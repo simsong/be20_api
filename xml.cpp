@@ -1,3 +1,4 @@
+/* -*- mode: C++; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /**
  * implementation for C++ XML generation class
  *
@@ -112,8 +113,8 @@ int mkstemp(char *tmpl)
 #endif
 
 
-std::string xml::xml_PRId64("%"PRId64);	// gets around compiler bug
-std::string xml::xml_PRIu64("%"PRIu64);	// gets around compiler bug
+std::string xml::xml_PRId64("%"PRId64); // gets around compiler bug
+std::string xml::xml_PRIu64("%"PRIu64); // gets around compiler bug
 
 static const char *cstr(const string &str){
     return str.c_str();
@@ -125,24 +126,24 @@ class Regex {
 public:
     regex_t reg;
     Regex(const char *pat):reg(){
-	memset(&reg,0,sizeof(reg));
-	if(REGCOMP(&reg,pat,REG_EXTENDED)){
-	    cerr << "xml.cpp: invalid regex pattern" << pat << "\n";
-	    exit(1);
-	}
+        memset(&reg,0,sizeof(reg));
+        if(REGCOMP(&reg,pat,REG_EXTENDED)){
+            cerr << "xml.cpp: invalid regex pattern" << pat << "\n";
+            exit(1);
+        }
     }
     ~Regex(){
-	REGFREE(&reg);
+        REGFREE(&reg);
     }
     string search(const string &line){
-	regmatch_t ary[2];
-	memset(ary,0,sizeof(ary));
-	if(REGEXEC(&reg,cstr(line),2,ary,0)==0){
-	    return string(cstr(line)+ary[1].rm_so,ary[1].rm_eo-ary[1].rm_so);
-	}
-	else {
-	    return string();
-	}
+        regmatch_t ary[2];
+        memset(ary,0,sizeof(ary));
+        if(REGEXEC(&reg,cstr(line),2,ary,0)==0){
+            return string(cstr(line)+ary[1].rm_so,ary[1].rm_eo-ary[1].rm_so);
+        }
+        else {
+            return string();
+        }
     }
 };
 #endif
@@ -164,22 +165,22 @@ string xml::xmlescape(const string &xml)
 {
     string ret;
     for(string::const_iterator i = xml.begin(); i!=xml.end(); i++){
-	switch(*i){
+        switch(*i){
         // XML escapes
-	case '>':  ret += xml_gt; break;
-	case '<':  ret += xml_lt; break;
-	case '&':  ret += xml_am; break;
-	case '\'': ret += xml_ap; break;
-	case '"':  ret += xml_qu; break;
+        case '>':  ret += xml_gt; break;
+        case '<':  ret += xml_lt; break;
+        case '&':  ret += xml_am; break;
+        case '\'': ret += xml_ap; break;
+        case '"':  ret += xml_qu; break;
 
         // % encodings
-	case '\000':  ret += encoding_null; break;	// retain encoded nulls
-	case '\r':  ret += encoding_r; break;
-	case '\n':  ret += encoding_n; break;
-	case '\t':  ret += encoding_t; break;
-	default:
-	    ret += *i;
-	}
+        case '\000':  ret += encoding_null; break;      // retain encoded nulls
+        case '\r':  ret += encoding_r; break;
+        case '\n':  ret += encoding_n; break;
+        case '\t':  ret += encoding_t; break;
+        default:
+            ret += *i;
+        }
     }
     return ret;
 }
@@ -192,9 +193,9 @@ string xml::xmlstrip(const string &xml)
 {
     string ret;
     for(string::const_iterator i = xml.begin(); i!=xml.end(); i++){
-	if(isprint(*i) && !strchr("<>\r\n&'\"",*i)){
-	    ret += isspace(*i) ? '_' : tolower(*i);
-	}
+        if(isprint(*i) && !strchr("<>\r\n&'\"",*i)){
+            ret += isspace(*i) ? '_' : tolower(*i);
+        }
     }
     return ret;
 }
@@ -211,7 +212,7 @@ std::string xml::xmlmap(const xml::strstrmap_t &m,const std::string &outer,const
     if(attrs.size()>0) ss << " " << attrs;
     ss << ">";
     for(std::map<std::string,std::string>::const_iterator it=m.begin();it!=m.end();it++){
-	ss << "<" << (*it).first  << ">" << (*it).second << "</" << (*it).first << ">";
+        ss << "<" << (*it).first  << ">" << (*it).second << "</" << (*it).first << ">";
     }
     ss << "</" << outer << ">";
     return ss.str();
@@ -220,7 +221,7 @@ std::string xml::xmlmap(const xml::strstrmap_t &m,const std::string &outer,const
 
 /* This goes to stdout */
 xml::xml():M(),outf(),out(&cout),tags(),tag_stack(),tempfilename(),tempfile_template("/tmp/xml_XXXXXXXX"),
-	   t0(),make_dtd(false),outfilename(),oneline()
+           t0(),make_dtd(false),outfilename(),oneline()
 {
 #ifdef HAVE_PTHREAD
     pthread_mutex_init(&M,NULL);
@@ -240,10 +241,10 @@ xml::xml(const std::string &outfilename_,bool makeDTD):
 #endif
     gettimeofday(&t0,0);
     if(!outf.is_open()){
-	perror(outfilename_.c_str());
-	exit(1);
+        perror(outfilename_.c_str());
+        exit(1);
     }
-    out = &outf;						// use this one instead
+    out = &outf;                                                // use this one instead
     *out << xml_header;
 }
 
@@ -264,8 +265,8 @@ xml::xml(const std::string &outfilename_,class existing &e):
 
     outf.open(outfilename.c_str(),ios_base::in|ios_base::out);
     if(!outf.is_open()){
-    	cerr << outfilename << strerror(errno) << ": Cannot open\n";
-	exit(1);
+        cerr << outfilename << strerror(errno) << ": Cannot open\n";
+        exit(1);
     }
     out = &outf;
     // Scan all of the lines, looking for elements in tagmap
@@ -282,36 +283,36 @@ xml::xml(const std::string &outfilename_,class existing &e):
     std::string line;
     int linenumber = 0;
     while(getline(outf,line)){
-	linenumber++;
-	string begs = tag_beg.search(line);
-	string ends = tag_end.search(line);
+        linenumber++;
+        string begs = tag_beg.search(line);
+        string ends = tag_end.search(line);
 
-	if(ends.size()==0 && line.find("/>")!=string::npos) ends=begs; // handle <value foo='bar'/>
+        if(ends.size()==0 && line.find("/>")!=string::npos) ends=begs; // handle <value foo='bar'/>
 
-	if(begs.size()>0 && ends.size()==0){
-	    tag_stack.push(begs);
-	}
+        if(begs.size()>0 && ends.size()==0){
+            tag_stack.push(begs);
+        }
 
-	if(begs.size()==0 && ends.size()>0){
-	    string popped = tag_stack.top();
-	    tag_stack.pop();
-	    if(ends != popped){
-		cerr << "xml is inconsistent at line " << linenumber << ".\n" 
-		     << "expected: " << popped << "\n"
-		     << "saw:      " << ends << "\n";
-		exit(1);
-	    }
-	}
+        if(begs.size()==0 && ends.size()>0){
+            string popped = tag_stack.top();
+            tag_stack.pop();
+            if(ends != popped){
+                cerr << "xml is inconsistent at line " << linenumber << ".\n" 
+                     << "expected: " << popped << "\n"
+                     << "saw:      " << ends << "\n";
+                exit(1);
+            }
+        }
 
-	if(e.tagmap && begs.size()>0 && begs==ends && e.tagmap->find(begs)!=e.tagmap->end()){
-	    (*e.tagmap)[begs] = tag_val.search(line);
-	}
+        if(e.tagmap && begs.size()>0 && begs==ends && e.tagmap->find(begs)!=e.tagmap->end()){
+            (*e.tagmap)[begs] = tag_val.search(line);
+        }
 
-	if(e.tagid && e.tagid_set && (*e.tagid)==begs){
-	    string a = tag_attrib.search(line);
-	    if(a.size()>0) a = a.substr(1,a.size()-2);
-	    (*e.tagid_set).insert(a);
-	}
+        if(e.tagid && e.tagid_set && (*e.tagid)==begs){
+            string a = tag_attrib.search(line);
+            if(a.size()>0) a = a.substr(1,a.size()-2);
+            (*e.tagid_set).insert(a);
+        }
     }
 }
 #endif
@@ -331,35 +332,35 @@ void xml::close()
     MUTEX_LOCK(&M);
     outf.close();
     if(make_dtd){
-	/* If we are making the DTD, then we should close the file,
-	 * scan the output file for the tags, write to a temp file, and then
-	 * close the temp file and have it overwrite the outfile.
-	 */
+        /* If we are making the DTD, then we should close the file,
+         * scan the output file for the tags, write to a temp file, and then
+         * close the temp file and have it overwrite the outfile.
+         */
 
-	std::ifstream in(cstr(tempfilename));
-	if(!in.is_open()){
-	    cerr << tempfilename << strerror(errno) << ":Cannot re-open for input\n";
-	    exit(1);
-	}
-	outf.open(cstr(outfilename),ios_base::out);
-	if(!outf.is_open()){
-	    cerr << outfilename << " " << strerror(errno)
-		 << ": Cannot open for output; will not delete " << tempfilename << "\n";
-	    exit(1);
-	}
-	// copy over first line --- the XML header
-	std::string line;
-	getline(in,line);
-	outf << line;
+        std::ifstream in(cstr(tempfilename));
+        if(!in.is_open()){
+            cerr << tempfilename << strerror(errno) << ":Cannot re-open for input\n";
+            exit(1);
+        }
+        outf.open(cstr(outfilename),ios_base::out);
+        if(!outf.is_open()){
+            cerr << outfilename << " " << strerror(errno)
+                 << ": Cannot open for output; will not delete " << tempfilename << "\n";
+            exit(1);
+        }
+        // copy over first line --- the XML header
+        std::string line;
+        getline(in,line);
+        outf << line;
 
-	write_dtd();			// write the DTD
-	while(!in.eof()){
-	    getline(in,line);
-	    outf << line << endl;
-	}
-	in.close();
-	unlink(cstr(tempfilename));
-	outf.close();
+        write_dtd();                    // write the DTD
+        while(!in.eof()){
+            getline(in,line);
+            outf << line << endl;
+        }
+        in.close();
+        unlink(cstr(tempfilename));
+        outf.close();
     }
     MUTEX_UNLOCK(&M);
 }
@@ -369,7 +370,7 @@ void xml::write_dtd()
     *out << "<!DOCTYPE fiwalk\n";
     *out << "[\n";
     for(set<string>::const_iterator it = tags.begin(); it != tags.end(); it++){
-	*out << "<!ELEMENT " << *it << "ANY >\n";
+        *out << "<!ELEMENT " << *it << "ANY >\n";
     }
     *out << "<!ATTLIST volume startsector CDATA #IMPLIED>\n";
     *out << "<!ATTLIST run start CDATA #IMPLIED>\n";
@@ -384,8 +385,8 @@ void xml::verify_tag(string tag)
 {
     if(tag[0]=='/') tag = tag.substr(1);
     if(tag.find(" ") != string::npos){
-	cerr << "tag '" << tag << "' contains space. Cannot continue.\n";
-	exit(1);
+        cerr << "tag '" << tag << "' contains space. Cannot continue.\n";
+        exit(1);
     }
     tags.insert(tag);
 }
@@ -398,7 +399,7 @@ void xml::puts(const string &v)
 void xml::spaces()
 {
     for(unsigned int i=0;i<tag_stack.size() && !oneline;i++){
-	*out << "  ";
+        *out << "  ";
     }
 }
 
@@ -422,17 +423,17 @@ extern "C" {
      * So we just allocate a huge buffer and then strdup() and hope!
      */
     int vasprintf(char **ret,const char *fmt,va_list ap)
-	__attribute__((__format__(ms_printf, 2, 0))) 
-	__MINGW_ATTRIB_NONNULL(2) ;
+        __attribute__((__format__(ms_printf, 2, 0))) 
+        __MINGW_ATTRIB_NONNULL(2) ;
     int vasprintf(char **ret,const char *fmt,va_list ap) 
     {
-	/* Figure out how long the result will be */
-	char buf[65536];
-	int size = vsnprintf(buf,sizeof(buf),fmt,ap);
-	if(size<0) return size;
-	/* Now allocate the memory */
-	*ret = (char *)strdup(buf);
-	return size;
+        /* Figure out how long the result will be */
+        char buf[65536];
+        int size = vsnprintf(buf,sizeof(buf),fmt,ap);
+        if(size<0) return size;
+        /* Now allocate the memory */
+        *ret = (char *)strdup(buf);
+        return size;
     }
 }
 #endif
@@ -446,8 +447,8 @@ void xml::printf(const char *fmt,...)
     /** printf to stream **/
     char *ret = 0;
     if(vasprintf(&ret,fmt,ap) < 0){
-	*out << "xml::xmlprintf: " << strerror(errno);
-	exit(EXIT_FAILURE);
+        *out << "xml::xmlprintf: " << strerror(errno);
+        exit(EXIT_FAILURE);
     }
     *out << ret;
     free(ret);
@@ -547,11 +548,11 @@ void xml::add_DFXML_execution_environment(const std::string &command_line)
 #ifdef HAVE_SYS_UTSNAME_H
     struct utsname name;
     if(uname(&name)==0){
-	xmlout("os_sysname",name.sysname);
-	xmlout("os_release",name.release);
-	xmlout("os_version",name.version);
-	xmlout("host",name.nodename);
-	xmlout("arch",name.machine);
+        xmlout("os_sysname",name.sysname);
+        xmlout("os_release",name.release);
+        xmlout("os_version",name.version);
+        xmlout("host",name.nodename);
+        xmlout("arch",name.machine);
     }
 #else
 #ifdef UNAMES
@@ -559,13 +560,13 @@ void xml::add_DFXML_execution_environment(const std::string &command_line)
 #endif
 #ifdef HAVE_GETHOSTNAME
     {
-	char hostname[1024];
-	if(gethostname(hostname,sizeof(hostname))==0){
-	    xmlout("host",hostname);
-	}
+        char hostname[1024];
+        if(gethostname(hostname,sizeof(hostname))==0){
+            xmlout("host",hostname);
+        }
     }
 #endif
-#endif	
+#endif  
     
     xmlout("command_line", command_line); // quote it!
 #ifdef HAVE_GETUID
@@ -580,7 +581,7 @@ void xml::add_DFXML_execution_environment(const std::string &command_line)
     time_t t = time(0);
     strftime(buf,sizeof(buf),TM_FORMAT,gmtime(&t));
     xmlout("start_time",buf);
-    pop();			// <execution_environment>
+    pop();                      // <execution_environment>
 }
 
 #ifdef WIN32
@@ -611,29 +612,29 @@ void xml::add_rusage()
     struct rusage ru;
     memset(&ru,0,sizeof(ru));
     if(getrusage(RUSAGE_SELF,&ru)==0){
-	push("rusage");
-	xmlout("utime",ru.ru_utime);
-	xmlout("stime",ru.ru_stime);
-	xmloutl("maxrss",(long)ru.ru_maxrss);
-	xmloutl("minflt",(long)ru.ru_minflt);
-	xmloutl("majflt",(long)ru.ru_majflt);
-	xmloutl("nswap",(long)ru.ru_nswap);
-	xmloutl("inblock",(long)ru.ru_inblock);
-	xmloutl("oublock",(long)ru.ru_oublock);
+        push("rusage");
+        xmlout("utime",ru.ru_utime);
+        xmlout("stime",ru.ru_stime);
+        xmloutl("maxrss",(long)ru.ru_maxrss);
+        xmloutl("minflt",(long)ru.ru_minflt);
+        xmloutl("majflt",(long)ru.ru_majflt);
+        xmloutl("nswap",(long)ru.ru_nswap);
+        xmloutl("inblock",(long)ru.ru_inblock);
+        xmloutl("oublock",(long)ru.ru_oublock);
 
-	struct timeval t1;
-	gettimeofday(&t1,0);
-	struct timeval t;
-	
-	t.tv_sec = t1.tv_sec - t0.tv_sec;
-	if(t1.tv_usec > t0.tv_usec){
-	    t.tv_usec = t1.tv_usec - t0.tv_usec;
-	} else {
-	    t.tv_sec--;
-	    t.tv_usec = (t1.tv_usec+1000000) - t0.tv_usec;
-	}
-	xmlout("clocktime",t);
-	pop();
+        struct timeval t1;
+        gettimeofday(&t1,0);
+        struct timeval t;
+        
+        t.tv_sec = t1.tv_sec - t0.tv_sec;
+        if(t1.tv_usec > t0.tv_usec){
+            t.tv_usec = t1.tv_usec - t0.tv_usec;
+        } else {
+            t.tv_sec--;
+            t.tv_usec = (t1.tv_usec+1000000) - t0.tv_usec;
+        }
+        xmlout("clocktime",t);
+        pop();
     }
 #endif
 }
@@ -662,8 +663,8 @@ void xml::xmlprintf(const std::string &tag,const std::string &attribute, const c
     /** printf to stream **/
     char *ret = 0;
     if(vasprintf(&ret,fmt,ap) < 0){
-	cerr << "xml::xmlprintf: " << strerror(errno) << "\n";
-	exit(EXIT_FAILURE);
+        cerr << "xml::xmlprintf: " << strerror(errno) << "\n";
+        exit(EXIT_FAILURE);
     }
     *out << ret;
     free(ret);
@@ -681,12 +682,12 @@ void xml::xmlout(const string &tag,const string &value,const string &attribute,b
     MUTEX_LOCK(&M);
     spaces();
     if(value.size()==0){
-	if(tag.size()) tagout(tag,attribute+"/");
+        if(tag.size()) tagout(tag,attribute+"/");
     } else {
-	if(tag.size()) tagout(tag,attribute);
-	if(escape_value) *out << xmlescape(value);
-	else *out << value;
-	if(tag.size()) tagout("/"+tag,"");
+        if(tag.size()) tagout(tag,attribute);
+        if(escape_value) *out << xmlescape(value);
+        else *out << value;
+        if(tag.size()) tagout("/"+tag,"");
     }
     *out << "\n";
     out->flush();
@@ -739,9 +740,9 @@ void xml::add_DFXML_build_environment()
 #endif    
 #if defined(__DATE__) && defined(__TIME__) && defined(HAVE_STRPTIME)
     if(strptime(__DATE__,"%b %d %Y",&tm)){
-	char buf[64];
-	snprintf(buf,sizeof(buf),"%4d-%02d-%02dT%s",tm.tm_year+1900,tm.tm_mon+1,tm.tm_mday,__TIME__);
-	xmlout("compilation_date",buf);
+        char buf[64];
+        snprintf(buf,sizeof(buf),"%4d-%02d-%02dT%s",tm.tm_year+1900,tm.tm_mon+1,tm.tm_mday,__TIME__);
+        xmlout("compilation_date",buf);
     }
 #endif
 #ifdef HAVE_LIBTSK3

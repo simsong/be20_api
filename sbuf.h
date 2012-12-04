@@ -1,3 +1,4 @@
+/* -*- mode: C++; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
  * sbuf.h:
  *
@@ -72,69 +73,69 @@ inline int64_t stoi64(std::string str){
 }
 class pos0_t {
 public:
-    string   path;			/* forensic path of decoders*/
-    uint64_t offset;			/* location of buf[0] */
+    string   path;                      /* forensic path of decoders*/
+    uint64_t offset;                    /* location of buf[0] */
     
     explicit pos0_t():path(""),offset(0){}
     pos0_t(string s):path(s),offset(0){}
     pos0_t(const pos0_t &obj):path(obj.path),offset(obj.offset){ }
     string str() const {
-	stringstream ss;
-	if(path.size()>0){
-	    ss << path << "-";
-	}
-	ss << offset;
-	return ss.str();
+        stringstream ss;
+        if(path.size()>0){
+            ss << path << "-";
+        }
+        ss << offset;
+        return ss.str();
     }
     bool isRecursive() const {
-	return path.size() > 0;
+        return path.size() > 0;
     } 
     string firstPart() const {
-	size_t p = path.find('-');
-	if(p==string::npos) return string("");
-	return path.substr(0,p);
+        size_t p = path.find('-');
+        if(p==string::npos) return string("");
+        return path.substr(0,p);
     }
     string lastAddedPart() const {
-	size_t p = path.rfind('-');
-	if(p==string::npos) return string("");
-	return path.substr(p+1);
+        size_t p = path.rfind('-');
+        if(p==string::npos) return string("");
+        return path.substr(p+1);
     }
-    string alphaPart() const {		// return the non-numeric parts
-	std::string desc;
-	bool inalpha = false;
-	/* Now get the string part of pos0 */
-	for(string::const_iterator it = path.begin();it!=path.end();it++){
-	    if((*it)=='-'){
-		desc += '/';
-		inalpha=false;
-	    }
-	    if(isalpha(*it) || (inalpha && isdigit(*it))){
-		desc += *it;
-		inalpha=true;
-	    }
-	}
-	return desc;
+    string alphaPart() const {          // return the non-numeric parts
+        std::string desc;
+        bool inalpha = false;
+        /* Now get the string part of pos0 */
+        for(string::const_iterator it = path.begin();it!=path.end();it++){
+            if((*it)=='-'){
+                desc += '/';
+                inalpha=false;
+            }
+            if(isalpha(*it) || (inalpha && isdigit(*it))){
+                desc += *it;
+                inalpha=true;
+            }
+        }
+        return desc;
     }
 
     /**
      * Return a new position that's been shifted by an offset
      */
     pos0_t shift(int64_t s) const {
-	if(s==0) return *this;
-	pos0_t ret;
-	size_t p = path.find('-');
-	if(p==string::npos){		// no path
-	    ret.path="";
-	    ret.offset = offset + s;
-	    return ret;
-	}
-	/* Figure out the value of the shift */
-	int64_t baseOffset = stoi64(path.substr(0,p-1));
-	stringstream ss;
-	ss << (baseOffset+s) << path.substr(p);
-	ret.path = ss.str();
-	ret.offset = offset;
-	return ret;
+        if(s==0) return *this;
+        pos0_t ret;
+        size_t p = path.find('-');
+        if(p==string::npos){            // no path
+            ret.path="";
+            ret.offset = offset + s;
+            return ret;
+        }
+        /* Figure out the value of the shift */
+        int64_t baseOffset = stoi64(path.substr(0,p-1));
+        stringstream ss;
+        ss << (baseOffset+s) << path.substr(p);
+        ret.path = ss.str();
+        ret.offset = offset;
+        return ret;
     }
 };
 
@@ -158,7 +159,7 @@ inline class pos0_t operator +(pos0_t pos0,const string &subdir) {
 
 /** Adding an offset */
 inline class pos0_t operator +(pos0_t pos0,int64_t delta) {
-    pos0.offset += delta;		
+    pos0.offset += delta;               
     return pos0;
 };
 
@@ -187,21 +188,21 @@ inline bool operator ==(const class pos0_t & pos0,const class pos0_t &pos1) {
  */
 template < class Type > class managed_malloc {
     class not_impl: public std::exception {
-	virtual const char *what() const throw() {
-	    return "managed_malloc assignment is not implemented.";
-	}
+        virtual const char *what() const throw() {
+            return "managed_malloc assignment is not implemented.";
+        }
     };
     managed_malloc &operator=(const managed_malloc &that) {
-	throw new not_impl();
+        throw new not_impl();
     }
     managed_malloc(const managed_malloc &that):buf(0){
-	throw new not_impl();
+        throw new not_impl();
     }
 public:
     Type *buf;
     managed_malloc(size_t bytes):buf(new Type[bytes]){ }
     ~managed_malloc(){
-	if(buf) delete []buf;
+        if(buf) delete []buf;
     }
 };
 
@@ -231,88 +232,88 @@ public:
 class sbuf_t {
 private:
     class not_impl: public exception {
-	virtual const char *what() const throw() {
-	    return "sbuf_t assignment is not implemented.";
-	}
+        virtual const char *what() const throw() {
+            return "sbuf_t assignment is not implemented.";
+        }
     };
 private:
     /* The private structures keep track of memory management */
-    int    fd;				/* file this came from if mmapped file */
-    bool   should_unmap;		/* munmap buffer when done */
-    bool   should_free;			/* should buf be freed when this sbuf is deleted? */
-    bool   should_close;		/* close(fd) when done. */
+    int    fd;                          /* file this came from if mmapped file */
+    bool   should_unmap;                /* munmap buffer when done */
+    bool   should_free;                 /* should buf be freed when this sbuf is deleted? */
+    bool   should_close;                /* close(fd) when done. */
     static size_t min(size_t a,size_t b){
-	return a<b ? a : b;
+        return a<b ? a : b;
     }
 
 public:
-    int     page_number;		/* used for debugging */
-    pos0_t  pos0;			/* the path of buf[0] */
+    int     page_number;                /* used for debugging */
+    pos0_t  pos0;                       /* the path of buf[0] */
 private:
-    const sbuf_t  *parent;		// parent sbuf references data in another.
+    const sbuf_t  *parent;              // parent sbuf references data in another.
 public:
-    mutable int   children;		// number of child sbufs; can get increment in copy
+    mutable int   children;             // number of child sbufs; can get increment in copy
 public:
     //private:               // one day
     /**
      * \deprecated
      * This field will be private in a future release of \b bulk_extractor.
      */
-    const uint8_t *buf;		/* start of the buffer */
+    const uint8_t *buf;         /* start of the buffer */
 public:
-     size_t  bufsize;		/* size of the buffer */
-     size_t  pagesize;		/* page data; the rest is the 'margin'. pagesize <= bufsize */
+     size_t  bufsize;           /* size of the buffer */
+     size_t  pagesize;          /* page data; the rest is the 'margin'. pagesize <= bufsize */
     
 private:
-    void release();			// release allocated storage
+    void release();                     // release allocated storage
     sbuf_t &operator=(const sbuf_t &that) {
-	throw new not_impl();
+        throw new not_impl();
     }
     /* Empty allocator is never allowed */
     explicit sbuf_t() __attribute__((__noreturn__)):fd(0),should_unmap(false),should_free(false),should_close(0),
-	     page_number(0),pos0(),parent(0),children(0),buf(0),bufsize(0),pagesize(0) {
-	std::cerr << "sbuf_t() empty allocator is never allowed\n";
-	throw new not_impl();
+             page_number(0),pos0(),parent(0),children(0),buf(0),bufsize(0),pagesize(0) {
+        std::cerr << "sbuf_t() empty allocator is never allowed\n";
+        throw new not_impl();
     }
 public:
     /**
      * Make an sbuf from a parent. 
      */
     sbuf_t(const sbuf_t &that ):
-	fd(0),should_unmap(false),should_free(false),should_close(false),
-	page_number(that.page_number),pos0(that.pos0),
-	parent(that.highest_parent()),
-	children(0),buf(that.buf),bufsize(that.bufsize),pagesize(that.pagesize){
-	parent->add_child(*this);
+        fd(0),should_unmap(false),should_free(false),should_close(false),
+        page_number(that.page_number),pos0(that.pos0),
+        parent(that.highest_parent()),
+        children(0),buf(that.buf),bufsize(that.bufsize),pagesize(that.pagesize){
+        parent->add_child(*this);
     }
 
     /* Allocate an sbuf with a position but no data. This is used for when an sbuf needs to be
      * passed but the sbuf has no data.
      */
     explicit sbuf_t(const pos0_t &pos0_):
-	fd(0), should_unmap(false), should_free(false), should_close(false),
-	page_number(0),pos0(pos0_),parent(0),children(0),buf(0),bufsize(0),
-	pagesize(0) {
+        fd(0), should_unmap(false), should_free(false), should_close(false),
+        page_number(0),pos0(pos0_),parent(0),children(0),buf(0),bufsize(0),
+        pagesize(0) {
     };
 
     /**
      * Make an sbuf from a parent but with a different path. 
      */
     explicit sbuf_t(const pos0_t &that_pos0, const sbuf_t &that_sbuf ):
-	fd(0),should_unmap(false),should_free(false),should_close(false),
-	page_number(that_sbuf.page_number),pos0(that_pos0),
-	parent(that_sbuf.highest_parent()),children(0),
-	buf(that_sbuf.buf),bufsize(that_sbuf.bufsize),pagesize(that_sbuf.pagesize){
-	parent->add_child(*this);
+        fd(0),should_unmap(false),should_free(false),should_close(false),
+        page_number(that_sbuf.page_number),pos0(that_pos0),
+        parent(that_sbuf.highest_parent()),children(0),
+        buf(that_sbuf.buf),bufsize(that_sbuf.bufsize),pagesize(that_sbuf.pagesize){
+        parent->add_child(*this);
     }
 
     explicit sbuf_t(const sbuf_t &that_sbuf,size_t offset):
-	fd(0),should_unmap(false),should_free(false),should_close(false),
-	page_number(that_sbuf.page_number),pos0(that_sbuf.pos0+offset),
-	parent(that_sbuf.highest_parent()),children(0),
-	buf(that_sbuf.buf+offset),
-	bufsize(that_sbuf.bufsize > offset ? that_sbuf.bufsize-offset : 0),
-	pagesize(that_sbuf.pagesize > offset ? that_sbuf.pagesize-offset : 0){
+        fd(0),should_unmap(false),should_free(false),should_close(false),
+        page_number(that_sbuf.page_number),pos0(that_sbuf.pos0+offset),
+        parent(that_sbuf.highest_parent()),children(0),
+        buf(that_sbuf.buf+offset),
+        bufsize(that_sbuf.bufsize > offset ? that_sbuf.bufsize-offset : 0),
+        pagesize(that_sbuf.pagesize > offset ? that_sbuf.pagesize-offset : 0){
     }
 
     /* Allocators */
@@ -323,31 +324,31 @@ public:
 
     /* Allocate from an existing buffer, optionally freeing that buffer */
     explicit sbuf_t(const pos0_t &pos0_,const uint8_t *buf_,
-		    size_t bufsize_,size_t pagesize_,
-		    int fd_,
-		    bool should_unmap_,bool should_free_,bool should_close_):
-	fd(fd_), should_unmap(should_unmap_), should_free(should_free_),
-	should_close(should_close_),
-	page_number(0),pos0(pos0_),parent(0),children(0),buf(buf_),bufsize(bufsize_),
-	pagesize(min(pagesize_,bufsize_)){
+                    size_t bufsize_,size_t pagesize_,
+                    int fd_,
+                    bool should_unmap_,bool should_free_,bool should_close_):
+        fd(fd_), should_unmap(should_unmap_), should_free(should_free_),
+        should_close(should_close_),
+        page_number(0),pos0(pos0_),parent(0),children(0),buf(buf_),bufsize(bufsize_),
+        pagesize(min(pagesize_,bufsize_)){
     };
     explicit sbuf_t(const pos0_t &pos0_,const uint8_t *buf_,
-		    size_t bufsize_,size_t pagesize_,bool should_free_):
-	fd(0), should_unmap(false), should_free(should_free_), should_close(false),
-	page_number(0),pos0(pos0_),parent(0),children(0),buf(buf_),bufsize(bufsize_),
-	pagesize(min(pagesize_,bufsize_)){
+                    size_t bufsize_,size_t pagesize_,bool should_free_):
+        fd(0), should_unmap(false), should_free(should_free_), should_close(false),
+        page_number(0),pos0(pos0_),parent(0),children(0),buf(buf_),bufsize(bufsize_),
+        pagesize(min(pagesize_,bufsize_)){
     };
     /** Allocate from an existing sbuf.
      * The allocated buf MUST be freed before the source, since no copy is made...
      */
     explicit sbuf_t(const sbuf_t &sbuf,size_t offset,size_t len):
-	fd(0), should_unmap(false), should_free(false), should_close(false),
-	page_number(sbuf.page_number),pos0(sbuf.pos0+offset),
-	parent(sbuf.highest_parent()),
-	children(0), buf(sbuf.buf+offset),
-	bufsize(offset+len<sbuf.bufsize ? len : sbuf.bufsize-offset),
-	pagesize(offset+len<sbuf.bufsize ? len : sbuf.bufsize-offset){
-	parent->add_child(*this);
+        fd(0), should_unmap(false), should_free(false), should_close(false),
+        page_number(sbuf.page_number),pos0(sbuf.pos0+offset),
+        parent(sbuf.highest_parent()),
+        children(0), buf(sbuf.buf+offset),
+        bufsize(offset+len<sbuf.bufsize ? len : sbuf.bufsize-offset),
+        pagesize(offset+len<sbuf.bufsize ? len : sbuf.bufsize-offset){
+        parent->add_child(*this);
     };
 
     /**
@@ -363,21 +364,21 @@ public:
      *    (Because we won't return what's in the margin as page data.)
      */
     sbuf_t operator +(size_t offset ) const {
-	return sbuf_t(*this,offset);
+        return sbuf_t(*this,offset);
     }
 
     virtual ~sbuf_t(){
 #ifdef SBUF_TRACK
-	assert(__sync_fetch_and_add(&children,0)==0);
+        assert(__sync_fetch_and_add(&children,0)==0);
 #endif
-	if(parent) parent->del_child(*this);
-	release();
+        if(parent) parent->del_child(*this);
+        release();
     }
 
     /* Allocate a sbuf from a file mapped into memory */
     static sbuf_t *map_file(const std::string &fname,const pos0_t &pos0); 
     static sbuf_t *map_file(const std::string &fname,const pos0_t &pos0,int fd); 
-    static std::string U10001C;		// delimeter character in bulk_extractor
+    static std::string U10001C;         // delimeter character in bulk_extractor
 
     /* Properties */
     size_t size() const {return bufsize;} // return the number of bytes
@@ -385,16 +386,16 @@ public:
 
     const sbuf_t *highest_parent() const; // returns the parent of the parent...
     void add_child(const sbuf_t &child) const {
-	__sync_fetch_and_add(&children,1);
+        __sync_fetch_and_add(&children,1);
 #ifdef SBUF_TRACK
-	std::cerr << "add_child(" << this << ")="<<children << "\n";
+        std::cerr << "add_child(" << this << ")="<<children << "\n";
 #endif
     }
     void del_child(const sbuf_t &child) const {
-	__sync_fetch_and_add(&children,-1);
+        __sync_fetch_and_add(&children,-1);
 #ifdef SBUF_TRACK
-	std::cerr << "del_child(" << this << ")="<<children << "\n";
-	assert(__sync_fetch_and_add(&children,0)>=0);
+        std::cerr << "del_child(" << this << ")="<<children << "\n";
+        assert(__sync_fetch_and_add(&children,0)>=0);
 #endif
     }
 
@@ -529,7 +530,7 @@ public:
      * Notice that we don't need to check to see if i<0 because i is unsigned.
      */
     uint8_t operator [](size_t i) const {
-	return (i<bufsize) ? buf[i] : 0;
+        return (i<bufsize) ? buf[i] : 0;
     }
 
     /**
@@ -538,10 +539,10 @@ public:
      * return -1 if there is none to find.
      */
     ssize_t find(uint8_t ch,size_t start) const {
-	for(;start<pagesize;start++){
-	    if(buf[start]==ch) return start;
-	}
-	return -1;
+        for(;start<pagesize;start++){
+            if(buf[start]==ch) return start;
+        }
+        return -1;
     }
 
     /**
@@ -550,20 +551,20 @@ public:
      * Return offset or -1 if there is none to find.
      */
     ssize_t find(const char *str,size_t start) const {
-	for(;start<pagesize;start++){
-	    bool found = true;
-	    for(size_t i=0;str[i] && found;i++){
-		if(start+i>=pagesize) return -1; // ran off the end
-		found = (buf[start+i]==str[i]);
-	    }
-	    if(found) return start;
-	}
-	return -1;
+        for(;start<pagesize;start++){
+            bool found = true;
+            for(size_t i=0;str[i] && found;i++){
+                if(start+i>=pagesize) return -1; // ran off the end
+                found = (buf[start+i]==str[i]);
+            }
+            if(found) return start;
+        }
+        return -1;
     }
 
     string substr(size_t offset,size_t len) const; /* make a substring */
-    md5_t md5(size_t offset,size_t len) const;	   /* compute the MD5 of a subset */
-    md5_t md5() const;				   // md5 of the whole object
+    md5_t md5(size_t offset,size_t len) const;     /* compute the MD5 of a subset */
+    md5_t md5() const;                             // md5 of the whole object
     bool is_constant(size_t offset,size_t len,uint8_t ch) const; // verify that it's constant
     bool is_constant(uint8_t ch) const { return is_constant(0,this->pagesize,ch); }
 
@@ -571,10 +572,10 @@ public:
     // room, otherwise return a null pointer.
     template<class Type>
     const Type * get_struct_ptr(uint32_t pos) const {
-	if (pos + sizeof(Type) <= bufsize) {
-	    return reinterpret_cast<const Type *> (buf+pos);
-	}
-	return NULL;
+        if (pos + sizeof(Type) <= bufsize) {
+            return reinterpret_cast<const Type *> (buf+pos);
+        }
+        return NULL;
     }
     
 

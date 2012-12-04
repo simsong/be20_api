@@ -1,3 +1,4 @@
+/* -*- mode: C++; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 #ifndef SBUF_STREAM_H
 #define SBUF_STREAM_H
 

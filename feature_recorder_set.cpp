@@ -1,3 +1,5 @@
+/* -*- mode: C++; c-basic-offset: 4; indent-tabs-mode: nil -*- */
+
 #include "config.h"
 #include "bulk_extractor_i.h"
 #include "xml.h"
@@ -21,28 +23,28 @@ feature_recorder  *feature_recorder_set::alert_recorder = 0; // no alert recorde
  * Create a properly functioning feature recorder set.
  */
 feature_recorder_set::feature_recorder_set(const feature_file_names_t &feature_files,
-					   const std::string &input_fname_,
-					   const std::string &outdir_,
-					   bool create_stop_files):
+                                           const std::string &input_fname_,
+                                           const std::string &outdir_,
+                                           bool create_stop_files):
     flags(0),input_fname(input_fname_),outdir(outdir_),frm(),Mstats(),scanner_stats()
 {
     /* Create the requested feature files */
     for(set<string>::const_iterator it=feature_files.begin();it!=feature_files.end();it++){
-	create_name(*it,create_stop_files);
+        create_name(*it,create_stop_files);
     }
 }
 
 void feature_recorder_set::flush_all()
 {
     for(feature_recorder_map::iterator i = frm.begin();i!=frm.end();i++){
-	i->second->flush();
+        i->second->flush();
     } 
 }
 
 void feature_recorder_set::close_all()
 {
     for(feature_recorder_map::iterator i = frm.begin();i!=frm.end();i++){
-	i->second->close();
+        i->second->close();
     } 
 }
 
@@ -57,8 +59,8 @@ bool feature_recorder_set::has_name(string name) const
  */
 feature_recorder *feature_recorder_set::get_name(string name) const
 {
-    if(flags & ONLY_ALERT){		// always return the alert recorder
-	name = feature_recorder_set::ALERT_RECORDER_NAME;
+    if(flags & ONLY_ALERT){             // always return the alert recorder
+        name = feature_recorder_set::ALERT_RECORDER_NAME;
     }
 
     feature_recorder_map::const_iterator it = frm.find(name);
@@ -86,13 +88,13 @@ void feature_recorder_set::dump_stats(xml &x)
 {
     x.push("scanner_times");
     for(scanner_stats_map::const_iterator it = scanner_stats.begin();it!=scanner_stats.end();it++){
-	x.set_oneline(true);
-	x.push("path");
-	x.xmlout("name",(*it).first);
-	x.xmlout("calls",(int64_t)(*it).second.calls);
-	x.xmlout("seconds",(*it).second.seconds);
-	x.pop();
-	x.set_oneline(false);
+        x.set_oneline(true);
+        x.push("path");
+        x.xmlout("name",(*it).first);
+        x.xmlout("calls",(int64_t)(*it).second.calls);
+        x.xmlout("seconds",(*it).second.seconds);
+        x.pop();
+        x.set_oneline(false);
     }
     x.pop();
 }
@@ -102,13 +104,13 @@ void feature_recorder_set::create_name(string name,bool create_stop_file)
     feature_recorder *fr = new feature_recorder(outdir,name);
     frm[name] = fr;
     if(create_stop_file){
-	string name_stopped = name+"_stopped";
-	
-	fr->stop_list_recorder = new feature_recorder(outdir,name_stopped);
-	frm[name_stopped] = fr->stop_list_recorder;
+        string name_stopped = name+"_stopped";
+        
+        fr->stop_list_recorder = new feature_recorder(outdir,name_stopped);
+        frm[name_stopped] = fr->stop_list_recorder;
     }
     
-    if(flags & DISABLED) return;	// don't open if we are disabled
+    if(flags & DISABLED) return;        // don't open if we are disabled
     
     /* Open the output!*/
     fr->open();

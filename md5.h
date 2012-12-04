@@ -1,3 +1,4 @@
+/* -*- mode: C++; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /* MD5DEEP - md5.h
  *
  * By Jesse Kornblum
@@ -20,7 +21,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <assert.h>
-#include <stdio.h>	// for snprintf
+#include <stdio.h>      // for snprintf
 
 /* __BEGIN_DECLS should be used at the beginning of your declarations,
    so that C++ compilers don't mangle their names.  Use __END_DECLS at
@@ -69,33 +70,33 @@ public:
     uint8_t digest[SIZE];
     /* python like interface for hexdigest */
     static const char *makehex(char *hexbuf,size_t bufsize,const unsigned char *bin,size_t binsize){
-	const char *hexbuf_start = hexbuf;
-	while(bufsize>=3 && binsize>0){
-	snprintf(hexbuf,bufsize,"%02x",*bin);
-	    hexbuf  += 2;
-	    bufsize -= 2;
-	    bin     += 1;
-	    binsize  -= 1;
-	}
-	return hexbuf_start;
+        const char *hexbuf_start = hexbuf;
+        while(bufsize>=3 && binsize>0){
+        snprintf(hexbuf,bufsize,"%02x",*bin);
+            hexbuf  += 2;
+            bufsize -= 2;
+            bin     += 1;
+            binsize  -= 1;
+        }
+        return hexbuf_start;
     }
     const char *hexdigest(char *hexbuf,size_t bufsize) const {
-	return makehex(hexbuf,bufsize,digest,sizeof(digest));
+        return makehex(hexbuf,bufsize,digest,sizeof(digest));
     }
     std::string hexdigest() const {
-	std::string ret;
-	char buf[sizeof(digest)*2+1];
-	return std::string(hexdigest(buf,sizeof(buf)));
+        std::string ret;
+        char buf[sizeof(digest)*2+1];
+        return std::string(hexdigest(buf,sizeof(buf)));
     }
     bool operator<(const md5_t &s2) const {
-	/* Check the first byte manually as a performance hack */
-	if(this->digest[0] < s2.digest[0]) return true;
-	if(this->digest[0] > s2.digest[0]) return false;
-	return memcmp(this->digest,s2.digest, this->SIZE) < 0;
+        /* Check the first byte manually as a performance hack */
+        if(this->digest[0] < s2.digest[0]) return true;
+        if(this->digest[0] > s2.digest[0]) return false;
+        return memcmp(this->digest,s2.digest, this->SIZE) < 0;
     }
     bool operator==(const md5_t &s2) const {
-	if(this->digest[0] != s2.digest[0]) return false;
-	return memcmp(this->digest,s2.digest, this->SIZE) == 0;
+        if(this->digest[0] != s2.digest[0]) return false;
+        return memcmp(this->digest,s2.digest, this->SIZE) == 0;
     }
 };
 
@@ -107,23 +108,23 @@ public:
     bool finalized;
     context_md5_t ctx;
     md5_generator():finalized(false),ctx(){
-	MD5Init(&ctx);
+        MD5Init(&ctx);
     }
     void update(const uint8_t *buf,size_t buflen){
-	assert(!finalized);
-	MD5Update(&ctx,buf,buflen);
+        assert(!finalized);
+        MD5Update(&ctx,buf,buflen);
     }
     md5_t final(){
-	md5_t res;
-	assert(!finalized);
-	MD5Final(res.digest,&ctx);
-	finalized=true;
-	return res;
+        md5_t res;
+        assert(!finalized);
+        MD5Final(res.digest,&ctx);
+        finalized=true;
+        return res;
     }
     static md5_t hash_buf(const uint8_t *buf,size_t buflen){
-	md5_generator g;
-	g.update(buf,buflen);
-	return g.final();
+        md5_generator g;
+        g.update(buf,buflen);
+        return g.final();
     }
 };
 #endif

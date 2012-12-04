@@ -1,3 +1,4 @@
+/* -*- mode: C++; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 #include "config.h"
 #include <fcntl.h>
 #include <sys/stat.h>
@@ -18,7 +19,7 @@ std::string sbuf_t::U10001C("\xf4\x80\x80\x9c");
 sbuf_t *sbuf_t::map_file(const std::string &fname,const pos0_t &pos0)
 {
     int fd = open(fname.c_str(),O_RDONLY,0);
-    if(fd<0) return 0;		/* cannot open file */
+    if(fd<0) return 0;          /* cannot open file */
     return sbuf_t::map_file(fname,pos0,fd);
 }
 
@@ -26,8 +27,8 @@ sbuf_t *sbuf_t::map_file(const std::string &fname,const pos0_t &pos0,int fd)
 {
     struct stat st;
     if(fstat(fd,&st)){
-	close(fd);
-	return 0; /* cannot stat */
+        close(fd);
+        return 0; /* cannot stat */
     }
 
 #ifdef HAVE_MMAP
@@ -37,12 +38,12 @@ sbuf_t *sbuf_t::map_file(const std::string &fname,const pos0_t &pos0,int fd)
     bool should_close = true;
 #else
     uint8_t *buf = (uint8_t *)malloc(st.st_size);
-    if(buf==0){		/* malloc failed */
-	return 0;
+    if(buf==0){         /* malloc failed */
+        return 0;
     }
     if((size_t)read(fd,(void *)buf,st.st_size)!=st.st_size){
-	free((void *)buf);		/* read failed */
-	return 0;
+        free((void *)buf);              /* read failed */
+        return 0;
     }
     close(fd);
     fd = 0;
@@ -51,13 +52,13 @@ sbuf_t *sbuf_t::map_file(const std::string &fname,const pos0_t &pos0,int fd)
     bool should_close = false;
 #endif
     sbuf_t *sbuf = new sbuf_t(pos0,// set the filename followed by U+10001C in UTF-8
-			      buf,
-			      st.st_size,
-			      st.st_size,
-			      fd,
-			      should_unmap,
-			      should_free,
-			      should_close);
+                              buf,
+                              st.st_size,
+                              st.st_size,
+                              fd,
+                              should_unmap,
+                              should_free,
+                              should_close);
     return sbuf;
 }
 
@@ -68,7 +69,7 @@ const sbuf_t *sbuf_t::highest_parent() const
 {
     const sbuf_t *hp = this;
     while(hp->parent != 0){
-	hp = hp->parent;
+        hp = hp->parent;
     }
     return hp;
 }
@@ -79,7 +80,7 @@ const sbuf_t *sbuf_t::highest_parent() const
 void sbuf_t::raw_dump(std::ostream &os,uint64_t start,uint64_t len) const
 {
     for(uint64_t i=start;i<start+len  && i<bufsize;i++){
-	os << buf[i];
+        os << buf[i];
     }
 }
 
@@ -109,32 +110,32 @@ void sbuf_t::hex_dump(std::ostream &os,uint64_t start,uint64_t len) const
 {
     const size_t bytes_per_line = 32;
     for(uint64_t i=start;i<start+len && i<bufsize;i+=bytes_per_line){
-	size_t spaces=0;
-	for(size_t j=0;j<bytes_per_line && i+j<bufsize && i+j<start+len;j++){
-	    unsigned char ch = (*this)[i+j];
-	    os << hexch(ch) << " ";
-	    spaces += 3;
-	    if(j==bytes_per_line/2){
-		os << ' ';
-		spaces += 1;
-	    }
-	}
-	for(;spaces<bytes_per_line*3+3;spaces++){
-	    os << ' ';
-	}
-	for(size_t j=0;j<bytes_per_line && i+j<bufsize && i+j<start+len;j++){
-	    unsigned char ch = (*this)[i+j];
-	    if(ch>=' ' && ch<='~') os << ch;
-	    else os << '.';
-	}
-	os << "\n";
+        size_t spaces=0;
+        for(size_t j=0;j<bytes_per_line && i+j<bufsize && i+j<start+len;j++){
+            unsigned char ch = (*this)[i+j];
+            os << hexch(ch) << " ";
+            spaces += 3;
+            if(j==bytes_per_line/2){
+                os << ' ';
+                spaces += 1;
+            }
+        }
+        for(;spaces<bytes_per_line*3+3;spaces++){
+            os << ' ';
+        }
+        for(size_t j=0;j<bytes_per_line && i+j<bufsize && i+j<start+len;j++){
+            unsigned char ch = (*this)[i+j];
+            if(ch>=' ' && ch<='~') os << ch;
+            else os << '.';
+        }
+        os << "\n";
     }
 }
 
 /* Write to a file descriptor */
 ssize_t sbuf_t::write(int fd_,size_t loc,size_t len) const
 {
-    if(loc>=bufsize) return 0;		// cannot write
+    if(loc>=bufsize) return 0;          // cannot write
     if(loc+len>bufsize) len=bufsize-loc; // clip at the end
     return ::write(fd_,buf+loc,len);
 }
@@ -142,7 +143,7 @@ ssize_t sbuf_t::write(int fd_,size_t loc,size_t len) const
 /* Write to a FILE */
 ssize_t sbuf_t::write(FILE *f,size_t loc,size_t len) const
 {
-    if(loc>=bufsize) return 0;		// cannot write
+    if(loc>=bufsize) return 0;          // cannot write
     if(loc+len>bufsize) len=bufsize-loc; // clip at the end
     return ::fwrite(buf+loc,1,len,f);
 }
@@ -150,7 +151,7 @@ ssize_t sbuf_t::write(FILE *f,size_t loc,size_t len) const
 /* Return a substring */
 std::string sbuf_t::substr(size_t loc,size_t len) const
 {
-    if(loc>=bufsize) return std::string("");		// cannot write
+    if(loc>=bufsize) return std::string("");            // cannot write
     if(loc+len>bufsize) len=bufsize-loc; // clip at the end
     return std::string((const char *)buf+loc,len);
 }
@@ -171,9 +172,9 @@ md5_t sbuf_t::md5() const
 bool sbuf_t::is_constant(size_t offset,size_t len,uint8_t ch) const // verify that it's constant
 {
     while(len>0){
-	if(((*this)[offset])!=ch) return false;
-	offset++;
-	len--;
+        if(((*this)[offset])!=ch) return false;
+        offset++;
+        len--;
     }
     return true;
 }
@@ -198,49 +199,49 @@ static int hexcharvals[256] = {-1,0};
 static const char *hexbuf(char *dst,int dst_len,const unsigned char *bin,int bytes,int flag)
 {
     int charcount = 0;
-    const char *start = dst;		// remember where the start of the string is
+    const char *start = dst;            // remember where the start of the string is
     const char *fmt = (flag & NSRL_HEXBUF_UPPERCASE) ? "%02X" : "%02x";
 
     if(hexcharvals[0]==-1){
-	/* Need to initialize this */
-	for(int i=0;i<256;i++){
-	    hexcharvals[i] = 0;
-	}
-	for(int i=0;i<10;i++){
-	    hexcharvals['0'+i] = i;
-	}
-	for(int i=10;i<16;i++){
-	    hexcharvals['A'+i-10] = i;
-	    hexcharvals['a'+i-10] = i;
-	}
+        /* Need to initialize this */
+        for(int i=0;i<256;i++){
+            hexcharvals[i] = 0;
+        }
+        for(int i=0;i<10;i++){
+            hexcharvals['0'+i] = i;
+        }
+        for(int i=10;i<16;i++){
+            hexcharvals['A'+i-10] = i;
+            hexcharvals['a'+i-10] = i;
+        }
     }
 
-    *dst = 0;				// begin with null termination
+    *dst = 0;                           // begin with null termination
     while(bytes>0 && dst_len > 3){
-	sprintf(dst,fmt,*bin); // convert the next byte
-	dst += 2;
-	bin += 1;
-	dst_len -= 2;
-	bytes--;
-	charcount++;			// how many characters
-	
-	if((flag & NSRL_HEXBUF_SPACE2) ||
-	   ((flag & NSRL_HEXBUF_SPACE4) && charcount%2==0))
-	    *dst++ = ' ';
-	    *dst   = '\000';
-	    dst_len -= 1;
+        sprintf(dst,fmt,*bin); // convert the next byte
+        dst += 2;
+        bin += 1;
+        dst_len -= 2;
+        bytes--;
+        charcount++;                    // how many characters
+        
+        if((flag & NSRL_HEXBUF_SPACE2) ||
+           ((flag & NSRL_HEXBUF_SPACE4) && charcount%2==0))
+            *dst++ = ' ';
+            *dst   = '\000';
+            dst_len -= 1;
     }
-    return start;			// return the start
+    return start;                       // return the start
 }
 
 
 std::ostream & operator <<(std::ostream &os,const sbuf_t &t){
-	char hex[17];
-	hexbuf(hex,sizeof(hex),t.buf,8,0);
-	os << "sbuf[page_number="   << t.page_number
-	   << " pos0=" << t.pos0 << " " << "buf[0..8]=0x" << hex
-	   << " bufsize=" << t.bufsize << " pagesize=" << t.pagesize << "]";
-	return os;
+        char hex[17];
+        hexbuf(hex,sizeof(hex),t.buf,8,0);
+        os << "sbuf[page_number="   << t.page_number
+           << " pos0=" << t.pos0 << " " << "buf[0..8]=0x" << hex
+           << " bufsize=" << t.bufsize << " pagesize=" << t.pagesize << "]";
+        return os;
     }
 
 /**

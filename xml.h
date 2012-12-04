@@ -1,3 +1,4 @@
+/* -*- mode: C++; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
  * Simson's XML output class.
  * Include this AFTER your config file with the HAVE statements.
@@ -67,14 +68,14 @@ private:
     /*** neither copying nor assignment is implemented ***
      *** We do this by making them private constructors that throw exceptions. ***/
     class not_impl: public std::exception {
-	virtual const char *what() const throw() {
-	    return "copying feature_recorder objects is not implemented.";
-	}
+        virtual const char *what() const throw() {
+            return "copying feature_recorder objects is not implemented.";
+        }
     };
     xml(const xml &fr) __attribute__((__noreturn__)):
-	M(),outf(),out(),tags(),tag_stack(),tempfilename(),tempfile_template(),t0(),
-	make_dtd(),outfilename(),oneline(){
-	throw new not_impl();
+        M(),outf(),out(),tags(),tag_stack(),tempfilename(),tempfile_template(),t0(),
+        make_dtd(),outfilename(),oneline(){
+        throw new not_impl();
     }
     const xml &operator=(const xml &x){ throw new not_impl(); }
     /****************************************************************/
@@ -87,13 +88,13 @@ public:
 private:
 
 #ifdef HAVE_PTHREAD
-    pthread_mutex_t M;			// mutext protecting out
+    pthread_mutex_t M;                  // mutext protecting out
 #else
-    int M;				// placeholder
+    int M;                              // placeholder
 #endif
     std::fstream outf;
-    std::ostream *out;			// where it is being written; defaulst to stdout
-    stringset tags;			// XML tags
+    std::ostream *out;                  // where it is being written; defaulst to stdout
+    stringset tags;                     // XML tags
     std::stack<std::string>tag_stack;
     std::string  tempfilename;
     std::string  tempfile_template;
@@ -103,30 +104,30 @@ private:
     void  write_doctype(std::fstream &out);
     void  write_dtd();
     void  verify_tag(std::string tag);
-    void  spaces();			// print spaces corresponding to tag stack
-    static std::string xml_PRId64;	// for compiler bug
-    static std::string xml_PRIu64;	// for compiler bug
+    void  spaces();                     // print spaces corresponding to tag stack
+    static std::string xml_PRId64;      // for compiler bug
+    static std::string xml_PRIu64;      // for compiler bug
     bool oneline;
 public:
     static std::string make_command_line(int argc,char * const *argv){
-	std::string command_line;
-	for(int i=0;i<argc;i++){
-	    if(i>0) command_line.push_back(' ');
-	    command_line.append(argv[i]);
-	}
-	return command_line;
+        std::string command_line;
+        for(int i=0;i<argc;i++){
+            if(i>0) command_line.push_back(' ');
+            command_line.append(argv[i]);
+        }
+        return command_line;
     }
 
 
     class existing {
     public:;
-	tagmap_t    *tagmap;
-	std::string *tagid;
-	const std::string *attrib;
-	stringset *tagid_set;
+        tagmap_t    *tagmap;
+        std::string *tagid;
+        const std::string *attrib;
+        stringset *tagid_set;
     };
 
-    xml();					 // defaults to stdout
+    xml();                                       // defaults to stdout
     xml(const std::string &outfilename,bool makeDTD); // write to a file, optionally making a DTD
     xml(const std::string &outfilename,class existing &e); // open an existing file, for appending
     virtual ~xml(){};
@@ -144,7 +145,7 @@ public:
      * @param tagid   - if a tagid is provided, fill tagid_set with all of the tags seen.
      */
     void open_existing(tagmap_t *tagmap,std::string *tagid,const std::string *attrib,tagid_set_t *tagid_set);
-    void close();			// writes the output to the file
+    void close();                       // writes the output to the file
 
     void flush(){outf.flush();}
     void tagout( const std::string &tag,const std::string &attribute);
@@ -156,22 +157,22 @@ public:
 
     // writes a std::string as parsed data
     void printf(const char *fmt,...) __attribute__((format(printf, 2, 3))); // "2" because this is "1"
-    void pop();	// close the tag
+    void pop(); // close the tag
 
     void add_DFXML_build_environment();
     static void cpuid(uint32_t op, unsigned long *eax, unsigned long *ebx,unsigned long *ecx, unsigned long *edx);
     void add_cpuid();
     void add_DFXML_execution_environment(const std::string &command_line);
     void add_DFXML_creator(const std::string &program,const std::string &version,
-			   const std::string &svn_r,
-			   const std::string &command_line){
-	push("creator","version='1.0'");
-	xmlout("program",program);
-	xmlout("version",version);
-	if(svn_r.size()>0) xmlout("svn_version",svn_r);
-	add_DFXML_build_environment();
-	add_DFXML_execution_environment(command_line);
-	pop();			// creator
+                           const std::string &svn_r,
+                           const std::string &command_line){
+        push("creator","version='1.0'");
+        xmlout("program",program);
+        xmlout("version",version);
+        if(svn_r.size()>0) xmlout("svn_version",svn_r);
+        add_DFXML_build_environment();
+        add_DFXML_execution_environment(command_line);
+        pop();                  // creator
     }
     void add_rusage();
     void set_oneline(bool v);
@@ -181,7 +182,7 @@ public:
      ********************************/
     void comment(const std::string &comment);
     void xmlprintf(const std::string &tag,const std::string &attribute,const char *fmt,...) 
-	__attribute__((format(printf, 4, 5))); // "4" because this is "1";
+        __attribute__((format(printf, 4, 5))); // "4" because this is "1";
     void xmlout( const std::string &tag,const std::string &value, const std::string &attribute, const bool escape_value);
 
     /* These all call xmlout or xmlprintf which already has locking, so these are all threadsafe! */
@@ -197,24 +198,24 @@ public:
 #endif
     void xmlout( const std::string &tag,const double value){ xmlprintf(tag,"","%f",value); }
     void xmlout( const std::string &tag,const struct timeval &ts) {
-	xmlprintf(tag,"","%d.%06d",(int)ts.tv_sec, (int)ts.tv_usec);
+        xmlprintf(tag,"","%d.%06d",(int)ts.tv_sec, (int)ts.tv_usec);
     }
     static std::string to8601(const struct timeval &ts) {
-	struct tm tm;
-	char buf[64];
+        struct tm tm;
+        char buf[64];
 #ifdef HAVE_LOCALTIME_R
-	localtime_r(&ts.tv_sec,&tm);
+        localtime_r(&ts.tv_sec,&tm);
 #else
-	time_t t = ts.tv_sec;
-	tm = *localtime(&t);
+        time_t t = ts.tv_sec;
+        tm = *localtime(&t);
 #endif
-	strftime(buf,sizeof(buf),"%Y-%m-%dT%H:%M:%S",&tm);
-	if(ts.tv_usec>0){
-	    int len = strlen(buf);
-	    snprintf(buf+len,sizeof(buf)-len,".%06d",(int)ts.tv_usec);
-	}
-	strcat(buf,"Z");
-	return std::string(buf);
+        strftime(buf,sizeof(buf),"%Y-%m-%dT%H:%M:%S",&tm);
+        if(ts.tv_usec>0){
+            int len = strlen(buf);
+            snprintf(buf+len,sizeof(buf)-len,".%06d",(int)ts.tv_usec);
+        }
+        strcat(buf,"Z");
+        return std::string(buf);
     }
 };
 #endif

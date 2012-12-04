@@ -1,3 +1,5 @@
+/* -*- mode: C++; c-basic-offset: 4; indent-tabs-mode: nil -*- */
+
 #ifndef BULK_EXTRACTOR_I_H
 #define BULK_EXTRACTOR_I_H
 
@@ -26,7 +28,7 @@
  * \li \c phase_shutdown - scanners are given a chance to shutdown
  */
 
-#ifndef	__cplusplus
+#ifndef __cplusplus
 #error bulk_extractor_i.h requires C++
 #endif
 
@@ -88,14 +90,14 @@ class histogram_def {
      */
 
     histogram_def(string feature_,string re_,string suffix_,uint32_t flags_=0):
-	feature(feature_),pattern(re_),require(),suffix(suffix_),flags(flags_){}
+        feature(feature_),pattern(re_),require(),suffix(suffix_),flags(flags_){}
     histogram_def(string feature_,string re_,string require_,string suffix_,uint32_t flags_=0):
-	feature(feature_),pattern(re_),require(require_),suffix(suffix_),flags(flags_){}
-    string feature;			/* feature file */
-    string pattern;			/* extract pattern; "" means use entire feature */
+        feature(feature_),pattern(re_),require(require_),suffix(suffix_),flags(flags_){}
+    string feature;                     /* feature file */
+    string pattern;                     /* extract pattern; "" means use entire feature */
     string require;
-    string suffix;			/* suffix to append; "" means "histogram" */
-    uint32_t flags;			// defined in histogram.h
+    string suffix;                      /* suffix to append; "" means "histogram" */
+    uint32_t flags;                     // defined in histogram.h
 };
 
 typedef  set<histogram_def> histograms_t;
@@ -107,7 +109,7 @@ inline bool operator <(class histogram_def h1,class histogram_def h2)  {
     if (h1.pattern>h2.pattern) return false;
     if (h1.suffix<h2.suffix) return true;
     if (h1.suffix>h2.suffix) return false;
-    return false;			/* equal */
+    return false;                       /* equal */
 };
 
 
@@ -118,7 +120,7 @@ inline bool operator !=(class histogram_def h1,class histogram_def h2)  {
 class packet_info {
 public:
     packet_info(const struct timeval &ts_,const uint8_t *data_,unsigned int caplen_,uint32_t vlan_):
-	ts(ts_),data(data_),caplen(caplen_),family(),vlan(vlan_){}
+        ts(ts_),data(data_),caplen(caplen_),family(),vlan(vlan_){}
     const struct timeval &ts;
     const uint8_t *data;
     uint32_t caplen;
@@ -134,37 +136,37 @@ typedef void packet_callback_t(void *user,const packet_info &pi);
 class scanner_info {
 private:
     class not_impl: public exception {
-	virtual const char *what() const throw() {
-	    return "copying feature_recorder objects is not implemented.";
-	}
+        virtual const char *what() const throw() {
+            return "copying feature_recorder objects is not implemented.";
+        }
     };
     scanner_info(const scanner_info &i) __attribute__((__noreturn__))
     :si_version(),name(),author(),description(),url(),
-					scanner_version(),flags(),feature_names(),histogram_defs(),
-					packet_user(),packet_cb(){
-	throw new not_impl();}
+                                        scanner_version(),flags(),feature_names(),histogram_defs(),
+                                        packet_user(),packet_cb(){
+        throw new not_impl();}
     ;
     const scanner_info &operator=(const scanner_info &i){ throw new not_impl();}
  public:
-    static const int SCANNER_DISABLED=0x01;		/* v1: enabled by default */
-    static const int SCANNER_NO_USAGE=0x02;		/* v1: do not show scanner in usage */
-    static const int SCANNER_NO_ALL  =0x04;		// v2: do not enable with -eALL
+    static const int SCANNER_DISABLED=0x01;             /* v1: enabled by default */
+    static const int SCANNER_NO_USAGE=0x02;             /* v1: do not show scanner in usage */
+    static const int SCANNER_NO_ALL  =0x04;             // v2: do not enable with -eALL
     static const int CURRENT_SI_VERSION=2;
 
     scanner_info():si_version(CURRENT_SI_VERSION),
-		   name(),author(),description(),url(),scanner_version(),flags(0),feature_names(),
-		   histogram_defs(),packet_user(),packet_cb(){}
-    int		si_version;		// version number for this structure
-    string	name;			// v1: scanner name
-    string	author;			// v1: who wrote me?
-    string	description;		// v1: what do I do?
-    string	url;			// v1: where I come from
-    string	scanner_version;	// v1: version for the scanner
-    uint64_t	flags;			// v1: flags
-    set<string> feature_names;		// v1: features I need
-    histograms_t histogram_defs;	// v1: histogram definition info
-    void	*packet_user;		// v2: user data provided to packet_cb
-    packet_callback_t *packet_cb;	// v2: packet handler, or NULL if not present.
+                   name(),author(),description(),url(),scanner_version(),flags(0),feature_names(),
+                   histogram_defs(),packet_user(),packet_cb(){}
+    int         si_version;             // version number for this structure
+    string      name;                   // v1: scanner name
+    string      author;                 // v1: who wrote me?
+    string      description;            // v1: what do I do?
+    string      url;                    // v1: where I come from
+    string      scanner_version;        // v1: version for the scanner
+    uint64_t    flags;                  // v1: flags
+    set<string> feature_names;          // v1: features I need
+    histograms_t histogram_defs;        // v1: histogram definition info
+    void        *packet_user;           // v2: user data provided to packet_cb
+    packet_callback_t *packet_cb;       // v2: packet handler, or NULL if not present.
 };
 
 #include <map>
@@ -178,27 +180,27 @@ class scanner_params {
 
     typedef std::map<string,string> PrintOptions;
     static print_mode_t getPrintMode(const PrintOptions &po){
-	PrintOptions::const_iterator p = po.find("print_mode_t");
-	if(p != po.end()){
-	    if(p->second=="MODE_NONE") return MODE_NONE;
-	    if(p->second=="MODE_HEX") return MODE_HEX;
-	    if(p->second=="MODE_RAW") return MODE_RAW;
-	    if(p->second=="MODE_HTTP") return MODE_HTTP;
-	}
-	return MODE_NONE;
+        PrintOptions::const_iterator p = po.find("print_mode_t");
+        if(p != po.end()){
+            if(p->second=="MODE_NONE") return MODE_NONE;
+            if(p->second=="MODE_HEX") return MODE_HEX;
+            if(p->second=="MODE_RAW") return MODE_RAW;
+            if(p->second=="MODE_HTTP") return MODE_HTTP;
+        }
+        return MODE_NONE;
     }
     static void setPrintMode(PrintOptions &po,int mode){
-	switch(mode){
-	default:
-	case MODE_NONE:po["print_mode_t"]="MODE_NONE";return;
-	case MODE_HEX:po["print_mode_t"]="MODE_HEX";return;
-	case MODE_RAW:po["print_mode_t"]="MODE_RAW";return;
-	case MODE_HTTP:po["print_mode_t"]="MODE_HTTP";return;
-	}
+        switch(mode){
+        default:
+        case MODE_NONE:po["print_mode_t"]="MODE_NONE";return;
+        case MODE_HEX:po["print_mode_t"]="MODE_HEX";return;
+        case MODE_RAW:po["print_mode_t"]="MODE_RAW";return;
+        case MODE_HTTP:po["print_mode_t"]="MODE_HTTP";return;
+        }
     }
 
     typedef enum {none=-1,startup=0,scan=1,shutdown=2} phase_t ;
-    static PrintOptions no_options;	// in common.cpp
+    static PrintOptions no_options;     // in common.cpp
 
     /********************
      *** CONSTRUCTORS ***
@@ -206,46 +208,46 @@ class scanner_params {
 
     /* A scanner params with all of the instance variables */
     scanner_params(phase_t phase_,const sbuf_t &sbuf_,class feature_recorder_set &fs_,
-		   PrintOptions &print_options_):
-	sp_version(CURRENT_SP_VERSION),
-	phase(phase_),sbuf(sbuf_),fs(fs_),depth(0),print_options(print_options_),info(0),sbufxml(0){
+                   PrintOptions &print_options_):
+        sp_version(CURRENT_SP_VERSION),
+        phase(phase_),sbuf(sbuf_),fs(fs_),depth(0),print_options(print_options_),info(0),sbufxml(0){
     }
 
     /* A scanner params with no print options*/
     scanner_params(phase_t phase_,const sbuf_t &sbuf_,class feature_recorder_set &fs_):
-	sp_version(CURRENT_SP_VERSION),
-	phase(phase_),sbuf(sbuf_),fs(fs_),depth(0),print_options(no_options),info(0),sbufxml(0){
+        sp_version(CURRENT_SP_VERSION),
+        phase(phase_),sbuf(sbuf_),fs(fs_),depth(0),print_options(no_options),info(0),sbufxml(0){
     }
 
     /* A scanner params with no print options but xmlstream */
     scanner_params(phase_t phase_,const sbuf_t &sbuf_,class feature_recorder_set &fs_,std::stringstream *xmladd):
-	sp_version(CURRENT_SP_VERSION),
-	phase(phase_),sbuf(sbuf_),fs(fs_),depth(0),print_options(no_options),info(0),sbufxml(xmladd){
+        sp_version(CURRENT_SP_VERSION),
+        phase(phase_),sbuf(sbuf_),fs(fs_),depth(0),print_options(no_options),info(0),sbufxml(xmladd){
     }
 
     /** Construct a scanner_params for recursion from an existing sp and a new sbuf.
      * Defaults to phase1
      */
     scanner_params(const scanner_params &sp_existing,const sbuf_t &sbuf_new):
-	sp_version(CURRENT_SP_VERSION),phase(sp_existing.phase),
-	sbuf(sbuf_new),fs(sp_existing.fs),depth(sp_existing.depth+1),
-	print_options(sp_existing.print_options),info(0),sbufxml(0){
-	assert(sp_existing.sp_version==CURRENT_SP_VERSION);
+        sp_version(CURRENT_SP_VERSION),phase(sp_existing.phase),
+        sbuf(sbuf_new),fs(sp_existing.fs),depth(sp_existing.depth+1),
+        print_options(sp_existing.print_options),info(0),sbufxml(0){
+        assert(sp_existing.sp_version==CURRENT_SP_VERSION);
     };
 
     /**************************
      *** INSTANCE VARIABLES ***
      **************************/
 
-    int      sp_version;		/* version number of this structure */
-    phase_t  phase;			/* v1: 0=startup, 1=normal, 2=shutdown (changed to phase_t in v1.3) */
-    const sbuf_t &sbuf;			/* v1: what to scan */
-    class feature_recorder_set &fs;	/* v1: where to put the results*/
-    uint32_t   depth;			/* v1: how far down are we? */
+    int      sp_version;                /* version number of this structure */
+    phase_t  phase;                     /* v1: 0=startup, 1=normal, 2=shutdown (changed to phase_t in v1.3) */
+    const sbuf_t &sbuf;                 /* v1: what to scan */
+    class feature_recorder_set &fs;     /* v1: where to put the results*/
+    uint32_t   depth;                   /* v1: how far down are we? */
 
-    PrintOptions  &print_options;	/* v1: how to print */
-    scanner_info  *info;		/* v2: get parameters on startup; info's are stored in a the scanner_def vector */
-    std::stringstream *sbufxml;		/* v3: tags added to the sbuf's XML stream */
+    PrintOptions  &print_options;       /* v1: how to print */
+    scanner_info  *info;                /* v2: get parameters on startup; info's are stored in a the scanner_def vector */
+    std::stringstream *sbufxml;         /* v3: tags added to the sbuf's XML stream */
 };
 
 
@@ -264,8 +266,8 @@ class recursion_control_block {
  recursion_control_block(process_t *callback_,string partName_,bool raf):
     callback(callback_),partName(partName_),returnAfterFound(raf){}
     process_t *callback;
-    string partName;		/* eg "ZIP", "GZIP" */
-    bool returnAfterFound;	/* only run once */
+    string partName;            /* eg "ZIP", "GZIP" */
+    bool returnAfterFound;      /* only run once */
 };
     
 /* plugin.cpp. This will become a class...  */
@@ -273,30 +275,30 @@ class scanner_def {
 public:;
     static uint32_t max_depth;
     scanner_def():scanner(0),enabled(false),info(),pathPrefix(){};
-    scanner_t  *scanner;		// pointer to the primary entry point
-    bool	enabled;		// is enabled?
+    scanner_t  *scanner;                // pointer to the primary entry point
+    bool        enabled;                // is enabled?
     scanner_info info;
-    string	pathPrefix;		/* path prefix for recursive scanners */
+    string      pathPrefix;             /* path prefix for recursive scanners */
 };
 void load_scanner(scanner_t scanner);
-void load_scanners(scanner_t * const *scanners);		// load the scan_ plugins
-void load_scanner_directory(const string &dirname);		// load the scan_ plugins
+void load_scanners(scanner_t * const *scanners);                // load the scan_ plugins
+void load_scanner_directory(const string &dirname);             // load the scan_ plugins
 typedef vector<scanner_def *> scanner_vector;
-extern scanner_vector current_scanners;				// current scanners
+extern scanner_vector current_scanners;                         // current scanners
 void enable_alert_recorder(feature_file_names_t &feature_file_names);
 void enable_feature_recorders(feature_file_names_t &feature_file_names);
 // print info about the scanners:
 void info_scanners(bool detailed,scanner_t * const *scanners_builtin,const char enable_opt,const char disable_opt);
 void scanners_enable(const std::string &name); // saves a command to enable this scanner
-void scanners_enable_all();		       // enable all of them
+void scanners_enable_all();                    // enable all of them
 void scanners_disable(const std::string &name); // saves a command to disable this scanner
-void scanners_disable_all();			// saves a command to disable all
-void scanners_process_commands();		// process the saved commands
+void scanners_disable_all();                    // saves a command to disable all
+void scanners_process_commands();               // process the saved commands
 
 /* plugin.cpp */
 void phase_shutdown(feature_recorder_set &fs, xml &xreport);
 void phase_histogram(feature_recorder_set &fs, xml &xreport);
-void process_sbuf(const class scanner_params &sp);				/* process for feature extraction */
+void process_sbuf(const class scanner_params &sp);                              /* process for feature extraction */
 void process_packet_info(const packet_info &pi);
 
 
@@ -308,10 +310,10 @@ inline std::string utos(uint16_t i){ std::stringstream ss; ss << i;return ss.str
 inline std::string safe_utf16to8(std::wstring s){ // needs to be cleaned up
     std::string utf8_line;
     try {
-	utf8::utf16to8(s.begin(),s.end(),back_inserter(utf8_line));
+        utf8::utf16to8(s.begin(),s.end(),back_inserter(utf8_line));
     } catch(utf8::invalid_utf16){
-	/* Exception thrown: bad UTF16 encoding */
-	utf8_line = "";
+        /* Exception thrown: bad UTF16 encoding */
+        utf8_line = "";
     }
     return utf8_line;
 }

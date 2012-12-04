@@ -1,4 +1,7 @@
 # http://www.gnu.org/software/automake
+*~
+*.o
+*.so
 
 Makefile.in
 

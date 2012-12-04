@@ -1,3 +1,4 @@
+/* -*- mode: C++; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
  * beregex.h:
  * 
@@ -27,9 +28,9 @@ private:
     static const char *version();
     static bool is_regex(const std::string &str);
 
-    std::string  pat;		   /* our pattern */
+    std::string  pat;              /* our pattern */
     int     flags;
-    void   *nreg_;		// would be regex_t *, but that's in regex.h which is included in beregex.c
+    void   *nreg_;              // would be regex_t *, but that's in regex.h which is included in beregex.c
     beregex(const beregex &that);
     beregex(std::string pat_,int flags_);
     ~beregex();
@@ -51,24 +52,24 @@ typedef std::vector<beregex *> beregex_vector;
  */
 class regex_list {
  public:
-    std::set<std::string>literal_strings;			/* static strings */
+    std::set<std::string>literal_strings;                       /* static strings */
     std::vector<beregex *> patterns;
     regex_list():literal_strings(),patterns(){}
 
     size_t size(){
-	return literal_strings.size() + patterns.size();
+        return literal_strings.size() + patterns.size();
     }
     /**
      * Read a file; returns 0 if successful, -1 if failure.
      * @param fname - the file to read.
      */
     ~regex_list(){
-	for(std::vector<beregex *>::iterator it=patterns.begin(); it != patterns.end(); it++){
-	    delete *it;
-	}
+        for(std::vector<beregex *>::iterator it=patterns.begin(); it != patterns.end(); it++){
+            delete *it;
+        }
     }
     void add_regex(const std::string &pat){
-	patterns.push_back(new beregex(pat,0));
+        patterns.push_back(new beregex(pat,0));
     }
     int readfile(std::string fname);
     /** check() is threadsafe. */

@@ -1,3 +1,4 @@
+/* -*- mode: C++; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /**
  * unicode_escape.cpp:
  * Escape unicode that is not valid.
@@ -78,13 +79,13 @@ bool valid_utf8codepoint(uint32_t unichar)
 {
     // Check for invalid characters in the bmp
     switch(unichar){
-    case 0xfffe: return false;		// reversed BOM
+    case 0xfffe: return false;          // reversed BOM
     case 0xffff: return false;
     default:
-	break;
+        break;
     }
     if(unichar >= 0xd800 && unichar <=0xdfff) return false; // high and low surrogates
-    if(unichar < 0x10000) return true;	// looks like it is in the BMP
+    if(unichar < 0x10000) return true;  // looks like it is in the BMP
 
     // check some regions outside the bmp
 
@@ -92,7 +93,7 @@ bool valid_utf8codepoint(uint32_t unichar)
     if(unichar > 0x13fff && unichar < 0x16000) return false;
     if(unichar > 0x16fff && unichar < 0x1b000) return false;
     if(unichar > 0x1bfff && unichar < 0x1d000) return false;
-	
+        
     // Plane 2
     if(unichar > 0x2bfff && unichar < 0x2f000) return false;
     
@@ -100,9 +101,9 @@ bool valid_utf8codepoint(uint32_t unichar)
     if(unichar >= 0x30000 && unichar < 0xdffff) return false;
 
     // Above Plane 16 is invalid
-    if(unichar > 0x10FFFF) return false;	// above plane 16?
+    if(unichar > 0x10FFFF) return false;        // above plane 16?
     
-    return true;			// must be valid
+    return true;                        // must be valid
 }
 
 /**
@@ -122,101 +123,101 @@ std::string validateOrEscapeUTF8(const std::string &input, bool escape_bad_utf8,
     // 
     // skip the validation if not escaping and not DEBUG_PEDANTIC
     if (escape_bad_utf8==false && escape_backslash==false && ((debug & DEBUG_PEDANTIC) == 0)){
-	return input;
+        return input;
     }
-	
+        
     // validate or escape input
     std::string output;
     for(std::string::size_type i =0; i< input.length(); ) {
-	uint8_t ch = (uint8_t)input.at(i);
-	
-	// utf8 1 byte prefix (0xxx xxxx)
-	if((ch & 0x80)==0x00){		// 00 .. 0x7f
-	    if(ch=='\\' && escape_backslash){	// escape the escape character as \x92
-		output += hexesc(ch);
-		i++;
-		continue;
-	    }
+        uint8_t ch = (uint8_t)input.at(i);
+        
+        // utf8 1 byte prefix (0xxx xxxx)
+        if((ch & 0x80)==0x00){          // 00 .. 0x7f
+            if(ch=='\\' && escape_backslash){   // escape the escape character as \x92
+                output += hexesc(ch);
+                i++;
+                continue;
+            }
 
-	    if( ch < ' '){		// not printable are escaped
-		output += hexesc(ch);
-		i++;
-		continue;
-	    }
-	    output += ch;		// printable is not escaped
-	    i++;
-	    continue;
-	}
+            if( ch < ' '){              // not printable are escaped
+                output += hexesc(ch);
+                i++;
+                continue;
+            }
+            output += ch;               // printable is not escaped
+            i++;
+            continue;
+        }
 
-	// utf8 2 bytes  (110x xxxx) prefix
-	if(((ch & 0xe0)==0xc0)  // 2-byte prefix
-	   && (i+1 < input.length())
-	   && utf8cont((uint8_t)input.at(i+1))){
-	    uint32_t unichar = (((uint8_t)input.at(i) & 0x1f) << 6) | (((uint8_t)input.at(i+1) & 0x3f));
+        // utf8 2 bytes  (110x xxxx) prefix
+        if(((ch & 0xe0)==0xc0)  // 2-byte prefix
+           && (i+1 < input.length())
+           && utf8cont((uint8_t)input.at(i+1))){
+            uint32_t unichar = (((uint8_t)input.at(i) & 0x1f) << 6) | (((uint8_t)input.at(i+1) & 0x3f));
 
-	    // check for valid 2-byte encoding
-	    if(valid_utf8codepoint(unichar)
-	       && ((uint8_t)input.at(i)!=0xc0)
-	       && (unichar >= 0x80)){ 
-		output += (uint8_t)input.at(i++);	// byte1
-		output += (uint8_t)input.at(i++);	// byte2
-		continue;
-	    }
-	}
-		
-	// utf8 3 bytes (1110 xxxx prefix)
-	if(((ch & 0xf0) == 0xe0)
-	   && (i+2 < input.length())
-	   && utf8cont((uint8_t)input.at(i+1))
-	   && utf8cont((uint8_t)input.at(i+2))){
-	    uint32_t unichar = (((uint8_t)input.at(i) & 0x0f) << 12)
-		| (((uint8_t)input.at(i+1) & 0x3f) << 6)
-		| (((uint8_t)input.at(i+2) & 0x3f));
-	    
+            // check for valid 2-byte encoding
+            if(valid_utf8codepoint(unichar)
+               && ((uint8_t)input.at(i)!=0xc0)
+               && (unichar >= 0x80)){ 
+                output += (uint8_t)input.at(i++);       // byte1
+                output += (uint8_t)input.at(i++);       // byte2
+                continue;
+            }
+        }
+                
+        // utf8 3 bytes (1110 xxxx prefix)
+        if(((ch & 0xf0) == 0xe0)
+           && (i+2 < input.length())
+           && utf8cont((uint8_t)input.at(i+1))
+           && utf8cont((uint8_t)input.at(i+2))){
+            uint32_t unichar = (((uint8_t)input.at(i) & 0x0f) << 12)
+                | (((uint8_t)input.at(i+1) & 0x3f) << 6)
+                | (((uint8_t)input.at(i+2) & 0x3f));
+            
             // check for a valid 3-byte code point
-	    if(valid_utf8codepoint(unichar)
-	       && unichar>=0x800){                     
-		output += (uint8_t)input.at(i++);	// byte1
-		output += (uint8_t)input.at(i++);	// byte2
-		output += (uint8_t)input.at(i++);	// byte3
-		continue;
-	    }
-	}
-	    
-	// utf8 4 bytes (1111 0xxx prefix)
-	if((( ch & 0xf8) == 0xf0)
-	   && (i+3 < input.length())
-	   && utf8cont((uint8_t)input.at(i+1))
-	   && utf8cont((uint8_t)input.at(i+2))
-	   && utf8cont((uint8_t)input.at(i+3))){
-	    uint32_t unichar =( (((uint8_t)input.at(i) & 0x07) << 18)
-				|(((uint8_t)input.at(i+1) & 0x3f) << 12)
-				|(((uint8_t)input.at(i+2) & 0x3f) <<  6)
-				|(((uint8_t)input.at(i+3) & 0x3f)));
+            if(valid_utf8codepoint(unichar)
+               && unichar>=0x800){                     
+                output += (uint8_t)input.at(i++);       // byte1
+                output += (uint8_t)input.at(i++);       // byte2
+                output += (uint8_t)input.at(i++);       // byte3
+                continue;
+            }
+        }
+            
+        // utf8 4 bytes (1111 0xxx prefix)
+        if((( ch & 0xf8) == 0xf0)
+           && (i+3 < input.length())
+           && utf8cont((uint8_t)input.at(i+1))
+           && utf8cont((uint8_t)input.at(i+2))
+           && utf8cont((uint8_t)input.at(i+3))){
+            uint32_t unichar =( (((uint8_t)input.at(i) & 0x07) << 18)
+                                |(((uint8_t)input.at(i+1) & 0x3f) << 12)
+                                |(((uint8_t)input.at(i+2) & 0x3f) <<  6)
+                                |(((uint8_t)input.at(i+3) & 0x3f)));
 
-	    if(valid_utf8codepoint(unichar) && unichar>=0x1000000){
-		output += (uint8_t)input.at(i++);	// byte1
-		output += (uint8_t)input.at(i++);	// byte2
-		output += (uint8_t)input.at(i++);	// byte3
-		output += (uint8_t)input.at(i++);	// byte4
-		continue;
-	    }
-	}
+            if(valid_utf8codepoint(unichar) && unichar>=0x1000000){
+                output += (uint8_t)input.at(i++);       // byte1
+                output += (uint8_t)input.at(i++);       // byte2
+                output += (uint8_t)input.at(i++);       // byte3
+                output += (uint8_t)input.at(i++);       // byte4
+                continue;
+            }
+        }
 
         if (escape_bad_utf8) {
-	    // Just escape the next byte and carry on
-	    output += hexesc((uint8_t)input.at(i++));
+            // Just escape the next byte and carry on
+            output += hexesc((uint8_t)input.at(i++));
         } else {
             // fatal if we are debug pedantic, otherwise just ignore
-	    // note: we shouldn't be here anyway, since if we are not escaping and we are not
-	    // pedantic we should have returned above
-	    if(debug & DEBUG_PEDANTIC){
-		std::ofstream os("bad_unicode.txt");
-		os << input << "\n";
-		os.close();
-		std::cerr << "INTERNAL ERROR: bad unicode stored in bad_unicode.txt\n";
-		assert(0);
-	    }
+            // note: we shouldn't be here anyway, since if we are not escaping and we are not
+            // pedantic we should have returned above
+            if(debug & DEBUG_PEDANTIC){
+                std::ofstream os("bad_unicode.txt");
+                os << input << "\n";
+                os.close();
+                std::cerr << "INTERNAL ERROR: bad unicode stored in bad_unicode.txt\n";
+                assert(0);
+            }
         }
     }
     return output;
@@ -227,7 +228,7 @@ std::string validateOrEscapeUTF8(const std::string &input, bool escape_bad_utf8,
 void show(const std::string &ugly)
 {
     for(size_t j=0;j<ugly.size();j++){
-	printf("%02X ",(unsigned char)ugly[j]);
+        printf("%02X ",(unsigned char)ugly[j]);
     }
 }
 
@@ -237,21 +238,21 @@ void check(const std::string &ugly,bool verbose)
     std::wstring utf16;
     /* Now check to make sure it is valid UTF8 */
     try {
-	utf8::utf8to16(res.begin(),res.end(),std::back_inserter(utf16));
-	if(verbose){
-	    show(ugly);
-	    printf(" successfully encodes as ");
-	    show(res);
-	    printf(" (\"%s\")\n",res.c_str());
-	}
+        utf8::utf8to16(res.begin(),res.end(),std::back_inserter(utf16));
+        if(verbose){
+            show(ugly);
+            printf(" successfully encodes as ");
+            show(res);
+            printf(" (\"%s\")\n",res.c_str());
+        }
     } catch(utf8::exception){
-	printf("utf8 error hex sequence: ");
-	show(ugly);
-	printf(" encoded as: ");
-	show(res);
-	printf("\n");
+        printf("utf8 error hex sequence: ");
+        show(ugly);
+        printf(" encoded as: ");
+        show(res);
+        printf("\n");
     } catch(std::exception){
-	std::cout << "other exception \n";
+        std::cout << "other exception \n";
     }
 }
 
@@ -262,16 +263,16 @@ void testfile(const char *fn)
     std::cout << "testing file " << fn << "\n";
     ifstream i(fn);
     if(i.is_open()){
-	string line;
-	getline(i,line);
-	std::cout << "line length: " << line.size() << "\n";
-	std::cout << "calling ValidateOrEscapeUTF8 to escape...\n";
-	string l2 = validateOrEscapeUTF8(line,true);
-	std::cout << "     length l2: " << l2.size() << "\n";
-	std::cout << "calling ValidateOrEscapeUTF8 to validate...\n";
-	validateOrEscapeUTF8(l2,false);
-	std::cout << "calling check...\n";
-	check(l2,false);
+        string line;
+        getline(i,line);
+        std::cout << "line length: " << line.size() << "\n";
+        std::cout << "calling ValidateOrEscapeUTF8 to escape...\n";
+        string l2 = validateOrEscapeUTF8(line,true);
+        std::cout << "     length l2: " << l2.size() << "\n";
+        std::cout << "calling ValidateOrEscapeUTF8 to validate...\n";
+        validateOrEscapeUTF8(l2,false);
+        std::cout << "calling check...\n";
+        check(l2,false);
     }
     std::cout << "done\n";
     exit(0);
@@ -283,11 +284,11 @@ int main(int argc,char **argv)
     std::cout << "Unicode Escape Regression Tester\n";
     int ch;
     while ((ch = getopt(argc,argv,"r:h")) != -1){
-	switch(ch) {
-	case 'r':
-	    testfile(optarg);
-	    break;
-	}
+        switch(ch) {
+        case 'r':
+            testfile(optarg);
+            break;
+        }
     }
 
 
@@ -298,29 +299,29 @@ int main(int argc,char **argv)
     check(std::string(buf,4),true);
 
     /* Runs 16 copies simultaneously... */
-    uint32_t max=0xFFFFFFFF;		// 2^32-1
+    uint32_t max=0xFFFFFFFF;            // 2^32-1
     for(uint64_t prefix=0;prefix<max;prefix+=0x10000000){
-	pid_t child = fork();
-	if(child==0){
-	    /* Try all 4-byte sequences in the prefix range...*/
-	    for(uint32_t k=0;k<=0x0FFFFFFF;k++){
-		uint32_t i=prefix+k;
-		std::string ugly((char *)&i,4);
-		check(ugly,false);
-		if((i & 0x00FFFFFF)==0x00FFFFFF){
-		    printf("pid=%d prefix=%x i=%x\n",getpid(),(uint32_t)prefix,(uint32_t)i);
-		    fflush(stdout);
-		}
-	    }
-	    exit(0);
-	}
-	printf("Launched PID %d\n",child);
-	fflush(stdout);
+        pid_t child = fork();
+        if(child==0){
+            /* Try all 4-byte sequences in the prefix range...*/
+            for(uint32_t k=0;k<=0x0FFFFFFF;k++){
+                uint32_t i=prefix+k;
+                std::string ugly((char *)&i,4);
+                check(ugly,false);
+                if((i & 0x00FFFFFF)==0x00FFFFFF){
+                    printf("pid=%d prefix=%x i=%x\n",getpid(),(uint32_t)prefix,(uint32_t)i);
+                    fflush(stdout);
+                }
+            }
+            exit(0);
+        }
+        printf("Launched PID %d\n",child);
+        fflush(stdout);
     }
     for(int i=0;i<16;i++){
-	int s=0;
-	pid_t p = wait(&s);
-	printf("pid %d finished with exit code %d\n",p,s);
+        int s=0;
+        pid_t p = wait(&s);
+        printf("pid %d finished with exit code %d\n",p,s);
     }
     std::cout << "done\n";
     exit(1);
@@ -328,8 +329,8 @@ int main(int argc,char **argv)
     /* Generic fuzzing. Try random attempts */
     std::string line;
     while(getline(std::cin,line)){
-	std::cout << validateOrEscapeUTF8(line,true) << "\n";
+        std::cout << validateOrEscapeUTF8(line,true) << "\n";
     }
-	
+        
 }
 #endif

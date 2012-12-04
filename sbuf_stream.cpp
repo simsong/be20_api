@@ -1,3 +1,4 @@
+/* -*- mode: C++; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 #include "config.h"
 #include "bulk_extractor_i.h"
 #include "sbuf_stream.h"

@@ -1,3 +1,4 @@
+/* -*- mode: C++; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 #ifndef UNICODE_ESCAPE_H
 #define UNICODE_ESCAPE_H
 

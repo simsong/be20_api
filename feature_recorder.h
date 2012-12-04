@@ -1,3 +1,5 @@
+/* -*- mode: C++; c-basic-offset: 4; indent-tabs-mode: nil -*- */
+
 #ifndef FEATURE_RECORDER_H
 #define FEATURE_RECORDER_H
 
@@ -48,20 +50,20 @@ using namespace std;
 class feature_recorder {
 private:
     uint32_t flags;
-    bool histogram_enabled;		/* do we automatically histogram? */
+    bool histogram_enabled;             /* do we automatically histogram? */
     /*** neither copying nor assignment is implemented                         ***
      *** We do this by making them private constructors that throw exceptions. ***/
     class not_impl: public exception {
-	virtual const char *what() const throw() {
-	    return "copying feature_recorder objects is not implemented.";
-	}
+        virtual const char *what() const throw() {
+            return "copying feature_recorder objects is not implemented.";
+        }
     };
     feature_recorder(const feature_recorder &fr) __attribute__((__noreturn__)) :
-	flags(0),histogram_enabled(false),
-	outdir(),name(),count(0),ios(),Mf(),Mr(),
-	stop_list_recorder(0),carved_set(),file_number(0),file_extension()
-	{
-	throw new not_impl();
+        flags(0),histogram_enabled(false),
+        outdir(),name(),count(0),ios(),Mf(),Mr(),
+        stop_list_recorder(0),carved_set(),file_number(0),file_extension()
+        {
+        throw new not_impl();
     }
     const feature_recorder &operator=(const feature_recorder &fr){ throw new not_impl(); }
     /****************************************************************/
@@ -75,19 +77,19 @@ public:
      * These flags control scanners.  Set them with set_flag().
      */
     /** Disable this recorder. */
-    static const int FLAG_DISABLED=0x01;	
+    static const int FLAG_DISABLED=0x01;        
     /** Do not write context. */
-    static const int FLAG_NO_CONTEXT=0x02;	
+    static const int FLAG_NO_CONTEXT=0x02;      
     /** Do not honor the stoplist/alertlist. */
-    static const int FLAG_NO_STOPLIST=0x04;	
+    static const int FLAG_NO_STOPLIST=0x04;     
     /** Do not honor the stoplist/alertlist. */
-    static const int FLAG_NO_ALERTLIST=0x04;	
+    static const int FLAG_NO_ALERTLIST=0x04;    
     /**
      * Normally feature recorders automatically quote non-UTF8 characters
      * with \x00 notation and quote "\" as \x5C. Specify FLAG_NO_QUOTE to
      * disable this behavior.
      */
-    static const int FLAG_NO_QUOTE=0x08;	// do not escape UTF8 codes
+    static const int FLAG_NO_QUOTE=0x08;        // do not escape UTF8 codes
 
     /**
      * Use this flag the feature recorder is sending UTF-8 XML.
@@ -97,17 +99,17 @@ public:
 
 
     /** @} */
-    static const int max_histogram_files = 10;	// don't make more than 10 files in low-memory conditions
+    static const int max_histogram_files = 10;  // don't make more than 10 files in low-memory conditions
     static const string histogram_file_header;
     static const string feature_file_header;
     static const string bulk_extractor_version_header;
-    static const uint8_t UTF8_BOM[3];	// UTF-8 byte order mark
+    static const uint8_t UTF8_BOM[3];   // UTF-8 byte order mark
     static const string BOM_EXPLAINATION; // what is this BOM thing? Put at the top of each file
     static uint32_t opt_max_context_size;
     static uint32_t opt_max_feature_size;
-    static size_t context_window;	// global option
-    static int64_t offset_add;		// added to every reported offset, for use with hadoop
-    static string banner_file;		// banner for top of every file
+    static size_t context_window;       // global option
+    static int64_t offset_add;          // added to every reported offset, for use with hadoop
+    static string banner_file;          // banner for top of every file
     static string extract_feature(const string &line);
 
     feature_recorder(string outdir,string name);
@@ -115,12 +117,12 @@ public:
 
     void set_flag(uint32_t flags_){flags|=flags_;}
 
-    string outdir;			// where output goes (could be static, I guess 
-    string name;			/* name of this feature recorder */
-    int64_t count;			/* number of records written */
-    std::fstream ios;			/* where features are written */
-    cppmutex Mf;			/* protects the file */
-    cppmutex Mr;			/* protects the redlist */
+    string outdir;                      // where output goes (could be static, I guess 
+    string name;                        /* name of this feature recorder */
+    int64_t count;                      /* number of records written */
+    std::fstream ios;                   /* where features are written */
+    cppmutex Mf;                        /* protects the file */
+    cppmutex Mr;                        /* protects the redlist */
 
     void   banner_stamp(std::ostream &os,const std::string &header); // stamp BOM, banner, and header
 
@@ -132,7 +134,7 @@ public:
 
     /* feature file management */
     void open();
-    void close();			
+    void close();                       
     void flush();
     void make_histogram(const class histogram_def &def);
     
@@ -170,9 +172,9 @@ public:
      * Carving writes the filename to the feature file; the context is the file's MD5
      * Automatically de-duplicates.
      */
-    std::set<md5_t>	carved_set;		/* set of MD5 hash codes of objects we've carved;  */
-    int64_t	file_number;		/* starts at 0; gets incremented by carve() */
-    string	file_extension;		/* includes "."; must be set by caller */
+    std::set<md5_t>     carved_set;             /* set of MD5 hash codes of objects we've carved;  */
+    int64_t     file_number;            /* starts at 0; gets incremented by carve() */
+    string      file_extension;         /* includes "."; must be set by caller */
     virtual void carve(const sbuf_t &sbuf,size_t pos,size_t len);
 
     /**
@@ -181,7 +183,7 @@ public:
      */
     virtual void write_tag(const pos0_t &pos0,size_t len,const string &tagName);
     virtual void write_tag(const sbuf_t &sbuf,const string &tagName){
-	write_tag(sbuf.pos0,sbuf.pagesize,tagName);
+        write_tag(sbuf.pos0,sbuf.pagesize,tagName);
     }
 
 };
