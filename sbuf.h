@@ -307,13 +307,13 @@ public:
         parent->add_child(*this);
     }
 
-    explicit sbuf_t(const sbuf_t &that_sbuf,size_t offset):
+    explicit sbuf_t(const sbuf_t &that_sbuf,size_t off):
         fd(0),should_unmap(false),should_free(false),should_close(false),
-        page_number(that_sbuf.page_number),pos0(that_sbuf.pos0+offset),
+        page_number(that_sbuf.page_number),pos0(that_sbuf.pos0+off),
         parent(that_sbuf.highest_parent()),children(0),
-        buf(that_sbuf.buf+offset),
-        bufsize(that_sbuf.bufsize > offset ? that_sbuf.bufsize-offset : 0),
-        pagesize(that_sbuf.pagesize > offset ? that_sbuf.pagesize-offset : 0){
+        buf(that_sbuf.buf+off),
+        bufsize(that_sbuf.bufsize > off ? that_sbuf.bufsize-off : 0),
+        pagesize(that_sbuf.pagesize > off ? that_sbuf.pagesize-off : 0){
     }
 
     /* Allocators */
@@ -341,15 +341,22 @@ public:
     /** Allocate from an existing sbuf.
      * The allocated buf MUST be freed before the source, since no copy is made...
      */
-    explicit sbuf_t(const sbuf_t &sbuf,size_t offset,size_t len):
+    explicit sbuf_t(const sbuf_t &sbuf,size_t off,size_t len):
         fd(0), should_unmap(false), should_free(false), should_close(false),
-        page_number(sbuf.page_number),pos0(sbuf.pos0+offset),
+        page_number(sbuf.page_number),pos0(sbuf.pos0+off),
         parent(sbuf.highest_parent()),
-        children(0), buf(sbuf.buf+offset),
-        bufsize(offset+len<sbuf.bufsize ? len : sbuf.bufsize-offset),
-        pagesize(offset+len<sbuf.bufsize ? len : sbuf.bufsize-offset){
+        children(0), buf(sbuf.buf+off),
+        bufsize(off+len<sbuf.bufsize ? len : sbuf.bufsize-off),
+        pagesize(off+len<sbuf.bufsize ? len : sbuf.bufsize-off){
         parent->add_child(*this);
     };
+
+    /** Find the offset of a byte */
+    size_t offset(const uint8_t *loc) const {
+        if(loc<buf) return 0;
+        if(loc>buf+bufsize) return bufsize;
+        return loc-buf;
+    }
 
     /**
      * the + operator returns a new sbuf that is i bytes in and, therefore, i bytes smaller.
@@ -363,8 +370,8 @@ public:
 
      *    (Because we won't return what's in the margin as page data.)
      */
-    sbuf_t operator +(size_t offset ) const {
-        return sbuf_t(*this,offset);
+    sbuf_t operator +(size_t off ) const {
+        return sbuf_t(*this,off);
     }
 
     virtual ~sbuf_t(){
@@ -562,10 +569,10 @@ public:
         return -1;
     }
 
-    string substr(size_t offset,size_t len) const; /* make a substring */
-    md5_t md5(size_t offset,size_t len) const;     /* compute the MD5 of a subset */
+    string substr(size_t loc,size_t len) const; /* make a substring */
+    md5_t md5(size_t loc,size_t len) const;     /* compute the MD5 of a subset */
     md5_t md5() const;                             // md5 of the whole object
-    bool is_constant(size_t offset,size_t len,uint8_t ch) const; // verify that it's constant
+    bool is_constant(size_t loc,size_t len,uint8_t ch) const; // verify that it's constant
     bool is_constant(uint8_t ch) const { return is_constant(0,this->pagesize,ch); }
 
     // Return a pointer to a structure contained within the sbuf if there is
@@ -587,8 +594,8 @@ public:
     void raw_dump(int fd,uint64_t start,uint64_t len) const; // writes to a raw file descriptor
     void hex_dump(std::ostream &os,uint64_t start,uint64_t len) const;
     void hex_dump(std::ostream &os) const; /* dump all */
-    ssize_t  write(int fd,size_t offset,size_t len) const; /* write to a file descriptor, returns # bytes written */
-    ssize_t  write(FILE *f,size_t offset,size_t len) const; /* write to a file descriptor, returns # bytes written */
+    ssize_t  write(int fd,size_t loc,size_t len) const; /* write to a file descriptor, returns # bytes written */
+    ssize_t  write(FILE *f,size_t loc,size_t len) const; /* write to a file descriptor, returns # bytes written */
 };
 
 std::ostream & operator <<(std::ostream &os,const sbuf_t &sbuf);

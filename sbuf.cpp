@@ -169,11 +169,11 @@ md5_t sbuf_t::md5() const
     return md5(0,pagesize);
 }
 
-bool sbuf_t::is_constant(size_t offset,size_t len,uint8_t ch) const // verify that it's constant
+bool sbuf_t::is_constant(size_t off,size_t len,uint8_t ch) const // verify that it's constant
 {
     while(len>0){
-        if(((*this)[offset])!=ch) return false;
-        offset++;
+        if(((*this)[off])!=ch) return false;
+        off++;
         len--;
     }
     return true;
@@ -273,8 +273,8 @@ void sbuf_t::getUTF8WithQuoting(size_t i, std::string &utf8_string) const {
     utf8_string = "";
 
     // read octets
-    for (size_t offset=i; offset<bufsize; offset++) {
-        uint8_t octet = get8u(offset);
+    for (size_t off=i; off<bufsize; off++) {
+        uint8_t octet = get8u(off);
 
         // stop before \0
         if (octet == 0) {
@@ -323,9 +323,9 @@ void sbuf_t::getUTF16(size_t i, std::wstring &utf16_string) const {
     utf16_string = std::wstring();
 
     // read the code units
-    size_t offset;
-    for (offset=i; offset<bufsize-1; offset += 2) {
-        uint16_t code_unit = get16u(offset);
+    size_t off;
+    for (off=i; off<bufsize-1; off += 2) {
+        uint16_t code_unit = get16u(off);
         //cout << "sbuf.cpp getUTF16 i: " << i << " code unit: " << code_unit << "\n";
 
         // stop before \U0000
@@ -372,9 +372,9 @@ void sbuf_t::getUTF16(size_t i, byte_order_t bo, std::wstring &utf16_string) con
     utf16_string = std::wstring();
 
     // read the code units
-    size_t offset;
-    for (offset=i; offset<bufsize-1; offset += 2) {
-        uint16_t code_unit = get16u(offset, bo);
+    size_t off;
+    for (off=i; off<bufsize-1; off += 2) {
+        uint16_t code_unit = get16u(off, bo);
         //cout << "sbuf.cpp getUTF16 i: " << i << " code unit: " << code_unit << "\n";
 
         // stop before \U0000
