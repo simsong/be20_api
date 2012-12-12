@@ -1,10 +1,21 @@
 /* -*- mode: C++; c-basic-offset: 4; indent-tabs-mode: nil -*- */
-#include "tcpflow.h"
+
+#include "config.h"
 
 #ifndef HAVE_LIBPCAP
+#include "pcap_fake.h"
+#include <string.h>
+#include <errno.h>
+#include <stdlib.h>
+#include <iostream>
 
 #ifdef WIN32
 #define SET_BINMODE(f) _setmode(_fileno(f), _O_BINARY)
+#endif
+
+#ifndef DEBUG
+    extern int debug;
+#define DEBUG(x) if (debug>x) printf
 #endif
 
 /* pcap_fake's struct pcap just keeps track of the file that was opened and

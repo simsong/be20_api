@@ -4,6 +4,11 @@
  * A fake libpcap implementation that can only read files without a filter.
  */
 
+#include <sys/cdefs.h>
+#include <stdint.h>
+#include <sys/time.h>
+#include <stdio.h>
+
 __BEGIN_DECLS
 
 /*
