@@ -41,3 +41,7 @@ References:
  http://www.jwz.org/doc/tabs-vs-spaces.html
 
  http://slashdot.org/pollBooth.pl?qid=395&aid=-1
+
+ http://google-styleguide.googlecode.com/svn/trunk/cppguide.xml
+
+ http://www.python.org/dev/peps/pep-0008/#maximum-line-length
