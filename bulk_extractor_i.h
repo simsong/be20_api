@@ -119,8 +119,11 @@ inline bool operator !=(class histogram_def h1,class histogram_def h2)  {
 
 class packet_info {
 public:
+    // no-family constructor is kept for compatibility
     packet_info(const struct timeval &ts_,const uint8_t *data_,unsigned int caplen_,uint32_t vlan_):
         ts(ts_),data(data_),caplen(caplen_),family(),vlan(vlan_){}
+    packet_info(const struct timeval &ts_,const uint8_t *data_,unsigned int caplen_,uint32_t vlan_,const uint32_t family_):
+        ts(ts_),data(data_),caplen(caplen_),family(family_),vlan(vlan_){}
     const struct timeval &ts;
     const uint8_t *data;
     uint32_t caplen;
