@@ -239,6 +239,7 @@ private:
 private:
     /* The private structures keep track of memory management */
     int    fd;                          /* file this came from if mmapped file */
+public:;
     bool   should_unmap;                /* munmap buffer when done */
     bool   should_free;                 /* should buf be freed when this sbuf is deleted? */
     bool   should_close;                /* close(fd) when done. */
