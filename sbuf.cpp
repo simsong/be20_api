@@ -20,8 +20,15 @@ sbuf_t *sbuf_t::map_file(const std::string &fname,const pos0_t &pos0)
 {
     int fd = open(fname.c_str(),O_RDONLY,0);
     if(fd<0) return 0;          /* cannot open file */
-    return sbuf_t::map_file(fname,pos0,fd);
+    sbuf_t *sbuf = sbuf_t::map_file(fname,pos0,fd);
+    sbuf->should_close = true;          // be sure to close the file
+    return sbuf;
 }
+
+/* Map a file when we are given an open fd.
+ * The fd is not closed when the file is unmapped.
+ * If there is no mmap, just allocate space and read the file
+ */
 
 sbuf_t *sbuf_t::map_file(const std::string &fname,const pos0_t &pos0,int fd)
 {
@@ -35,12 +42,12 @@ sbuf_t *sbuf_t::map_file(const std::string &fname,const pos0_t &pos0,int fd)
     uint8_t *buf = (uint8_t *)mmap(0,st.st_size,PROT_READ,MAP_FILE|MAP_SHARED,fd,0);
     bool should_free  = false;
     bool should_unmap = true;
-    bool should_close = true;
 #else
     uint8_t *buf = (uint8_t *)malloc(st.st_size);
     if(buf==0){         /* malloc failed */
         return 0;
     }
+    lseek(fd,0,SEEK_SET);               // go to beginning of file
     if((size_t)read(fd,(void *)buf,st.st_size)!=st.st_size){
         free((void *)buf);              /* read failed */
         return 0;
@@ -49,7 +56,6 @@ sbuf_t *sbuf_t::map_file(const std::string &fname,const pos0_t &pos0,int fd)
     fd = 0;
     bool should_free = true;
     bool should_unmap = false;
-    bool should_close = false;
 #endif
     sbuf_t *sbuf = new sbuf_t(pos0,// set the filename followed by U+10001C in UTF-8
                               buf,
@@ -58,7 +64,7 @@ sbuf_t *sbuf_t::map_file(const std::string &fname,const pos0_t &pos0,int fd)
                               fd,
                               should_unmap,
                               should_free,
-                              should_close);
+                              false);   // the caller's job is to close
     return sbuf;
 }
 
