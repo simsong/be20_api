@@ -128,12 +128,14 @@ inline bool operator !=(class histogram_def h1,class histogram_def h2)  {
 class packet_info {
 public:
     packet_info(const struct timeval &ts_,const uint8_t *data_,unsigned int caplen_,uint32_t vlan_):
-        ts(ts_),data(data_),caplen(caplen_),family(),vlan(vlan_){}
+        ts(ts_),data(data_),caplen(caplen_),vlan(vlan_),family(){}
+    packet_info(const struct timeval &ts_,const uint8_t *data_,unsigned int caplen_,uint32_t vlan_,uint32_t family_):
+        ts(ts_),data(data_),caplen(caplen_),vlan(vlan_),family(family_){}
     const struct timeval &ts;
     const uint8_t *data;
     uint32_t caplen;
-    uint32_t family;
     uint32_t vlan;
+    uint32_t family;
 };
 typedef void scanner_t(const class scanner_params &sp,const class recursion_control_block &rcb);
 typedef void process_t(const class scanner_params &sp); 
