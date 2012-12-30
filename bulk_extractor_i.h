@@ -127,6 +127,7 @@ inline bool operator !=(class histogram_def h1,class histogram_def h2)  {
 
 class packet_info {
 public:
+    enum vlan_t {NO_VLAN=-1};
     packet_info(const struct timeval &ts_,const uint8_t *data_,unsigned int caplen_,uint32_t vlan_):
         ts(ts_),data(data_),caplen(caplen_),vlan(vlan_),family(){}
     packet_info(const struct timeval &ts_,const uint8_t *data_,unsigned int caplen_,uint32_t vlan_,uint32_t family_):
