@@ -23,6 +23,9 @@ hint: variable to 'current' or 'upstream' to push only the current branch.
 $ 
 
 Do this:
+$ git checkout -b tmp  ; git checkout master ; git merge tmp ; git branch -d tmp ; git push git@github.com:simsong/be13_api.git master
+
+Extended:
 
 $ git checkout -b tmp 
 Switched to a new branch 'tmp'
