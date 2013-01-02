@@ -515,9 +515,9 @@ void process_sbuf(const class scanner_params &sp)
 #endif
         }
         catch ( exception &e ) {
-            cerr << "Scanner  " << name
+            cerr << "Scanner: " << name
                  << " Exception: " << e.what()
-                 << " processing " << sp.sbuf.pos0 << "\n";
+                 << " processing " << sp.sbuf.pos0 << " bufsize=" << sp.sbuf.bufsize << "\n";
         }
     }
     fs.flush_all();
