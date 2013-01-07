@@ -49,30 +49,38 @@ typedef std::map<std::string,std::string>  be_config_t;
 extern be_config_t be_config;           // system configuration
 
 
+/* Network includes */
 
 /****************************************************************
  *** pcap.h --- If we don't have it, fake it. ---
  ***/
-#if defined(HAVE_LIBPCAP)
+#ifdef HAVE_NETINET_IP_H
+# include <netinet/ip.h>
+#endif
+#ifdef HAVE_NETINET_IF_ETHER_H
+# include <netinet/if_ether.h>
+#endif
+#ifdef HAVE_NET_ETHERNET_H
+# include <net/ethernet.h>		// for freebsd
+#endif
 
-/* pcap.h has redundant definitions */
+
+#if defined(HAVE_LIBPCAP)
 #  ifdef GNUC_HAS_DIAGNOSTIC_PRAGMA
 #    pragma GCC diagnostic ignored "-Wredundant-decls"
 #  endif
-
 #  ifdef HAVE_PCAP_PCAP_H
 #    include <pcap/pcap.h>
 #  else
 #    include <pcap.h>
 #  endif
-
 #  ifdef GNUC_HAS_DIAGNOSTIC_PRAGMA
 #    pragma GCC diagnostic warning "-Wredundant-decls"
 #  endif
-
 #else
 #  include "pcap_fake.h"
 #endif
+
 
 
 
@@ -125,19 +133,72 @@ inline bool operator !=(class histogram_def h1,class histogram_def h2)  {
     return h1.feature!=h2.feature || h1.pattern!=h2.pattern || h1.suffix!=h2.suffix;
 };
 
+/*
+ * The packet_info structure records packets after they are read from the pcap library.
+ * It preserves the original pcap information and information decoded from the MAC and
+ * VLAN (IEEE 802.1Q) layers.
+ *
+ * @param ts   - the actual packet time to use (adjusted)
+ * @param pcap_data - Original data offset point from pcap
+ * @param data - the actual packet data, minus the MAC layer
+ * @param datalen - How much data is available at the datalen pointer
+ * 
+ */
 class packet_info {
 public:
     enum vlan_t {NO_VLAN=-1};
-    packet_info(const struct timeval &ts_,const uint8_t *data_,unsigned int caplen_,uint32_t vlan_):
-        ts(ts_),data(data_),caplen(caplen_),vlan(vlan_),family(){}
-    packet_info(const struct timeval &ts_,const uint8_t *data_,unsigned int caplen_,uint32_t vlan_,uint32_t family_):
-        ts(ts_),data(data_),caplen(caplen_),vlan(vlan_),family(family_){}
-    const struct timeval &ts;
-    const uint8_t *data;
-    uint32_t caplen;
-    uint32_t vlan;
-    uint32_t family;
+    packet_info(const int dlt,const struct pcap_pkthdr *h,const u_char *d,
+                const struct timeval &ts_,const uint8_t *d2,size_t dl2):
+        pcap_dlt(dlt),pcap_hdr(h),pcap_data(d),ts(ts_),ip_data(d2),ip_datalen(dl2){}
+    packet_info(const int dlt,const struct pcap_pkthdr *h,const u_char *d):
+        pcap_dlt(dlt),pcap_hdr(h),pcap_data(d),ts(h->ts),ip_data(d),ip_datalen(h->caplen){}
+
+    const int    pcap_dlt;              // data link type; needed by libpcap, not provided
+    const struct pcap_pkthdr *pcap_hdr; // provided by libpcap
+    const u_char *pcap_data;            // provided by libpcap
+    const struct timeval &ts;           // possibly modified before packet_info created
+    const uint8_t * const ip_data;             // pointer to where ip data begins
+    const size_t ip_datalen;            // length of ip data
+
+    int   ip_version() const;                 // returns 4, 6 or 0
+    u_short ether_type() const;               // returns 0 if not IEEE802, otherwise returns ether_type
+    int     vlan() const; // returns NO_VLAN if not IEEE802 or not VLAN, othererwise VID
 };
+
+#ifdef DLT_IEEE802
+inline u_short packet_info::ether_type() const
+{
+    if(pcap_dlt==DLT_IEEE802 || pcap_dlt==DLT_EN10MB){
+        const struct ether_header *eth_header = (struct ether_header *) pcap_data;
+        return ntohs(eth_header->ether_type);
+    }
+    return 0;
+}
+#endif
+
+#ifdef ETHERTYPE_VLAN
+inline int packet_info::vlan() const
+{
+    if(ether_type()==ETHERTYPE_VLAN){
+        return ntohs(*(u_short *)(pcap_data + sizeof(struct ether_header)));
+    }
+    return -1;
+}
+#endif
+
+inline int packet_info::ip_version() const
+{
+    if (ip_datalen >= sizeof(struct ip)) {
+        const struct ip *ip_header = (struct ip *) ip_data;
+        switch(ip_header->ip_v){
+        case 4: return 4;
+        case 6: return 6;
+        }
+    }
+    return 0;
+}
+
+
 typedef void scanner_t(const class scanner_params &sp,const class recursion_control_block &rcb);
 typedef void process_t(const class scanner_params &sp); 
 typedef void packet_callback_t(void *user,const packet_info &pi);
