@@ -119,7 +119,9 @@ public:
     }
 
 
-    class existing {
+    // this is for reading an existing file; it should be removed and replaced
+    // with an expat-based reader.
+    class existing {                    
     public:;
         tagmap_t    *tagmap;
         std::string *tagid;

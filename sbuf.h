@@ -423,7 +423,7 @@ public:
     class range_exception_t: public std::exception {
     public:
         virtual const char *what() const throw() {
-            return "Error: Attempt to read past end of sbuf";
+            return "Error: Read past end of sbuf";
         }
     };
 
