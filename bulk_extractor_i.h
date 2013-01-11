@@ -160,7 +160,7 @@ public:
     const uint8_t * const ip_data;             // pointer to where ip data begins
     const size_t ip_datalen;            // length of ip data
 
-    int   ip_version() const;                 // returns 4, 6 or 0
+    int     ip_version() const;                 // returns 4, 6 or 0
     u_short ether_type() const;               // returns 0 if not IEEE802, otherwise returns ether_type
     int     vlan() const; // returns NO_VLAN if not IEEE802 or not VLAN, othererwise VID
 };
