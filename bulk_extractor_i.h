@@ -271,6 +271,9 @@ public:
     int     ip_version() const;                 // returns 4, 6 or 0
     u_short ether_type() const;               // returns 0 if not IEEE802, otherwise returns ether_type
     int     vlan() const; // returns NO_VLAN if not IEEE802 or not VLAN, othererwise VID
+    bool    get_ip6(struct ip6_dgram &output) const;
+    bool    get_ip4(struct ip4_dgram &output) const;
+    bool    get_tcp(struct tcp_seg &output) const;
 };
 
 #ifdef DLT_IEEE802
@@ -304,6 +307,111 @@ inline int packet_info::ip_version() const
         }
     }
     return 0;
+}
+
+inline bool packet_info::get_ip6(struct ip6_dgram &output) const
+{
+    if(ip_datalen < sizeof(private_ip6_hdr)) {
+        return false;
+    }
+
+    // check for expected IP version
+    const struct ip *ip_header = (struct ip *) ip_data;
+    if(ip_header->ip_v != 6) {
+        return false;
+    }
+
+    output.header = (struct private_ip6_hdr *) ip_data;
+
+    // TODO account for nested headers?
+    uint64_t header_len = sizeof(private_ip6_hdr);
+
+    if(ip_datalen > header_len) {
+        output.payload = ip_data + header_len;
+        output.payload_len = ip_datalen - header_len;
+    }
+    else {
+        output.payload = NULL;
+        output.payload_len = 0;
+    }
+
+    return true;
+}
+
+inline bool packet_info::get_ip4(struct ip4_dgram &output) const
+{
+    if(ip_datalen < sizeof(struct ip)) {
+        return false;
+    }
+
+    output.header = (struct ip *) ip_data;
+
+    if(output.header->ip_v != 4) {
+        return false;
+    }
+
+    // check for IP payload
+    uint64_t header_len = output.header->ip_hl * 4;
+    if(ip_datalen > header_len) {
+        output.payload = ip_data + header_len;
+        output.payload_len = ip_datalen - header_len;
+    }
+    else {
+        output.payload = NULL;
+        output.payload_len = 0;
+    }
+
+    return true;
+}
+
+inline bool packet_info::get_tcp(struct tcp_seg &output) const
+{
+    // find start of raw TCP segment by parsing as IP
+    struct ip4_dgram ip4;
+    struct ip6_dgram ip6;
+    uint64_t tcp_len = 0;
+    const uint8_t *tcp_bytes;
+
+    if(get_ip4(ip4)) {
+        if(ip4.header->ip_p != IPPROTO_TCP) {
+            return false;
+        }
+        tcp_bytes = ip4.payload;
+        tcp_len = ip4.payload_len;
+    }
+    else if(get_ip6(ip6)) {
+        if(ip6.header->ip6_ctlun.ip6_un1.ip6_un1_nxt != IPPROTO_TCP) {
+            return false;
+        }
+        tcp_bytes = ip6.payload;
+        tcp_len = ip6.payload_len;
+    }
+    else {
+        return false;
+    }
+
+    // use discovered raw TCP tcp segment
+
+    // bytes must be longer than the minimal TCP header
+    if(tcp_len < sizeof(struct tcphdr)) {
+        return false;
+    }
+
+    output.header = (struct tcphdr *) tcp_bytes;
+    // TODO sanity check - possibly checksum based?
+
+    // check for TCP body
+    uint64_t header_len = output.header->th_off * 4;
+    if(tcp_len > header_len) {
+        output.body = tcp_bytes + header_len;
+        output.body_len = tcp_len - header_len;
+    }
+    else {
+        output.body = NULL;
+        output.body_len = 0;
+    }
+
+    return true;
 }
 
 
