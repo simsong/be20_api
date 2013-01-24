@@ -57,6 +57,12 @@ extern be_config_t be_config;           // system configuration
 #ifdef HAVE_NETINET_IP_H
 # include <netinet/ip.h>
 #endif
+#ifdef HAVE_NETINET_TCP_H
+// the BSD flavor of tcphdr is the one used elsewhere in the code
+# define __FAVOR_BSD
+# include <netinet/tcp.h>
+# undef __FAVOR_BSD
+#endif
 #ifdef HAVE_NETINET_IF_ETHER_H
 # include <netinet/if_ether.h>
 #endif
@@ -133,6 +139,108 @@ inline bool operator !=(class histogram_def h1,class histogram_def h2)  {
     return h1.feature!=h2.feature || h1.pattern!=h2.pattern || h1.suffix!=h2.suffix;
 };
 
+/*
+ * IPv6 header structure
+ */
+struct private_in6_addr {		// our own private ipv6 definition
+    union {
+	uint8_t   __u6_addr8[16];
+	uint16_t  __u6_addr16[8];
+	uint32_t  __u6_addr32[4];
+    } __u6_addr;                    /* 128-bit IP6 address */
+};
+struct private_ip6_hdr {
+    union {
+	struct ip6_hdrctl {
+	    uint32_t ip6_un1_flow;	/* 20 bits of flow-ID */
+	    uint16_t ip6_un1_plen;	/* payload length */
+	    uint8_t  ip6_un1_nxt;	/* next header */
+	    uint8_t  ip6_un1_hlim;	/* hop limit */
+	} ip6_un1;
+	uint8_t ip6_un2_vfc;	/* 4 bits version, top 4 bits class */
+    } ip6_ctlun;
+    struct private_in6_addr ip6_src;	/* source address */
+    struct private_in6_addr ip6_dst;	/* destination address */
+} __attribute__((__packed__));
+#ifndef HAVE_TCP_SEQ
+#ifdef WIN32
+#define __LITTLE_ENDIAN 1234
+#define __BIG_ENDIAN 4321
+#define __BYTE_ORDER __LITTLE_ENDIAN
+#endif
+
+/*
+ * Structure of an internet header, naked of options.
+ */
+struct ip {
+#if __BYTE_ORDER == __LITTLE_ENDIAN
+    uint8_t ip_hl:4;		/* header length */
+    uint8_t ip_v:4;		/* version */
+#endif
+#if __BYTE_ORDER == __BIG_ENDIAN
+    uint8_t ip_v:4;		/* version */
+    uint8_t ip_hl:4;		/* header length */
+#endif
+    uint8_t ip_tos;			/* type of service */
+    uint16_t ip_len;			/* total length */
+    uint16_t ip_id;			/* identification */
+    uint16_t ip_off;			/* fragment offset field */
+#define	IP_RF 0x8000			/* reserved fragment flag */
+#define	IP_DF 0x4000			/* dont fragment flag */
+#define	IP_MF 0x2000			/* more fragments flag */
+#define	IP_OFFMASK 0x1fff		/* mask for fragmenting bits */
+    uint8_t ip_ttl;			/* time to live */
+    uint8_t ip_p;			/* protocol */
+    uint16_t ip_sum;			/* checksum */
+    struct in_addr ip_src, ip_dst;	/* source and dest address */
+} __attribute__ ((__packed__));
+
+typedef	uint32_t tcp_seq;
+/*
+ * TCP header.
+ * Per RFC 793, September, 1981.
+ */
+struct tcphdr {
+    uint16_t th_sport;		/* source port */
+    uint16_t th_dport;		/* destination port */
+    tcp_seq th_seq;		/* sequence number */
+    tcp_seq th_ack;		/* acknowledgement number */
+#  if __BYTE_ORDER == __LITTLE_ENDIAN
+    uint8_t th_x2:4;		/* (unused) */
+    uint8_t th_off:4;		/* data offset */
+#  endif
+#  if __BYTE_ORDER == __BIG_ENDIAN
+    uint8_t th_off:4;		/* data offset */
+    uint8_t th_x2:4;		/* (unused) */
+#  endif
+    uint8_t th_flags;
+#  define TH_FIN	0x01
+#  define TH_SYN	0x02
+#  define TH_RST	0x04
+#  define TH_PUSH	0x08
+#  define TH_ACK	0x10
+#  define TH_URG	0x20
+    uint16_t th_win;		/* window */
+    uint16_t th_sum;		/* checksum */
+    uint16_t th_urp;		/* urgent pointer */
+};
+#endif
+// convenience structs for entire PDU of TCP/IP protocols
+struct tcp_seg {
+    const struct tcphdr *header;
+    const uint8_t *body;
+    uint16_t body_len;
+};
+struct ip4_dgram {
+    const struct ip *header;
+    const uint8_t *payload;
+    uint16_t payload_len;
+};
+struct ip6_dgram {
+    const struct private_ip6_hdr *header;
+    const uint8_t *payload;
+    uint16_t payload_len;
+};
 /*
  * The packet_info structure records packets after they are read from the pcap library.
  * It preserves the original pcap information and information decoded from the MAC and
