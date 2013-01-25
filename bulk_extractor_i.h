@@ -66,6 +66,9 @@ extern be_config_t be_config;           // system configuration
 #ifdef HAVE_NETINET_IF_ETHER_H
 # include <netinet/if_ether.h>
 #endif
+#ifdef HAVE_NETINET_IN_H
+# include <netinet/in.h>
+#endif
 #ifdef HAVE_NET_ETHERNET_H
 # include <net/ethernet.h>		// for freebsd
 #endif
@@ -225,22 +228,6 @@ struct tcphdr {
     uint16_t th_urp;		/* urgent pointer */
 };
 #endif
-// convenience structs for entire PDU of TCP/IP protocols
-struct tcp_seg {
-    const struct tcphdr *header;
-    const uint8_t *body;
-    uint16_t body_len;
-};
-struct ip4_dgram {
-    const struct ip *header;
-    const uint8_t *payload;
-    uint16_t payload_len;
-};
-struct ip6_dgram {
-    const struct private_ip6_hdr *header;
-    const uint8_t *payload;
-    uint16_t payload_len;
-};
 /*
  * The packet_info structure records packets after they are read from the pcap library.
  * It preserves the original pcap information and information decoded from the MAC and
@@ -254,6 +241,25 @@ struct ip6_dgram {
  */
 class packet_info {
 public:
+    // IPv4 header offsets
+    static const size_t ip4_proto_off = 9;
+    static const size_t ip4_src_off = 12;
+    static const size_t ip4_dst_off = 16;
+    // IPv6 header offsets
+    static const size_t ip6_nxt_hdr_off = 6;
+    static const size_t ip6_plen_off = 4;
+    static const size_t ip6_src_off = 8;
+    static const size_t ip6_dst_off = 24;
+    // TCP header offsets
+    static const size_t tcp_sport_off = 0;
+    static const size_t tcp_dport_off = 2;
+
+    class frame_too_short : public std::logic_error {
+    public:
+        frame_too_short() :
+            std::logic_error("frame too short to contain requisite network structures") {}
+    };
+
     enum vlan_t {NO_VLAN=-1};
     packet_info(const int dlt,const struct pcap_pkthdr *h,const u_char *d,
                 const struct timeval &ts_,const uint8_t *d2,size_t dl2):
@@ -271,9 +277,26 @@ public:
     int     ip_version() const;                 // returns 4, 6 or 0
     u_short ether_type() const;               // returns 0 if not IEEE802, otherwise returns ether_type
     int     vlan() const; // returns NO_VLAN if not IEEE802 or not VLAN, othererwise VID
-    bool    get_ip6(struct ip6_dgram &output) const;
-    bool    get_ip4(struct ip4_dgram &output) const;
-    bool    get_tcp(struct tcp_seg &output) const;
+    // packet typing
+    bool    is_ip4() const;
+    bool    is_ip6() const;
+    bool    is_ip4_tcp() const;
+    bool    is_ip6_tcp() const;
+    // packet extraction
+    // IPv4
+    const struct in_addr *get_ip4_src() const;
+    const struct in_addr *get_ip4_dst() const;
+    uint8_t get_ip4_proto() const;
+    // IPv6
+    uint8_t get_ip6_nxt_hdr() const;
+    uint16_t get_ip6_plen() const;
+    const struct private_in6_addr *get_ip6_src() const;
+    const struct private_in6_addr *get_ip6_dst() const;
+    // TCP
+    uint16_t get_ip4_tcp_sport() const;
+    uint16_t get_ip4_tcp_dport() const;
+    uint16_t get_ip6_tcp_sport() const;
+    uint16_t get_ip6_tcp_dport() const;
 };
 
 #ifdef DLT_IEEE802
@@ -309,109 +332,118 @@ inline int packet_info::ip_version() const
     return 0;
 }
 
-inline bool packet_info::get_ip6(struct ip6_dgram &output) const
+// packet typing
+
+inline bool packet_info::is_ip4() const
 {
-    if(ip_datalen < sizeof(private_ip6_hdr)) {
-        return false;
-    }
-
-    // check for expected IP version
-    const struct ip *ip_header = (struct ip *) ip_data;
-    if(ip_header->ip_v != 6) {
-        return false;
-    }
-
-    output.header = (struct private_ip6_hdr *) ip_data;
-
-    // TODO account for nested headers?
-    uint64_t header_len = sizeof(private_ip6_hdr);
-
-    if(ip_datalen > header_len) {
-        output.payload = ip_data + header_len;
-        output.payload_len = ip_datalen - header_len;
-    }
-    else {
-        output.payload = NULL;
-        output.payload_len = 0;
-    }
-
-    return true;
+    return ip_version() == 4;
 }
 
-inline bool packet_info::get_ip4(struct ip4_dgram &output) const
+inline bool packet_info::is_ip6() const
+{
+    return ip_version() == 6;
+}
+
+inline bool packet_info::is_ip4_tcp() const
+{
+    if(ip_datalen < sizeof(struct ip) + sizeof(struct tcphdr)) {
+        return false;
+    }
+    return *((uint8_t*) (ip_data + ip4_proto_off)) == IPPROTO_TCP;
+    return false;
+}
+
+inline bool packet_info::is_ip6_tcp() const
+{
+    if(ip_datalen < sizeof(struct private_ip6_hdr) + sizeof(struct tcphdr)) {
+        return false;
+    }
+    return *((uint8_t*) (ip_data + ip6_nxt_hdr_off)) == IPPROTO_TCP;
+}
+
+// packet extraction
+// precondition: the apropriate packet type function must return true before using these functions.
+//     example: is_ip4_tcp() must return true before calling get_ip4_tcp_sport()
+
+// IPv4
+inline const struct in_addr *packet_info::get_ip4_src() const
 {
     if(ip_datalen < sizeof(struct ip)) {
-        return false;
+        throw new frame_too_short;
     }
-
-    output.header = (struct ip *) ip_data;
-
-    if(output.header->ip_v != 4) {
-        return false;
-    }
-
-    // check for IP payload
-    uint64_t header_len = output.header->ip_hl * 4;
-    if(ip_datalen > header_len) {
-        output.payload = ip_data + header_len;
-        output.payload_len = ip_datalen - header_len;
-    }
-    else {
-        output.payload = NULL;
-        output.payload_len = 0;
-    }
-
-    return true;
+    return (const struct in_addr *) ip_data + ip4_src_off;
 }
-
-inline bool packet_info::get_tcp(struct tcp_seg &output) const
+inline const struct in_addr *packet_info::get_ip4_dst() const
 {
-    // find start of raw TCP segment by parsing as IP
-    struct ip4_dgram ip4;
-    struct ip6_dgram ip6;
-    uint64_t tcp_len = 0;
-    const uint8_t *tcp_bytes;
-
-    if(get_ip4(ip4)) {
-        if(ip4.header->ip_p != IPPROTO_TCP) {
-            return false;
-        }
-        tcp_bytes = ip4.payload;
-        tcp_len = ip4.payload_len;
+    if(ip_datalen < sizeof(struct ip)) {
+        throw new frame_too_short;
     }
-    else if(get_ip6(ip6)) {
-        if(ip6.header->ip6_ctlun.ip6_un1.ip6_un1_nxt != IPPROTO_TCP) {
-            return false;
-        }
-        tcp_bytes = ip6.payload;
-        tcp_len = ip6.payload_len;
+    return (const struct in_addr *) ip_data + ip4_dst_off;
+}
+inline uint8_t packet_info::get_ip4_proto() const
+{
+    if(ip_datalen < sizeof(struct ip)) {
+        throw new frame_too_short;
     }
-    else {
-        return false;
+    return *((uint8_t *) (ip_data + ip4_proto_off));
+}
+// IPv6
+inline uint8_t packet_info::get_ip6_nxt_hdr() const
+{
+    if(ip_datalen < sizeof(struct private_ip6_hdr)) {
+        throw new frame_too_short;
     }
-
-    // use discovered raw TCP tcp segment
-
-    // bytes must be longer than the minimal TCP header
-    if(tcp_len < sizeof(struct tcphdr)) {
-        return false;
+    return *((uint8_t *) (ip_data + ip6_nxt_hdr_off));
+}
+inline uint16_t packet_info::get_ip6_plen() const
+{
+    if(ip_datalen < sizeof(struct private_ip6_hdr)) {
+        throw new frame_too_short;
     }
-
-    output.header = (struct tcphdr *) tcp_bytes;
-    // TODO sanity check - possibly checksum based?
-
-    // check for TCP body
-    uint64_t header_len = output.header->th_off * 4;
-    if(tcp_len > header_len) {
-        output.body = tcp_bytes + header_len;
-        output.body_len = tcp_len - header_len;
+    return ntohs(*((uint16_t *) (ip_data + ip6_plen_off)));
+}
+inline const struct private_in6_addr *packet_info::get_ip6_src() const
+{
+    if(ip_datalen < sizeof(struct private_ip6_hdr)) {
+        throw new frame_too_short;
     }
-    else {
-        output.body = NULL;
-        output.body_len = 0;
+    return (const struct private_in6_addr *) ip_data + ip6_src_off;
+}
+inline const struct private_in6_addr *packet_info::get_ip6_dst() const
+{
+    if(ip_datalen < sizeof(struct private_ip6_hdr)) {
+        throw new frame_too_short;
     }
-
-    return true;
+    return (const struct private_in6_addr *) ip_data + ip6_dst_off;
+}
+// TCP
+inline uint16_t packet_info::get_ip4_tcp_sport() const
+{
+    if(ip_datalen < sizeof(struct tcphdr) + sizeof(struct ip)) {
+        throw new frame_too_short;
+    }
+    return ntohs(*((uint16_t *) (ip_data + sizeof(struct ip) + tcp_sport_off)));
+}
+inline uint16_t packet_info::get_ip4_tcp_dport() const
+{
+    if(ip_datalen < sizeof(struct tcphdr) + sizeof(struct ip)) {
+        throw new frame_too_short;
+    }
+    return ntohs(*((uint16_t *) (ip_data + sizeof(struct ip) + tcp_dport_off)));
+}
+inline uint16_t packet_info::get_ip6_tcp_sport() const
+{
+    if(ip_datalen < sizeof(struct tcphdr) + sizeof(struct private_ip6_hdr)) {
+        throw new frame_too_short;
+    }
+    return ntohs(*((uint16_t *) (ip_data + sizeof(struct private_ip6_hdr) + tcp_sport_off)));
+}
+inline uint16_t packet_info::get_ip6_tcp_dport() const
+{
+    if(ip_datalen < sizeof(struct tcphdr) + sizeof(struct private_ip6_hdr)) {
+        throw new frame_too_short;
+    }
+    return ntohs(*((uint16_t *) (ip_data + sizeof(struct private_ip6_hdr) + tcp_dport_off)));
 }
 
 
