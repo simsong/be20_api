@@ -4,6 +4,8 @@
 
 #ifndef HAVE_LIBPCAP
 #include "pcap_fake.h"
+
+#include <fcntl.h>
 #include <string.h>
 #include <errno.h>
 #include <stdlib.h>
@@ -11,6 +13,8 @@
 
 #ifdef WIN32
 #define SET_BINMODE(f) _setmode(_fileno(f), _O_BINARY)
+#else
+#define SET_BINMODE(f) /* ignore */
 #endif
 
 #ifndef DEBUG
@@ -86,9 +90,7 @@ inline uint32_t swap2(uint16_t x)
 
 pcap_t *pcap_fopen_offline(FILE *fp, char *errbuf)
 {
-#ifdef WIN32
     SET_BINMODE(fp);
-#endif
     bool swapped = false;
     struct pcap_file_header header;
     if(fread(&header,sizeof(header),1,fp)!=1){

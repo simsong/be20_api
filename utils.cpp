@@ -12,9 +12,7 @@
 #endif
 
 #include "config.h"
-#include "bulk_extractor.h"
-//#include "utils.h"
-//#include "cppmutex.h"
+#include "utils.h"
 
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>

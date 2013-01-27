@@ -30,6 +30,7 @@ static const char *regex_version = "system";
 
 #ifndef HAVE_REGEX
 #error bulk_extractor requires tre_regcomp or regcomp to run
+#error download it from http://laurikari.net/tre/download/
 #endif
 
 #include "beregex.h"

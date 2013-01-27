@@ -54,6 +54,8 @@ extern be_config_t be_config;           // system configuration
 /****************************************************************
  *** pcap.h --- If we don't have it, fake it. ---
  ***/
+
+
 #ifdef HAVE_NETINET_IP_H
 # include <netinet/ip.h>
 #endif
@@ -68,6 +70,13 @@ extern be_config_t be_config;           // system configuration
 #endif
 #ifdef HAVE_NET_ETHERNET_H
 # include <net/ethernet.h>		// for freebsd
+#endif
+
+#ifdef WIN32
+typedef uint8_t u_int8_t ;
+typedef uint16_t u_int16_t ;
+#define ETH_ALEN 6			// ethernet address len
+#include "net_ethernet.h"
 #endif
 
 
@@ -162,6 +171,8 @@ struct private_ip6_hdr {
     struct private_in6_addr ip6_src;	/* source address */
     struct private_in6_addr ip6_dst;	/* destination address */
 } __attribute__((__packed__));
+
+
 #ifndef HAVE_TCP_SEQ
 #ifdef WIN32
 #define __LITTLE_ENDIAN 1234
@@ -225,6 +236,8 @@ struct tcphdr {
     uint16_t th_urp;		/* urgent pointer */
 };
 #endif
+
+
 // convenience structs for entire PDU of TCP/IP protocols
 struct tcp_seg {
     const struct tcphdr *header;
@@ -514,7 +527,12 @@ inline int isxdigit(int c)
  * and the Unix epoch.
  *
  * http://arstechnica.com/civis/viewtopic.php?f=20&t=111992
+ * gmtime_r() is Linux-specific. You'll find a copy in util.cpp for Windows.
  */
+
+#ifndef HAVE_GMTIME_R
+void gmtime_r(time_t *t,struct tm *tm);
+#endif
 
 inline std::string microsoftDateToISODate(const uint64_t &time)
 {
