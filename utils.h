@@ -43,9 +43,10 @@ void warnx(const char *fmt,...) __attribute__((format(printf, 1, 0)));
 void localtime_r(time_t *t,struct tm *tm);
 #endif
 
-#ifndef HAVE_GMTIME_R
-void gmtime_r(time_t *t,struct tm *tm);
-#endif
+// gmtime.h definition moved to bulk_extractor_i.h
+//#ifndef HAVE_GMTIME_R
+//void gmtime_r(time_t *t,struct tm *tm);
+//#endif
 
 int64_t get_filesize(int fd);
 

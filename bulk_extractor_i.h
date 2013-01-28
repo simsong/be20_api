@@ -54,24 +54,32 @@ extern be_config_t be_config;           // system configuration
  *** pcap.h --- If we don't have it, fake it. ---
  ***/
 
-
-#ifdef HAVE_NETINET_IP_H
-# include <netinet/ip.h>
-#endif
-#ifdef HAVE_NETINET_TCP_H
 // the BSD flavor of tcphdr is the one used elsewhere in the code
-# define __FAVOR_BSD
-# include <netinet/tcp.h>
-# undef __FAVOR_BSD
+//#define __FAVOR_BSD
+
+#ifdef HAVE_NETINET_IN_H
+#include <netinet/in.h>
 #endif
+
+// We no longer use the builtin definitions
+//#ifdef HAVE_NETINET_IP_H
+//# include <netinet/ip.h>
+//#endif
+//#ifdef HAVE_NETINET_TCP_H
+//# include <netinet/tcp.h>
+//# undef __FAVOR_BSD
+//#endif
+
 #ifdef HAVE_NETINET_IF_ETHER_H
 # include <netinet/if_ether.h>
+#define HAVE_STRUCT_ETHERHDR
 #endif
 #ifdef HAVE_NET_ETHERNET_H
 # include <net/ethernet.h>		// for freebsd
+#define HAVE_STRUCT_ETHERHDR
 #endif
 
-#ifdef WIN32
+#ifndef HAVE_STRUCT_ETHERHDR
 typedef uint8_t u_int8_t ;
 typedef uint16_t u_int16_t ;
 #define ETH_ALEN 6			// ethernet address len
@@ -94,9 +102,6 @@ typedef uint16_t u_int16_t ;
 #else
 #  include "pcap_fake.h"
 #endif
-
-
-
 
 /**
  * \class scanner_params
