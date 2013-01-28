@@ -48,7 +48,7 @@ sbuf_t *sbuf_t::map_file(const std::string &fname,const pos0_t &pos0,int fd)
         return 0;
     }
     lseek(fd,0,SEEK_SET);               // go to beginning of file
-    if((size_t)read(fd,(void *)buf,st.st_size)!=st.st_size){
+    if((size_t)read(fd,(void *)buf,st.st_size)!=(size_t)st.st_size){
         free((void *)buf);              /* read failed */
         return 0;
     }

@@ -33,7 +33,6 @@
 #endif
 
 #include "sbuf.h"
-#include "cppmutex.h"
 #include "feature_recorder.h"
 #include "feature_recorder_set.h"
 #include "xml.h"

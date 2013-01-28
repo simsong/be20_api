@@ -5,13 +5,13 @@
 // Just for this module
 #define _FILE_OFFSET_BITS 64
 
-
 /* required per C++ standard */
 #ifndef __STDC_FORMAT_MACROS
 #define __STDC_FORMAT_MACROS
 #endif
 
 #include "config.h"
+#include "cppmutex.h"
 #include "utils.h"
 
 #ifdef HAVE_UNISTD_H

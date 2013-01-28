@@ -46,6 +46,7 @@ using namespace std;
 
 #include "md5.h"
 #include "regex.h"
+#include "cppmutex.h"
 
 class feature_recorder {
 private:
@@ -121,6 +122,7 @@ public:
     string name;                        /* name of this feature recorder */
     int64_t count;                      /* number of records written */
     std::fstream ios;                   /* where features are written */
+
     cppmutex Mf;                        /* protects the file */
     cppmutex Mr;                        /* protects the redlist */
 

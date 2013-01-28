@@ -588,7 +588,6 @@ void xml::add_DFXML_execution_environment(const std::string &command_line)
 #include "psapi.h"
 #endif
 
-
 void xml::add_rusage()
 {
 #ifdef WIN32
