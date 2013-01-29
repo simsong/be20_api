@@ -18,11 +18,9 @@
 
 #if defined(WIN32) || !defined(__BYTE_ORDER)
 #define __LITTLE_ENDIAN 1234
-#define __BIG_ENDIAN 4321
+#define __BIG_ENDIAN    4321
 #define __BYTE_ORDER __LITTLE_ENDIAN
 #endif
-
-
 
 #if (__BYTE_ORDER == __LITTLE_ENDIAN) && (__BYTE_ORDER == __BIG_ENDIAN)
 #error Invalid __BYTE_ORDER
@@ -180,10 +178,12 @@ namespace be13 {
     } __attribute__ ((__packed__));
 
     typedef uint32_t in_addr_t;         // historical
+    // on windows we use the definition that's in winsock
+#ifndef WIN32
     struct in_addr {                    // also historical
 	in_addr_t s_addr;
     };
-
+#endif
 
   /*
    * Structure of an internet header, naked of options.
