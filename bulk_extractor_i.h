@@ -220,14 +220,14 @@ namespace be13 {
     /*
      * IPv6 header structure
      */
-    struct private_in6_addr {		// our own private ipv6 definition
+    struct in6_addr {		// our own private ipv6 definition
         union {
             uint8_t   __u6_addr8[16];
             uint16_t  __u6_addr16[8];
             uint32_t  __u6_addr32[4];
         } __u6_addr;                    /* 128-bit IP6 address */
     };
-    struct private_ip6_hdr {
+    struct ip6_hdr {
         union {
             struct ip6_hdrctl {
                 uint32_t ip6_un1_flow;	/* 20 bits of flow-ID */
@@ -237,12 +237,12 @@ namespace be13 {
             } ip6_un1;
             uint8_t ip6_un2_vfc;	/* 4 bits version, top 4 bits class */
         } ip6_ctlun;
-        struct private_in6_addr ip6_src;	/* source address */
-        struct private_in6_addr ip6_dst;	/* destination address */
+        struct in6_addr ip6_src;	/* source address */
+        struct in6_addr ip6_dst;	/* destination address */
     } __attribute__((__packed__));
 
     struct ip6_dgram {
-        const struct private_ip6_hdr *header;
+        const struct ip6_hdr *header;
         const uint8_t *payload;
         uint16_t payload_len;
     };
