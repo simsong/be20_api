@@ -137,7 +137,7 @@ packet_plugin_info_vector_t  packet_handlers;   // pcap callback handlers
 /**
  * Process a pcap packet
  */
-void process_packet_info(const packet_info &pi)
+void process_packet_info(const be13::packet_info &pi)
 {
     for(packet_plugin_info_vector_t::iterator it = packet_handlers.begin(); it != packet_handlers.end(); it++){
         (*(*it).callback)((*it).user,pi);
