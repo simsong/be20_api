@@ -3,6 +3,17 @@
 #ifndef BULK_EXTRACTOR_I_H
 #define BULK_EXTRACTOR_I_H
 
+/* We need netinet/in.h or windowsx.h */
+#ifdef HAVE_NETINET_IN_H
+# include <netinet/in.h>
+#endif
+
+#ifdef WIN32
+#include <winsock2.h>
+#include <windows.h>
+#include <windowsx.h>
+#endif
+
 /* If byte_order hasn't been defined, assume its intel */
 
 #if defined(WIN32) || !defined(__BYTE_ORDER)
