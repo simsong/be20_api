@@ -9,21 +9,21 @@
 #endif
 
 #ifdef WIN32
-#include <winsock2.h>
-#include <windows.h>
-#include <windowsx.h>
+#  include <winsock2.h>
+#  include <windows.h>
+#  include <windowsx.h>
 #endif
 
 /* If byte_order hasn't been defined, assume its intel */
 
 #if defined(WIN32) || !defined(__BYTE_ORDER)
-#define __LITTLE_ENDIAN 1234
-#define __BIG_ENDIAN    4321
-#define __BYTE_ORDER __LITTLE_ENDIAN
+#  define __LITTLE_ENDIAN 1234
+#  define __BIG_ENDIAN    4321
+#  define __BYTE_ORDER __LITTLE_ENDIAN
 #endif
 
 #if (__BYTE_ORDER == __LITTLE_ENDIAN) && (__BYTE_ORDER == __BIG_ENDIAN)
-#error Invalid __BYTE_ORDER
+#  error Invalid __BYTE_ORDER
 #endif
 
 /**
@@ -52,7 +52,7 @@
  */
 
 #ifndef __cplusplus
-#error bulk_extractor_i.h requires C++
+# error bulk_extractor_i.h requires C++
 #endif
 
 #include "sbuf.h"
@@ -159,11 +159,11 @@ inline bool operator !=(class histogram_def h1,class histogram_def h2)  {
 namespace be13 {
 
 #ifndef ETH_ALEN
-#define ETH_ALEN 6			// ethernet address len
+#  define ETH_ALEN 6			// ethernet address len
 #endif
 
 #ifndef IPPROTO_TCP
-#define IPPROTO_TCP     6               /* tcp */
+#  define IPPROTO_TCP     6               /* tcp */
 #endif
 
     struct ether_addr {
@@ -177,13 +177,15 @@ namespace be13 {
         uint16_t ether_type;		        /* packet type ID field	*/
     } __attribute__ ((__packed__));
 
-    typedef uint32_t in_addr_t;         // historical
+    // The mess below is becuase these items are typedefs and
+    // structs on some systems and #defines on other systems
+    // So in the interest of portability we need to define *new*
+    // structures that are only used here
+    typedef uint32_t ip4_addr_t;         // historical
     // on windows we use the definition that's in winsock
-#ifndef WIN32
-    struct in_addr {                    // also historical
-	in_addr_t s_addr;
+    struct ip4_addr {   
+	ip4_addr_t addr;
     };
-#endif
 
   /*
    * Structure of an internet header, naked of options.
@@ -208,7 +210,7 @@ namespace be13 {
         uint8_t ip_ttl;			/* time to live */
         uint8_t ip_p;			/* protocol */
         uint16_t ip_sum;			/* checksum */
-        struct in_addr ip_src, ip_dst;	/* source and dest address */
+        struct ip4_addr ip_src, ip_dst;	/* source and dest address */
     } __attribute__ ((__packed__));
 
     struct ip4_dgram {
@@ -220,7 +222,7 @@ namespace be13 {
     /*
      * IPv6 header structure
      */
-    struct in6_addr {		// our own private ipv6 definition
+    struct ip6_addr {		// our own private ipv6 definition
         union {
             uint8_t   __u6_addr8[16];
             uint16_t  __u6_addr16[8];
@@ -237,8 +239,8 @@ namespace be13 {
             } ip6_un1;
             uint8_t ip6_un2_vfc;	/* 4 bits version, top 4 bits class */
         } ip6_ctlun;
-        struct in6_addr ip6_src;	/* source address */
-        struct in6_addr ip6_dst;	/* destination address */
+        struct ip6_addr ip6_src;	/* source address */
+        struct ip6_addr ip6_dst;	/* destination address */
     } __attribute__((__packed__));
 
     struct ip6_dgram {
