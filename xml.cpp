@@ -28,20 +28,6 @@
 #include <unistd.h>
 
 
-#ifdef HAVE_TRE_TRE_H
-#include <tre/tre.h>
-#define REGCOMP tre_regcomp
-#define REGFREE tre_regfree
-#define REGEXEC tre_regexec
-#else
-#ifdef HAVE_REGEX_H
-#include <regex.h>
-#define REGCOMP regcomp
-#define REGFREE regfree
-#define REGEXEC regexec
-#endif
-#endif
-
 #ifdef HAVE_PTHREAD
 #define MUTEX_LOCK(M)   pthread_mutex_lock(M)
 #define MUTEX_UNLOCK(M) pthread_mutex_unlock(M)
@@ -49,6 +35,12 @@
 #define MUTEX_LOCK(M)   {}
 #define MUTEX_UNLOCK(M) {}
 #endif
+
+#ifdef HAVE_TRE_TRE_H
+#include <tre/tre.h>
+#endif
+
+
 
 #include <iostream>
 #include <stdarg.h>
@@ -119,34 +111,6 @@ std::string xml::xml_PRIu64("%"PRIu64); // gets around compiler bug
 static const char *cstr(const string &str){
     return str.c_str();
 }
-
-#if defined(REGCOMP)
-/** A local class for regex matching with a single pattern */
-class Regex {
-public:
-    regex_t reg;
-    Regex(const char *pat):reg(){
-        memset(&reg,0,sizeof(reg));
-        if(REGCOMP(&reg,pat,REG_EXTENDED)){
-            cerr << "xml.cpp: invalid regex pattern" << pat << "\n";
-            exit(1);
-        }
-    }
-    ~Regex(){
-        REGFREE(&reg);
-    }
-    string search(const string &line){
-        regmatch_t ary[2];
-        memset(ary,0,sizeof(ary));
-        if(REGEXEC(&reg,cstr(line),2,ary,0)==0){
-            return string(cstr(line)+ary[1].rm_so,ary[1].rm_eo-ary[1].rm_so);
-        }
-        else {
-            return string();
-        }
-    }
-};
-#endif
 
 // XML escapes
 static string xml_lt("&lt;");
@@ -270,15 +234,15 @@ xml::xml(const std::string &outfilename_,class existing &e):
     }
     out = &outf;
     // Scan all of the lines, looking for elements in tagmap
-    Regex tag_beg("<([^/> ]+)");
-    Regex tag_end("</([^> ]+)");
-    Regex tag_val(">([^<]*)<");
+    beregex tag_beg("<([^/> ]+)",0);
+    beregex tag_end("</([^> ]+)",0);
+    beregex tag_val(">([^<]*)<",0);
 
     // compute the regular expression to get the attribute
     string areg("=((\'[^\']+\')|(\"[^\"]+\"))");
     if(e.attrib) areg = *(e.attrib) + areg;
 
-    Regex tag_attrib(areg.c_str());
+    beregex tag_attrib(areg.c_str(),0);
 
     std::string line;
     int linenumber = 0;

@@ -87,7 +87,8 @@ beregex::~beregex(){
  * set *found to be what was found, *offset to be the starting offset, and *len to be
  * the length. Note that this only handles a single group.
  */
-int beregex::search(const std::string &line,std::string *found,size_t *offset,size_t *len) const{
+int beregex::search(const std::string &line,std::string *found,size_t *offset,size_t *len) const
+{
     static const int REGMAX=2;
     regmatch_t pmatch[REGMAX];
     if(!nreg_) return 0;
@@ -104,6 +105,7 @@ int beregex::search(const std::string &line,std::string *found,size_t *offset,si
     return 1;                           /* success */
 }
 /** Perform a search with an array of strings. Return 0 if success, return code if fail.*/
+
 int beregex::search(const std::string &line,std::string *matches,int REGMAX) const {
     regmatch_t *pmatch = (regmatch_t *)calloc(sizeof(regmatch_t),REGMAX+1);
     if(!nreg) return 0;
@@ -118,6 +120,22 @@ int beregex::search(const std::string &line,std::string *matches,int REGMAX) con
     free(pmatch);
     return r;
 }
+
+std::string beregex::search(const std::string &line) const
+{
+    regmatch_t pmatch[2];
+    memset(pmatch,0,sizeof(pmatch));
+    if(REGEXEC(nreg,line.c_str(),2,pmatch,0)==0){
+        size_t start = pmatch[1].rm_so;
+        size_t len   = pmatch[1].rm_eo-pmatch[1].rm_so;
+        return line.substr(start,len);
+    }
+    else {
+        return std::string();
+    }
+}
+
+
 
 int regex_list::readfile(std::string fname)
 {

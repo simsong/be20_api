@@ -41,6 +41,7 @@ private:
      */
     int search(const std::string &line,std::string *found,size_t *offset,size_t *len) const;
     int search(const std::string &line,std::string *matches,int REGMAX) const;
+    std::string search(const std::string &line) const; // returns first match
 };
 typedef std::vector<beregex *> beregex_vector;
 
