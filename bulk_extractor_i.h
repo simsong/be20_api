@@ -76,6 +76,25 @@ extern be_config_t be_config;           // system configuration
 /****************************************************************
  *** pcap.h --- If we don't have it, fake it. ---
  ***/
+#ifdef HAVE_NETINET_IP_H
+# include <netinet/ip.h>
+#endif
+#ifdef HAVE_NETINET_TCP_H
+// the BSD flavor of tcphdr is the one used elsewhere in the code
+# define __FAVOR_BSD
+# include <netinet/tcp.h>
+# undef __FAVOR_BSD
+#endif
+#ifdef HAVE_NETINET_IF_ETHER_H
+# include <netinet/if_ether.h>
+#endif
+#ifdef HAVE_NETINET_IN_H
+# include <netinet/in.h>
+#endif
+#ifdef HAVE_NET_ETHERNET_H
+# include <net/ethernet.h>		// for freebsd
+#endif
+
 
 #if defined(HAVE_LIBPCAP)
 #  ifdef GNUC_HAS_DIAGNOSTIC_PRAGMA
@@ -274,18 +293,11 @@ namespace be13 {
 #  define TH_PUSH	0x08
 #  define TH_ACK	0x10
 #  define TH_URG	0x20
-        uint16_t th_win;		/* window */
-        uint16_t th_sum;		/* checksum */
-        uint16_t th_urp;		/* urgent pointer */
-    };
-
-// convenience structs for entire PDU of TCP/IP protocols
-    struct tcp_seg {
-        const struct tcphdr *header;
-        const uint8_t *body;
-        uint16_t body_len;
-    };
-
+    uint16_t th_win;		/* window */
+    uint16_t th_sum;		/* checksum */
+    uint16_t th_urp;		/* urgent pointer */
+};
+#endif
 /*
  * The packet_info structure records packets after they are read from the pcap library.
  * It preserves the original pcap information and information decoded from the MAC and
@@ -297,26 +309,65 @@ namespace be13 {
  * @param datalen - How much data is available at the datalen pointer
  * 
  */
-    class packet_info {
+class packet_info {
+public:
+    // IPv4 header offsets
+    static const size_t ip4_proto_off = 9;
+    static const size_t ip4_src_off = 12;
+    static const size_t ip4_dst_off = 16;
+    // IPv6 header offsets
+    static const size_t ip6_nxt_hdr_off = 6;
+    static const size_t ip6_plen_off = 4;
+    static const size_t ip6_src_off = 8;
+    static const size_t ip6_dst_off = 24;
+    // TCP header offsets
+    static const size_t tcp_sport_off = 0;
+    static const size_t tcp_dport_off = 2;
+
+    class frame_too_short : public std::logic_error {
     public:
-        enum vlan_t {NO_VLAN=-1};
-        packet_info(const int dlt,const struct pcap_pkthdr *h,const u_char *d,
-                    const struct timeval &ts_,const uint8_t *d2,size_t dl2):
-            pcap_dlt(dlt),pcap_hdr(h),pcap_data(d),ts(ts_),ip_data(d2),ip_datalen(dl2){}
-        packet_info(const int dlt,const struct pcap_pkthdr *h,const u_char *d):
-            pcap_dlt(dlt),pcap_hdr(h),pcap_data(d),ts(h->ts),ip_data(d),ip_datalen(h->caplen){}
-        
-        const int    pcap_dlt;              // data link type; needed by libpcap, not provided
-        const struct pcap_pkthdr *pcap_hdr; // provided by libpcap
-        const u_char *pcap_data;            // provided by libpcap
-        const struct timeval &ts;           // possibly modified before packet_info created
-        const uint8_t * const ip_data;             // pointer to where ip data begins
-        const size_t ip_datalen;            // length of ip data
-        
-        int     ip_version() const;                 // returns 4, 6 or 0
-        u_short ether_type() const;               // returns 0 if not IEEE802, otherwise returns ether_type
-        int     vlan() const; // returns NO_VLAN if not IEEE802 or not VLAN, othererwise VID
+        frame_too_short() :
+            std::logic_error("frame too short to contain requisite network structures") {}
     };
+
+    enum vlan_t {NO_VLAN=-1};
+    packet_info(const int dlt,const struct pcap_pkthdr *h,const u_char *d,
+                const struct timeval &ts_,const uint8_t *d2,size_t dl2):
+        pcap_dlt(dlt),pcap_hdr(h),pcap_data(d),ts(ts_),ip_data(d2),ip_datalen(dl2){}
+    packet_info(const int dlt,const struct pcap_pkthdr *h,const u_char *d):
+        pcap_dlt(dlt),pcap_hdr(h),pcap_data(d),ts(h->ts),ip_data(d),ip_datalen(h->caplen){}
+
+    const int    pcap_dlt;              // data link type; needed by libpcap, not provided
+    const struct pcap_pkthdr *pcap_hdr; // provided by libpcap
+    const u_char *pcap_data;            // provided by libpcap
+    const struct timeval &ts;           // possibly modified before packet_info created
+    const uint8_t * const ip_data;             // pointer to where ip data begins
+    const size_t ip_datalen;            // length of ip data
+
+    int     ip_version() const;                 // returns 4, 6 or 0
+    u_short ether_type() const;               // returns 0 if not IEEE802, otherwise returns ether_type
+    int     vlan() const; // returns NO_VLAN if not IEEE802 or not VLAN, othererwise VID
+    // packet typing
+    bool    is_ip4() const;
+    bool    is_ip6() const;
+    bool    is_ip4_tcp() const;
+    bool    is_ip6_tcp() const;
+    // packet extraction
+    // IPv4
+    const struct in_addr *get_ip4_src() const;
+    const struct in_addr *get_ip4_dst() const;
+    uint8_t get_ip4_proto() const;
+    // IPv6
+    uint8_t get_ip6_nxt_hdr() const;
+    uint16_t get_ip6_plen() const;
+    const struct private_in6_addr *get_ip6_src() const;
+    const struct private_in6_addr *get_ip6_dst() const;
+    // TCP
+    uint16_t get_ip4_tcp_sport() const;
+    uint16_t get_ip4_tcp_dport() const;
+    uint16_t get_ip6_tcp_sport() const;
+    uint16_t get_ip6_tcp_dport() const;
+};
 
     
 #ifdef DLT_IEEE802
@@ -364,8 +415,123 @@ namespace be13 {
         }
         return 0;
     }
+
+    // packet typing
+
+    inline bool packet_info::is_ip4() const
+    {
+        return ip_version() == 4;
+    }
+
+    inline bool packet_info::is_ip6() const
+    {
+        return ip_version() == 6;
+    }
+
+    inline bool packet_info::is_ip4_tcp() const
+    {
+        if(ip_datalen < sizeof(struct ip) + sizeof(struct tcphdr)) {
+            return false;
+        }
+        return *((uint8_t*) (ip_data + ip4_proto_off)) == IPPROTO_TCP;
+        return false;
+    }
+
+    inline bool packet_info::is_ip6_tcp() const
+    {
+        if(ip_datalen < sizeof(struct private_ip6_hdr) + sizeof(struct tcphdr)) {
+            return false;
+        }
+        return *((uint8_t*) (ip_data + ip6_nxt_hdr_off)) == IPPROTO_TCP;
+    }
+
+    // packet extraction
+    // precondition: the apropriate packet type function must return true before using these functions.
+    //     example: is_ip4_tcp() must return true before calling get_ip4_tcp_sport()
+
+    // IPv4
+    inline const struct in_addr *packet_info::get_ip4_src() const
+    {
+        if(ip_datalen < sizeof(struct ip)) {
+            throw new frame_too_short;
+        }
+        return (const struct in_addr *) ip_data + ip4_src_off;
+    }
+    inline const struct in_addr *packet_info::get_ip4_dst() const
+    {
+        if(ip_datalen < sizeof(struct ip)) {
+            throw new frame_too_short;
+        }
+        return (const struct in_addr *) ip_data + ip4_dst_off;
+    }
+    inline uint8_t packet_info::get_ip4_proto() const
+    {
+        if(ip_datalen < sizeof(struct ip)) {
+            throw new frame_too_short;
+        }
+        return *((uint8_t *) (ip_data + ip4_proto_off));
+    }
+    // IPv6
+    inline uint8_t packet_info::get_ip6_nxt_hdr() const
+    {
+        if(ip_datalen < sizeof(struct private_ip6_hdr)) {
+            throw new frame_too_short;
+        }
+        return *((uint8_t *) (ip_data + ip6_nxt_hdr_off));
+    }
+    inline uint16_t packet_info::get_ip6_plen() const
+    {
+        if(ip_datalen < sizeof(struct private_ip6_hdr)) {
+            throw new frame_too_short;
+        }
+        return ntohs(*((uint16_t *) (ip_data + ip6_plen_off)));
+    }
+    inline const struct private_in6_addr *packet_info::get_ip6_src() const
+    {
+        if(ip_datalen < sizeof(struct private_ip6_hdr)) {
+            throw new frame_too_short;
+        }
+        return (const struct private_in6_addr *) ip_data + ip6_src_off;
+    }
+    inline const struct private_in6_addr *packet_info::get_ip6_dst() const
+    {
+        if(ip_datalen < sizeof(struct private_ip6_hdr)) {
+            throw new frame_too_short;
+        }
+        return (const struct private_in6_addr *) ip_data + ip6_dst_off;
+    }
+    // TCP
+    inline uint16_t packet_info::get_ip4_tcp_sport() const
+    {
+        if(ip_datalen < sizeof(struct tcphdr) + sizeof(struct ip)) {
+            throw new frame_too_short;
+        }
+        return ntohs(*((uint16_t *) (ip_data + sizeof(struct ip) + tcp_sport_off)));
+    }
+    inline uint16_t packet_info::get_ip4_tcp_dport() const
+    {
+        if(ip_datalen < sizeof(struct tcphdr) + sizeof(struct ip)) {
+            throw new frame_too_short;
+        }
+        return ntohs(*((uint16_t *) (ip_data + sizeof(struct ip) + tcp_dport_off)));
+    }
+    inline uint16_t packet_info::get_ip6_tcp_sport() const
+    {
+        if(ip_datalen < sizeof(struct tcphdr) + sizeof(struct private_ip6_hdr)) {
+            throw new frame_too_short;
+        }
+        return ntohs(*((uint16_t *) (ip_data + sizeof(struct private_ip6_hdr) + tcp_sport_off)));
+    }
+    inline uint16_t packet_info::get_ip6_tcp_dport() const
+    {
+        if(ip_datalen < sizeof(struct tcphdr) + sizeof(struct private_ip6_hdr)) {
+            throw new frame_too_short;
+        }
+        return ntohs(*((uint16_t *) (ip_data + sizeof(struct private_ip6_hdr) + tcp_dport_off)));
+    }
 };
-    
+
+
 typedef void scanner_t(const class scanner_params &sp,const class recursion_control_block &rcb);
 typedef void process_t(const class scanner_params &sp); 
 typedef void packet_callback_t(void *user,const be13::packet_info &pi);
