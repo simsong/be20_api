@@ -4,7 +4,7 @@
 #include <sys/types.h>
 #include <inttypes.h>
 
-#if defined(HAVE_TRE_REGCOMP)
+#if defined(HAVE_LIBTRE) && defined(HAVE_TRE_REGCOMP)
 #ifdef HAVE_TRE_TRE_H
 #include <tre/tre.h>
 #endif
@@ -12,11 +12,12 @@
 #define REGFREE tre_regfree
 #define REGEXEC tre_regexec
 #define nreg (regex_t *)nreg_
-#define HAVE_REGEX
+#define HAVE_REGULAR_EXPRESSIONS
 static const char *regex_version = "tre";
 #endif
 
-#if defined(HAVE_REGCOMP) && !defined(HAVE_REGEX)
+/* use regcomp() if tre_regcomp() is not available */
+#if defined(HAVE_REGCOMP) && !defined(HAVE_REGULAR_EXPRESSIONS)
 #ifdef HAVE_REGEX_H
 #include <regex.h>
 #endif
@@ -24,13 +25,13 @@ static const char *regex_version = "tre";
 #define REGFREE regfree
 #define REGEXEC regexec
 #define nreg (regex_t *)nreg_
-#define HAVE_REGEX
+#define HAVE_REGULAR_EXPRESSIONS
 static const char *regex_version = "system";
 #endif
 
-#ifndef HAVE_REGEX
+#ifndef HAVE_REGULAR_EXPRESSIONS
 #error bulk_extractor requires tre_regcomp or regcomp to run
-#error download it from http://laurikari.net/tre/download/
+#error download tre from "http://laurikari.net/tre/download/"
 #endif
 
 #include "beregex.h"
@@ -117,6 +118,19 @@ int beregex::search(const std::string &line,std::string *matches,int REGMAX) con
     }
     free(pmatch);
     return r;
+}
+
+std::string beregex::search(const std::string &line) const{
+    regmatch_t pmatch[2];
+    memset(pmatch,0,sizeof(pmatch));
+    if(REGEXEC(nreg,line.c_str(),2,pmatch,0)==0){
+        size_t start = pmatch[1].rm_so;
+        size_t len   = pmatch[1].rm_eo-pmatch[1].rm_so;
+        return line.substr(start,len);
+    }
+    else {
+        return std::string();   // no match
+    }
 }
 
 int regex_list::readfile(std::string fname)
