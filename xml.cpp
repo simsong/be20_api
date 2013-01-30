@@ -19,6 +19,7 @@
 
 
 #include "config.h"
+#include "be13_api/beregex.h"
 
 #ifdef WIN32
 #include <winsock2.h>
@@ -212,7 +213,6 @@ xml::xml(const std::string &outfilename_,bool makeDTD):
     *out << xml_header;
 }
 
-#if defined(REGCOMP)
 /**
  * opening an existing DFXML file...
  * Scan through and see if we can process.
@@ -279,7 +279,6 @@ xml::xml(const std::string &outfilename_,class existing &e):
         }
     }
 }
-#endif
 
 
 
