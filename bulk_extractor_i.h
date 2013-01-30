@@ -297,7 +297,6 @@ namespace be13 {
     uint16_t th_sum;		/* checksum */
     uint16_t th_urp;		/* urgent pointer */
 };
-#endif
 /*
  * The packet_info structure records packets after they are read from the pcap library.
  * It preserves the original pcap information and information decoded from the MAC and
@@ -360,8 +359,8 @@ public:
     // IPv6
     uint8_t get_ip6_nxt_hdr() const;
     uint16_t get_ip6_plen() const;
-    const struct private_in6_addr *get_ip6_src() const;
-    const struct private_in6_addr *get_ip6_dst() const;
+    const struct ip6_addr *get_ip6_src() const;
+    const struct ip6_addr *get_ip6_dst() const;
     // TCP
     uint16_t get_ip4_tcp_sport() const;
     uint16_t get_ip4_tcp_dport() const;
@@ -439,7 +438,7 @@ public:
 
     inline bool packet_info::is_ip6_tcp() const
     {
-        if(ip_datalen < sizeof(struct private_ip6_hdr) + sizeof(struct tcphdr)) {
+        if(ip_datalen < sizeof(struct ip6_hdr) + sizeof(struct tcphdr)) {
             return false;
         }
         return *((uint8_t*) (ip_data + ip6_nxt_hdr_off)) == IPPROTO_TCP;
@@ -474,31 +473,31 @@ public:
     // IPv6
     inline uint8_t packet_info::get_ip6_nxt_hdr() const
     {
-        if(ip_datalen < sizeof(struct private_ip6_hdr)) {
+        if(ip_datalen < sizeof(struct ip6_hdr)) {
             throw new frame_too_short;
         }
         return *((uint8_t *) (ip_data + ip6_nxt_hdr_off));
     }
     inline uint16_t packet_info::get_ip6_plen() const
     {
-        if(ip_datalen < sizeof(struct private_ip6_hdr)) {
+        if(ip_datalen < sizeof(struct ip6_hdr)) {
             throw new frame_too_short;
         }
         return ntohs(*((uint16_t *) (ip_data + ip6_plen_off)));
     }
-    inline const struct private_in6_addr *packet_info::get_ip6_src() const
+    inline const struct ip6_addr *packet_info::get_ip6_src() const
     {
-        if(ip_datalen < sizeof(struct private_ip6_hdr)) {
+        if(ip_datalen < sizeof(struct ip6_hdr)) {
             throw new frame_too_short;
         }
-        return (const struct private_in6_addr *) ip_data + ip6_src_off;
+        return (const struct ip6_addr *) ip_data + ip6_src_off;
     }
-    inline const struct private_in6_addr *packet_info::get_ip6_dst() const
+    inline const struct ip6_addr *packet_info::get_ip6_dst() const
     {
-        if(ip_datalen < sizeof(struct private_ip6_hdr)) {
+        if(ip_datalen < sizeof(struct ip6_hdr)) {
             throw new frame_too_short;
         }
-        return (const struct private_in6_addr *) ip_data + ip6_dst_off;
+        return (const struct ip6_addr *) ip_data + ip6_dst_off;
     }
     // TCP
     inline uint16_t packet_info::get_ip4_tcp_sport() const
@@ -517,17 +516,17 @@ public:
     }
     inline uint16_t packet_info::get_ip6_tcp_sport() const
     {
-        if(ip_datalen < sizeof(struct tcphdr) + sizeof(struct private_ip6_hdr)) {
+        if(ip_datalen < sizeof(struct tcphdr) + sizeof(struct ip6_hdr)) {
             throw new frame_too_short;
         }
-        return ntohs(*((uint16_t *) (ip_data + sizeof(struct private_ip6_hdr) + tcp_sport_off)));
+        return ntohs(*((uint16_t *) (ip_data + sizeof(struct ip6_hdr) + tcp_sport_off)));
     }
     inline uint16_t packet_info::get_ip6_tcp_dport() const
     {
-        if(ip_datalen < sizeof(struct tcphdr) + sizeof(struct private_ip6_hdr)) {
+        if(ip_datalen < sizeof(struct tcphdr) + sizeof(struct ip6_hdr)) {
             throw new frame_too_short;
         }
-        return ntohs(*((uint16_t *) (ip_data + sizeof(struct private_ip6_hdr) + tcp_dport_off)));
+        return ntohs(*((uint16_t *) (ip_data + sizeof(struct ip6_hdr) + tcp_dport_off)));
     }
 };
 
