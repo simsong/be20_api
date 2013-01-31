@@ -76,15 +76,6 @@ extern be_config_t be_config;           // system configuration
 /****************************************************************
  *** pcap.h --- If we don't have it, fake it. ---
  ***/
-#ifdef HAVE_NETINET_IP_H
-# include <netinet/ip.h>
-#endif
-#ifdef HAVE_NETINET_TCP_H
-// the BSD flavor of tcphdr is the one used elsewhere in the code
-# define __FAVOR_BSD
-# include <netinet/tcp.h>
-# undef __FAVOR_BSD
-#endif
 #ifdef HAVE_NETINET_IF_ETHER_H
 # include <netinet/if_ether.h>
 #endif
@@ -429,7 +420,7 @@ public:
 
     inline bool packet_info::is_ip4_tcp() const
     {
-        if(ip_datalen < sizeof(struct ip) + sizeof(struct tcphdr)) {
+        if(ip_datalen < sizeof(struct ip4) + sizeof(struct tcphdr)) {
             return false;
         }
         return *((uint8_t*) (ip_data + ip4_proto_off)) == IPPROTO_TCP;
@@ -451,21 +442,21 @@ public:
     // IPv4
     inline const struct in_addr *packet_info::get_ip4_src() const
     {
-        if(ip_datalen < sizeof(struct ip)) {
+        if(ip_datalen < sizeof(struct ip4)) {
             throw new frame_too_short;
         }
         return (const struct in_addr *) ip_data + ip4_src_off;
     }
     inline const struct in_addr *packet_info::get_ip4_dst() const
     {
-        if(ip_datalen < sizeof(struct ip)) {
+        if(ip_datalen < sizeof(struct ip4)) {
             throw new frame_too_short;
         }
         return (const struct in_addr *) ip_data + ip4_dst_off;
     }
     inline uint8_t packet_info::get_ip4_proto() const
     {
-        if(ip_datalen < sizeof(struct ip)) {
+        if(ip_datalen < sizeof(struct ip4)) {
             throw new frame_too_short;
         }
         return *((uint8_t *) (ip_data + ip4_proto_off));
@@ -502,17 +493,17 @@ public:
     // TCP
     inline uint16_t packet_info::get_ip4_tcp_sport() const
     {
-        if(ip_datalen < sizeof(struct tcphdr) + sizeof(struct ip)) {
+        if(ip_datalen < sizeof(struct tcphdr) + sizeof(struct ip4)) {
             throw new frame_too_short;
         }
-        return ntohs(*((uint16_t *) (ip_data + sizeof(struct ip) + tcp_sport_off)));
+        return ntohs(*((uint16_t *) (ip_data + sizeof(struct ip4) + tcp_sport_off)));
     }
     inline uint16_t packet_info::get_ip4_tcp_dport() const
     {
-        if(ip_datalen < sizeof(struct tcphdr) + sizeof(struct ip)) {
+        if(ip_datalen < sizeof(struct tcphdr) + sizeof(struct ip4)) {
             throw new frame_too_short;
         }
-        return ntohs(*((uint16_t *) (ip_data + sizeof(struct ip) + tcp_dport_off)));
+        return ntohs(*((uint16_t *) (ip_data + sizeof(struct ip4) + tcp_dport_off)));
     }
     inline uint16_t packet_info::get_ip6_tcp_sport() const
     {
