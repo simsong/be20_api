@@ -234,10 +234,10 @@ namespace be13 {
      */
     struct ip6_addr {		// our own private ipv6 definition
         union {
-            uint8_t   __u6_addr8[16];
-            uint16_t  __u6_addr16[8];
-            uint32_t  __u6_addr32[4];
-        } __u6_addr;                    /* 128-bit IP6 address */
+            uint8_t   addr8[16];        // three ways to get the data
+            uint16_t  addr16[8];
+            uint32_t  addr32[4];
+        } addr;                    /* 128-bit IP6 address */
     };
     struct ip6_hdr {
         union {
