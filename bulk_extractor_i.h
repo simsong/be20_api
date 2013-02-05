@@ -321,6 +321,10 @@ public:
     };
 
     enum vlan_t {NO_VLAN=-1};
+    /** create a packet, usually an IP packet.
+     * @param d - start of MAC packet
+     * @param d2 - start of IP data
+     */
     packet_info(const int dlt,const struct pcap_pkthdr *h,const u_char *d,
                 const struct timeval &ts_,const uint8_t *d2,size_t dl2):
         pcap_dlt(dlt),pcap_hdr(h),pcap_data(d),ts(ts_),ip_data(d2),ip_datalen(dl2){}
@@ -331,24 +335,27 @@ public:
     const struct pcap_pkthdr *pcap_hdr; // provided by libpcap
     const u_char *pcap_data;            // provided by libpcap
     const struct timeval &ts;           // possibly modified before packet_info created
-    const uint8_t * const ip_data;             // pointer to where ip data begins
+    const uint8_t * const ip_data;      // pointer to where ip data begins
     const size_t ip_datalen;            // length of ip data
 
-    int     ip_version() const;                 // returns 4, 6 or 0
-    u_short ether_type() const;               // returns 0 if not IEEE802, otherwise returns ether_type
-    int     vlan() const; // returns NO_VLAN if not IEEE802 or not VLAN, othererwise VID
+    int     ip_version() const;         // returns 4, 6 or 0
+    u_short ether_type() const;         // returns 0 if not IEEE802, otherwise returns ether_type
+    int     vlan() const;               // returns NO_VLAN if not IEEE802 or not VLAN, othererwise VID
+    const uint8_t *get_ether_dhost() const;   // returns a pointer to ether dhost if ether packet
+    const uint8_t *get_ether_shost() const;   // returns a pointer to ether shost if ether packet
+
     // packet typing
     bool    is_ip4() const;
     bool    is_ip6() const;
     bool    is_ip4_tcp() const;
     bool    is_ip6_tcp() const;
     // packet extraction
-    // IPv4
+    // IPv4 - return pointers to fields or throws frame_too_short exception
     const struct in_addr *get_ip4_src() const;
     const struct in_addr *get_ip4_dst() const;
     uint8_t get_ip4_proto() const;
     // IPv6
-    uint8_t get_ip6_nxt_hdr() const;
+    uint8_t  get_ip6_nxt_hdr() const;
     uint16_t get_ip6_plen() const;
     const struct ip6_addr *get_ip6_src() const;
     const struct ip6_addr *get_ip6_dst() const;
@@ -439,25 +446,34 @@ public:
     // precondition: the apropriate packet type function must return true before using these functions.
     //     example: is_ip4_tcp() must return true before calling get_ip4_tcp_sport()
 
+    // Get ether addresses; should this handle vlan and such?
+    inline const uint8_t *packet_info::get_ether_dhost() const
+    {
+        if(pcap_hdr->caplen < sizeof(struct ether_addr)){
+            throw new frame_too_short();
+        }
+        return ((const struct ether_header *)pcap_data)->ether_dhost;
+    }
+
     // IPv4
     inline const struct in_addr *packet_info::get_ip4_src() const
     {
         if(ip_datalen < sizeof(struct ip4)) {
-            throw new frame_too_short;
+            throw new frame_too_short();
         }
         return (const struct in_addr *) ip_data + ip4_src_off;
     }
     inline const struct in_addr *packet_info::get_ip4_dst() const
     {
         if(ip_datalen < sizeof(struct ip4)) {
-            throw new frame_too_short;
+            throw new frame_too_short();
         }
         return (const struct in_addr *) ip_data + ip4_dst_off;
     }
     inline uint8_t packet_info::get_ip4_proto() const
     {
         if(ip_datalen < sizeof(struct ip4)) {
-            throw new frame_too_short;
+            throw new frame_too_short();
         }
         return *((uint8_t *) (ip_data + ip4_proto_off));
     }
@@ -465,28 +481,28 @@ public:
     inline uint8_t packet_info::get_ip6_nxt_hdr() const
     {
         if(ip_datalen < sizeof(struct ip6_hdr)) {
-            throw new frame_too_short;
+            throw new frame_too_short();
         }
         return *((uint8_t *) (ip_data + ip6_nxt_hdr_off));
     }
     inline uint16_t packet_info::get_ip6_plen() const
     {
         if(ip_datalen < sizeof(struct ip6_hdr)) {
-            throw new frame_too_short;
+            throw new frame_too_short();
         }
         return ntohs(*((uint16_t *) (ip_data + ip6_plen_off)));
     }
     inline const struct ip6_addr *packet_info::get_ip6_src() const
     {
         if(ip_datalen < sizeof(struct ip6_hdr)) {
-            throw new frame_too_short;
+            throw new frame_too_short();
         }
         return (const struct ip6_addr *) ip_data + ip6_src_off;
     }
     inline const struct ip6_addr *packet_info::get_ip6_dst() const
     {
         if(ip_datalen < sizeof(struct ip6_hdr)) {
-            throw new frame_too_short;
+            throw new frame_too_short();
         }
         return (const struct ip6_addr *) ip_data + ip6_dst_off;
     }
@@ -494,28 +510,28 @@ public:
     inline uint16_t packet_info::get_ip4_tcp_sport() const
     {
         if(ip_datalen < sizeof(struct tcphdr) + sizeof(struct ip4)) {
-            throw new frame_too_short;
+            throw new frame_too_short();
         }
         return ntohs(*((uint16_t *) (ip_data + sizeof(struct ip4) + tcp_sport_off)));
     }
     inline uint16_t packet_info::get_ip4_tcp_dport() const
     {
         if(ip_datalen < sizeof(struct tcphdr) + sizeof(struct ip4)) {
-            throw new frame_too_short;
+            throw new frame_too_short();
         }
         return ntohs(*((uint16_t *) (ip_data + sizeof(struct ip4) + tcp_dport_off)));
     }
     inline uint16_t packet_info::get_ip6_tcp_sport() const
     {
         if(ip_datalen < sizeof(struct tcphdr) + sizeof(struct ip6_hdr)) {
-            throw new frame_too_short;
+            throw new frame_too_short();
         }
         return ntohs(*((uint16_t *) (ip_data + sizeof(struct ip6_hdr) + tcp_sport_off)));
     }
     inline uint16_t packet_info::get_ip6_tcp_dport() const
     {
         if(ip_datalen < sizeof(struct tcphdr) + sizeof(struct ip6_hdr)) {
-            throw new frame_too_short;
+            throw new frame_too_short();
         }
         return ntohs(*((uint16_t *) (ip_data + sizeof(struct ip6_hdr) + tcp_dport_off)));
     }
