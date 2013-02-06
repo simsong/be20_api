@@ -367,6 +367,8 @@ public:
 };
 
     
+
+
 #ifdef DLT_IEEE802
     inline u_short packet_info::ether_type() const
     {
@@ -453,6 +455,14 @@ public:
             throw new frame_too_short();
         }
         return ((const struct ether_header *)pcap_data)->ether_dhost;
+    }
+
+    inline const uint8_t *packet_info::get_ether_shost() const
+    {
+        if(pcap_hdr->caplen < sizeof(struct ether_addr)){
+            throw new frame_too_short();
+        }
+        return ((const struct ether_header *)pcap_data)->ether_shost;
     }
 
     // IPv4
