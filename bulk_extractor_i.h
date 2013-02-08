@@ -83,7 +83,7 @@ extern be_config_t be_config;           // system configuration
 # include <netinet/in.h>
 #endif
 #ifdef HAVE_NET_ETHERNET_H
-# include <net/ethernet.h>		// for freebsd
+# include <net/ethernet.h>              // for freebsd
 #endif
 
 
@@ -169,7 +169,7 @@ inline bool operator !=(class histogram_def h1,class histogram_def h2)  {
 namespace be13 {
 
 #ifndef ETH_ALEN
-#  define ETH_ALEN 6			// ethernet address len
+#  define ETH_ALEN 6                    // ethernet address len
 #endif
 
 #ifndef IPPROTO_TCP
@@ -182,9 +182,9 @@ namespace be13 {
 
     /* 10Mb/s ethernet header */
     struct ether_header {
-        uint8_t  ether_dhost[ETH_ALEN];	/* destination eth addr	*/
-        uint8_t  ether_shost[ETH_ALEN];	/* source ether addr	*/
-        uint16_t ether_type;		        /* packet type ID field	*/
+        uint8_t  ether_dhost[ETH_ALEN]; /* destination eth addr */
+        uint8_t  ether_shost[ETH_ALEN]; /* source ether addr    */
+        uint16_t ether_type;                    /* packet type ID field */
     } __attribute__ ((__packed__));
 
     // The mess below is becuase these items are typedefs and
@@ -194,7 +194,7 @@ namespace be13 {
     typedef uint32_t ip4_addr_t;         // historical
     // on windows we use the definition that's in winsock
     struct ip4_addr {   
-	ip4_addr_t addr;
+        ip4_addr_t addr;
     };
 
   /*
@@ -202,25 +202,25 @@ namespace be13 {
    */
     struct ip4 {
 #if __BYTE_ORDER == __LITTLE_ENDIAN
-        uint8_t ip_hl:4;		/* header length */
-        uint8_t ip_v:4;		/* version */
+        uint8_t ip_hl:4;                /* header length */
+        uint8_t ip_v:4;                 /* version */
 #endif
 #if __BYTE_ORDER == __BIG_ENDIAN
-        uint8_t ip_v:4;		/* version */
-        uint8_t ip_hl:4;		/* header length */
+        uint8_t ip_v:4;                 /* version */
+        uint8_t ip_hl:4;                /* header length */
 #endif
-        uint8_t ip_tos;			/* type of service */
-        uint16_t ip_len;			/* total length */
-        uint16_t ip_id;			/* identification */
-        uint16_t ip_off;			/* fragment offset field */
-#define	IP_RF 0x8000			/* reserved fragment flag */
-#define	IP_DF 0x4000			/* dont fragment flag */
-#define	IP_MF 0x2000			/* more fragments flag */
-#define	IP_OFFMASK 0x1fff		/* mask for fragmenting bits */
-        uint8_t ip_ttl;			/* time to live */
-        uint8_t ip_p;			/* protocol */
-        uint16_t ip_sum;			/* checksum */
-        struct ip4_addr ip_src, ip_dst;	/* source and dest address */
+        uint8_t  ip_tos;                /* type of service */
+        uint16_t ip_len;                /* total length */
+        uint16_t ip_id;                 /* identification */
+        uint16_t ip_off;                /* fragment offset field */
+#define IP_RF 0x8000                    /* reserved fragment flag */
+#define IP_DF 0x4000                    /* dont fragment flag */
+#define IP_MF 0x2000                    /* more fragments flag */
+#define IP_OFFMASK 0x1fff               /* mask for fragmenting bits */
+        uint8_t ip_ttl;                 /* time to live */
+        uint8_t ip_p;                   /* protocol */
+        uint16_t ip_sum;                        /* checksum */
+        struct ip4_addr ip_src, ip_dst; /* source and dest address */
     } __attribute__ ((__packed__));
 
     struct ip4_dgram {
@@ -232,7 +232,7 @@ namespace be13 {
     /*
      * IPv6 header structure
      */
-    struct ip6_addr {		// our own private ipv6 definition
+    struct ip6_addr {           // our own private ipv6 definition
         union {
             uint8_t   addr8[16];        // three ways to get the data
             uint16_t  addr16[8];
@@ -242,15 +242,15 @@ namespace be13 {
     struct ip6_hdr {
         union {
             struct ip6_hdrctl {
-                uint32_t ip6_un1_flow;	/* 20 bits of flow-ID */
-                uint16_t ip6_un1_plen;	/* payload length */
-                uint8_t  ip6_un1_nxt;	/* next header */
-                uint8_t  ip6_un1_hlim;	/* hop limit */
+                uint32_t ip6_un1_flow;  /* 20 bits of flow-ID */
+                uint16_t ip6_un1_plen;  /* payload length */
+                uint8_t  ip6_un1_nxt;   /* next header */
+                uint8_t  ip6_un1_hlim;  /* hop limit */
             } ip6_un1;
-            uint8_t ip6_un2_vfc;	/* 4 bits version, top 4 bits class */
+            uint8_t ip6_un2_vfc;        /* 4 bits version, top 4 bits class */
         } ip6_ctlun;
-        struct ip6_addr ip6_src;	/* source address */
-        struct ip6_addr ip6_dst;	/* destination address */
+        struct ip6_addr ip6_src;        /* source address */
+        struct ip6_addr ip6_dst;        /* destination address */
     } __attribute__((__packed__));
 
     struct ip6_dgram {
@@ -263,30 +263,30 @@ namespace be13 {
      * TCP header.
      * Per RFC 793, September, 1981.
      */
-    typedef	uint32_t tcp_seq;
+    typedef     uint32_t tcp_seq;
     struct tcphdr {
-        uint16_t th_sport;		/* source port */
-        uint16_t th_dport;		/* destination port */
-        tcp_seq th_seq;		/* sequence number */
-        tcp_seq th_ack;		/* acknowledgement number */
+        uint16_t th_sport;              /* source port */
+        uint16_t th_dport;              /* destination port */
+        tcp_seq th_seq;         /* sequence number */
+        tcp_seq th_ack;         /* acknowledgement number */
 #  if __BYTE_ORDER == __LITTLE_ENDIAN
-        uint8_t th_x2:4;		/* (unused) */
-        uint8_t th_off:4;		/* data offset */
+        uint8_t th_x2:4;                /* (unused) */
+        uint8_t th_off:4;               /* data offset */
 #  endif
 #  if __BYTE_ORDER == __BIG_ENDIAN
-        uint8_t th_off:4;		/* data offset */
-        uint8_t th_x2:4;		/* (unused) */
+        uint8_t th_off:4;               /* data offset */
+        uint8_t th_x2:4;                /* (unused) */
 #  endif
         uint8_t th_flags;
-#  define TH_FIN	0x01
-#  define TH_SYN	0x02
-#  define TH_RST	0x04
-#  define TH_PUSH	0x08
-#  define TH_ACK	0x10
-#  define TH_URG	0x20
-    uint16_t th_win;		/* window */
-    uint16_t th_sum;		/* checksum */
-    uint16_t th_urp;		/* urgent pointer */
+#  define TH_FIN        0x01
+#  define TH_SYN        0x02
+#  define TH_RST        0x04
+#  define TH_PUSH       0x08
+#  define TH_ACK        0x10
+#  define TH_URG        0x20
+    uint16_t th_win;            /* window */
+    uint16_t th_sum;            /* checksum */
+    uint16_t th_urp;            /* urgent pointer */
 };
 /*
  * The packet_info structure records packets after they are read from the pcap library.
@@ -366,9 +366,6 @@ public:
     uint16_t get_ip6_tcp_dport() const;
 };
 
-    
-
-
 #ifdef DLT_IEEE802
     inline u_short packet_info::ether_type() const
     {
@@ -381,17 +378,17 @@ public:
 #endif
     
 #ifndef ETHERTYPE_PUP
-#define	ETHERTYPE_PUP		0x0200          /* Xerox PUP */
-#define ETHERTYPE_SPRITE	0x0500		/* Sprite */
-#define	ETHERTYPE_IP		0x0800		/* IP */
-#define	ETHERTYPE_ARP		0x0806		/* Address resolution */
-#define	ETHERTYPE_REVARP	0x8035		/* Reverse ARP */
-#define ETHERTYPE_AT		0x809B		/* AppleTalk protocol */
-#define ETHERTYPE_AARP		0x80F3		/* AppleTalk ARP */
-#define	ETHERTYPE_VLAN		0x8100		/* IEEE 802.1Q VLAN tagging */
-#define ETHERTYPE_IPX		0x8137		/* IPX */
-#define	ETHERTYPE_IPV6		0x86dd		/* IP protocol version 6 */
-#define ETHERTYPE_LOOPBACK	0x9000		/* used to test interfaces */
+#define ETHERTYPE_PUP           0x0200          /* Xerox PUP */
+#define ETHERTYPE_SPRITE        0x0500          /* Sprite */
+#define ETHERTYPE_IP            0x0800          /* IP */
+#define ETHERTYPE_ARP           0x0806          /* Address resolution */
+#define ETHERTYPE_REVARP        0x8035          /* Reverse ARP */
+#define ETHERTYPE_AT            0x809B          /* AppleTalk protocol */
+#define ETHERTYPE_AARP          0x80F3          /* AppleTalk ARP */
+#define ETHERTYPE_VLAN          0x8100          /* IEEE 802.1Q VLAN tagging */
+#define ETHERTYPE_IPX           0x8137          /* IPX */
+#define ETHERTYPE_IPV6          0x86dd          /* IP protocol version 6 */
+#define ETHERTYPE_LOOPBACK      0x9000          /* used to test interfaces */
 #endif
     
     inline int packet_info::vlan() const
