@@ -338,6 +338,7 @@ public:
     const uint8_t * const ip_data;      // pointer to where ip data begins
     const size_t ip_datalen;            // length of ip data
 
+    static u_short nshort(const u_char *buf,size_t pos);   // return a network byte order short at offset pos
     int     ip_version() const;         // returns 4, 6 or 0
     u_short ether_type() const;         // returns 0 if not IEEE802, otherwise returns ether_type
     int     vlan() const;               // returns NO_VLAN if not IEEE802 or not VLAN, othererwise VID
@@ -391,10 +392,15 @@ public:
 #define ETHERTYPE_LOOPBACK      0x9000          /* used to test interfaces */
 #endif
     
+    inline u_short packet_info::nshort(const u_char *buf,size_t pos) 
+    {
+        return (buf[pos]<<8) | (buf[pos+1]);
+    }
+
     inline int packet_info::vlan() const
     {
         if(ether_type()==ETHERTYPE_VLAN){
-            return ntohs(*(u_short *)(pcap_data + sizeof(struct ether_header)));
+            return nshort(pcap_data,sizeof(struct ether_header));
         }
         return -1;
     }
@@ -463,6 +469,9 @@ public:
     }
 
     // IPv4
+#  ifdef GNUC_HAS_DIAGNOSTIC_PRAGMA
+#    pragma GCC diagnostic ignored "-Wcast-align"
+#  endif
     inline const struct in_addr *packet_info::get_ip4_src() const
     {
         if(ip_datalen < sizeof(struct ip4)) {
@@ -477,6 +486,9 @@ public:
         }
         return (const struct in_addr *) ip_data + ip4_dst_off;
     }
+#  ifdef GNUC_HAS_DIAGNOSTIC_PRAGMA
+#    pragma GCC diagnostic warning "-Wcast-align"
+#  endif
     inline uint8_t packet_info::get_ip4_proto() const
     {
         if(ip_datalen < sizeof(struct ip4)) {
@@ -497,8 +509,12 @@ public:
         if(ip_datalen < sizeof(struct ip6_hdr)) {
             throw new frame_too_short();
         }
-        return ntohs(*((uint16_t *) (ip_data + ip6_plen_off)));
+        //return ntohs(*((uint16_t *) (ip_data + ip6_plen_off)));
+        return nshort(ip_data,ip6_plen_off);
     }
+#  ifdef GNUC_HAS_DIAGNOSTIC_PRAGMA
+#    pragma GCC diagnostic ignored "-Wcast-align"
+#  endif
     inline const struct ip6_addr *packet_info::get_ip6_src() const
     {
         if(ip_datalen < sizeof(struct ip6_hdr)) {
@@ -513,34 +529,43 @@ public:
         }
         return (const struct ip6_addr *) ip_data + ip6_dst_off;
     }
+#  ifdef GNUC_HAS_DIAGNOSTIC_PRAGMA
+#    pragma GCC diagnostic warning "-Wcast-align"
+#  endif
+
     // TCP
     inline uint16_t packet_info::get_ip4_tcp_sport() const
     {
         if(ip_datalen < sizeof(struct tcphdr) + sizeof(struct ip4)) {
             throw new frame_too_short();
         }
-        return ntohs(*((uint16_t *) (ip_data + sizeof(struct ip4) + tcp_sport_off)));
+        //return ntohs(*((uint16_t *) (ip_data + sizeof(struct ip4) + tcp_sport_off)));
+        return nshort(ip_data,sizeof(struct ip4) + tcp_sport_off);
     }
     inline uint16_t packet_info::get_ip4_tcp_dport() const
     {
         if(ip_datalen < sizeof(struct tcphdr) + sizeof(struct ip4)) {
             throw new frame_too_short();
         }
-        return ntohs(*((uint16_t *) (ip_data + sizeof(struct ip4) + tcp_dport_off)));
+        //return ntohs(*((uint16_t *) (ip_data + sizeof(struct ip4) + tcp_dport_off)));
+        return nshort(ip_data,sizeof(struct ip4) + tcp_dport_off); // 
+
     }
     inline uint16_t packet_info::get_ip6_tcp_sport() const
     {
         if(ip_datalen < sizeof(struct tcphdr) + sizeof(struct ip6_hdr)) {
             throw new frame_too_short();
         }
-        return ntohs(*((uint16_t *) (ip_data + sizeof(struct ip6_hdr) + tcp_sport_off)));
+        //return ntohs(*((uint16_t *) (ip_data + sizeof(struct ip6_hdr) + tcp_sport_off)));
+        return nshort(ip_data,sizeof(struct ip6_hdr) + tcp_sport_off); // 
     }
     inline uint16_t packet_info::get_ip6_tcp_dport() const
     {
         if(ip_datalen < sizeof(struct tcphdr) + sizeof(struct ip6_hdr)) {
             throw new frame_too_short();
         }
-        return ntohs(*((uint16_t *) (ip_data + sizeof(struct ip6_hdr) + tcp_dport_off)));
+        //return ntohs(*((uint16_t *) (ip_data + sizeof(struct ip6_hdr) + tcp_dport_off)));
+        return nshort(ip_data,sizeof(struct ip6_hdr) + tcp_dport_off); // 
     }
 };
 
