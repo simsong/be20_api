@@ -707,6 +707,9 @@ void xml::add_DFXML_build_environment()
         xmlout("compilation_date",buf);
     }
 #endif
+#ifdef BOOST_VERSION
+    xmlout("library", "", std::string("name=\"boost\" version=\" BOOST_VERSION "\"",false);
+#endif
 #ifdef HAVE_LIBTSK3
     xmlout("library", "", std::string("name=\"tsk\" version=\"") + tsk_version_get_str() + "\"",false);
 #endif
