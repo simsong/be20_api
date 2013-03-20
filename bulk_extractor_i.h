@@ -198,22 +198,25 @@ namespace be13 {
     struct ether_header {
         uint8_t  ether_dhost[ETH_ALEN]; /* destination eth addr */
         uint8_t  ether_shost[ETH_ALEN]; /* source ether addr    */
-        uint16_t ether_type;                    /* packet type ID field */
+        uint16_t ether_type;            /* packet type ID field */
     } __attribute__ ((__packed__));
 
-    // The mess below is becuase these items are typedefs and
-    // structs on some systems and #defines on other systems
-    // So in the interest of portability we need to define *new*
-    // structures that are only used here
+    /* The mess below is becuase these items are typedefs and
+     * structs on some systems and #defines on other systems
+     * So in the interest of portability we need to define *new*
+     * structures that are only used here
+     */
+
     typedef uint32_t ip4_addr_t;         // historical
+
     // on windows we use the definition that's in winsock
     struct ip4_addr {   
         ip4_addr_t addr;
     };
 
-  /*
-   * Structure of an internet header, naked of options.
-   */
+    /*
+     * Structure of an internet header, naked of options.
+     */
     struct ip4 {
 #if __BYTE_ORDER == __LITTLE_ENDIAN
         uint8_t ip_hl:4;                /* header length */
@@ -305,7 +308,11 @@ namespace be13 {
 /*
  * The packet_info structure records packets after they are read from the pcap library.
  * It preserves the original pcap information and information decoded from the MAC and
- * VLAN (IEEE 802.1Q) layers.
+ * VLAN (IEEE 802.1Q) layers, as well as information that might be present from 802.11
+ * interfaces. However it does not preserve the full radiotap information. 
+ * 
+ * packet_info is created to make it easier to write network forensic software. It encapsulates
+ * much of the common knowledge needed to operate on packet-based IP networks.
  *
  * @param ts   - the actual packet time to use (adjusted)
  * @param pcap_data - Original data offset point from pcap
@@ -347,9 +354,9 @@ public:
 
     const int    pcap_dlt;              // data link type; needed by libpcap, not provided
     const struct pcap_pkthdr *pcap_hdr; // provided by libpcap
-    const u_char *pcap_data;            // provided by libpcap
-    const struct timeval &ts;           // possibly modified before packet_info created
-    const uint8_t * const ip_data;      // pointer to where ip data begins
+    const u_char *pcap_data;            // provided by libpcap; where the MAC layer begins
+    const struct timeval &ts;           // when packet received; possibly modified before packet_info created
+    const uint8_t *const ip_data;       // pointer to where ip data begins
     const size_t ip_datalen;            // length of ip data
 
     static u_short nshort(const u_char *buf,size_t pos);   // return a network byte order short at offset pos
