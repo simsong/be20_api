@@ -135,7 +135,8 @@ typedef vector<packet_plugin_info> packet_plugin_info_vector_t;
 packet_plugin_info_vector_t  packet_handlers;   // pcap callback handlers
 
 /**
- * Process a pcap packet
+ * Process a pcap packet.
+ * Designed to be very efficient because we have so many packets.
  */
 void process_packet_info(const be13::packet_info &pi)
 {
@@ -151,7 +152,8 @@ void process_packet_info(const be13::packet_info &pi)
  * As part of scanner loading, determine:
  * - feature files that the scanner requires
  * - Histograms that the scanner makes
- * - pcap handlers that the scanner uses
+ * This is called before canners are enabled or disabled, so the pcap handlers
+ * need to be set afterwards
  */
 void load_scanner(scanner_t scanner)
 {
@@ -182,7 +184,6 @@ void load_scanner(scanner_t scanner)
         histograms.insert((*it));
     }
     current_scanners.push_back(sd);
-    if(sd->info.packet_cb) packet_handlers.push_back(packet_plugin_info(sd->info.packet_user,sd->info.packet_cb));
 }
 
 
@@ -230,6 +231,17 @@ void load_scanners(scanner_t * const *scanners)
 {
     for(int i=0;scanners[i];i++){
         load_scanner(scanners[i]);
+    }
+}
+
+void load_scanner_packet_handlers()
+{
+    for(scanner_vector::const_iterator it = current_scanners.begin(); it!=current_scanners.end(); it++){
+        if((*it)->enabled){
+            const scanner_def *sd = (*it);
+            
+            packet_handlers.push_back(packet_plugin_info(sd->info.packet_user,sd->info.packet_cb));
+        }
     }
 }
 
@@ -305,6 +317,7 @@ void scanners_process_commands()
         case scanner_command::DISABLE:     set_scanner_enabled((*it).name,false);break;
         }
     }
+    load_scanner_packet_handlers();     // can't do until enable/disable commands are run
     commands_processed=true;
 }
 
