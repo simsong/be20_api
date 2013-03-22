@@ -612,9 +612,11 @@ private:
     ;
     const scanner_info &operator=(const scanner_info &i){ throw new not_impl();}
  public:
+    /* scanner flags */
     static const int SCANNER_DISABLED=0x01;             /* v1: enabled by default */
     static const int SCANNER_NO_USAGE=0x02;             /* v1: do not show scanner in usage */
-    static const int SCANNER_NO_ALL  =0x04;             // v2: do not enable with -eALL
+    static const int SCANNER_NO_ALL       =0x04;         /* v2: do not enable with -eALL */
+    static const int SCANNER_FIND_SCANNER = 0x08;        /* v2: this is scanner that uses the find_list */
     static const int CURRENT_SI_VERSION=2;
 
     scanner_info():si_version(CURRENT_SI_VERSION),
