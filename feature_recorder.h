@@ -104,7 +104,7 @@ public:
     static const string histogram_file_header;
     static const string feature_file_header;
     static const string bulk_extractor_version_header;
-    static const uint8_t UTF8_BOM[3];   // UTF-8 byte order mark
+    static const string UTF8_BOM;   // UTF-8 byte order mark
     static const string BOM_EXPLAINATION; // what is this BOM thing? Put at the top of each file
     static uint32_t opt_max_context_size;
     static uint32_t opt_max_feature_size;

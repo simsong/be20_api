@@ -14,7 +14,7 @@
 #define DEBUG_EXIT_EARLY  1000		/* just print the size of the volume and exis */
 #define DEBUG_ALLOCATE_512MiB 1002	/* Allocate 512MiB, but don't set any flags */
 
-extern int debug;			// feel free to use
+//extern int debug;			// feel free to use
 
 
 /* We need netinet/in.h or windowsx.h */
@@ -81,8 +81,6 @@ extern int debug;			// feel free to use
 
 /* bulkd extractor configuration */
 
-typedef std::map<std::string,std::string>  be_config_t;
-extern be_config_t be_config;           // system configuration
 
 
 /* Network includes */
@@ -607,21 +605,25 @@ private:
     scanner_info(const scanner_info &i) __attribute__((__noreturn__))
     :si_version(),name(),author(),description(),url(),
                                         scanner_version(),flags(),feature_names(),histogram_defs(),
-                                        packet_user(),packet_cb(){
+        packet_user(),packet_cb(),config(),debug(0){
         throw new not_impl();}
     ;
     const scanner_info &operator=(const scanner_info &i){ throw new not_impl();}
  public:
-    /* scanner flags */
-    static const int SCANNER_DISABLED=0x01;             /* v1: enabled by default */
-    static const int SCANNER_NO_USAGE=0x02;             /* v1: do not show scanner in usage */
-    static const int SCANNER_NO_ALL       =0x04;         /* v2: do not enable with -eALL */
-    static const int SCANNER_FIND_SCANNER = 0x08;        /* v2: this is scanner that uses the find_list */
-    static const int CURRENT_SI_VERSION=2;
+    typedef std::map<std::string,std::string>  config_t; // configuration for scanner passed in
 
+    /* scanner flags */
+    static const int SCANNER_DISABLED     = 0x01;       /* v1: enabled by default */
+    static const int SCANNER_NO_USAGE     = 0x02;       /* v1: do not show scanner in usage */
+    static const int SCANNER_NO_ALL       = 0x04;       /* v2: do not enable with -eALL */
+    static const int SCANNER_FIND_SCANNER = 0x08;       /* v2: this is scanner that uses the find_list */
+    static const int CURRENT_SI_VERSION=3;              // 
+
+    // never change the order or delete old fields, or else you will
+    // break backwards compatability 
     scanner_info():si_version(CURRENT_SI_VERSION),
                    name(),author(),description(),url(),scanner_version(),flags(0),feature_names(),
-                   histogram_defs(),packet_user(),packet_cb(){}
+                   histogram_defs(),packet_user(),packet_cb(),config(),debug(0){}
     int         si_version;             // version number for this structure
     string      name;                   // v1: scanner name
     string      author;                 // v1: who wrote me?
@@ -633,6 +635,8 @@ private:
     histograms_t histogram_defs;        // v1: histogram definition info
     void        *packet_user;           // v2: user data provided to packet_cb
     packet_callback_t *packet_cb;       // v2: packet handler, or NULL if not present.
+    config_t    config;                 // v3: this scanner's configuration. [scanner_name:] prefix removed
+    int         debug;                  // v3: debug flag
 };
 
 #include <map>
@@ -665,7 +669,8 @@ class scanner_params {
         }
     }
 
-    typedef enum {none=-1,startup=0,scan=1,shutdown=2} phase_t ;
+    // phase_t specifies when the scanner is being called
+    typedef enum {PHASE_NONE=-1,PHASE_STARTUP=0,PHASE_SCAN=1,PHASE_SHUTDOWN=2} phase_t ;
     static PrintOptions no_options;     // in common.cpp
 
     /********************
@@ -680,13 +685,15 @@ class scanner_params {
     }
 
     /* A scanner params with no print options*/
-    scanner_params(phase_t phase_,const sbuf_t &sbuf_,class feature_recorder_set &fs_):
+    scanner_params(phase_t phase_,const sbuf_t &sbuf_,
+                   class feature_recorder_set &fs_):
         sp_version(CURRENT_SP_VERSION),
         phase(phase_),sbuf(sbuf_),fs(fs_),depth(0),print_options(no_options),info(0),sbufxml(0){
     }
 
     /* A scanner params with no print options but xmlstream */
-    scanner_params(phase_t phase_,const sbuf_t &sbuf_,class feature_recorder_set &fs_,std::stringstream *xmladd):
+    scanner_params(phase_t phase_,const sbuf_t &sbuf_,
+                   class feature_recorder_set &fs_,std::stringstream *xmladd):
         sp_version(CURRENT_SP_VERSION),
         phase(phase_),sbuf(sbuf_),fs(fs_),depth(0),print_options(no_options),info(0),sbufxml(xmladd){
     }
@@ -743,25 +750,30 @@ public:;
     scanner_def():scanner(0),enabled(false),info(),pathPrefix(){};
     scanner_t  *scanner;                // pointer to the primary entry point
     bool        enabled;                // is enabled?
-    scanner_info info;
+    scanner_info info;                  // info block sent to and returned by scanner
     string      pathPrefix;             /* path prefix for recursive scanners */
 };
-void load_scanner(scanner_t scanner);
-void load_scanners(scanner_t * const *scanners);                // load the scan_ plugins
-void load_scanner_directory(const string &dirname);             // load the scan_ plugins
-typedef vector<scanner_def *> scanner_vector;
-extern scanner_vector current_scanners;                         // current scanners
+void load_scanner(scanner_t scanner,const scanner_info::config_t &config); // load a specific scanner
+void load_scanners(scanner_t * const *scanners_builtin,const scanner_info::config_t &config);           // load the scan_ plugins
+void load_scanner_directory(const string &dirname,const scanner_info::config_t &config); // load scanners in the directory
+void load_scanner_directories(const std::vector<std::string> &dirnames,const scanner_info::config_t &config);
+
 void enable_alert_recorder(feature_file_names_t &feature_file_names);
 void enable_feature_recorders(feature_file_names_t &feature_file_names);
+
 // print info about the scanners:
 void info_scanners(bool detailed,scanner_t * const *scanners_builtin,const char enable_opt,const char disable_opt);
 void scanners_enable(const std::string &name); // saves a command to enable this scanner
 void scanners_enable_all();                    // enable all of them
 void scanners_disable(const std::string &name); // saves a command to disable this scanner
 void scanners_disable_all();                    // saves a command to disable all
-void scanners_process_commands();               // process the saved commands
+void scanners_process_commands();               // process the enable/disable and config commands
+
+typedef vector<scanner_def *> scanner_vector;
+extern scanner_vector current_scanners;                         // current scanners
 
 /* plugin.cpp */
+void set_scanner_debug(int debug);
 void phase_shutdown(feature_recorder_set &fs, xml &xreport);
 void phase_histogram(feature_recorder_set &fs, xml &xreport);
 void process_sbuf(const class scanner_params &sp);                              /* process for feature extraction */

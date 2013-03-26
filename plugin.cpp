@@ -21,7 +21,7 @@
 #include "xml.h"
 
 uint32_t scanner_def::max_depth = 5;            // max recursion depth
-
+static int debug;                               // local debug variable
 
 /****************************************************************
  *** misc support
@@ -79,6 +79,10 @@ static void errx(int eval,const char *fmt,...)
 scanner_params::PrintOptions scanner_params::no_options; 
 scanner_vector current_scanners;                                // current scanners
 
+void set_scanner_debug(int adebug)
+{
+    debug = adebug;
+}
 
 
 /**
@@ -149,13 +153,15 @@ void process_packet_info(const be13::packet_info &pi)
 
 /**
  * plugin system phase 0: Load a scanner.
- * As part of scanner loading, determine:
+ *
+ * As part of scanner loading:
+ * - pass configuration to the scanner
  * - feature files that the scanner requires
  * - Histograms that the scanner makes
- * This is called before canners are enabled or disabled, so the pcap handlers
+ * This is called before scanners are enabled or disabled, so the pcap handlers
  * need to be set afterwards
  */
-void load_scanner(scanner_t scanner)
+void load_scanner(scanner_t scanner,const scanner_info::config_t &config)
 {
     /* If scanner is already loaded, return */
     for(scanner_vector::const_iterator it = current_scanners.begin();it!=current_scanners.end();it++){
@@ -166,19 +172,37 @@ void load_scanner(scanner_t scanner)
     sbuf_t      sbuf(pos0);
     feature_recorder_set fs(feature_recorder_set::DISABLED); // dummy
 
-    // Create an empty scanner param to get startup information
-    scanner_params sp(scanner_params::startup,sbuf,fs); // 
-    scanner_def *sd = new scanner_def(); 
+    //
+    // Each scanner's params are stored in a scanner_def object that
+    // is created here and retained for the duration of the run.
+    // The scanner_def includes its own scanner_info structure.
+    // We pre-load the structure with the configuration for this scanner
+    // and the global debug variable
+    //
+    scanner_params sp(scanner_params::PHASE_STARTUP,sbuf,fs); // 
+    scanner_def *sd = new scanner_def();                     
     sd->scanner = scanner;
-    sp.phase = scanner_params::startup;                         // startup
+    sd->info.debug = debug;
+
+    for(scanner_info::config_t::const_iterator it = config.begin();it!=config.end();it++){
+        std::string name = it->first;
+        std::string value = it->second;
+
+        sd->info.config[name] = value;
+    }
+
+    sp.phase = scanner_params::PHASE_STARTUP;                         // startup
     sp.info  = &sd->info;
 
-    // Make an empty recursion control block and get the scanner's startup 
+    // Make an empty recursion control block and call the scanner's
+    // initialization function.
     recursion_control_block rcb(0,"",0); 
     (*scanner)(sp,rcb);                  // phase 0
     
     sd->enabled      = !(sd->info.flags & scanner_info::SCANNER_DISABLED);
 
+    // Catch histograms and add as a current scanner for all scanners,
+    // as a scanner may be enabled after it is loaded.
     for(histograms_t::const_iterator it = sd->info.histogram_defs.begin();
         it != sd->info.histogram_defs.end(); it++){
         histograms.insert((*it));
@@ -187,7 +211,7 @@ void load_scanner(scanner_t scanner)
 }
 
 
-static void load_scanner_file(string fn )
+static void load_scanner_file(string fn,const scanner_info::config_t &config)
 {
     /* Figure out the function name */
     size_t extloc = fn.rfind('.');
@@ -224,29 +248,19 @@ static void load_scanner_file(string fn )
     std::cout << "  ERROR: Support for loadable libraries not enabled\n";
     return;
 #endif
-    load_scanner(*scanner/*,histograms*/);
+    load_scanner(*scanner,config);
 }
 
-void load_scanners(scanner_t * const *scanners)
+void load_scanners(scanner_t * const *scanners,
+                   const scanner_info::config_t &config)
 {
     for(int i=0;scanners[i];i++){
-        load_scanner(scanners[i]);
+        load_scanner(scanners[i],config);
     }
 }
 
-void load_scanner_packet_handlers()
-{
-    for(scanner_vector::const_iterator it = current_scanners.begin(); it!=current_scanners.end(); it++){
-        if((*it)->enabled){
-            const scanner_def *sd = (*it);
-            
-            packet_handlers.push_back(packet_plugin_info(sd->info.packet_user,sd->info.packet_cb));
-        }
-    }
-}
-
-
-void load_scanner_directory(const string &dirname )
+void load_scanner_directory(const string &dirname,
+                            const scanner_info::config_t &config )
 {
     DIR *dirp = opendir(dirname.c_str());
     if(dirp==0){
@@ -264,10 +278,31 @@ void load_scanner_directory(const string &dirname )
 #else
             if(ext!="so") continue;     // not a shared library
 #endif
-            load_scanner_file(dirname+"/"+fname );
+            load_scanner_file(dirname+"/"+fname,config );
         }
     }
 }
+
+void load_scanner_directories(const std::vector<std::string> &dirnames,
+                              const scanner_info::config_t &config)
+{
+    for(std::vector<std::string>::const_iterator it = dirnames.begin();it!=dirnames.end();it++){
+        load_scanner_directory(*it,config);
+    }
+}
+
+
+void load_scanner_packet_handlers()
+{
+    for(scanner_vector::const_iterator it = current_scanners.begin(); it!=current_scanners.end(); it++){
+        if((*it)->enabled){
+            const scanner_def *sd = (*it);
+            packet_handlers.push_back(packet_plugin_info(sd->info.packet_user,sd->info.packet_cb));
+        }
+    }
+}
+
+
 /****************************************************************
  *** Scanner Commands (which one is enabled or disabled)
  ****************************************************************/
@@ -332,9 +367,9 @@ void phase_shutdown(feature_recorder_set &fs, xml &xreport)
         if((*it)->enabled){
             pos0_t pos0;
             sbuf_t sbuf(pos0);
-            scanner_params sp(scanner_params::shutdown,sbuf,fs);
+            scanner_params sp(scanner_params::PHASE_SHUTDOWN,sbuf,fs);
             recursion_control_block rcb(0,"",0);        // empty rcb 
-            sp.phase=scanner_params::shutdown;                          // shutdown
+            sp.phase=scanner_params::PHASE_SHUTDOWN;                          // shutdown
             (*(*it)->scanner)(sp,rcb);
         }
     }
@@ -391,8 +426,10 @@ void enable_feature_recorders(feature_file_names_t &feature_file_names)
 
 void info_scanners(bool detailed,scanner_t * const *scanners_builtin,const char enable_opt,const char disable_opt)
 {
-    /* Print a list of scanners */
-    load_scanners(scanners_builtin /* ,histograms */);
+    /* Print a list of scanners. We need to load them to do this, so they are loaded with empty config */
+    const scanner_info::config_t empty_config;
+
+    load_scanners(scanners_builtin,empty_config);
     std::cout << "\n";
     std::vector<std::string> enabled_wordlist;
     std::vector<std::string> disabled_wordlist;
