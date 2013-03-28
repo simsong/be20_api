@@ -297,7 +297,9 @@ void load_scanner_packet_handlers()
     for(scanner_vector::const_iterator it = current_scanners.begin(); it!=current_scanners.end(); it++){
         if((*it)->enabled){
             const scanner_def *sd = (*it);
-            packet_handlers.push_back(packet_plugin_info(sd->info.packet_user,sd->info.packet_cb));
+            if(sd->info.packet_cb){
+                packet_handlers.push_back(packet_plugin_info(sd->info.packet_user,sd->info.packet_cb));
+            }
         }
     }
 }
