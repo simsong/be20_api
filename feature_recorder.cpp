@@ -48,7 +48,7 @@ uint32_t feature_recorder::opt_max_feature_size=1024*1024;
  * 3. Add the header
  */
 
-const uint8_t feature_recorder::UTF8_BOM[3] =  {0xef,0xbb,0xbf};
+const string feature_recorder::UTF8_BOM("\xef\xbb\xbf");
 const string feature_recorder::BOM_EXPLAINATION("# UTF-8 Byte Order Marker; see http://unicode.org/faq/utf_bom.html\n");
 
 void feature_recorder::banner_stamp(std::ostream &os,const std::string &header)

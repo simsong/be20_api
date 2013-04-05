@@ -26,7 +26,7 @@ feature_recorder_set::feature_recorder_set(const feature_file_names_t &feature_f
                                            const std::string &input_fname_,
                                            const std::string &outdir_,
                                            bool create_stop_files):
-    flags(0),input_fname(input_fname_),outdir(outdir_),frm(),Mstats(),scanner_stats()
+    flags(0),input_fname(input_fname_),outdir(outdir_),frm(),Mlock(),scanner_stats()
 {
     /* Create the requested feature files */
     for(set<string>::const_iterator it=feature_files.begin();it!=feature_files.end();it++){
@@ -57,12 +57,15 @@ bool feature_recorder_set::has_name(string name) const
 /*
  * Gets a feature_recorder_set.
  */
-feature_recorder *feature_recorder_set::get_name(string name) const
+feature_recorder *feature_recorder_set::get_name(const std::string &name) 
 {
-    if(flags & ONLY_ALERT){             // always return the alert recorder
-        name = feature_recorder_set::ALERT_RECORDER_NAME;
+    if(flags & ONLY_ALERT){
+        if(name!=feature_recorder_set::ALERT_RECORDER_NAME){             // always return the alert recorder
+            return get_name(feature_recorder_set::ALERT_RECORDER_NAME);
+        }
     }
 
+    cppmutex::lock lock(Mlock);
     feature_recorder_map::const_iterator it = frm.find(name);
     if(it!=frm.end()) return it->second;
     std::cerr << "feature_recorder::get_name(" << name << ") does not exist\n";
@@ -71,14 +74,14 @@ feature_recorder *feature_recorder_set::get_name(string name) const
 }
 
 
-feature_recorder *feature_recorder_set::get_alert_recorder()  const
+feature_recorder *feature_recorder_set::get_alert_recorder()  
 {
     return get_name(feature_recorder_set::ALERT_RECORDER_NAME);
 }
 
 void feature_recorder_set::add_stats(string bucket,double seconds)
 {
-    cppmutex::lock lock(Mstats);
+    cppmutex::lock lock(Mlock);
     class pstats &p = scanner_stats[bucket]; // get the location of the stats
     p.seconds += seconds;
     p.calls ++;

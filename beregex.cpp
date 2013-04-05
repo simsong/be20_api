@@ -42,6 +42,7 @@ const char *beregex::version(){return regex_version;}
 
 bool beregex::is_regex(const std::string &str)
 {
+    return true;                        // SLG TEST
     for(std::string::const_iterator it = str.begin();it!=str.end();it++){
         switch(*it){
         case '?':
@@ -55,7 +56,6 @@ bool beregex::is_regex(const std::string &str)
     }
     return false;
 }
-
 
 beregex::beregex(const beregex &that):pat(that.pat),flags(that.flags),nreg_(0)
 {
@@ -143,8 +143,8 @@ int regex_list::readfile(std::string fname)
         while(!f.eof()){
             std::string line;
             getline(f,line);
-            if((*line.end())=='\r'){
-                line.erase(line.end()); /* remove the last character if it is a \r */
+            if(line.size()>0 && (*line.end())=='\r'){
+                line.erase(line.end()); /* remove the last character while it is a \n or \r */
             }
             patterns.push_back(new beregex(line,0));
         }
@@ -154,17 +154,33 @@ int regex_list::readfile(std::string fname)
     return -1;
 }
 
-bool regex_list::check(const std::string &probe,std::string *found, size_t *offset,size_t *len) const 
+void regex_list::add_regex(const std::string &pat)
 {
+    patterns.push_back(new beregex(pat,0));
+}
+
+
+/* Find the FIRST match in buf */
+bool regex_list::check(const std::string &buf,std::string *found, size_t *offset,size_t *len) const 
+{
+    /* Now check check pattern */
     /* First check literals, because they are faster */
-    if(literal_strings.find(probe)!=literal_strings.end()){
-        return true;
-    }
-    /* Now check the patterns */
+    bool first = true;
+    bool fnd = false;
     for(std::vector<beregex *>::const_iterator it=patterns.begin(); it != patterns.end(); it++){
-        if((*it)->search(probe,found,offset,len)){
-            return true;
+        std::string nfound;
+        size_t      noffset=0;
+        size_t      nlen=0;
+        if((*it)->search(buf,&nfound,&noffset,&nlen)){
+            if(first || noffset<*offset){
+                fnd     = true;
+                *found  = nfound;
+                *offset = noffset;
+                *len    = nlen;
+                first   = false;
+            }
         }
     }
-    return false;
+    return fnd;
 }
+

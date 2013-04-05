@@ -28,7 +28,7 @@ private:
         }
     };
     feature_recorder_set(const feature_recorder_set &fs) __attribute__((__noreturn__)) :
-        flags(0),input_fname(),outdir(),frm(),Mstats(),scanner_stats(){ throw new not_impl(); }
+        flags(0),input_fname(),outdir(),frm(),Mlock(),scanner_stats(){ throw new not_impl(); }
     const feature_recorder_set &operator=(const feature_recorder_set &fs){ throw new not_impl(); }
     uint32_t flags;
 public:
@@ -37,7 +37,7 @@ public:
     std::string input_fname;            // input file
     std::string outdir;                 // where output goes
     feature_recorder_map  frm;          // map of feature recorders
-    cppmutex Mstats;
+    cppmutex Mlock;            // can be locked even in a const function
     class pstats {
     public:
         double seconds;
@@ -57,7 +57,7 @@ public:
                          bool create_stop_files);
 
     /** create a dummy feature_recorder_set with no output directory */
-    feature_recorder_set(uint32_t flags_):flags(flags_),input_fname(),outdir(),frm(),Mstats(),scanner_stats(){ }
+    feature_recorder_set(uint32_t flags_):flags(flags_),input_fname(),outdir(),frm(),Mlock(),scanner_stats(){ }
     virtual ~feature_recorder_set() {
         for(feature_recorder_map::iterator i = frm.begin();i!=frm.end();i++){
             delete i->second;
@@ -75,8 +75,8 @@ public:
 
     // NOTE:
     // only virtual functions may be called by plugins!
-    virtual feature_recorder *get_name(string name) const;
-    virtual feature_recorder *get_alert_recorder() const;
+    virtual feature_recorder *get_name(const std::string &name);
+    virtual feature_recorder *get_alert_recorder();
 };
 
 

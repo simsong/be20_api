@@ -55,3 +55,9 @@ To git@github.com:simsong/be13_api.git
    2d14a08..74aca46  master -> master
 $ 
 
+
+Summary:
+$ git checkout -b newbranch
+$ git checkout master
+$ git merge newbranch
+$ git branch -d newbranch

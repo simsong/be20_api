@@ -29,6 +29,10 @@
 #include <unistd.h>
 
 
+#ifdef HAVE_BOOST_VERSION_HPP
+#include <boost/version.hpp>
+#endif
+
 #ifdef HAVE_PTHREAD
 #define MUTEX_LOCK(M)   pthread_mutex_lock(M)
 #define MUTEX_UNLOCK(M) pthread_mutex_unlock(M)
@@ -705,6 +709,13 @@ void xml::add_DFXML_build_environment()
         char buf[64];
         snprintf(buf,sizeof(buf),"%4d-%02d-%02dT%s",tm.tm_year+1900,tm.tm_mon+1,tm.tm_mday,__TIME__);
         xmlout("compilation_date",buf);
+    }
+#endif
+#ifdef BOOST_VERSION
+    {
+        char buf[64];
+        snprintf(buf,sizeof(buf),"%d",BOOST_VERSION);
+        xmlout("library", "", std::string("name=\"boost\" version=\"") + buf + "\"",false);
     }
 #endif
 #ifdef HAVE_LIBTSK3

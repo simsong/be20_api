@@ -46,32 +46,29 @@ private:
 typedef std::vector<beregex *> beregex_vector;
 
 /**
- * The regex_list maintains a list of literal strings and regular expressions.
+ * The regex_list maintains a list of regular expressions.
  * The list can be read out of a file.
  * check() returns true if the provided string is inside the list
  * This should be combined with the word_and_context_list
  */
 class regex_list {
  public:
-    std::set<std::string>literal_strings;                       /* static strings */
     std::vector<beregex *> patterns;
-    regex_list():literal_strings(),patterns(){}
+    regex_list():patterns(){}
 
     size_t size(){
-        return literal_strings.size() + patterns.size();
+        return patterns.size();
     }
     /**
      * Read a file; returns 0 if successful, -1 if failure.
      * @param fname - the file to read.
      */
-    ~regex_list(){
+    virtual ~regex_list(){
         for(std::vector<beregex *>::iterator it=patterns.begin(); it != patterns.end(); it++){
             delete *it;
         }
     }
-    void add_regex(const std::string &pat){
-        patterns.push_back(new beregex(pat,0));
-    }
+    void add_regex(const std::string &pat);
     int readfile(std::string fname);
     /** check() is threadsafe. */
     bool check(const std::string &probe,std::string *found, size_t *offset,size_t *len) const;

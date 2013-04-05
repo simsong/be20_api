@@ -76,6 +76,7 @@ char    *pcap_geterr(pcap_t *);
 #define DLT_SLIP        8       /* Serial Line IP */
 #define DLT_PPP         9       /* Point-to-point Protocol */
 #define DLT_FDDI        10      /* FDDI */
+#define DLT_RAW         101     /* just packets */
 
 
 __END_DECLS

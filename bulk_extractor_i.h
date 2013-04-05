@@ -3,6 +3,20 @@
 #ifndef BULK_EXTRACTOR_I_H
 #define BULK_EXTRACTOR_I_H
 
+#define DEBUG_PEDANTIC    0x0001	// check values more rigorously
+#define DEBUG_PRINT_STEPS 0x0002
+#define DEBUG_SCANNER     0x0004	// dump all feature writes to stderr
+#define DEBUG_NO_SCANNERS 0x0008        /* do not run the scanners */
+#define DEBUG_DUMP_DATA   0x0010	/* dump data as it is seen */
+#define DEBUG_MALLOC_FAIL 0x0020
+#define DEBUG_INFO        0x0040	// print extra info
+#define DEBUG_MALLOC_FAIL_FREQUENCY 200
+#define DEBUG_EXIT_EARLY  1000		/* just print the size of the volume and exis */
+#define DEBUG_ALLOCATE_512MiB 1002	/* Allocate 512MiB, but don't set any flags */
+
+//extern int debug;			// feel free to use
+
+
 /* We need netinet/in.h or windowsx.h */
 #ifdef HAVE_NETINET_IN_H
 # include <netinet/in.h>
@@ -67,8 +81,6 @@
 
 /* bulkd extractor configuration */
 
-typedef std::map<std::string,std::string>  be_config_t;
-extern be_config_t be_config;           // system configuration
 
 
 /* Network includes */
@@ -83,7 +95,7 @@ extern be_config_t be_config;           // system configuration
 # include <netinet/in.h>
 #endif
 #ifdef HAVE_NET_ETHERNET_H
-# include <net/ethernet.h>		// for freebsd
+# include <net/ethernet.h>              // for freebsd
 #endif
 
 
@@ -91,10 +103,17 @@ extern be_config_t be_config;           // system configuration
 #  ifdef GNUC_HAS_DIAGNOSTIC_PRAGMA
 #    pragma GCC diagnostic ignored "-Wredundant-decls"
 #  endif
-#  ifdef HAVE_PCAP_PCAP_H
+#  if defined(HAVE_PCAP_PCAP_H)
 #    include <pcap/pcap.h>
-#  else
+#    define GOT_PCAP
+#  endif
+#  if defined(HAVE_PCAP_H) && !defined(GOT_PCAP)
 #    include <pcap.h>
+#    define GOT_PCAP
+#  endif
+#  if defined(HAVE_WPCAP_PCAP_H) && !defined(GOT_PCAP)
+#    include <wpcap/pcap.h>
+#    define GOT_PCAP
 #  endif
 #  ifdef GNUC_HAS_DIAGNOSTIC_PRAGMA
 #    pragma GCC diagnostic warning "-Wredundant-decls"
@@ -169,7 +188,7 @@ inline bool operator !=(class histogram_def h1,class histogram_def h2)  {
 namespace be13 {
 
 #ifndef ETH_ALEN
-#  define ETH_ALEN 6			// ethernet address len
+#  define ETH_ALEN 6                    // ethernet address len
 #endif
 
 #ifndef IPPROTO_TCP
@@ -182,45 +201,48 @@ namespace be13 {
 
     /* 10Mb/s ethernet header */
     struct ether_header {
-        uint8_t  ether_dhost[ETH_ALEN];	/* destination eth addr	*/
-        uint8_t  ether_shost[ETH_ALEN];	/* source ether addr	*/
-        uint16_t ether_type;		        /* packet type ID field	*/
+        uint8_t  ether_dhost[ETH_ALEN]; /* destination eth addr */
+        uint8_t  ether_shost[ETH_ALEN]; /* source ether addr    */
+        uint16_t ether_type;            /* packet type ID field */
     } __attribute__ ((__packed__));
 
-    // The mess below is becuase these items are typedefs and
-    // structs on some systems and #defines on other systems
-    // So in the interest of portability we need to define *new*
-    // structures that are only used here
+    /* The mess below is becuase these items are typedefs and
+     * structs on some systems and #defines on other systems
+     * So in the interest of portability we need to define *new*
+     * structures that are only used here
+     */
+
     typedef uint32_t ip4_addr_t;         // historical
+
     // on windows we use the definition that's in winsock
     struct ip4_addr {   
-	ip4_addr_t addr;
+        ip4_addr_t addr;
     };
 
-  /*
-   * Structure of an internet header, naked of options.
-   */
+    /*
+     * Structure of an internet header, naked of options.
+     */
     struct ip4 {
 #if __BYTE_ORDER == __LITTLE_ENDIAN
-        uint8_t ip_hl:4;		/* header length */
-        uint8_t ip_v:4;		/* version */
+        uint8_t ip_hl:4;                /* header length */
+        uint8_t ip_v:4;                 /* version */
 #endif
 #if __BYTE_ORDER == __BIG_ENDIAN
-        uint8_t ip_v:4;		/* version */
-        uint8_t ip_hl:4;		/* header length */
+        uint8_t ip_v:4;                 /* version */
+        uint8_t ip_hl:4;                /* header length */
 #endif
-        uint8_t ip_tos;			/* type of service */
-        uint16_t ip_len;			/* total length */
-        uint16_t ip_id;			/* identification */
-        uint16_t ip_off;			/* fragment offset field */
-#define	IP_RF 0x8000			/* reserved fragment flag */
-#define	IP_DF 0x4000			/* dont fragment flag */
-#define	IP_MF 0x2000			/* more fragments flag */
-#define	IP_OFFMASK 0x1fff		/* mask for fragmenting bits */
-        uint8_t ip_ttl;			/* time to live */
-        uint8_t ip_p;			/* protocol */
-        uint16_t ip_sum;			/* checksum */
-        struct ip4_addr ip_src, ip_dst;	/* source and dest address */
+        uint8_t  ip_tos;                /* type of service */
+        uint16_t ip_len;                /* total length */
+        uint16_t ip_id;                 /* identification */
+        uint16_t ip_off;                /* fragment offset field */
+#define IP_RF 0x8000                    /* reserved fragment flag */
+#define IP_DF 0x4000                    /* dont fragment flag */
+#define IP_MF 0x2000                    /* more fragments flag */
+#define IP_OFFMASK 0x1fff               /* mask for fragmenting bits */
+        uint8_t ip_ttl;                 /* time to live */
+        uint8_t ip_p;                   /* protocol */
+        uint16_t ip_sum;                        /* checksum */
+        struct ip4_addr ip_src, ip_dst; /* source and dest address */
     } __attribute__ ((__packed__));
 
     struct ip4_dgram {
@@ -232,7 +254,7 @@ namespace be13 {
     /*
      * IPv6 header structure
      */
-    struct ip6_addr {		// our own private ipv6 definition
+    struct ip6_addr {           // our own private ipv6 definition
         union {
             uint8_t   addr8[16];        // three ways to get the data
             uint16_t  addr16[8];
@@ -242,15 +264,15 @@ namespace be13 {
     struct ip6_hdr {
         union {
             struct ip6_hdrctl {
-                uint32_t ip6_un1_flow;	/* 20 bits of flow-ID */
-                uint16_t ip6_un1_plen;	/* payload length */
-                uint8_t  ip6_un1_nxt;	/* next header */
-                uint8_t  ip6_un1_hlim;	/* hop limit */
+                uint32_t ip6_un1_flow;  /* 20 bits of flow-ID */
+                uint16_t ip6_un1_plen;  /* payload length */
+                uint8_t  ip6_un1_nxt;   /* next header */
+                uint8_t  ip6_un1_hlim;  /* hop limit */
             } ip6_un1;
-            uint8_t ip6_un2_vfc;	/* 4 bits version, top 4 bits class */
+            uint8_t ip6_un2_vfc;        /* 4 bits version, top 4 bits class */
         } ip6_ctlun;
-        struct ip6_addr ip6_src;	/* source address */
-        struct ip6_addr ip6_dst;	/* destination address */
+        struct ip6_addr ip6_src;        /* source address */
+        struct ip6_addr ip6_dst;        /* destination address */
     } __attribute__((__packed__));
 
     struct ip6_dgram {
@@ -263,35 +285,39 @@ namespace be13 {
      * TCP header.
      * Per RFC 793, September, 1981.
      */
-    typedef	uint32_t tcp_seq;
+    typedef     uint32_t tcp_seq;
     struct tcphdr {
-        uint16_t th_sport;		/* source port */
-        uint16_t th_dport;		/* destination port */
-        tcp_seq th_seq;		/* sequence number */
-        tcp_seq th_ack;		/* acknowledgement number */
+        uint16_t th_sport;              /* source port */
+        uint16_t th_dport;              /* destination port */
+        tcp_seq th_seq;         /* sequence number */
+        tcp_seq th_ack;         /* acknowledgement number */
 #  if __BYTE_ORDER == __LITTLE_ENDIAN
-        uint8_t th_x2:4;		/* (unused) */
-        uint8_t th_off:4;		/* data offset */
+        uint8_t th_x2:4;                /* (unused) */
+        uint8_t th_off:4;               /* data offset */
 #  endif
 #  if __BYTE_ORDER == __BIG_ENDIAN
-        uint8_t th_off:4;		/* data offset */
-        uint8_t th_x2:4;		/* (unused) */
+        uint8_t th_off:4;               /* data offset */
+        uint8_t th_x2:4;                /* (unused) */
 #  endif
         uint8_t th_flags;
-#  define TH_FIN	0x01
-#  define TH_SYN	0x02
-#  define TH_RST	0x04
-#  define TH_PUSH	0x08
-#  define TH_ACK	0x10
-#  define TH_URG	0x20
-    uint16_t th_win;		/* window */
-    uint16_t th_sum;		/* checksum */
-    uint16_t th_urp;		/* urgent pointer */
+#  define TH_FIN        0x01
+#  define TH_SYN        0x02
+#  define TH_RST        0x04
+#  define TH_PUSH       0x08
+#  define TH_ACK        0x10
+#  define TH_URG        0x20
+    uint16_t th_win;            /* window */
+    uint16_t th_sum;            /* checksum */
+    uint16_t th_urp;            /* urgent pointer */
 };
 /*
  * The packet_info structure records packets after they are read from the pcap library.
  * It preserves the original pcap information and information decoded from the MAC and
- * VLAN (IEEE 802.1Q) layers.
+ * VLAN (IEEE 802.1Q) layers, as well as information that might be present from 802.11
+ * interfaces. However it does not preserve the full radiotap information. 
+ * 
+ * packet_info is created to make it easier to write network forensic software. It encapsulates
+ * much of the common knowledge needed to operate on packet-based IP networks.
  *
  * @param ts   - the actual packet time to use (adjusted)
  * @param pcap_data - Original data offset point from pcap
@@ -333,11 +359,12 @@ public:
 
     const int    pcap_dlt;              // data link type; needed by libpcap, not provided
     const struct pcap_pkthdr *pcap_hdr; // provided by libpcap
-    const u_char *pcap_data;            // provided by libpcap
-    const struct timeval &ts;           // possibly modified before packet_info created
-    const uint8_t * const ip_data;      // pointer to where ip data begins
+    const u_char *pcap_data;            // provided by libpcap; where the MAC layer begins
+    const struct timeval &ts;           // when packet received; possibly modified before packet_info created
+    const uint8_t *const ip_data;       // pointer to where ip data begins
     const size_t ip_datalen;            // length of ip data
 
+    static u_short nshort(const u_char *buf,size_t pos);   // return a network byte order short at offset pos
     int     ip_version() const;         // returns 4, 6 or 0
     u_short ether_type() const;         // returns 0 if not IEEE802, otherwise returns ether_type
     int     vlan() const;               // returns NO_VLAN if not IEEE802 or not VLAN, othererwise VID
@@ -366,7 +393,6 @@ public:
     uint16_t get_ip6_tcp_dport() const;
 };
 
-    
 #ifdef DLT_IEEE802
     inline u_short packet_info::ether_type() const
     {
@@ -379,23 +405,28 @@ public:
 #endif
     
 #ifndef ETHERTYPE_PUP
-#define	ETHERTYPE_PUP		0x0200          /* Xerox PUP */
-#define ETHERTYPE_SPRITE	0x0500		/* Sprite */
-#define	ETHERTYPE_IP		0x0800		/* IP */
-#define	ETHERTYPE_ARP		0x0806		/* Address resolution */
-#define	ETHERTYPE_REVARP	0x8035		/* Reverse ARP */
-#define ETHERTYPE_AT		0x809B		/* AppleTalk protocol */
-#define ETHERTYPE_AARP		0x80F3		/* AppleTalk ARP */
-#define	ETHERTYPE_VLAN		0x8100		/* IEEE 802.1Q VLAN tagging */
-#define ETHERTYPE_IPX		0x8137		/* IPX */
-#define	ETHERTYPE_IPV6		0x86dd		/* IP protocol version 6 */
-#define ETHERTYPE_LOOPBACK	0x9000		/* used to test interfaces */
+#define ETHERTYPE_PUP           0x0200          /* Xerox PUP */
+#define ETHERTYPE_SPRITE        0x0500          /* Sprite */
+#define ETHERTYPE_IP            0x0800          /* IP */
+#define ETHERTYPE_ARP           0x0806          /* Address resolution */
+#define ETHERTYPE_REVARP        0x8035          /* Reverse ARP */
+#define ETHERTYPE_AT            0x809B          /* AppleTalk protocol */
+#define ETHERTYPE_AARP          0x80F3          /* AppleTalk ARP */
+#define ETHERTYPE_VLAN          0x8100          /* IEEE 802.1Q VLAN tagging */
+#define ETHERTYPE_IPX           0x8137          /* IPX */
+#define ETHERTYPE_IPV6          0x86dd          /* IP protocol version 6 */
+#define ETHERTYPE_LOOPBACK      0x9000          /* used to test interfaces */
 #endif
     
+    inline u_short packet_info::nshort(const u_char *buf,size_t pos) 
+    {
+        return (buf[pos]<<8) | (buf[pos+1]);
+    }
+
     inline int packet_info::vlan() const
     {
         if(ether_type()==ETHERTYPE_VLAN){
-            return ntohs(*(u_short *)(pcap_data + sizeof(struct ether_header)));
+            return nshort(pcap_data,sizeof(struct ether_header));
         }
         return -1;
     }
@@ -455,7 +486,18 @@ public:
         return ((const struct ether_header *)pcap_data)->ether_dhost;
     }
 
+    inline const uint8_t *packet_info::get_ether_shost() const
+    {
+        if(pcap_hdr->caplen < sizeof(struct ether_addr)){
+            throw new frame_too_short();
+        }
+        return ((const struct ether_header *)pcap_data)->ether_shost;
+    }
+
     // IPv4
+#  ifdef GNUC_HAS_DIAGNOSTIC_PRAGMA
+#    pragma GCC diagnostic ignored "-Wcast-align"
+#  endif
     inline const struct in_addr *packet_info::get_ip4_src() const
     {
         if(ip_datalen < sizeof(struct ip4)) {
@@ -470,6 +512,9 @@ public:
         }
         return (const struct in_addr *) ip_data + ip4_dst_off;
     }
+#  ifdef GNUC_HAS_DIAGNOSTIC_PRAGMA
+#    pragma GCC diagnostic warning "-Wcast-align"
+#  endif
     inline uint8_t packet_info::get_ip4_proto() const
     {
         if(ip_datalen < sizeof(struct ip4)) {
@@ -490,8 +535,12 @@ public:
         if(ip_datalen < sizeof(struct ip6_hdr)) {
             throw new frame_too_short();
         }
-        return ntohs(*((uint16_t *) (ip_data + ip6_plen_off)));
+        //return ntohs(*((uint16_t *) (ip_data + ip6_plen_off)));
+        return nshort(ip_data,ip6_plen_off);
     }
+#  ifdef GNUC_HAS_DIAGNOSTIC_PRAGMA
+#    pragma GCC diagnostic ignored "-Wcast-align"
+#  endif
     inline const struct ip6_addr *packet_info::get_ip6_src() const
     {
         if(ip_datalen < sizeof(struct ip6_hdr)) {
@@ -506,34 +555,43 @@ public:
         }
         return (const struct ip6_addr *) ip_data + ip6_dst_off;
     }
+#  ifdef GNUC_HAS_DIAGNOSTIC_PRAGMA
+#    pragma GCC diagnostic warning "-Wcast-align"
+#  endif
+
     // TCP
     inline uint16_t packet_info::get_ip4_tcp_sport() const
     {
         if(ip_datalen < sizeof(struct tcphdr) + sizeof(struct ip4)) {
             throw new frame_too_short();
         }
-        return ntohs(*((uint16_t *) (ip_data + sizeof(struct ip4) + tcp_sport_off)));
+        //return ntohs(*((uint16_t *) (ip_data + sizeof(struct ip4) + tcp_sport_off)));
+        return nshort(ip_data,sizeof(struct ip4) + tcp_sport_off);
     }
     inline uint16_t packet_info::get_ip4_tcp_dport() const
     {
         if(ip_datalen < sizeof(struct tcphdr) + sizeof(struct ip4)) {
             throw new frame_too_short();
         }
-        return ntohs(*((uint16_t *) (ip_data + sizeof(struct ip4) + tcp_dport_off)));
+        //return ntohs(*((uint16_t *) (ip_data + sizeof(struct ip4) + tcp_dport_off)));
+        return nshort(ip_data,sizeof(struct ip4) + tcp_dport_off); // 
+
     }
     inline uint16_t packet_info::get_ip6_tcp_sport() const
     {
         if(ip_datalen < sizeof(struct tcphdr) + sizeof(struct ip6_hdr)) {
             throw new frame_too_short();
         }
-        return ntohs(*((uint16_t *) (ip_data + sizeof(struct ip6_hdr) + tcp_sport_off)));
+        //return ntohs(*((uint16_t *) (ip_data + sizeof(struct ip6_hdr) + tcp_sport_off)));
+        return nshort(ip_data,sizeof(struct ip6_hdr) + tcp_sport_off); // 
     }
     inline uint16_t packet_info::get_ip6_tcp_dport() const
     {
         if(ip_datalen < sizeof(struct tcphdr) + sizeof(struct ip6_hdr)) {
             throw new frame_too_short();
         }
-        return ntohs(*((uint16_t *) (ip_data + sizeof(struct ip6_hdr) + tcp_dport_off)));
+        //return ntohs(*((uint16_t *) (ip_data + sizeof(struct ip6_hdr) + tcp_dport_off)));
+        return nshort(ip_data,sizeof(struct ip6_hdr) + tcp_dport_off); // 
     }
 };
 
@@ -554,19 +612,25 @@ private:
     scanner_info(const scanner_info &i) __attribute__((__noreturn__))
     :si_version(),name(),author(),description(),url(),
                                         scanner_version(),flags(),feature_names(),histogram_defs(),
-                                        packet_user(),packet_cb(){
+        packet_user(),packet_cb(),config(),debug(0){
         throw new not_impl();}
     ;
     const scanner_info &operator=(const scanner_info &i){ throw new not_impl();}
  public:
-    static const int SCANNER_DISABLED=0x01;             /* v1: enabled by default */
-    static const int SCANNER_NO_USAGE=0x02;             /* v1: do not show scanner in usage */
-    static const int SCANNER_NO_ALL  =0x04;             // v2: do not enable with -eALL
-    static const int CURRENT_SI_VERSION=2;
+    typedef std::map<std::string,std::string>  config_t; // configuration for scanner passed in
 
+    /* scanner flags */
+    static const int SCANNER_DISABLED     = 0x01;       /* v1: enabled by default */
+    static const int SCANNER_NO_USAGE     = 0x02;       /* v1: do not show scanner in usage */
+    static const int SCANNER_NO_ALL       = 0x04;       /* v2: do not enable with -eALL */
+    static const int SCANNER_FIND_SCANNER = 0x08;       /* v2: this is scanner that uses the find_list */
+    static const int CURRENT_SI_VERSION=3;              // 
+
+    // never change the order or delete old fields, or else you will
+    // break backwards compatability 
     scanner_info():si_version(CURRENT_SI_VERSION),
                    name(),author(),description(),url(),scanner_version(),flags(0),feature_names(),
-                   histogram_defs(),packet_user(),packet_cb(){}
+                   histogram_defs(),packet_user(),packet_cb(),config(),debug(0){}
     int         si_version;             // version number for this structure
     string      name;                   // v1: scanner name
     string      author;                 // v1: who wrote me?
@@ -578,6 +642,8 @@ private:
     histograms_t histogram_defs;        // v1: histogram definition info
     void        *packet_user;           // v2: user data provided to packet_cb
     packet_callback_t *packet_cb;       // v2: packet handler, or NULL if not present.
+    config_t    config;                 // v3: this scanner's configuration. [scanner_name:] prefix removed
+    int         debug;                  // v3: debug flag
 };
 
 #include <map>
@@ -610,7 +676,8 @@ class scanner_params {
         }
     }
 
-    typedef enum {none=-1,startup=0,scan=1,shutdown=2} phase_t ;
+    // phase_t specifies when the scanner is being called
+    typedef enum {PHASE_NONE=-1,PHASE_STARTUP=0,PHASE_SCAN=1,PHASE_SHUTDOWN=2} phase_t ;
     static PrintOptions no_options;     // in common.cpp
 
     /********************
@@ -625,13 +692,15 @@ class scanner_params {
     }
 
     /* A scanner params with no print options*/
-    scanner_params(phase_t phase_,const sbuf_t &sbuf_,class feature_recorder_set &fs_):
+    scanner_params(phase_t phase_,const sbuf_t &sbuf_,
+                   class feature_recorder_set &fs_):
         sp_version(CURRENT_SP_VERSION),
         phase(phase_),sbuf(sbuf_),fs(fs_),depth(0),print_options(no_options),info(0),sbufxml(0){
     }
 
     /* A scanner params with no print options but xmlstream */
-    scanner_params(phase_t phase_,const sbuf_t &sbuf_,class feature_recorder_set &fs_,std::stringstream *xmladd):
+    scanner_params(phase_t phase_,const sbuf_t &sbuf_,
+                   class feature_recorder_set &fs_,std::stringstream *xmladd):
         sp_version(CURRENT_SP_VERSION),
         phase(phase_),sbuf(sbuf_),fs(fs_),depth(0),print_options(no_options),info(0),sbufxml(xmladd){
     }
@@ -688,25 +757,30 @@ public:;
     scanner_def():scanner(0),enabled(false),info(),pathPrefix(){};
     scanner_t  *scanner;                // pointer to the primary entry point
     bool        enabled;                // is enabled?
-    scanner_info info;
+    scanner_info info;                  // info block sent to and returned by scanner
     string      pathPrefix;             /* path prefix for recursive scanners */
 };
-void load_scanner(scanner_t scanner);
-void load_scanners(scanner_t * const *scanners);                // load the scan_ plugins
-void load_scanner_directory(const string &dirname);             // load the scan_ plugins
-typedef vector<scanner_def *> scanner_vector;
-extern scanner_vector current_scanners;                         // current scanners
+void load_scanner(scanner_t scanner,const scanner_info::config_t &config); // load a specific scanner
+void load_scanners(scanner_t * const *scanners_builtin,const scanner_info::config_t &config);           // load the scan_ plugins
+void load_scanner_directory(const string &dirname,const scanner_info::config_t &config); // load scanners in the directory
+void load_scanner_directories(const std::vector<std::string> &dirnames,const scanner_info::config_t &config);
+
 void enable_alert_recorder(feature_file_names_t &feature_file_names);
 void enable_feature_recorders(feature_file_names_t &feature_file_names);
+
 // print info about the scanners:
 void info_scanners(bool detailed,scanner_t * const *scanners_builtin,const char enable_opt,const char disable_opt);
 void scanners_enable(const std::string &name); // saves a command to enable this scanner
 void scanners_enable_all();                    // enable all of them
 void scanners_disable(const std::string &name); // saves a command to disable this scanner
 void scanners_disable_all();                    // saves a command to disable all
-void scanners_process_commands();               // process the saved commands
+void scanners_process_commands();               // process the enable/disable and config commands
+
+typedef vector<scanner_def *> scanner_vector;
+extern scanner_vector current_scanners;                         // current scanners
 
 /* plugin.cpp */
+void set_scanner_debug(int debug);
 void phase_shutdown(feature_recorder_set &fs, xml &xreport);
 void phase_histogram(feature_recorder_set &fs, xml &xreport);
 void process_sbuf(const class scanner_params &sp);                              /* process for feature extraction */
