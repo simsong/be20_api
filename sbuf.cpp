@@ -115,18 +115,26 @@ static std::string hexch(unsigned char ch)
 void sbuf_t::hex_dump(std::ostream &os,uint64_t start,uint64_t len) const
 {
     const size_t bytes_per_line = 32;
+    size_t max_spaces = 0;
     for(uint64_t i=start;i<start+len && i<bufsize;i+=bytes_per_line){
         size_t spaces=0;
+
+        /* Print the offset */
+        char b[64];
+        snprintf(b,sizeof(b),"%04x: ",(int)i);
+        os << b;
+        spaces += strlen(b);
+
         for(size_t j=0;j<bytes_per_line && i+j<bufsize && i+j<start+len;j++){
             unsigned char ch = (*this)[i+j];
-            os << hexch(ch) << " ";
-            spaces += 3;
-            if(j==bytes_per_line/2){
-                os << ' ';
+            os << hexch(ch);  spaces += 2;
+            if(j%2==1){
+                os << " ";
                 spaces += 1;
             }
         }
-        for(;spaces<bytes_per_line*3+3;spaces++){
+        if(spaces>max_spaces) max_spaces=spaces;
+        for(;spaces<max_spaces;spaces++){
             os << ' ';
         }
         for(size_t j=0;j<bytes_per_line && i+j<bufsize && i+j<start+len;j++){
