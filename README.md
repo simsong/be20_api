@@ -4,6 +4,10 @@ be13_api
 API for bulk_extractor version 1.3
 
 
+Set remote origin:
+  http://stackoverflow.com/questions/7259535/git-setting-up-a-remote-origin
+  git remote add origin git@github.com:simsong/be13_api.git
+
 http://stackoverflow.com/questions/5828324/update-git-submodule
 
 Update to this repository to master:
