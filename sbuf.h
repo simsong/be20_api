@@ -559,6 +559,20 @@ public:
      * Return offset or -1 if there is none to find.
      */
     ssize_t find(const char *str,size_t start) const {
+        if(str[0]==0) return -1;        // nothing to search for
+
+        for(;start<pagesize;start++){
+            const uint8_t *p = (const uint8_t *)memchr(buf+start,str[0],bufsize-start);
+            if(p==0) return -1;             // first character not present,
+            size_t loc = p-buf;
+            for(size_t i=0;loc + i < bufsize && str[i];i++){
+                if(buf[loc+i] != str[i]) break;
+                if(str[i+1]==0) return loc; // next char is null, so we are found!
+            }
+            start = loc+1;              // advance to character after found character
+        }
+        return -1;
+#if 0
         for(;start<pagesize;start++){
             bool found = true;
             for(size_t i=0;str[i] && found;i++){
@@ -568,6 +582,7 @@ public:
             if(found) return start;
         }
         return -1;
+#endif
     }
 
     string substr(size_t loc,size_t len) const; /* make a substring */

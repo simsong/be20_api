@@ -73,7 +73,7 @@ private:
         }
     };
     xml(const xml &fr) __attribute__((__noreturn__)):
-        M(),outf(),out(),tags(),tag_stack(),tempfilename(),tempfile_template(),t0(),
+    M(),outf(),out(),tags(),tag_stack(),tempfilename(),tempfile_template(),t0(),t_delta(),
         make_dtd(),outfilename(),oneline(){
         throw new not_impl();
     }
@@ -99,6 +99,7 @@ private:
     std::string  tempfilename;
     std::string  tempfile_template;
     struct timeval t0;
+    struct timeval t_delta;		// for creating delta timestamps
     bool  make_dtd;
     std::string outfilename;
     void  write_doctype(std::fstream &out);
@@ -177,6 +178,7 @@ public:
         pop();                  // creator
     }
     void add_rusage();
+    void add_timestamp(const std::string &name);
     void set_oneline(bool v);
 
     /********************************

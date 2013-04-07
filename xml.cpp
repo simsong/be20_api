@@ -190,12 +190,13 @@ std::string xml::xmlmap(const xml::strstrmap_t &m,const std::string &outer,const
 
 /* This goes to stdout */
 xml::xml():M(),outf(),out(&cout),tags(),tag_stack(),tempfilename(),tempfile_template("/tmp/xml_XXXXXXXX"),
-           t0(),make_dtd(false),outfilename(),oneline()
+           t0(),t_delta(),make_dtd(false),outfilename(),oneline()
 {
 #ifdef HAVE_PTHREAD
     pthread_mutex_init(&M,NULL);
 #endif
     gettimeofday(&t0,0);
+    gettimeofday(&t_delta,0);
     *out << xml_header;
 }
 
@@ -203,12 +204,13 @@ xml::xml():M(),outf(),out(&cout),tags(),tag_stack(),tempfilename(),tempfile_temp
 xml::xml(const std::string &outfilename_,bool makeDTD):
     M(),outf(outfilename_.c_str(),ios_base::out),
     out(),tags(),tag_stack(),tempfilename(),tempfile_template(outfilename_+"_tmp_XXXXXXXX"),
-    t0(),make_dtd(false),outfilename(outfilename_),oneline()
+    t0(),t_delta(),make_dtd(false),outfilename(outfilename_),oneline()
 {
 #ifdef HAVE_PTHREAD
     pthread_mutex_init(&M,NULL);
 #endif
     gettimeofday(&t0,0);
+    gettimeofday(&t_delta,0);
     if(!outf.is_open()){
         perror(outfilename_.c_str());
         exit(1);
@@ -224,12 +226,13 @@ xml::xml(const std::string &outfilename_,bool makeDTD):
  */
 xml::xml(const std::string &outfilename_,class existing &e):
     M(),outf(), out(),tags(),tag_stack(),tempfilename(),tempfile_template(),
-    t0(),make_dtd(false),outfilename(outfilename_),oneline()
+    t0(),t_delta(),make_dtd(false),outfilename(outfilename_),oneline()
 {
 #ifdef HAVE_PTHREAD
     pthread_mutex_init(&M,NULL);
 #endif
     gettimeofday(&t0,0);
+    gettimeofday(&t_delta,0);
 
     outf.open(outfilename.c_str(),ios_base::in|ios_base::out);
     if(!outf.is_open()){
@@ -605,6 +608,47 @@ void xml::add_rusage()
 #endif
 }
 
+void xml::add_timestamp(const std::string &name)
+{
+    struct timeval t1;
+    gettimeofday(&t1,0);
+    struct timeval t;
+
+    // timestamp delta
+    t.tv_sec = t1.tv_sec - t_delta.tv_sec;
+    if(t1.tv_usec > t_delta.tv_usec){
+        t.tv_usec = t1.tv_usec - t_delta.tv_usec;
+    } else {
+        t.tv_sec--;
+        t.tv_usec = (t1.tv_usec+1000000) - t_delta.tv_usec;
+    }
+    char delta[16];
+    snprintf(delta, 16, "%d.%06d", (int)t.tv_sec, (int)t.tv_usec);
+
+    // reset t_delta for the next invocation
+    gettimeofday(&t_delta,0);
+
+    // timestamp total
+    t.tv_sec = t1.tv_sec - t0.tv_sec;
+    if(t1.tv_usec > t0.tv_usec){
+        t.tv_usec = t1.tv_usec - t0.tv_usec;
+    } else {
+        t.tv_sec--;
+        t.tv_usec = (t1.tv_usec+1000000) - t0.tv_usec;
+    }
+    char total[16];
+    snprintf(total, 16, "%d.%06d", (int)t.tv_sec, (int)t.tv_usec);
+
+    // prepare attributes
+    std::stringstream ss;
+    ss << "name='" << name
+       << "' delta='" << delta
+       << "' total='" << total
+       << "'";
+
+    // add named timestamp
+    xmlout("timestamp", "",ss.str(), true);
+}
 
 /****************************************************************
  *** THESE ARE THE ONLY THREADSAFE ROUTINES
