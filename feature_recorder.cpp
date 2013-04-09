@@ -543,7 +543,7 @@ void feature_recorder::carve(const sbuf_t &sbuf,size_t pos,size_t len)
 #ifdef WIN32
         int r = mkdir(dirname.c_str());
 #else   
-        int r = mkdir(dirname.c_str(),0666);
+        int r = mkdir(dirname.c_str(),0777);
 #endif
         if(r){
             cerr << "Could not make directory " << dirname << ": " << strerror(errno) << "\n";
