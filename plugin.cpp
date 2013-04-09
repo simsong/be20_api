@@ -566,9 +566,14 @@ void process_sbuf(const class scanner_params &sp)
             }
 #endif
         }
-        catch ( exception &e ) {
+        catch (const std::exception &e ) {
             cerr << "Scanner: " << name
                  << " Exception: " << e.what()
+                 << " processing " << sp.sbuf.pos0 << " bufsize=" << sp.sbuf.bufsize << "\n";
+        }
+        catch (...) {
+            cerr << "Scanner: " << name
+                 << " Unknown Exception (...) " 
                  << " processing " << sp.sbuf.pos0 << " bufsize=" << sp.sbuf.bufsize << "\n";
         }
     }
