@@ -53,14 +53,26 @@ const string feature_recorder::BOM_EXPLAINATION("# UTF-8 Byte Order Marker; see 
 
 void feature_recorder::banner_stamp(std::ostream &os,const std::string &header)
 {
+    int banner_lines = 0;
     os << UTF8_BOM << BOM_EXPLAINATION;         // 
-    ifstream i(banner_file.c_str());
-    if(i.is_open()){
-        string line;
-        getline(i,line);
-        os << "#" << line << "\n";
-        i.close();
+    if(banner_file!=""){
+        ifstream i(banner_file.c_str());
+        if(i.is_open()){
+            string line;
+            while(getline(i,line)){
+                if(line.size()>0 && ((*line.end()=='\r') || (*line.end()=='\n'))){
+                    line.erase(line.end()); /* remove the last character while it is a \n or \r */
+                }
+                os << "# " << line << "\n";
+                banner_lines++;
+            }
+            i.close();
+        }
     }
+    if(banner_lines==0){
+        os << "# BANNER FILE NOT PROVIDED (-b option)";
+    }
+    
     os << bulk_extractor_version_header;
     os << "# Feature-Recorder: " << name << "\n";
 #ifdef BULK_EXTRACTOR
