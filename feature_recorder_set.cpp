@@ -17,10 +17,12 @@
 
 
 const string feature_recorder_set::ALERT_RECORDER_NAME = "alerts";
+const string feature_recorder_set::DISABLED_RECORDER_NAME = "disabled";
 feature_recorder  *feature_recorder_set::alert_recorder = 0; // no alert recorder to start
 
 /**
  * Create a properly functioning feature recorder set.
+ * If disabled, create a disabled feature_recorder that can respond to functions as requested.
  */
 feature_recorder_set::feature_recorder_set(const feature_file_names_t &feature_files,
                                            const std::string &input_fname_,
@@ -28,6 +30,12 @@ feature_recorder_set::feature_recorder_set(const feature_file_names_t &feature_f
                                            bool create_stop_files):
     flags(0),input_fname(input_fname_),outdir(outdir_),frm(),Mlock(),scanner_stats()
 {
+    if(flags & SET_DISABLED){
+        create_name(DISABLED_RECORDER_NAME,false);
+        frm[DISABLED_RECORDER_NAME]->set_flag(feature_recorder::FLAG_DISABLED);
+        return;
+    }
+
     /* Create the requested feature files */
     for(set<string>::const_iterator it=feature_files.begin();it!=feature_files.end();it++){
         create_name(*it,create_stop_files);
@@ -59,6 +67,10 @@ bool feature_recorder_set::has_name(string name) const
  */
 feature_recorder *feature_recorder_set::get_name(const std::string &name) 
 {
+    if(flags & SET_DISABLED){           // if feature recorder set is disabled, return the disabled recorder.
+        return get_name(feature_recorder_set::DISABLED_RECORDER_NAME);
+    }
+
     if(flags & ONLY_ALERT){
         if(name!=feature_recorder_set::ALERT_RECORDER_NAME){             // always return the alert recorder
             return get_name(feature_recorder_set::ALERT_RECORDER_NAME);
@@ -113,7 +125,7 @@ void feature_recorder_set::create_name(string name,bool create_stop_file)
         frm[name_stopped] = fr->stop_list_recorder;
     }
     
-    if(flags & DISABLED) return;        // don't open if we are disabled
+    if(flags & SET_DISABLED) return;        // don't open if we are disabled
     
     /* Open the output!*/
     fr->open();

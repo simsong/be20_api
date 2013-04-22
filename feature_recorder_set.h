@@ -47,7 +47,8 @@ public:
     scanner_stats_map scanner_stats;
 
     static const string   ALERT_RECORDER_NAME;  // the name of the alert recorder
-    static const uint32_t DISABLED=0x02;        // the set is effectively disabled
+    static const string   DISABLED_RECORDER_NAME; // the fake disabled feature recorder
+    static const uint32_t SET_DISABLED=0x02;    // the set is effectively disabled; for path-printer
     static const uint32_t ONLY_ALERT=0x01;      // always return the alert recorder
 
     /** Create a properly functioning feature recorder set. */

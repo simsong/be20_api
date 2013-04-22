@@ -170,7 +170,7 @@ void load_scanner(scanner_t scanner,const scanner_info::config_t &config)
 
     pos0_t      pos0;
     sbuf_t      sbuf(pos0);
-    feature_recorder_set fs(feature_recorder_set::DISABLED); // dummy
+    feature_recorder_set fs(feature_recorder_set::SET_DISABLED); // dummy
 
     //
     // Each scanner's params are stored in a scanner_def object that
