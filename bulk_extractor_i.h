@@ -620,10 +620,12 @@ private:
     typedef std::map<std::string,std::string>  config_t; // configuration for scanner passed in
 
     /* scanner flags */
-    static const int SCANNER_DISABLED     = 0x01;       /* v1: enabled by default */
-    static const int SCANNER_NO_USAGE     = 0x02;       /* v1: do not show scanner in usage */
-    static const int SCANNER_NO_ALL       = 0x04;       /* v2: do not enable with -eALL */
-    static const int SCANNER_FIND_SCANNER = 0x08;       /* v2: this is scanner that uses the find_list */
+    static const int SCANNER_DISABLED       = 0x01;       /* v1: enabled by default */
+    static const int SCANNER_NO_USAGE       = 0x02;       /* v1: do not show scanner in usage */
+    static const int SCANNER_NO_ALL         = 0x04;       /* v2: do not enable with -eALL */
+    static const int SCANNER_FIND_SCANNER   = 0x08; /* v2: this scanner uses the find_list */
+    static const int SCANNER_RECURSE        = 0x10; // v3: this scanner will recurse
+    static const int SCANNER_RECURSE_EXPAND = 0x20;     // v3: recurses AND result is >= original size
     static const int CURRENT_SI_VERSION=3;              // 
 
     // never change the order or delete old fields, or else you will
@@ -677,7 +679,14 @@ class scanner_params {
     }
 
     // phase_t specifies when the scanner is being called
-    typedef enum {PHASE_NONE=-1,PHASE_STARTUP=0,PHASE_SCAN=1,PHASE_SHUTDOWN=2} phase_t ;
+    typedef enum {
+        PHASE_NONE     = -1,
+        PHASE_STARTUP  = 0,             // called when scanner loads
+        PHASE_SCAN     = 1,             // called to scan an sbuf
+        PHASE_SHUTDOWN = 2,          // called when scanner is shutdown
+        // PHASE_THREAD_BEFORE_SCAN        // called by each thread before first scan
+        // PHASE_THREAD_AFTER_SCAN         // caleld by each thread after last sbuf is scanned
+    } phase_t ;
     static PrintOptions no_options;     // in common.cpp
 
     /********************
