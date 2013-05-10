@@ -70,7 +70,7 @@ void feature_recorder::banner_stamp(std::ostream &os,const std::string &header)
         }
     }
     if(banner_lines==0){
-        os << "# BANNER FILE NOT PROVIDED (-b option)";
+        os << "# BANNER FILE NOT PROVIDED (-b option)\n";
     }
     
     os << bulk_extractor_version_header;
