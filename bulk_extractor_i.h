@@ -846,4 +846,14 @@ inline std::string microsoftDateToISODate(const uint64_t &time)
     return string(buf);
 }
 
+/* Many internal windows and Linux structures require a valid printable name in ASCII */
+inline bool validASCIIName(const std::string &name)
+{
+    for(size_t i = 0; i< name.size(); i++){
+	if(((u_char)name[i]) & 0x80) return false; // high bit should not be set
+	if(((u_char)name[i]) < ' ') return false;  // should not be control character
+    }
+    return true;
+}
+
 #endif
