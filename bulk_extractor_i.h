@@ -620,13 +620,28 @@ private:
     typedef std::map<std::string,std::string>  config_t; // configuration for scanner passed in
 
     /* scanner flags */
-    static const int SCANNER_DISABLED       = 0x01;       /* v1: enabled by default */
-    static const int SCANNER_NO_USAGE       = 0x02;       /* v1: do not show scanner in usage */
-    static const int SCANNER_NO_ALL         = 0x04;       /* v2: do not enable with -eALL */
-    static const int SCANNER_FIND_SCANNER   = 0x08; /* v2: this scanner uses the find_list */
+    static const int SCANNER_DISABLED       = 0x01; // v1: enabled by default 
+    static const int SCANNER_NO_USAGE       = 0x02; // v1: do not show scanner in usage 
+    static const int SCANNER_NO_ALL         = 0x04; // v2: do not enable with -eALL 
+    static const int SCANNER_FIND_SCANNER   = 0x08; // v2: this scanner uses the find_list 
     static const int SCANNER_RECURSE        = 0x10; // v3: this scanner will recurse
-    static const int SCANNER_RECURSE_EXPAND = 0x20;     // v3: recurses AND result is >= original size
-    static const int CURRENT_SI_VERSION=3;              // 
+    static const int SCANNER_RECURSE_EXPAND = 0x20; // v3: recurses AND result is >= original size
+    static const int SCANNER_WANTS_NGRAMS   = 0x40; // v3: Scanner gets buffers that are constant n-grams
+    static const int CURRENT_SI_VERSION=3;          // 
+
+    static const std::string flag_to_string(const int flag){
+        std::string ret;
+        if(flag==0) ret += "NONE ";
+        if(flag & SCANNER_DISABLED) ret += "SCANNER_DISABLED ";
+        if(flag & SCANNER_NO_USAGE) ret += "SCANNER_NO_USAGE ";
+        if(flag & SCANNER_NO_ALL) ret += "SCANNER_NO_ALL ";
+        if(flag & SCANNER_FIND_SCANNER) ret += "SCANNER_FIND_SCANNER ";
+        if(flag & SCANNER_RECURSE) ret += "SCANNER_RECURSE ";
+        if(flag & SCANNER_RECURSE_EXPAND) ret += "SCANNER_RECURSE_EXPAND ";
+        if(flag & SCANNER_WANTS_NGRAMS) ret += "SCANNER_WANTS_NGRAMS ";
+        return ret;
+    }
+
 
     // never change the order or delete old fields, or else you will
     // break backwards compatability 
@@ -762,7 +777,8 @@ class recursion_control_block {
 /* plugin.cpp. This will become a class...  */
 class scanner_def {
 public:;
-    static uint32_t max_depth;
+    static uint32_t max_depth;          // maximum depth to scan for the scanners
+    static uint32_t max_ngram;          // maximum ngram size to change
     scanner_def():scanner(0),enabled(false),info(),pathPrefix(){};
     scanner_t  *scanner;                // pointer to the primary entry point
     bool        enabled;                // is enabled?
