@@ -2,11 +2,8 @@
  *** utils.h
  *** 
  *** To use utils.c/utils.h, be sure this is in your configure.ac file:
-
-AC_CHECK_HEADERS([err.h err.h sys/mman.h sys/resource.h unistd.h])
-AC_CHECK_FUNCS([ishexnumber unistd.h err errx warn warnx pread64 pread _lseeki64 ])
-
-***
+      m4_include([be13_api/be13_configure.m4])
+ ***
  ****************************************************************/
 
 
@@ -66,30 +63,5 @@ inline int ishexnumber(int c)
 }
 #endif
 __END_DECLS
-
-/* Useful functions for scanners */
-//#if defined(__cplusplus)
-//#include <string>
-//#define ONE_HUNDRED_NANO_SEC_TO_SECONDS 10000000
-//#define SECONDS_BETWEEN_WIN32_EPOCH_AND_UNIX_EPOCH 11644473600LL
-///*
-// * 11644473600 is the number of seconds between the Win32 epoch
-// * and the Unix epoch.
-// *
-// * http://arstechnica.com/civis/viewtopic.php?f=20&t=111992
-// */
-//
-//inline std::string microsoftDateToISODate(const uint64_t &time)
-//{
-//    time_t tmp = (time / ONE_HUNDRED_NANO_SEC_TO_SECONDS) - SECONDS_BETWEEN_WIN32_EPOCH_AND_UNIX_EPOCH;
-//    
-//    struct tm time_tm;
-//    gmtime_r(&tmp, &time_tm);
-//    char buf[256];
-//    strftime(buf, sizeof(buf), "%Y-%m-%dT%H:%M:%SZ", &time_tm); // Zulu time
-//    return std::string(buf);
-//}
-//#endif
-
 
 #endif
