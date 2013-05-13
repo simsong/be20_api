@@ -82,7 +82,6 @@ private:
 
 public:
     typedef std::map<std::string,std::string> strstrmap_t;
-    typedef std::map<std::string,std::string> tagmap_t;
     typedef std::set<std::string> stringset;
     typedef std::set<std::string> tagid_set_t;
 private:
@@ -120,19 +119,8 @@ public:
     }
 
 
-    // this is for reading an existing file; it should be removed and replaced
-    // with an expat-based reader.
-    class existing {                    
-    public:;
-        tagmap_t    *tagmap;
-        std::string *tagid;
-        const std::string *attrib;
-        stringset *tagid_set;
-    };
-
     xml();                                       // defaults to stdout
     xml(const std::string &outfilename,bool makeDTD); // write to a file, optionally making a DTD
-    xml(const std::string &outfilename,class existing &e); // open an existing file, for appending
     virtual ~xml(){};
     void set_tempfile_template(const std::string &temp);
 
@@ -142,12 +130,6 @@ public:
     /** xmlmap turns a map into an XML block */
     static std::string xmlmap(const strstrmap_t &m,const std::string &outer,const std::string &attrs);
 
-    /**
-     * opens an existing XML file and jumps to the end.
-     * @param tagmap  - any keys that are tags capture the values.
-     * @param tagid   - if a tagid is provided, fill tagid_set with all of the tags seen.
-     */
-    void open_existing(tagmap_t *tagmap,std::string *tagid,const std::string *attrib,tagid_set_t *tagid_set);
     void close();                       // writes the output to the file
 
     void flush(){outf.flush();}
