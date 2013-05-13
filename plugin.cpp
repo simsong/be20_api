@@ -20,7 +20,8 @@
 #include "bulk_extractor_i.h"
 #include "xml.h"
 
-uint32_t scanner_def::max_depth = 5;            // max recursion depth
+uint32_t scanner_def::max_depth = 7;            // max recursion depth
+uint32_t scanner_def::max_ngram = 10;            // max recursion depth
 static int debug;                               // local debug variable
 
 /****************************************************************
@@ -438,12 +439,7 @@ void info_scanners(bool detailed,scanner_t * const *scanners_builtin,const char 
     for(scanner_vector::const_iterator it = current_scanners.begin();it!=current_scanners.end();it++){
         if(detailed){
             std::cout << "Scanner Name: " << (*it)->info.name << "\n";
-            std::cout << "flags:  ";
-            if((*it)->info.flags & scanner_info::SCANNER_DISABLED) std::cout << "SCANNER_DISABLED ";
-            if((*it)->info.flags & scanner_info::SCANNER_NO_USAGE) std::cout << "SCANNER_NO_USAGE ";
-            if((*it)->info.flags==0) std::cout << "NONE ";
-
-            std::cout << "\n";
+            std::cout << "flags:  " << scanner_info::flag_to_string((*it)->info.flags) << "\n";
             std::cout << "Scanner Interface version: " << (*it)->info.si_version << "\n";
             std::cout << "Author: " << (*it)->info.author << "\n";
             std::cout << "Description: " << (*it)->info.description << "\n";
@@ -489,6 +485,19 @@ static std::string upperstr(const std::string &str)
     return ret;
 }
 
+/* Determine if the sbuf consists of a repeating ngram */
+static size_t find_ngram_size(const sbuf_t &sbuf)
+{
+    for(size_t ngram_size = 1; ngram_size < scanner_def::max_ngram; ngram_size++){
+	bool ngram_match = true;
+	for(size_t i=ngram_size;i<sbuf.pagesize && ngram_match;i++){
+	    if(sbuf[i%ngram_size]!=sbuf[i]) ngram_match = false;
+	}
+	if(ngram_match) return ngram_size;
+    }
+    return 0;                           // no ngram size
+}
+
 /** process_extract is the main workhorse. It is calls each scanner on each page. 
  * @param sp    - the scanner params, including the sbuf to process 
  * It is also the recursive entry point for sub-analysis.
@@ -520,15 +529,29 @@ void process_sbuf(const class scanner_params &sp)
         return;
     }
 
+    /* Determine if the sbuf consists of a repeating ngram */
+
+    /* Scan for a repeating ngram */
+    size_t ngram_size = 0;
+
     /****************************************************************
      *** CALL EACH OF THE SCANNERS ON THE SBUF
      ****************************************************************/
 
     for(scanner_vector::iterator it = current_scanners.begin();it!=current_scanners.end();it++){
-        if((*it)->enabled==false) continue;
-        string name = (*it)->info.name;
+        // Look for reasons not to run a scanner
+
+        if((*it)->enabled==false) continue; // not enabled
+
+        if((ngram_size > 0) && (((*it)->info.flags & scanner_info::SCANNER_WANTS_NGRAMS)==0)){
+            // buffer contains ngrams
+            continue;
+        }
         
+        string name = (*it)->info.name;
+
         try {
+
 #ifdef DEBUG_PRINT_STEPS
             if(debug & DEBUG_PRINT_STEPS){
                 cerr << "calling scanner " << name << "...\n";
