@@ -28,21 +28,6 @@ static int debug;                               // local debug variable
  *** misc support
  ****************************************************************/
 
-void be_mkdir(string dir)
-{
-#ifdef WIN32
-    if(mkdir(dir.c_str())){
-        cerr << "Could not make directory " << dir << "\n";
-        exit(1);
-    }
-#else
-    if(mkdir(dir.c_str(),0777)){
-        cerr << "Could not make directory " << dir << "\n";
-        exit(1);
-    }
-#endif
-}
-
 #ifndef HAVE_ERR
 #include <stdarg.h>
 // noreturn attribute to avoid warning with GCC on Linux
@@ -185,6 +170,7 @@ void load_scanner(scanner_t scanner,const scanner_info::config_t &config)
     sd->scanner = scanner;
     sd->info.debug = debug;
 
+    /* Copy the config into this scanner's info config */
     for(scanner_info::config_t::const_iterator it = config.begin();it!=config.end();it++){
         std::string name = it->first;
         std::string value = it->second;
@@ -252,8 +238,7 @@ static void load_scanner_file(string fn,const scanner_info::config_t &config)
     load_scanner(*scanner,config);
 }
 
-void load_scanners(scanner_t * const *scanners,
-                   const scanner_info::config_t &config)
+void load_scanners(scanner_t * const *scanners, const scanner_info::config_t &config)
 {
     for(int i=0;scanners[i];i++){
         load_scanner(scanners[i],config);
@@ -427,9 +412,57 @@ void enable_feature_recorders(feature_file_names_t &feature_file_names)
     }
 }
 
-void info_scanners(bool detailed,scanner_t * const *scanners_builtin,const char enable_opt,const char disable_opt)
+/* option processing */
+/* Get the config and build the help strings at the same time! */
+std::stringstream helpstream;
+void scanner_info::get_config(const std::string &n,std::string *val,const std::string &help)
 {
-    /* Print a list of scanners. We need to load them to do this, so they are loaded with empty config */
+    /* Check to see if we are being called as part of a help operation */
+    helpstream << "   -S " << n << "=" << *val << "    " << help << "\n";
+    if(config.find(n)!=config.end() && val){
+        *val = config[n];
+    }
+}
+
+void scanner_info::get_config(const std::string &n,uint64_t *val,const std::string &help)
+{
+    std::stringstream ss;
+    ss << *val;
+    std::string v(ss.str());
+    get_config(n,&v,help);
+    ss.str(v);
+    ss >> *val;
+}
+
+void scanner_info::get_config(const std::string &n,uint32_t *val,const std::string &help)
+{
+    std::stringstream ss;
+    ss << *val;
+    std::string v(ss.str());
+    get_config(n,&v,help);
+    ss.str(v);
+    ss >> *val;
+}
+
+void scanner_info::get_config(const std::string &n,size_t *val,const std::string &help)
+{
+    std::stringstream ss;
+    ss << *val;
+    std::string v(ss.str());
+    get_config(n,&v,help);
+    ss.str(v);
+    ss >> *val;
+}
+
+
+
+/**
+ * Print a list of scanners.
+ * We need to load them to do this, so they are loaded with empty config
+ */
+void info_scanners(bool detailed,scanner_t * const *scanners_builtin,
+                   const char enable_opt,const char disable_opt)
+{
     const scanner_info::config_t empty_config;
 
     load_scanners(scanners_builtin,empty_config);
@@ -460,10 +493,15 @@ void info_scanners(bool detailed,scanner_t * const *scanners_builtin,const char 
             enabled_wordlist.push_back((*it)->info.name);
         }
     }
-    if(detailed) return;
+    if(detailed){
+        std::cout << "Options: \n";
+        std::cout << helpstream.str();
+        return;
+    }
     sort(disabled_wordlist.begin(),disabled_wordlist.end());
     sort(enabled_wordlist.begin(),enabled_wordlist.end());
-    for(std::vector<std::string>::const_iterator it = disabled_wordlist.begin();it!=disabled_wordlist.end();it++){
+    for(std::vector<std::string>::const_iterator it = disabled_wordlist.begin();
+        it!=disabled_wordlist.end();it++){
         std::cout << "   -" << enable_opt << " " <<  *it << " - enable scanner " << *it << "\n";
     }
     std::cout << "\n";
@@ -532,7 +570,7 @@ void process_sbuf(const class scanner_params &sp)
     /* Determine if the sbuf consists of a repeating ngram */
 
     /* Scan for a repeating ngram */
-    size_t ngram_size = 0;
+    size_t ngram_size = find_ngram_size(sp.sbuf);
 
     /****************************************************************
      *** CALL EACH OF THE SCANNERS ON THE SBUF

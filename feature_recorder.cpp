@@ -75,9 +75,7 @@ void feature_recorder::banner_stamp(std::ostream &os,const std::string &header)
     
     os << bulk_extractor_version_header;
     os << "# Feature-Recorder: " << name << "\n";
-#ifdef BULK_EXTRACTOR
-    os << "# Filename: " << image_fname << "\n";
-#endif
+    if(input_fname.size()) os << "# Filename: " << input_fname << "\n";
     if(debug!=0){
         os << "# DEBUG: " << debug << " (";
         if(debug & DEBUG_PEDANTIC) os << " DEBUG_PEDANTIC ";
@@ -99,9 +97,9 @@ void feature_recorder::banner_stamp(std::ostream &os,const std::string &header)
  * @param histogram_enabled - whether or not a histogram should be created.
  */
 
-feature_recorder::feature_recorder(string outdir_,string name_):
+feature_recorder::feature_recorder(string outdir_,string input_fname_,string name_):
     flags(0),histogram_enabled(false),
-    outdir(outdir_),name(name_),count(0),ios(),Mf(),Mr(), 
+    outdir(outdir_),input_fname(input_fname_),name(name_),count(0),ios(),Mf(),Mr(), 
     stop_list_recorder(0),carved_set(),
     file_number(0),file_extension("."+name)
 {

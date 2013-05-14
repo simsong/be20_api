@@ -14,9 +14,6 @@
 #define DEBUG_EXIT_EARLY  1000		/* just print the size of the volume and exis */
 #define DEBUG_ALLOCATE_512MiB 1002	/* Allocate 512MiB, but don't set any flags */
 
-//extern int debug;			// feel free to use
-
-
 /* We need netinet/in.h or windowsx.h */
 #ifdef HAVE_NETINET_IN_H
 # include <netinet/in.h>
@@ -601,6 +598,7 @@ typedef void process_t(const class scanner_params &sp);
 typedef void packet_callback_t(void *user,const be13::packet_info &pi);
     
 /** scanner_info gets filled in by the scanner to tell the caller about the scanner.
+ *
  */
 class scanner_info {
 private:
@@ -642,7 +640,6 @@ private:
         return ret;
     }
 
-
     // never change the order or delete old fields, or else you will
     // break backwards compatability 
     scanner_info():si_version(CURRENT_SI_VERSION),
@@ -660,15 +657,25 @@ private:
     void        *packet_user;           // v2: user data provided to packet_cb
     packet_callback_t *packet_cb;       // v2: packet handler, or NULL if not present.
     config_t    config;                 // v3: this scanner's configuration. [scanner_name:] prefix removed
+                                        //     please use get_config functions below
     int         debug;                  // v3: debug flag
-};
 
+    // These methods are implemented in the plugin system for the scanner to get config information.
+    // The get_config methods should be called on the si object during PHASE_STARTUP
+    virtual void get_config(const std::string &name,std::string *val,const std::string &help);
+    virtual void get_config(const std::string &name,uint64_t *val,const std::string &help);
+    virtual void get_config(const std::string &name,uint32_t *val,const std::string &help);
+    virtual void get_config(const std::string &name,size_t *val,const std::string &help);
+    virtual ~scanner_info(){};
+};
 #include <map>
+/**
+ * The scanner_params class is a way for sending the scanner parameters
+ * for this particular sbuf to be scanned.
+ */
+
 class scanner_params {
  public:
-    /** Construct a scanner_params from a sbuf and other sensible defaults.
-     *
-     */
     enum print_mode_t {MODE_NONE=0,MODE_HEX,MODE_RAW,MODE_HTTP};
     static const int CURRENT_SP_VERSION=3;
 

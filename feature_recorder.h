@@ -61,7 +61,7 @@ private:
     };
     feature_recorder(const feature_recorder &fr) __attribute__((__noreturn__)) :
         flags(0),histogram_enabled(false),
-        outdir(),name(),count(0),ios(),Mf(),Mr(),
+        outdir(),input_fname(),name(),count(0),ios(),Mf(),Mr(),
         stop_list_recorder(0),carved_set(),file_number(0),file_extension()
         {
         throw new not_impl();
@@ -113,12 +113,14 @@ public:
     static string banner_file;          // banner for top of every file
     static string extract_feature(const string &line);
 
-    feature_recorder(string outdir,string name);
+    feature_recorder(string outdir,string input_fname,string name);
     virtual ~feature_recorder();
 
-    void set_flag(uint32_t flags_){flags|=flags_;}
+    virtual void set_flag(uint32_t flags_){flags|=flags_;}
+    virtual void set_input_fname(const std::string &f){input_fname = f;}
 
     string outdir;                      // where output goes (could be static, I guess 
+    string input_fname;                 // image we are analyzing
     string name;                        /* name of this feature recorder */
     int64_t count;                      /* number of records written */
     std::fstream ios;                   /* where features are written */

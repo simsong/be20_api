@@ -116,12 +116,12 @@ void feature_recorder_set::dump_stats(xml &x)
 
 void feature_recorder_set::create_name(string name,bool create_stop_file) 
 {
-    feature_recorder *fr = new feature_recorder(outdir,name);
+    feature_recorder *fr = new feature_recorder(outdir,input_fname,name);
     frm[name] = fr;
     if(create_stop_file){
         string name_stopped = name+"_stopped";
         
-        fr->stop_list_recorder = new feature_recorder(outdir,name_stopped);
+        fr->stop_list_recorder = new feature_recorder(outdir,input_fname,name_stopped);
         frm[name_stopped] = fr->stop_list_recorder;
     }
     
