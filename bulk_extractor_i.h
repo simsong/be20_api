@@ -662,10 +662,14 @@ private:
 
     // These methods are implemented in the plugin system for the scanner to get config information.
     // The get_config methods should be called on the si object during PHASE_STARTUP
+    static std::stringstream helpstream; // where scanner info help messages are saved.
+    static  void get_config(const scanner_info::config_t &c,
+                            const std::string &name,std::string *val,const std::string &help);
     virtual void get_config(const std::string &name,std::string *val,const std::string &help);
     virtual void get_config(const std::string &name,uint64_t *val,const std::string &help);
     virtual void get_config(const std::string &name,uint32_t *val,const std::string &help);
     virtual void get_config(const std::string &name,size_t *val,const std::string &help);
+    virtual void get_config(const std::string &name,bool *val,const std::string &help);
     virtual ~scanner_info(){};
 };
 #include <map>

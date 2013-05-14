@@ -414,14 +414,21 @@ void enable_feature_recorders(feature_file_names_t &feature_file_names)
 
 /* option processing */
 /* Get the config and build the help strings at the same time! */
-std::stringstream helpstream;
-void scanner_info::get_config(const std::string &n,std::string *val,const std::string &help)
+std::stringstream scanner_info::helpstream;
+void scanner_info::get_config(const scanner_info::config_t &c,
+                              const std::string &n,std::string *val,const std::string &help)
 {
     /* Check to see if we are being called as part of a help operation */
     helpstream << "   -S " << n << "=" << *val << "    " << help << "\n";
-    if(config.find(n)!=config.end() && val){
-        *val = config[n];
+    scanner_info::config_t::const_iterator it = c.find(n);
+    if(it!=c.end() && val){
+        *val = it->second;
     }
+}
+
+void scanner_info::get_config(const std::string &n,std::string *val,const std::string &help)
+{
+    scanner_info::get_config(config,n,val,help);
 }
 
 void scanner_info::get_config(const std::string &n,uint64_t *val,const std::string &help)
@@ -452,6 +459,21 @@ void scanner_info::get_config(const std::string &n,size_t *val,const std::string
     get_config(n,&v,help);
     ss.str(v);
     ss >> *val;
+}
+
+void scanner_info::get_config(const std::string &n,bool *val,const std::string &help)
+{
+    std::stringstream ss;
+    ss << ((*val) ? "YES" : "NO");
+    std::string v(ss.str());
+    get_config(n,&v,help);
+    switch(v.at(0)){
+    case 'Y':case 'y':case 'T':case 't':case '1':
+        *val = true;
+        break;
+    default:
+        *val = false;
+    }
 }
 
 
@@ -494,8 +516,8 @@ void info_scanners(bool detailed,scanner_t * const *scanners_builtin,
         }
     }
     if(detailed){
-        std::cout << "Options: \n";
-        std::cout << helpstream.str();
+        std::cout << "Settable Options (and their defaults): \n";
+        std::cout << scanner_info::helpstream.str();
         return;
     }
     sort(disabled_wordlist.begin(),disabled_wordlist.end());
