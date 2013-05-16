@@ -451,6 +451,7 @@ void scanner_info::get_config(const std::string &n,uint32_t *val,const std::stri
     ss >> *val;
 }
 
+#ifdef HAVE_GET_CONFIG_SIZE_T
 void scanner_info::get_config(const std::string &n,size_t *val,const std::string &help)
 {
     std::stringstream ss;
@@ -460,6 +461,7 @@ void scanner_info::get_config(const std::string &n,size_t *val,const std::string
     ss.str(v);
     ss >> *val;
 }
+#endif
 
 void scanner_info::get_config(const std::string &n,bool *val,const std::string &help)
 {
