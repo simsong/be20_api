@@ -57,8 +57,8 @@ public:
                          const std::string &outdir,
                          bool create_stop_files);
 
-    /** create a dummy feature_recorder_set with no output directory */
-    feature_recorder_set(uint32_t flags_):flags(flags_),input_fname(),outdir(),frm(),Mlock(),scanner_stats(){ }
+    /** create a dummy feature_recorder_set with only an alert or disabled recorder and no output directory */
+    feature_recorder_set(uint32_t flags_);
     virtual ~feature_recorder_set() {
         for(feature_recorder_map::iterator i = frm.begin();i!=frm.end();i++){
             delete i->second;
@@ -74,7 +74,8 @@ public:
     void create_name(string name,bool create_stop_also);
     void clear_flag(uint32_t f){flags|=f;}
     void add_stats(string bucket,double seconds);
-    void dump_stats(class xml &xml);
+    typedef void (*stat_callback_t)(void *user,const std::string &name,uint64_t calls,double seconds);
+    void get_stats(void *user,stat_callback_t stat_callback);
 
     // NOTE:
     // only virtual functions may be called by plugins!

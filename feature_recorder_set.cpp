@@ -2,7 +2,7 @@
 
 #include "config.h"
 #include "bulk_extractor_i.h"
-#include "xml.h"
+//#include "dfxml/src/dfxml_generator.h"
 
 #ifdef USE_HISTOGRAMS
 #include "histogram.h"
@@ -19,6 +19,17 @@
 const string feature_recorder_set::ALERT_RECORDER_NAME = "alerts";
 const string feature_recorder_set::DISABLED_RECORDER_NAME = "disabled";
 feature_recorder  *feature_recorder_set::alert_recorder = 0; // no alert recorder to start
+
+/* Create an empty recorder */
+feature_recorder_set::feature_recorder_set(uint32_t flags_):flags(flags_),input_fname(),outdir(),frm(),Mlock(),scanner_stats()
+{
+    if(flags & SET_DISABLED){
+        create_name(DISABLED_RECORDER_NAME,false);
+        frm[DISABLED_RECORDER_NAME]->set_flag(feature_recorder::FLAG_DISABLED);
+        return;
+    }
+    assert(0);                          // need to have a disabled recorder
+}
 
 /**
  * Create a properly functioning feature recorder set.
@@ -67,20 +78,19 @@ bool feature_recorder_set::has_name(string name) const
  */
 feature_recorder *feature_recorder_set::get_name(const std::string &name) 
 {
+    const std::string *thename = &name;
     if(flags & SET_DISABLED){           // if feature recorder set is disabled, return the disabled recorder.
-        return get_name(feature_recorder_set::DISABLED_RECORDER_NAME);
+        thename = &feature_recorder_set::DISABLED_RECORDER_NAME;
     }
 
     if(flags & ONLY_ALERT){
-        if(name!=feature_recorder_set::ALERT_RECORDER_NAME){             // always return the alert recorder
-            return get_name(feature_recorder_set::ALERT_RECORDER_NAME);
-        }
+        thename = &feature_recorder_set::ALERT_RECORDER_NAME;
     }
 
     cppmutex::lock lock(Mlock);
-    feature_recorder_map::const_iterator it = frm.find(name);
+    feature_recorder_map::const_iterator it = frm.find(*thename);
     if(it!=frm.end()) return it->second;
-    std::cerr << "feature_recorder::get_name(" << name << ") does not exist\n";
+    std::cerr << "feature_recorder::get_name(" << *thename << ") does not exist\n";
     assert(0);
     exit(0);
 }
@@ -99,19 +109,11 @@ void feature_recorder_set::add_stats(string bucket,double seconds)
     p.calls ++;
 }
 
-void feature_recorder_set::dump_stats(xml &x)
+void feature_recorder_set::get_stats(void *user,stat_callback_t stat_callback)
 {
-    x.push("scanner_times");
     for(scanner_stats_map::const_iterator it = scanner_stats.begin();it!=scanner_stats.end();it++){
-        x.set_oneline(true);
-        x.push("path");
-        x.xmlout("name",(*it).first);
-        x.xmlout("calls",(int64_t)(*it).second.calls);
-        x.xmlout("seconds",(*it).second.seconds);
-        x.pop();
-        x.set_oneline(false);
+        (*stat_callback)(user,(*it).first,(*it).second.calls,(*it).second.seconds);
     }
-    x.pop();
 }
 
 void feature_recorder_set::create_name(string name,bool create_stop_file) 

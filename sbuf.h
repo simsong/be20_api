@@ -26,8 +26,6 @@
 #define __STDC_FORMAT_MACROS
 #endif
 
-#include "md5.h"
-
 using namespace std;
 
 #include <stdlib.h>
@@ -586,8 +584,6 @@ public:
     }
 
     string substr(size_t loc,size_t len) const; /* make a substring */
-    md5_t md5(size_t loc,size_t len) const;     /* compute the MD5 of a subset */
-    md5_t md5() const;                             // md5 of the whole object
     bool is_constant(size_t loc,size_t len,uint8_t ch) const; // verify that it's constant
     bool is_constant(uint8_t ch) const { return is_constant(0,this->pagesize,ch); }
 

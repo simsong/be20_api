@@ -529,7 +529,9 @@ void feature_recorder::write_buf(const sbuf_t &sbuf,size_t pos,size_t len)
 /**
  * Carving support.
  */
-void feature_recorder::carve(const sbuf_t &sbuf,size_t pos,size_t len)
+void feature_recorder::carve(const sbuf_t &sbuf,size_t pos,size_t len,
+                             const std::string &hash_function_name,
+                             hashing_function_t hashing_function)
 {
     /* If we are in the margin, ignore; it will be processed again */
     if(pos >= sbuf.pagesize && pos < sbuf.bufsize){
@@ -561,19 +563,19 @@ void feature_recorder::carve(const sbuf_t &sbuf,size_t pos,size_t len)
         }
     }
 
-    /* Get the MD5 of the object to be carved */
-    md5_t carved_md5 = sbuf.md5(pos,len);
+    /* Get the hex hash value of the object to be carved */
+    std::string carved_hash_hexvalue = (*hashing_function)(sbuf);
     char fname[MAXPATHLEN+1];
     
     {
         /* New code: grab the lock. It is automatically freed on return. */
         cppmutex::lock lock(Mf);
-        bool previously_carved = (carved_set.find(carved_md5)!=carved_set.end());
+        bool previously_carved = (carved_set.find(carved_hash_hexvalue)!=carved_set.end());
 
         if(previously_carved) return;
 
         /* Insert it into the set */
-        carved_set.insert(carved_md5);
+        carved_set.insert(carved_hash_hexvalue);
 
         /* Generate the file name */
         int myfilenumber = file_number++;
@@ -585,7 +587,7 @@ void feature_recorder::carve(const sbuf_t &sbuf,size_t pos,size_t len)
      */
     stringstream ss;
     ss << "<fileobject><filename>" << fname << "</filename><filesize>" << len << "</filesize>"
-        "<hashdigest type='MD5'>" << carved_md5.hexdigest() << "</hashdigest></fileobject>";
+       << "<hashdigest type='" << hash_function_name << "'>" << carved_hash_hexvalue << "</hashdigest></fileobject>";
     this->write(sbuf.pos0+len,fname,ss.str());
     
     /* Now carve to a file */

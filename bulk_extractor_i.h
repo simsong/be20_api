@@ -19,6 +19,8 @@
 # include <netinet/in.h>
 #endif
 
+#include <assert.h>
+
 #ifdef WIN32
 #  include <winsock2.h>
 #  include <windows.h>
@@ -69,7 +71,6 @@
 #include "sbuf.h"
 #include "feature_recorder.h"
 #include "feature_recorder_set.h"
-#include "xml.h"
 #include "utf8.h"
 
 #include <vector>
@@ -625,6 +626,7 @@ private:
     static const int SCANNER_RECURSE        = 0x10; // v3: this scanner will recurse
     static const int SCANNER_RECURSE_EXPAND = 0x20; // v3: recurses AND result is >= original size
     static const int SCANNER_WANTS_NGRAMS   = 0x40; // v3: Scanner gets buffers that are constant n-grams
+    static const int SCANNER_FAST_FIND      = 0x80; // v3: This scanner is a very fast FIND scanner
     static const int CURRENT_SI_VERSION=3;          // 
 
     static const std::string flag_to_string(const int flag){
@@ -659,6 +661,8 @@ private:
     config_t    config;                 // v3: this scanner's configuration. [scanner_name:] prefix removed
                                         //     please use get_config functions below
     int         debug;                  // v3: debug flag
+    std::string hash_name;              // name of the hash function to use
+    std::string (*hasher)(const uint8_t *buf,size_t bufsize); // function to perform hashing with
 
     // These methods are implemented in the plugin system for the scanner to get config information.
     // The get_config methods should be called on the si object during PHASE_STARTUP
@@ -836,8 +840,9 @@ namespace be13 {
         
 
         /* Run the phases on the scanners */
-        static void phase_shutdown(feature_recorder_set &fs, xml &xreport);
-        static void phase_histogram(feature_recorder_set &fs, xml &xreport);
+        static void phase_shutdown(feature_recorder_set &fs);
+        typedef void (*xml_notifier_t)(const std::string &xmlstring);
+        static void phase_histogram(feature_recorder_set &fs, xml_notifier_t xml_error_notifier);
         static void process_sbuf(const class scanner_params &sp);                              /* process for feature extraction */
         static void process_packet_info(const be13::packet_info &pi);
 

@@ -44,7 +44,6 @@ using namespace std;
 #include <fstream>
 #include <set>
 
-#include "md5.h"
 #include "regex.h"
 #include "cppmutex.h"
 
@@ -173,13 +172,16 @@ public:
 
     /**
      * support for carving.
-     * Carving writes the filename to the feature file; the context is the file's MD5
+     * Carving writes the filename to the feature file; the context is the file's hash using the provided function.
      * Automatically de-duplicates.
      */
-    std::set<md5_t>     carved_set;             /* set of MD5 hash codes of objects we've carved;  */
+    std::set<std::string>     carved_set;    /* set of hex hash values of objects we've carved;  */
     int64_t     file_number;            /* starts at 0; gets incremented by carve() */
     string      file_extension;         /* includes "."; must be set by caller */
-    virtual void carve(const sbuf_t &sbuf,size_t pos,size_t len);
+    typedef std::string (*hashing_function_t)(const sbuf_t &sbuf); // returns a hex value
+    virtual void carve(const sbuf_t &sbuf,size_t pos,size_t len,
+                       const std::string &hash_function_name,
+                       hashing_function_t hashing_function);
 
     /**
      * support for tagging blocks with their type.

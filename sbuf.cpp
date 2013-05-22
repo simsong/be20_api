@@ -170,19 +170,6 @@ std::string sbuf_t::substr(size_t loc,size_t len) const
     return std::string((const char *)buf+loc,len);
 }
 
-/* Return the md5 of a substring */
-md5_t sbuf_t::md5(size_t loc,size_t len) const
-{
-    if(loc>=bufsize) return md5_generator::hash_buf((const unsigned char *)"",0);
-    if(loc+len>bufsize) len=bufsize-loc; // clip at the end
-    return md5_generator::hash_buf(buf+loc,len);
-}
-
-md5_t sbuf_t::md5() const 
-{
-    return md5(0,pagesize);
-}
-
 bool sbuf_t::is_constant(size_t off,size_t len,uint8_t ch) const // verify that it's constant
 {
     while(len>0){

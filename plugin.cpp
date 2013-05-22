@@ -18,7 +18,7 @@
 #endif
 
 #include "bulk_extractor_i.h"
-#include "xml.h"
+//#include "xml.h"
 
 uint32_t scanner_def::max_depth = 7;            // max recursion depth
 uint32_t scanner_def::max_ngram = 10;            // max recursion depth
@@ -285,16 +285,14 @@ void be13::plugin::load_scanner_packet_handlers()
 
 void be13::plugin::message_enabled_scanners(scanner_params::phase_t phase) // send every enabled scanner the phase message
 {
+    feature_recorder_set fs(feature_recorder_set::SET_DISABLED); // dummy
+    recursion_control_block rcb(0,"",0); // dummy rcb
+    /* make an empty sbuf and feature recorder set */
+    pos0_t      pos0;
+    sbuf_t      sbuf(pos0);
+    scanner_params sp(phase,sbuf,fs); 
     for(scanner_vector::iterator it = current_scanners.begin(); it!=current_scanners.end(); it++){
         if((*it)->enabled){
-            /* make an empty sbuf and feature recorder set */
-            pos0_t      pos0;
-            sbuf_t      sbuf(pos0);
-            feature_recorder_set fs(feature_recorder_set::SET_DISABLED); // dummy
-            scanner_params sp(phase,sbuf,fs); 
-            
-            recursion_control_block rcb(0,"",0); // dummy rcb
-
             ((*it)->scanner)(sp,rcb);
         }
     }
@@ -391,7 +389,7 @@ void be13::plugin::scanners_process_commands()
  *** PHASE_SHUTDOWN (formerly phase 2): shut down the scanners
  ****************************************************************/
 
-void be13::plugin::phase_shutdown(feature_recorder_set &fs, xml &xreport)
+void be13::plugin::phase_shutdown(feature_recorder_set &fs)
 {
     for(scanner_vector::iterator it = current_scanners.begin();it!=current_scanners.end();it++){
         if((*it)->enabled){
@@ -410,7 +408,7 @@ void be13::plugin::phase_shutdown(feature_recorder_set &fs, xml &xreport)
  ****************************************************************/
 #ifdef USE_HISTOGRAMS
 bool opt_enable_histograms=true;
-void be13::plugin::phase_histogram(feature_recorder_set &fs, xml &xreport)
+void be13::plugin::phase_histogram(feature_recorder_set &fs, xml_notifier_t xml_error_notifier)
 {
     if(!opt_enable_histograms) return;
     int ctr = 0;
@@ -425,15 +423,16 @@ void be13::plugin::phase_histogram(feature_recorder_set &fs, xml &xreport)
                 std::cerr << "ERROR: " ;
                 std::cerr.flush();
                 std::cerr << e.what() << " computing histogram " << (*it).feature << "\n";
-                xreport.xmlout("error",(*it).feature, "function='phase3'",true);
+                if(xml_error_notifier){
+                    std::string error = std::string("<error function='phase3' histogram='") + (*it).feature + std::string("</error>");
+                    (*xml_error_notifier)(error);
+                }
             }
         }
         if(++ctr % 3 == 0) std::cout << "\n";
         std::cout.flush();
     }
     if(ctr % 4 !=0) std::cout << "\n";
-    xreport.comment("phase 3 finish");
-    xreport.flush();
 }
 #endif
 
