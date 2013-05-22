@@ -509,8 +509,10 @@ void scanner_info::get_config(const std::string &n,bool *val,const std::string &
  * Print a list of scanners.
  * We need to load them to do this, so they are loaded with empty config
  */
-void be13::plugin::info_scanners(bool detailed,scanner_t * const *scanners_builtin,
-                   const char enable_opt,const char disable_opt)
+void be13::plugin::info_scanners(bool detailed_info,
+                                 bool detailed_settings,
+                                 scanner_t * const *scanners_builtin,
+                                 const char enable_opt,const char disable_opt)
 {
     const scanner_info::config_t empty_config;
 
@@ -519,7 +521,7 @@ void be13::plugin::info_scanners(bool detailed,scanner_t * const *scanners_built
     std::vector<std::string> enabled_wordlist;
     std::vector<std::string> disabled_wordlist;
     for(scanner_vector::const_iterator it = current_scanners.begin();it!=current_scanners.end();it++){
-        if(detailed){
+        if(detailed_info){
             std::cout << "Scanner Name: " << (*it)->info.name << "\n";
             std::cout << "flags:  " << scanner_info::flag_to_string((*it)->info.flags) << "\n";
             std::cout << "Scanner Interface version: " << (*it)->info.si_version << "\n";
@@ -542,10 +544,9 @@ void be13::plugin::info_scanners(bool detailed,scanner_t * const *scanners_built
             enabled_wordlist.push_back((*it)->info.name);
         }
     }
-    if(detailed){
+    if(detailed_settings){
         std::cout << "Settable Options (and their defaults): \n";
         std::cout << scanner_info::helpstream.str();
-        return;
     }
     sort(disabled_wordlist.begin(),disabled_wordlist.end());
     sort(enabled_wordlist.begin(),enabled_wordlist.end());

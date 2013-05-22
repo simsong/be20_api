@@ -830,7 +830,9 @@ namespace be13 {
         static void scanners_disable(const std::string &name); // saves a command to disable this scanner
         static void scanners_process_commands();               // process the enable/disable and config commands
 
-        static void info_scanners(bool detailed,scanner_t * const *scanners_builtin,const char enable_opt,const char disable_opt);
+        static void info_scanners(bool detailed_info,
+                                  bool detailed_settings,
+                                  scanner_t * const *scanners_builtin,const char enable_opt,const char disable_opt);
         
 
         /* Run the phases on the scanners */
