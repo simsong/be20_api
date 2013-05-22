@@ -710,11 +710,11 @@ class scanner_params {
     // phase_t specifies when the scanner is being called
     typedef enum {
         PHASE_NONE     = -1,
-        PHASE_STARTUP  = 0,             // called when scanner loads
+        PHASE_STARTUP  = 0,             // called in main thread when scanner loads; called on EVERY scanner (called for help)
+        PHASE_INIT     = 3,             // called in main thread for every ENABLED scanner after all scanners loaded
+        PHASE_THREAD_BEFORE_SCAN = 4,   // called in worker thread for every ENABLED scanner before first scan
         PHASE_SCAN     = 1,             // called to scan an sbuf
-        PHASE_SHUTDOWN = 2,          // called when scanner is shutdown
-        // PHASE_THREAD_BEFORE_SCAN        // called by each thread before first scan
-        // PHASE_THREAD_AFTER_SCAN         // caleld by each thread after last sbuf is scanned
+        PHASE_SHUTDOWN = 2,             // called in main thread when scanner is shutdown
     } phase_t ;
     static PrintOptions no_options;     // in common.cpp
 
@@ -799,32 +799,51 @@ public:;
     scanner_info info;                  // info block sent to and returned by scanner
     string      pathPrefix;             /* path prefix for recursive scanners */
 };
-void load_scanner(scanner_t scanner,const scanner_info::config_t &config); // load a specific scanner
-void load_scanners(scanner_t * const *scanners_builtin,const scanner_info::config_t &config);           // load the scan_ plugins
-void load_scanner_directory(const string &dirname,const scanner_info::config_t &config); // load scanners in the directory
-void load_scanner_directories(const std::vector<std::string> &dirnames,const scanner_info::config_t &config);
 
-void enable_alert_recorder(feature_file_names_t &feature_file_names);
-void enable_feature_recorders(feature_file_names_t &feature_file_names);
+namespace be13 {
+    /* plugin.cpp */
 
-// print info about the scanners:
-void info_scanners(bool detailed,scanner_t * const *scanners_builtin,const char enable_opt,const char disable_opt);
-void scanners_enable(const std::string &name); // saves a command to enable this scanner
-void scanners_enable_all();                    // enable all of them
-void scanners_disable(const std::string &name); // saves a command to disable this scanner
-void scanners_disable_all();                    // saves a command to disable all
-void scanners_process_commands();               // process the enable/disable and config commands
+    struct plugin {
+        typedef vector<scanner_def *> scanner_vector;
+        static scanner_vector current_scanners;                         // current scanners
 
-typedef vector<scanner_def *> scanner_vector;
-extern scanner_vector current_scanners;                         // current scanners
+        static void set_scanner_debug(int debug);
 
-/* plugin.cpp */
-void set_scanner_debug(int debug);
-void phase_shutdown(feature_recorder_set &fs, xml &xreport);
-void phase_histogram(feature_recorder_set &fs, xml &xreport);
-void process_sbuf(const class scanner_params &sp);                              /* process for feature extraction */
-void process_packet_info(const be13::packet_info &pi);
+        static void load_scanner(scanner_t scanner,const scanner_info::config_t &config); // load a specific scanner
+        static void load_scanner_file(string fn,const scanner_info::config_t &config);    // load a scanner from a file
+        static void load_scanners(scanner_t * const *scanners_builtin,const scanner_info::config_t &config);           // load the scan_ plugins
+        static void load_scanner_directory(const string &dirname,const scanner_info::config_t &config); // load scanners in the directory
+        static void load_scanner_directories(const std::vector<std::string> &dirnames,const scanner_info::config_t &config);
+        static void load_scanner_packet_handlers();
+        
+        static void message_enabled_scanners(scanner_params::phase_t phase); // send every enabled scanner the phase message
+        static scanner_t *find_scanner(const std::string &name); // returns the named scanner, or 0 if no scanner of that name
+        static void get_enabled_scanners(std::vector<std::string> &svector); // put the enabled scanners into the vector
+        static bool find_scanner_enabled(); // return true if a find scanner is enabled
+        
+        // print info about the scanners:
+        static void scanners_disable_all();                    // saves a command to disable all
+        static void scanners_enable_all();                    // enable all of them
+        static void set_scanner_enabled(const std::string &name,bool enable);
+        static void set_scanner_enabled_all(bool enable);
+        static void scanners_enable(const std::string &name); // saves a command to enable this scanner
+        static void scanners_disable(const std::string &name); // saves a command to disable this scanner
+        static void scanners_process_commands();               // process the enable/disable and config commands
 
+        static void info_scanners(bool detailed,scanner_t * const *scanners_builtin,const char enable_opt,const char disable_opt);
+        
+
+        /* Run the phases on the scanners */
+        static void phase_shutdown(feature_recorder_set &fs, xml &xreport);
+        static void phase_histogram(feature_recorder_set &fs, xml &xreport);
+        static void process_sbuf(const class scanner_params &sp);                              /* process for feature extraction */
+        static void process_packet_info(const be13::packet_info &pi);
+
+        /* recorders */
+        static void get_scanner_feature_file_names(feature_file_names_t &feature_file_names);
+
+    };
+};
 
 inline std::string itos(int i){ std::stringstream ss; ss << i;return ss.str();}
 inline std::string dtos(double d){ std::stringstream ss; ss << d;return ss.str();}

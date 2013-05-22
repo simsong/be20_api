@@ -65,6 +65,8 @@ public:
         }
     }
 
+    static void get_alert_recorder_name(feature_file_names_t &feature_file_names);
+
     void flush_all();
     void close_all();
     bool has_name(string name) const;   /* does the named feature exist? */

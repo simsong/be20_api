@@ -62,10 +62,28 @@ static void errx(int eval,const char *fmt,...)
  *** SCANNER PLUG-IN SYSTEM
  ****************************************************************/
 
-scanner_params::PrintOptions scanner_params::no_options; 
-scanner_vector current_scanners;                                // current scanners
+/* scanner_params */
 
-void set_scanner_debug(int adebug)
+scanner_params::PrintOptions scanner_params::no_options; 
+
+/* vector object for keeping track of packet callbacks */
+
+class packet_plugin_info {
+public:
+    packet_plugin_info(void *user_,packet_callback_t *callback_):user(user_),callback(callback_){};
+    void *user;
+    packet_callback_t *callback;
+};
+
+typedef vector<packet_plugin_info> packet_plugin_info_vector_t;
+packet_plugin_info_vector_t  packet_handlers;   // pcap callback handlers
+
+
+/* plugin */
+
+be13::plugin::scanner_vector be13::plugin::current_scanners;                                // current scanners
+
+void be13::plugin::set_scanner_debug(int adebug)
 {
     debug = adebug;
 }
@@ -81,7 +99,7 @@ void set_scanner_debug(int adebug)
  * 'all' is a special scanner that enables all scanners.
  */
 
-static void set_scanner_enabled(const string name,bool enable)
+void be13::plugin::set_scanner_enabled(const std::string &name,bool enable)
 {
     for(scanner_vector::iterator it = current_scanners.begin();it!=current_scanners.end();it++){
         if(name=="all" && (((*it)->info.flags & scanner_info::SCANNER_NO_ALL)==0)){
@@ -97,7 +115,7 @@ static void set_scanner_enabled(const string name,bool enable)
     exit(1);
 }
 
-static void set_scanner_enabled_all(bool enable)
+void be13::plugin::set_scanner_enabled_all(bool enable)
 {
     for(scanner_vector::const_iterator it = current_scanners.begin();it!=current_scanners.end();it++){
         (*it)->enabled = enable;
@@ -108,34 +126,11 @@ static void set_scanner_enabled_all(bool enable)
  * The histogram should be done in the plug-in
  */
 
-histograms_t histograms;
+static histograms_t histograms;
 
 /****************************************************************
- *** Packet plugin support
- ***/
-
-class packet_plugin_info {
-public:
-    packet_plugin_info(void *user_,packet_callback_t *callback_):user(user_),callback(callback_){};
-    void *user;
-    packet_callback_t *callback;
-};
-
-typedef vector<packet_plugin_info> packet_plugin_info_vector_t;
-packet_plugin_info_vector_t  packet_handlers;   // pcap callback handlers
-
-/**
- * Process a pcap packet.
- * Designed to be very efficient because we have so many packets.
- */
-void process_packet_info(const be13::packet_info &pi)
-{
-    for(packet_plugin_info_vector_t::iterator it = packet_handlers.begin(); it != packet_handlers.end(); it++){
-        (*(*it).callback)((*it).user,pi);
-    }
-}
-
-
+ *** scanner plugin loading
+ ****************************************************************/
 
 /**
  * plugin system phase 0: Load a scanner.
@@ -147,13 +142,14 @@ void process_packet_info(const be13::packet_info &pi)
  * This is called before scanners are enabled or disabled, so the pcap handlers
  * need to be set afterwards
  */
-void load_scanner(scanner_t scanner,const scanner_info::config_t &config)
+void be13::plugin::load_scanner(scanner_t scanner,const scanner_info::config_t &config)
 {
     /* If scanner is already loaded, return */
     for(scanner_vector::const_iterator it = current_scanners.begin();it!=current_scanners.end();it++){
         if((*it)->scanner==scanner) return;
     }
 
+    /* make an empty sbuf and feature recorder set */
     pos0_t      pos0;
     sbuf_t      sbuf(pos0);
     feature_recorder_set fs(feature_recorder_set::SET_DISABLED); // dummy
@@ -172,9 +168,8 @@ void load_scanner(scanner_t scanner,const scanner_info::config_t &config)
 
     /* Copy the config into this scanner's info config */
     for(scanner_info::config_t::const_iterator it = config.begin();it!=config.end();it++){
-        std::string name = it->first;
-        std::string value = it->second;
-
+        const std::string &name = it->first;
+        const std::string &value = it->second;
         sd->info.config[name] = value;
     }
 
@@ -197,8 +192,7 @@ void load_scanner(scanner_t scanner,const scanner_info::config_t &config)
     current_scanners.push_back(sd);
 }
 
-
-static void load_scanner_file(string fn,const scanner_info::config_t &config)
+void be13::plugin::load_scanner_file(string fn,const scanner_info::config_t &config)
 {
     /* Figure out the function name */
     size_t extloc = fn.rfind('.');
@@ -238,15 +232,14 @@ static void load_scanner_file(string fn,const scanner_info::config_t &config)
     load_scanner(*scanner,config);
 }
 
-void load_scanners(scanner_t * const *scanners, const scanner_info::config_t &config)
+void be13::plugin::load_scanners(scanner_t * const *scanners, const scanner_info::config_t &config)
 {
     for(int i=0;scanners[i];i++){
         load_scanner(scanners[i],config);
     }
 }
 
-void load_scanner_directory(const string &dirname,
-                            const scanner_info::config_t &config )
+void be13::plugin::load_scanner_directory(const string &dirname, const scanner_info::config_t &config )
 {
     DIR *dirp = opendir(dirname.c_str());
     if(dirp==0){
@@ -269,7 +262,7 @@ void load_scanner_directory(const string &dirname,
     }
 }
 
-void load_scanner_directories(const std::vector<std::string> &dirnames,
+void be13::plugin::load_scanner_directories(const std::vector<std::string> &dirnames,
                               const scanner_info::config_t &config)
 {
     for(std::vector<std::string>::const_iterator it = dirnames.begin();it!=dirnames.end();it++){
@@ -278,7 +271,7 @@ void load_scanner_directories(const std::vector<std::string> &dirnames,
 }
 
 
-void load_scanner_packet_handlers()
+void be13::plugin::load_scanner_packet_handlers()
 {
     for(scanner_vector::const_iterator it = current_scanners.begin(); it!=current_scanners.end(); it++){
         if((*it)->enabled){
@@ -289,6 +282,54 @@ void load_scanner_packet_handlers()
         }
     }
 }
+
+void be13::plugin::message_enabled_scanners(scanner_params::phase_t phase) // send every enabled scanner the phase message
+{
+    for(scanner_vector::iterator it = current_scanners.begin(); it!=current_scanners.end(); it++){
+        if((*it)->enabled){
+            /* make an empty sbuf and feature recorder set */
+            pos0_t      pos0;
+            sbuf_t      sbuf(pos0);
+            feature_recorder_set fs(feature_recorder_set::SET_DISABLED); // dummy
+            scanner_params sp(phase,sbuf,fs); 
+            
+            recursion_control_block rcb(0,"",0); // dummy rcb
+
+            ((*it)->scanner)(sp,rcb);
+        }
+    }
+}
+
+scanner_t *be13::plugin::find_scanner(const std::string &search_name)
+{
+    for(scanner_vector::const_iterator it = current_scanners.begin();it!=current_scanners.end();it++){
+	if(search_name == (*it)->info.name){
+            return (*it)->scanner;
+        }
+    }
+    return 0;
+}
+
+void be13::plugin::get_enabled_scanners(std::vector<std::string> &svector) // put the enabled scanners into the vector
+{
+    for(scanner_vector::const_iterator it=current_scanners.begin();it!=current_scanners.end();it++){
+	if((*it)->enabled){
+            svector.push_back((*it)->info.name);
+	}
+    }
+}
+
+bool be13::plugin::find_scanner_enabled()
+{
+    for(scanner_vector::const_iterator it = current_scanners.begin(); it!=current_scanners.end(); it++){
+        if( ((*it)->info.flags & scanner_info::SCANNER_FIND_SCANNER)
+            && ((*it)->enabled)){
+            return true;
+        }
+    }
+    return false;
+}
+
 
 
 /****************************************************************
@@ -305,31 +346,31 @@ public:
 static vector<scanner_command> scanner_commands;
 static bool commands_processed = false;
 
-void scanners_disable_all()
+void be13::plugin::scanners_disable_all()
 {
     assert(commands_processed==false);
     scanner_commands.push_back(scanner_command(scanner_command::DISABLE_ALL,string("")));
 }
 
-void scanners_enable_all()
+void be13::plugin::scanners_enable_all()
 {
     assert(commands_processed==false);
     scanner_commands.push_back(scanner_command(scanner_command::ENABLE_ALL,string("")));
 }
 
-void scanners_enable(const std::string &name)
+void be13::plugin::scanners_enable(const std::string &name)
 {
     assert(commands_processed==false);
     scanner_commands.push_back(scanner_command(scanner_command::ENABLE,name));
 }
 
-void scanners_disable(const std::string &name)
+void be13::plugin::scanners_disable(const std::string &name)
 {
     assert(commands_processed==false);
     scanner_commands.push_back(scanner_command(scanner_command::DISABLE,name));
 }
 
-void scanners_process_commands()
+void be13::plugin::scanners_process_commands()
 {
     for(vector<scanner_command>::const_iterator it=scanner_commands.begin();
         it!=scanner_commands.end();it++){
@@ -341,6 +382,7 @@ void scanners_process_commands()
         }
     }
     load_scanner_packet_handlers();     // can't do until enable/disable commands are run
+    message_enabled_scanners(scanner_params::PHASE_INIT); // tell all enabled scanners to init
     commands_processed=true;
 }
 
@@ -349,7 +391,7 @@ void scanners_process_commands()
  *** PHASE_SHUTDOWN (formerly phase 2): shut down the scanners
  ****************************************************************/
 
-void phase_shutdown(feature_recorder_set &fs, xml &xreport)
+void be13::plugin::phase_shutdown(feature_recorder_set &fs, xml &xreport)
 {
     for(scanner_vector::iterator it = current_scanners.begin();it!=current_scanners.end();it++){
         if((*it)->enabled){
@@ -367,8 +409,10 @@ void phase_shutdown(feature_recorder_set &fs, xml &xreport)
  *** PHASE HISTOGRAM (formerly phase 3): Create the histograms
  ****************************************************************/
 #ifdef USE_HISTOGRAMS
-void phase_histogram(feature_recorder_set &fs, xml &xreport)
+bool opt_enable_histograms=true;
+void be13::plugin::phase_histogram(feature_recorder_set &fs, xml &xreport)
 {
+    if(!opt_enable_histograms) return;
     int ctr = 0;
     for(histograms_t::const_iterator it = histograms.begin();it!=histograms.end();it++){
         std::cout << "   " << (*it).feature << " " << (*it).suffix << "...";
@@ -392,25 +436,6 @@ void phase_histogram(feature_recorder_set &fs, xml &xreport)
     xreport.flush();
 }
 #endif
-
-void enable_alert_recorder(feature_file_names_t &feature_file_names)
-{
-    feature_file_names.insert(feature_recorder_set::ALERT_RECORDER_NAME); // we always have alerts
-}
-
-
-void enable_feature_recorders(feature_file_names_t &feature_file_names)
-{
-    for(scanner_vector::const_iterator it=current_scanners.begin();it!=current_scanners.end();it++){
-        if((*it)->enabled){
-            for(set<string>::const_iterator fi=(*it)->info.feature_names.begin();
-                fi!=(*it)->info.feature_names.end();
-                fi++){
-                feature_file_names.insert(*fi);
-            }
-        }
-    }
-}
 
 /* option processing */
 /* Get the config and build the help strings at the same time! */
@@ -484,7 +509,7 @@ void scanner_info::get_config(const std::string &n,bool *val,const std::string &
  * Print a list of scanners.
  * We need to load them to do this, so they are loaded with empty config
  */
-void info_scanners(bool detailed,scanner_t * const *scanners_builtin,
+void be13::plugin::info_scanners(bool detailed,scanner_t * const *scanners_builtin,
                    const char enable_opt,const char disable_opt)
 {
     const scanner_info::config_t empty_config;
@@ -565,7 +590,7 @@ static size_t find_ngram_size(const sbuf_t &sbuf)
  * It is also the recursive entry point for sub-analysis.
  */
 
-void process_sbuf(const class scanner_params &sp)
+void be13::plugin::process_sbuf(const class scanner_params &sp)
 {
     const pos0_t &pos0 = sp.sbuf.pos0;
     class feature_recorder_set &fs = sp.fs;
@@ -666,4 +691,29 @@ void process_sbuf(const class scanner_params &sp)
 }
 
 
+
+/**
+ * Process a pcap packet.
+ * Designed to be very efficient because we have so many packets.
+ */
+void be13::plugin::process_packet_info(const be13::packet_info &pi)
+{
+    for(packet_plugin_info_vector_t::iterator it = packet_handlers.begin(); it != packet_handlers.end(); it++){
+        (*(*it).callback)((*it).user,pi);
+    }
+}
+
+
+void be13::plugin::get_scanner_feature_file_names(feature_file_names_t &feature_file_names)
+{
+    for(scanner_vector::const_iterator it=current_scanners.begin();it!=current_scanners.end();it++){
+        if((*it)->enabled){
+            for(set<string>::const_iterator fi=(*it)->info.feature_names.begin();
+                fi!=(*it)->info.feature_names.end();
+                fi++){
+                feature_file_names.insert(*fi);
+            }
+        }
+    }
+}
 

@@ -132,3 +132,9 @@ void feature_recorder_set::create_name(string name,bool create_stop_file)
     if(fr->stop_list_recorder) fr->stop_list_recorder->open();
 }
 
+void feature_recorder_set::get_alert_recorder_name(feature_file_names_t &feature_file_names)
+{
+    feature_file_names.insert(feature_recorder_set::ALERT_RECORDER_NAME); // we always have alerts
+}
+
+
