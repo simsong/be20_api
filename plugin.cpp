@@ -441,7 +441,7 @@ void scanner_info::get_config(const scanner_info::config_t &c,
                               const std::string &n,std::string *val,const std::string &help)
 {
     /* Check to see if we are being called as part of a help operation */
-    helpstream << "   -S " << n << "=" << *val << "    " << help << "\n";
+    helpstream << "   -S " << n << "=" << *val << "    " << help << " (" << name << ")\n";
     scanner_info::config_t::const_iterator it = c.find(n);
     if(it!=c.end() && val){
         *val = it->second;
