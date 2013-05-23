@@ -8,9 +8,7 @@
 #define DEBUG_SCANNER     0x0004	// dump all feature writes to stderr
 #define DEBUG_NO_SCANNERS 0x0008        /* do not run the scanners */
 #define DEBUG_DUMP_DATA   0x0010	/* dump data as it is seen */
-#define DEBUG_MALLOC_FAIL 0x0020
 #define DEBUG_INFO        0x0040	// print extra info
-#define DEBUG_MALLOC_FAIL_FREQUENCY 200
 #define DEBUG_EXIT_EARLY  1000		/* just print the size of the volume and exis */
 #define DEBUG_ALLOCATE_512MiB 1002	/* Allocate 512MiB, but don't set any flags */
 
@@ -69,16 +67,22 @@
 #endif
 
 #include "sbuf.h"
-#include "feature_recorder.h"
-#include "feature_recorder_set.h"
 #include "utf8.h"
 
 #include <vector>
 #include <set>
 #include <map>
 
-/* bulkd extractor configuration */
+namespace be13 {
+    struct hash_def {
+        hash_def():name(),func(){};
+        std::string name; // v3: (input) function to perform hashing with        
+        std::string (*func)(const uint8_t *buf,size_t bufsize); // v3: (input) function to perform hashing with
+    };
+};
 
+#include "feature_recorder.h"
+#include "feature_recorder_set.h"
 
 
 /* Network includes */
@@ -605,13 +609,13 @@ class scanner_info {
 private:
     class not_impl: public exception {
         virtual const char *what() const throw() {
-            return "copying feature_recorder objects is not implemented.";
+            return "copying scanner_info objects is not implemented.";
         }
     };
     scanner_info(const scanner_info &i) __attribute__((__noreturn__))
     :si_version(),name(),author(),description(),url(),
-                                        scanner_version(),flags(),feature_names(),histogram_defs(),
-        packet_user(),packet_cb(),config(),debug(0){
+        scanner_version(),flags(),feature_names(),histogram_defs(),
+        packet_user(),packet_cb(),config(){
         throw new not_impl();}
     ;
     const scanner_info &operator=(const scanner_info &i){ throw new not_impl();}
@@ -642,27 +646,32 @@ private:
         return ret;
     }
 
+    /* Global config is passed to each scanner as a pointer */
+    struct scanner_config {
+        scanner_config():namevals(),debug(),hasher(){};
+        config_t  namevals; // v3: (input) name=val map
+        int       debug; // v3: (input) current debug level
+        struct be13::hash_def  hasher;
+    };
+
     // never change the order or delete old fields, or else you will
     // break backwards compatability 
     scanner_info():si_version(CURRENT_SI_VERSION),
                    name(),author(),description(),url(),scanner_version(),flags(0),feature_names(),
-                   histogram_defs(),packet_user(),packet_cb(),config(),debug(0){}
+                   histogram_defs(),packet_user(),packet_cb(),config(){}
     int         si_version;             // version number for this structure
-    string      name;                   // v1: scanner name
-    string      author;                 // v1: who wrote me?
-    string      description;            // v1: what do I do?
-    string      url;                    // v1: where I come from
-    string      scanner_version;        // v1: version for the scanner
-    uint64_t    flags;                  // v1: flags
-    set<string> feature_names;          // v1: features I need
-    histograms_t histogram_defs;        // v1: histogram definition info
-    void        *packet_user;           // v2: user data provided to packet_cb
-    packet_callback_t *packet_cb;       // v2: packet handler, or NULL if not present.
-    config_t    config;                 // v3: this scanner's configuration. [scanner_name:] prefix removed
-                                        //     please use get_config functions below
-    int         debug;                  // v3: debug flag
-    std::string hash_name;              // name of the hash function to use
-    std::string (*hasher)(const uint8_t *buf,size_t bufsize); // function to perform hashing with
+    string      name;                   // v1: (output) scanner name
+    string      author;                 // v1: (output) who wrote me?
+    string      description;            // v1: (output) what do I do?
+    string      url;                    // v1: (output) where I come from
+    string      scanner_version;        // v1: (output) version for the scanner
+    uint64_t    flags;                  // v1: (output) flags
+    set<string> feature_names;          // v1: (output) features I need
+    histograms_t histogram_defs;        // v1: (output) histogram definition info
+    void        *packet_user;           // v2: (output) user data provided to packet_cb
+    packet_callback_t *packet_cb;       // v2: (output) packet handler, or NULL if not present.
+    const scanner_config *config;       // v3: (intput to scanner) config
+
 
     // These methods are implemented in the plugin system for the scanner to get config information.
     // The get_config methods should be called on the si object during PHASE_STARTUP
@@ -672,6 +681,7 @@ private:
     virtual void get_config(const std::string &name,std::string *val,const std::string &help);
     virtual void get_config(const std::string &name,uint64_t *val,const std::string &help);
     virtual void get_config(const std::string &name,uint32_t *val,const std::string &help);
+    virtual void get_config(const std::string &name,uint8_t *val,const std::string &help);
 #ifdef __APPLE__
     virtual void get_config(const std::string &name,size_t *val,const std::string &help);
 #define HAVE_GET_CONFIG_SIZE_T
@@ -726,14 +736,14 @@ class scanner_params {
      *** CONSTRUCTORS ***
      ********************/
 
-    /* A scanner params with all of the instance variables */
+    /* A scanner params with all of the instance variables, typically for scanning  */
     scanner_params(phase_t phase_,const sbuf_t &sbuf_,class feature_recorder_set &fs_,
                    PrintOptions &print_options_):
         sp_version(CURRENT_SP_VERSION),
         phase(phase_),sbuf(sbuf_),fs(fs_),depth(0),print_options(print_options_),info(0),sbufxml(0){
     }
 
-    /* A scanner params with no print options*/
+    /* A scanner params with no print options */
     scanner_params(phase_t phase_,const sbuf_t &sbuf_,
                    class feature_recorder_set &fs_):
         sp_version(CURRENT_SP_VERSION),
@@ -756,6 +766,10 @@ class scanner_params {
         print_options(sp_existing.print_options),info(0),sbufxml(0){
         assert(sp_existing.sp_version==CURRENT_SP_VERSION);
     };
+
+    /**
+     * A scanner params with an empty info
+     */
 
     /**************************
      *** INSTANCE VARIABLES ***
@@ -813,11 +827,11 @@ namespace be13 {
 
         static void set_scanner_debug(int debug);
 
-        static void load_scanner(scanner_t scanner,const scanner_info::config_t &config); // load a specific scanner
-        static void load_scanner_file(string fn,const scanner_info::config_t &config);    // load a scanner from a file
-        static void load_scanners(scanner_t * const *scanners_builtin,const scanner_info::config_t &config);           // load the scan_ plugins
-        static void load_scanner_directory(const string &dirname,const scanner_info::config_t &config); // load scanners in the directory
-        static void load_scanner_directories(const std::vector<std::string> &dirnames,const scanner_info::config_t &config);
+        static void load_scanner(scanner_t scanner,const scanner_info::scanner_config &sc); // load a specific scanner
+        static void load_scanner_file(string fn,const scanner_info::scanner_config &sc);    // load a scanner from a file
+        static void load_scanners(scanner_t * const *scanners_builtin,const scanner_info::scanner_config &sc);           // load the scan_ plugins
+        static void load_scanner_directory(const string &dirname,const scanner_info::scanner_config &sc); // load scanners in the directory
+        static void load_scanner_directories(const std::vector<std::string> &dirnames,const scanner_info::scanner_config &sc);
         static void load_scanner_packet_handlers();
         
         static void message_enabled_scanners(scanner_params::phase_t phase); // send every enabled scanner the phase message

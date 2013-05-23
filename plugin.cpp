@@ -142,7 +142,7 @@ static histograms_t histograms;
  * This is called before scanners are enabled or disabled, so the pcap handlers
  * need to be set afterwards
  */
-void be13::plugin::load_scanner(scanner_t scanner,const scanner_info::config_t &config)
+void be13::plugin::load_scanner(scanner_t scanner,const scanner_info::scanner_config &sc)
 {
     /* If scanner is already loaded, return */
     for(scanner_vector::const_iterator it = current_scanners.begin();it!=current_scanners.end();it++){
@@ -161,17 +161,15 @@ void be13::plugin::load_scanner(scanner_t scanner,const scanner_info::config_t &
     // We pre-load the structure with the configuration for this scanner
     // and the global debug variable
     //
+    // currently every scanner gets the same config. In the future, we might
+    // want to give different scanners different variables.
+    //
+
     scanner_params sp(scanner_params::PHASE_STARTUP,sbuf,fs); // 
     scanner_def *sd = new scanner_def();                     
     sd->scanner = scanner;
-    sd->info.debug = debug;
+    sd->info.config = &sc;              
 
-    /* Copy the config into this scanner's info config */
-    for(scanner_info::config_t::const_iterator it = config.begin();it!=config.end();it++){
-        const std::string &name = it->first;
-        const std::string &value = it->second;
-        sd->info.config[name] = value;
-    }
 
     sp.phase = scanner_params::PHASE_STARTUP;                         // startup
     sp.info  = &sd->info;
@@ -192,7 +190,7 @@ void be13::plugin::load_scanner(scanner_t scanner,const scanner_info::config_t &
     current_scanners.push_back(sd);
 }
 
-void be13::plugin::load_scanner_file(string fn,const scanner_info::config_t &config)
+void be13::plugin::load_scanner_file(string fn,const scanner_info::scanner_config &sc)
 {
     /* Figure out the function name */
     size_t extloc = fn.rfind('.');
@@ -229,17 +227,17 @@ void be13::plugin::load_scanner_file(string fn,const scanner_info::config_t &con
     std::cout << "  ERROR: Support for loadable libraries not enabled\n";
     return;
 #endif
-    load_scanner(*scanner,config);
+    load_scanner(*scanner,sc);
 }
 
-void be13::plugin::load_scanners(scanner_t * const *scanners, const scanner_info::config_t &config)
+void be13::plugin::load_scanners(scanner_t * const *scanners, const scanner_info::scanner_config &sc)
 {
     for(int i=0;scanners[i];i++){
-        load_scanner(scanners[i],config);
+        load_scanner(scanners[i],sc);
     }
 }
 
-void be13::plugin::load_scanner_directory(const string &dirname, const scanner_info::config_t &config )
+void be13::plugin::load_scanner_directory(const string &dirname, const scanner_info::scanner_config &sc )
 {
     DIR *dirp = opendir(dirname.c_str());
     if(dirp==0){
@@ -257,16 +255,16 @@ void be13::plugin::load_scanner_directory(const string &dirname, const scanner_i
 #else
             if(ext!="so") continue;     // not a shared library
 #endif
-            load_scanner_file(dirname+"/"+fname,config );
+            load_scanner_file(dirname+"/"+fname,sc );
         }
     }
 }
 
 void be13::plugin::load_scanner_directories(const std::vector<std::string> &dirnames,
-                              const scanner_info::config_t &config)
+                              const scanner_info::scanner_config &sc)
 {
     for(std::vector<std::string>::const_iterator it = dirnames.begin();it!=dirnames.end();it++){
-        load_scanner_directory(*it,config);
+        load_scanner_directory(*it,sc);
     }
 }
 
@@ -452,7 +450,7 @@ void scanner_info::get_config(const scanner_info::config_t &c,
 
 void scanner_info::get_config(const std::string &n,std::string *val,const std::string &help)
 {
-    scanner_info::get_config(config,n,val,help);
+    scanner_info::get_config(config->namevals,n,val,help);
 }
 
 void scanner_info::get_config(const std::string &n,uint64_t *val,const std::string &help)
@@ -466,6 +464,16 @@ void scanner_info::get_config(const std::string &n,uint64_t *val,const std::stri
 }
 
 void scanner_info::get_config(const std::string &n,uint32_t *val,const std::string &help)
+{
+    std::stringstream ss;
+    ss << *val;
+    std::string v(ss.str());
+    get_config(n,&v,help);
+    ss.str(v);
+    ss >> *val;
+}
+
+void scanner_info::get_config(const std::string &n,uint8_t *val,const std::string &help)
 {
     std::stringstream ss;
     ss << *val;
@@ -513,7 +521,7 @@ void be13::plugin::info_scanners(bool detailed_info,
                                  scanner_t * const *scanners_builtin,
                                  const char enable_opt,const char disable_opt)
 {
-    const scanner_info::config_t empty_config;
+    const scanner_info::scanner_config empty_config;
 
     load_scanners(scanners_builtin,empty_config);
     std::cout << "\n";
@@ -549,6 +557,7 @@ void be13::plugin::info_scanners(bool detailed_info,
     }
     sort(disabled_wordlist.begin(),disabled_wordlist.end());
     sort(enabled_wordlist.begin(),enabled_wordlist.end());
+    std::cout << "\n";
     for(std::vector<std::string>::const_iterator it = disabled_wordlist.begin();
         it!=disabled_wordlist.end();it++){
         std::cout << "   -" << enable_opt << " " <<  *it << " - enable scanner " << *it << "\n";

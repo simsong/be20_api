@@ -179,9 +179,7 @@ public:
     int64_t     file_number;            /* starts at 0; gets incremented by carve() */
     string      file_extension;         /* includes "."; must be set by caller */
     typedef std::string (*hashing_function_t)(const sbuf_t &sbuf); // returns a hex value
-    virtual void carve(const sbuf_t &sbuf,size_t pos,size_t len,
-                       const std::string &hash_function_name,
-                       hashing_function_t hashing_function);
+    virtual void carve(const sbuf_t &sbuf,size_t pos,size_t len,const class be13::hash_def &hasher);
 
     /**
      * support for tagging blocks with their type.

@@ -237,6 +237,12 @@ string feature_recorder::unquote_string(const string &s)
  *  Create a histogram for this feature recorder and an extraction pattern.
  */
 
+static void truncate_at(string &line,char ch)
+{
+    size_t pos = line.find(ch);
+    if(pos!=string::npos) line.erase(pos);
+}
+
 void feature_recorder::make_histogram(const class histogram_def &def)
 {
     beregex reg(def.pattern,REG_EXTENDED);
@@ -530,8 +536,7 @@ void feature_recorder::write_buf(const sbuf_t &sbuf,size_t pos,size_t len)
  * Carving support.
  */
 void feature_recorder::carve(const sbuf_t &sbuf,size_t pos,size_t len,
-                             const std::string &hash_function_name,
-                             hashing_function_t hashing_function)
+                             const be13::hash_def &hasher)
 {
     /* If we are in the margin, ignore; it will be processed again */
     if(pos >= sbuf.pagesize && pos < sbuf.bufsize){
@@ -564,7 +569,7 @@ void feature_recorder::carve(const sbuf_t &sbuf,size_t pos,size_t len,
     }
 
     /* Get the hex hash value of the object to be carved */
-    std::string carved_hash_hexvalue = (*hashing_function)(sbuf);
+    std::string carved_hash_hexvalue = (*hasher.func)(sbuf.buf,sbuf.bufsize);
     char fname[MAXPATHLEN+1];
     
     {
@@ -587,7 +592,7 @@ void feature_recorder::carve(const sbuf_t &sbuf,size_t pos,size_t len,
      */
     stringstream ss;
     ss << "<fileobject><filename>" << fname << "</filename><filesize>" << len << "</filesize>"
-       << "<hashdigest type='" << hash_function_name << "'>" << carved_hash_hexvalue << "</hashdigest></fileobject>";
+       << "<hashdigest type='" << hasher.name << "'>" << carved_hash_hexvalue << "</hashdigest></fileobject>";
     this->write(sbuf.pos0+len,fname,ss.str());
     
     /* Now carve to a file */

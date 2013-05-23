@@ -15,6 +15,17 @@
 #include <stdint.h>
 #include <sys/time.h>
 
+#if defined(__cplusplus)
+#include <string>
+#include <vector>
+bool ends_with(const std::string &buf,const std::string &with);
+bool ends_with(const std::wstring &buf,const std::wstring &with);
+std::vector<std::string> &split(const std::string &s, char delim, std::vector<std::string> &elems);
+std::vector<std::string> split(const std::string &s, char delim);
+#endif
+
+
+
 #ifndef __BEGIN_DECLS
 #if defined(__cplusplus)
 #define __BEGIN_DECLS   extern "C" {
@@ -40,6 +51,7 @@ void warnx(const char *fmt,...) __attribute__((format(printf, 1, 0)));
 void localtime_r(time_t *t,struct tm *tm);
 #endif
 
+
 // gmtime.h definition moved to bulk_extractor_i.h
 //#ifndef HAVE_GMTIME_R
 //void gmtime_r(time_t *t,struct tm *tm);
@@ -63,5 +75,6 @@ inline int ishexnumber(int c)
 }
 #endif
 __END_DECLS
+
 
 #endif
