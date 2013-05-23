@@ -18,6 +18,10 @@
 #ifndef SBUF_H
 #define SBUF_H
 
+#ifdef HAVE_STRING_H
+#include <string.h>
+#endif
+
 //Don't turn this on; it currently makes scan_net crash.
 //#define SBUF_TRACK
 
@@ -33,6 +37,7 @@ using namespace std;
 #include <string>
 #include <sstream>
 #include <iostream>
+
 
 /****************************************************************
  *** pos0_t
