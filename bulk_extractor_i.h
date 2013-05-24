@@ -681,6 +681,7 @@ private:
     virtual void get_config(const std::string &name,std::string *val,const std::string &help);
     virtual void get_config(const std::string &name,uint64_t *val,const std::string &help);
     virtual void get_config(const std::string &name,uint32_t *val,const std::string &help);
+    virtual void get_config(const std::string &name,uint16_t *val,const std::string &help);
     virtual void get_config(const std::string &name,uint8_t *val,const std::string &help);
 #ifdef __APPLE__
     virtual void get_config(const std::string &name,size_t *val,const std::string &help);

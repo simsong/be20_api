@@ -453,26 +453,24 @@ void scanner_info::get_config(const std::string &n,std::string *val,const std::s
     scanner_info::get_config(config->namevals,n,val,help);
 }
 
-void scanner_info::get_config(const std::string &n,uint64_t *val,const std::string &help)
-{
-    std::stringstream ss;
-    ss << *val;
-    std::string v(ss.str());
-    get_config(n,&v,help);
-    ss.str(v);
-    ss >> *val;
-}
+#define GET_CONFIG(T) void scanner_info::get_config(const std::string &n,T *val,const std::string &help) {\
+        std::stringstream ss;\
+        ss << *val;\
+        std::string v(ss.str());\
+        get_config(n,&v,help);\
+        ss.str(v);\
+        ss >> *val;\
+    }
 
-void scanner_info::get_config(const std::string &n,uint32_t *val,const std::string &help)
-{
-    std::stringstream ss;
-    ss << *val;
-    std::string v(ss.str());
-    get_config(n,&v,help);
-    ss.str(v);
-    ss >> *val;
-}
+GET_CONFIG(uint64_t)
+GET_CONFIG(uint32_t)
+GET_CONFIG(uint16_t)
+#ifdef HAVE_GET_CONFIG_SIZE_T
+GET_CONFIG(size_t)
+#endif
 
+
+/* uint8_t needs cast to uint32_t for << */
 void scanner_info::get_config(const std::string &n,uint8_t *val,const std::string &help)
 {
     std::stringstream ss;
@@ -483,18 +481,7 @@ void scanner_info::get_config(const std::string &n,uint8_t *val,const std::strin
     ss >> *val;
 }
 
-#ifdef HAVE_GET_CONFIG_SIZE_T
-void scanner_info::get_config(const std::string &n,size_t *val,const std::string &help)
-{
-    std::stringstream ss;
-    ss << *val;
-    std::string v(ss.str());
-    get_config(n,&v,help);
-    ss.str(v);
-    ss >> *val;
-}
-#endif
-
+/* bool needs special processing for YES/NO/TRUE/FALSE */
 void scanner_info::get_config(const std::string &n,bool *val,const std::string &help)
 {
     std::stringstream ss;
@@ -509,7 +496,6 @@ void scanner_info::get_config(const std::string &n,bool *val,const std::string &
         *val = false;
     }
 }
-
 
 
 /**
