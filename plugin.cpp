@@ -476,7 +476,7 @@ void scanner_info::get_config(const std::string &n,uint32_t *val,const std::stri
 void scanner_info::get_config(const std::string &n,uint8_t *val,const std::string &help)
 {
     std::stringstream ss;
-    ss << *val;
+    ss << (uint32_t)(*val);
     std::string v(ss.str());
     get_config(n,&v,help);
     ss.str(v);
