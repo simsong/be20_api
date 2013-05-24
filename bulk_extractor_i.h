@@ -728,8 +728,8 @@ class scanner_params {
         PHASE_STARTUP  = 0,             // called in main thread when scanner loads; called on EVERY scanner (called for help)
         PHASE_INIT     = 3,             // called in main thread for every ENABLED scanner after all scanners loaded
         PHASE_THREAD_BEFORE_SCAN = 4,   // called in worker thread for every ENABLED scanner before first scan
-        PHASE_SCAN     = 1,             // called to scan an sbuf
-        PHASE_SHUTDOWN = 2,             // called in main thread when scanner is shutdown
+        PHASE_SCAN     = 1,             // called in worker thread for every ENABLED scanner to scan an sbuf
+        PHASE_SHUTDOWN = 2,             // called in main thread for every ENABLED scanner when scanner is shutdown
     } phase_t ;
     static PrintOptions no_options;     // in common.cpp
 
