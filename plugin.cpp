@@ -463,6 +463,7 @@ void scanner_info::get_config(const std::string &n,std::string *val,const std::s
     }
 
 GET_CONFIG(uint64_t)
+GET_CONFIG(int32_t)                     // both int32_t and uint32_t
 GET_CONFIG(uint32_t)
 GET_CONFIG(uint16_t)
 #ifdef HAVE_GET_CONFIG_SIZE_T
