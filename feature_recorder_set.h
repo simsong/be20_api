@@ -66,11 +66,6 @@ public:
         }
     }
 
-    static void get_alert_recorder_name(feature_file_names_t &feature_file_names);
-    feature_recorder *get_alert_recorder(){
-        return get_name(feature_recorder_set::ALERT_RECORDER_NAME);
-    }
-
     void flush_all();
     void close_all();
     bool has_name(string name) const;   /* does the named feature exist? */
@@ -84,6 +79,8 @@ public:
     // NOTE:
     // only virtual functions may be called by plugins!
     virtual feature_recorder *get_name(const std::string &name);
+    virtual feature_recorder *get_alert_recorder();
+    static void get_alert_recorder_name(feature_file_names_t &feature_file_names);
 };
 
 

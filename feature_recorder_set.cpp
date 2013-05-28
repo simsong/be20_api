@@ -133,5 +133,8 @@ void feature_recorder_set::get_alert_recorder_name(feature_file_names_t &feature
 {
     feature_file_names.insert(feature_recorder_set::ALERT_RECORDER_NAME); // we always have alerts
 }
-
+feature_recorder *feature_recorder_set::get_alert_recorder()
+{
+    return get_name(feature_recorder_set::ALERT_RECORDER_NAME);
+}
 
