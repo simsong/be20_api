@@ -18,7 +18,7 @@
 #endif
 
 #ifndef DEBUG
-    extern int debug;
+    extern uint32_t debug;
 #define DEBUG(x) if (debug>x) printf
 #endif
 

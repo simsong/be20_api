@@ -50,6 +50,7 @@ using namespace std;
 class feature_recorder {
 private:
     uint32_t flags;
+    static uint32_t debug;
     bool histogram_enabled;             /* do we automatically histogram? */
     /*** neither copying nor assignment is implemented                         ***
      *** We do this by making them private constructors that throw exceptions. ***/
@@ -69,6 +70,7 @@ private:
     /****************************************************************/
 
 public:
+    static void set_debug(uint32_t ndebug){debug=ndebug;}
     typedef string offset_t;
 
     /**

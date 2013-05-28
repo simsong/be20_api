@@ -31,7 +31,6 @@
 #define O_BINARY 0
 #endif
 
-extern int debug;
 #ifndef DEBUG_PEDANTIC
 #define DEBUG_PEDANTIC    0x0001// check values more rigorously
 #endif
@@ -41,6 +40,7 @@ int64_t feature_recorder::offset_add   = 0;
 std::string  feature_recorder::banner_file;
 uint32_t feature_recorder::opt_max_context_size=1024*1024;
 uint32_t feature_recorder::opt_max_feature_size=1024*1024;
+uint32_t feature_recorder::debug=0;
 
 /** 
  * 1. Put the UTF-8 BOM in the file.

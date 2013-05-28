@@ -1,5 +1,6 @@
 /* -*- mode: C++; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 #ifndef FEATURE_RECORDER_SET_H
+#define FEATURE_RECORDER_SET_H
 #include "feature_recorder.h"
 
 /** \addtogroup internal_interfaces
@@ -66,6 +67,9 @@ public:
     }
 
     static void get_alert_recorder_name(feature_file_names_t &feature_file_names);
+    feature_recorder *get_alert_recorder(){
+        return get_name(feature_recorder_set::ALERT_RECORDER_NAME);
+    }
 
     void flush_all();
     void close_all();
@@ -80,7 +84,6 @@ public:
     // NOTE:
     // only virtual functions may be called by plugins!
     virtual feature_recorder *get_name(const std::string &name);
-    virtual feature_recorder *get_alert_recorder();
 };
 
 

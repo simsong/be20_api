@@ -649,6 +649,7 @@ private:
     /* Global config is passed to each scanner as a pointer */
     struct scanner_config {
         scanner_config():namevals(),debug(),hasher(){};
+        virtual ~scanner_config(){}
         config_t  namevals; // v3: (input) name=val map
         int       debug; // v3: (input) current debug level
         struct be13::hash_def  hasher;

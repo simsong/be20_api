@@ -2,7 +2,6 @@
 
 #include "config.h"
 #include "bulk_extractor_i.h"
-//#include "dfxml/src/dfxml_generator.h"
 
 #ifdef USE_HISTOGRAMS
 #include "histogram.h"
@@ -21,7 +20,8 @@ const string feature_recorder_set::DISABLED_RECORDER_NAME = "disabled";
 feature_recorder  *feature_recorder_set::alert_recorder = 0; // no alert recorder to start
 
 /* Create an empty recorder */
-feature_recorder_set::feature_recorder_set(uint32_t flags_):flags(flags_),input_fname(),outdir(),frm(),Mlock(),scanner_stats()
+feature_recorder_set::feature_recorder_set(uint32_t flags_):flags(flags_),input_fname(),
+                                                            outdir(),frm(),Mlock(),scanner_stats()
 {
     if(flags & SET_DISABLED){
         create_name(DISABLED_RECORDER_NAME,false);
@@ -95,11 +95,6 @@ feature_recorder *feature_recorder_set::get_name(const std::string &name)
     exit(0);
 }
 
-
-feature_recorder *feature_recorder_set::get_alert_recorder()  
-{
-    return get_name(feature_recorder_set::ALERT_RECORDER_NAME);
-}
 
 void feature_recorder_set::add_stats(string bucket,double seconds)
 {
