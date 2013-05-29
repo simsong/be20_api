@@ -607,6 +607,7 @@ typedef void packet_callback_t(void *user,const be13::packet_info &pi);
  */
 class scanner_info {
 private:
+    static std::stringstream helpstream; // where scanner info help messages are saved.
     class not_impl: public exception {
         virtual const char *what() const throw() {
             return "copying scanner_info objects is not implemented.";
@@ -620,12 +621,13 @@ private:
     ;
     const scanner_info &operator=(const scanner_info &i){ throw new not_impl();}
  public:
+    static std::string helpstr(){return helpstream.str();}
     typedef std::map<std::string,std::string>  config_t; // configuration for scanner passed in
 
     /* scanner flags */
     static const int SCANNER_DISABLED       = 0x01; // v1: enabled by default 
     static const int SCANNER_NO_USAGE       = 0x02; // v1: do not show scanner in usage 
-    static const int SCANNER_NO_ALL         = 0x04; // v2: do not enable with -eALL 
+    static const int SCANNER_NO_ALL         = 0x04; // v2: do not enable with -eall 
     static const int SCANNER_FIND_SCANNER   = 0x08; // v2: this scanner uses the find_list 
     static const int SCANNER_RECURSE        = 0x10; // v3: this scanner will recurse
     static const int SCANNER_RECURSE_EXPAND = 0x20; // v3: recurses AND result is >= original size
@@ -660,6 +662,7 @@ private:
     scanner_info():si_version(CURRENT_SI_VERSION),
                    name(),author(),description(),url(),scanner_version(),flags(0),feature_names(),
                    histogram_defs(),packet_user(),packet_cb(),config(){}
+    /* PASSED FROM SCANNER to API: */
     int         si_version;             // version number for this structure
     string      name;                   // v1: (output) scanner name
     string      author;                 // v1: (output) who wrote me?
@@ -669,14 +672,14 @@ private:
     uint64_t    flags;                  // v1: (output) flags
     set<string> feature_names;          // v1: (output) features I need
     histograms_t histogram_defs;        // v1: (output) histogram definition info
-    void        *packet_user;           // v2: (output) user data provided to packet_cb
-    packet_callback_t *packet_cb;       // v2: (output) packet handler, or NULL if not present.
-    const scanner_config *config;       // v3: (intput to scanner) config
+    void        *packet_user;           // v2: (output) data for network callback
+    packet_callback_t *packet_cb;       // v2: (output) callback for processing network packets, or NULL
 
+    /* PASSED FROM API TO SCANNER; access with functions below */
+    const scanner_config *config;       // v3: (intput to scanner) config
 
     // These methods are implemented in the plugin system for the scanner to get config information.
     // The get_config methods should be called on the si object during PHASE_STARTUP
-    static std::stringstream helpstream; // where scanner info help messages are saved.
     virtual void get_config(const scanner_info::config_t &c,
                             const std::string &name,std::string *val,const std::string &help);
     virtual void get_config(const std::string &name,std::string *val,const std::string &help);
@@ -727,13 +730,13 @@ class scanner_params {
     // phase_t specifies when the scanner is being called
     typedef enum {
         PHASE_NONE     = -1,
-        PHASE_STARTUP  = 0,             // called in main thread when scanner loads; called on EVERY scanner (called for help)
-        PHASE_INIT     = 3,             // called in main thread for every ENABLED scanner after all scanners loaded
-        PHASE_THREAD_BEFORE_SCAN = 4,   // called in worker thread for every ENABLED scanner before first scan
-        PHASE_SCAN     = 1,             // called in worker thread for every ENABLED scanner to scan an sbuf
-        PHASE_SHUTDOWN = 2,             // called in main thread for every ENABLED scanner when scanner is shutdown
+        PHASE_STARTUP  = 0,            // called in main thread when scanner loads; called on EVERY scanner (called for help)
+        PHASE_INIT     = 3,            // called in main thread for every ENABLED scanner after all scanners loaded
+        PHASE_THREAD_BEFORE_SCAN = 4,  // called in worker thread for every ENABLED scanner before first scan
+        PHASE_SCAN     = 1,            // called in worker thread for every ENABLED scanner to scan an sbuf
+        PHASE_SHUTDOWN = 2,            // called in main thread for every ENABLED scanner when scanner is shutdown
     } phase_t ;
-    static PrintOptions no_options;     // in common.cpp
+    static PrintOptions no_options;    // in common.cpp
 
     /********************
      *** CONSTRUCTORS ***
@@ -780,13 +783,13 @@ class scanner_params {
 
     int      sp_version;                /* version number of this structure */
     phase_t  phase;                     /* v1: 0=startup, 1=normal, 2=shutdown (changed to phase_t in v1.3) */
-    const sbuf_t &sbuf;                 /* v1: what to scan */
-    class feature_recorder_set &fs;     /* v1: where to put the results*/
-    uint32_t   depth;                   /* v1: how far down are we? */
+    const sbuf_t &sbuf;                 /* v1: what to scan / only valid in SCAN_PHASE */
+    class feature_recorder_set &fs;     /* v1: where to put the results / only valid in SCAN_PHASE */
+    uint32_t   depth;                   /* v1: how far down are we? / only valid in SCAN_PHASE */
 
-    PrintOptions  &print_options;       /* v1: how to print */
-    scanner_info  *info;                /* v2: get parameters on startup; info's are stored in a the scanner_def vector */
-    std::stringstream *sbufxml;         /* v3: tags added to the sbuf's XML stream */
+    PrintOptions  &print_options;       /* v1: how to print / NOT USED IN SCANNERS */
+    scanner_info  *info;                /* v2: set/get parameters on startup */
+    std::stringstream *sbufxml;         /* v3: tags added to the sbuf's XML stream (advanced feature) */
 };
 
 

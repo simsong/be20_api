@@ -184,6 +184,7 @@ public:
     virtual void carve(const sbuf_t &sbuf,size_t pos,size_t len,const class be13::hash_def &hasher);
 
     /**
+     * EXPERIMENTAL!
      * support for tagging blocks with their type.
      * typically 'len' is the sector size, but it need not be.
      */

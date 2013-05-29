@@ -575,17 +575,6 @@ public:
             start = loc+1;              // advance to character after found character
         }
         return -1;
-#if 0
-        for(;start<pagesize;start++){
-            bool found = true;
-            for(size_t i=0;str[i] && found;i++){
-                if(start+i>=pagesize) return -1; // ran off the end
-                found = (buf[start+i]==str[i]);
-            }
-            if(found) return start;
-        }
-        return -1;
-#endif
     }
 
     string substr(size_t loc,size_t len) const; /* make a substring */

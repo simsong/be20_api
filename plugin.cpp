@@ -540,7 +540,7 @@ void be13::plugin::info_scanners(bool detailed_info,
     }
     if(detailed_settings){
         std::cout << "Settable Options (and their defaults): \n";
-        std::cout << scanner_info::helpstream.str();
+        std::cout << scanner_info::helpstr();
     }
     sort(disabled_wordlist.begin(),disabled_wordlist.end());
     sort(enabled_wordlist.begin(),enabled_wordlist.end());
