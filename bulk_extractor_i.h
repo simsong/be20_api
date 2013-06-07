@@ -769,7 +769,7 @@ class scanner_params {
     scanner_params(const scanner_params &sp_existing,const sbuf_t &sbuf_new):
         sp_version(CURRENT_SP_VERSION),phase(sp_existing.phase),
         sbuf(sbuf_new),fs(sp_existing.fs),depth(sp_existing.depth+1),
-        print_options(sp_existing.print_options),info(0),sbufxml(0){
+        print_options(sp_existing.print_options),info(sp_existing.info),sbufxml(0){
         assert(sp_existing.sp_version==CURRENT_SP_VERSION);
     };
 
