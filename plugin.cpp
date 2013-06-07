@@ -18,7 +18,6 @@
 #endif
 
 #include "bulk_extractor_i.h"
-//#include "xml.h"
 
 uint32_t scanner_def::max_depth = 7;            // max recursion depth
 uint32_t scanner_def::max_ngram = 10;            // max recursion depth
@@ -34,12 +33,12 @@ static int debug;                               // local debug variable
 static void err(int eval,const char *fmt,...) __attribute__ ((noreturn));
 static void err(int eval,const char *fmt,...)
 {
-  va_list ap;
-  va_start(ap,fmt);
-  vfprintf(stderr,fmt,ap);
-  va_end(ap);
-  fprintf(stderr,": %s\n",strerror(errno));
-  exit(eval);
+    va_list ap;
+    va_start(ap,fmt);
+    vfprintf(stderr,fmt,ap);
+    va_end(ap);
+    fprintf(stderr,": %s\n",strerror(errno));
+    exit(eval);
 }
 #endif
 
@@ -49,12 +48,12 @@ static void err(int eval,const char *fmt,...)
 static void errx(int eval,const char *fmt,...) __attribute__ ((noreturn));
 static void errx(int eval,const char *fmt,...)
 {
-  va_list ap;
-  va_start(ap,fmt);
-  vfprintf(stderr,fmt,ap);
-  fprintf(stderr,"%s\n",strerror(errno));
-  va_end(ap);
-  exit(eval);
+    va_list ap;
+    va_start(ap,fmt);
+    vfprintf(stderr,fmt,ap);
+    fprintf(stderr,"%s\n",strerror(errno));
+    va_end(ap);
+    exit(eval);
 }
 #endif
 
