@@ -172,6 +172,8 @@ public:
     // Context is written automatically
     virtual void write_buf(const sbuf_t &sbuf,size_t pos,size_t len); /* writes with context */
 
+    void set_file_extension(std::string e){file_extension=e;}
+
     /**
      * support for carving.
      * Carving writes the filename to the feature file; the context is the file's hash using the provided function.

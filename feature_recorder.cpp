@@ -534,6 +534,7 @@ void feature_recorder::write_buf(const sbuf_t &sbuf,size_t pos,size_t len)
 
 /**
  * Carving support.
+ * 2013-06-08 - filenames are the forensic path.
  */
 void feature_recorder::carve(const sbuf_t &sbuf,size_t pos,size_t len,
                              const be13::hash_def &hasher)
@@ -544,8 +545,7 @@ void feature_recorder::carve(const sbuf_t &sbuf,size_t pos,size_t len,
     }
 
     if(pos >= sbuf.bufsize){    /* Sanity checks */
-        cerr << "*** carve: WRITE OUTSIDE BUFFER.  pos=" << pos
-             << " sbuf=" << sbuf << "\n";
+        cerr << "*** carve: WRITE OUTSIDE BUFFER.  pos=" << pos << " sbuf=" << sbuf << "\n";
         return;
     }
 
@@ -558,18 +558,27 @@ void feature_recorder::carve(const sbuf_t &sbuf,size_t pos,size_t len,
     string dirname = outdir + "/" + name;
     if (access(dirname.c_str(),R_OK)!=0){
 #ifdef WIN32
-        int r = mkdir(dirname.c_str());
+        mkdir(dirname.c_str());
 #else   
-        int r = mkdir(dirname.c_str(),0777);
+        mkdir(dirname.c_str(),0777);
 #endif
-        if(r){
-            cerr << "Could not make directory " << dirname << ": " << strerror(errno) << "\n";
-            exit(1);
-        }
+    }
+    /* Check to make sure that directory is there. We don't just the return code
+     * because there could have been two attempts to make the directory simultaneously,
+     * so the mkdir could fail but the directory could nevertheless exist. We need to
+     * remember the error number because the access() call may clear it.
+     */
+    int oerrno = errno;                 // remember error number
+    if (access(dirname.c_str(),R_OK)!=0){
+        cerr << "Could not make directory " << dirname << ": " << strerror(oerrno) << "\n";
+        return;
     }
 
     /* Get the hex hash value of the object to be carved */
     std::string carved_hash_hexvalue = (*hasher.func)(sbuf.buf,sbuf.bufsize);
+    std::string fname = dirname + "/" + sbuf.pos0.str() + file_extension;
+
+#if 0
     char fname[MAXPATHLEN+1];
     
     {
@@ -587,6 +596,7 @@ void feature_recorder::carve(const sbuf_t &sbuf,size_t pos,size_t len,
         snprintf(fname,sizeof(fname),"%s/%06d%s",dirname.c_str(),myfilenumber,file_extension.c_str());
         /* mutex must be freed before call to write, since write() will lock it again */
     }
+#endif
     
     /* Record what was found in the feature file.
      */
@@ -596,8 +606,7 @@ void feature_recorder::carve(const sbuf_t &sbuf,size_t pos,size_t len,
     this->write(sbuf.pos0+len,fname,ss.str());
     
     /* Now carve to a file */
-    errno=0;
-    int fd = ::open(fname,O_CREAT|O_BINARY|O_RDWR,0666);
+    int fd = ::open(fname.c_str(),O_CREAT|O_BINARY|O_RDWR,0666);
     if(fd<0){
         cerr << "*** carve: Cannot create " << fname << ": " << strerror(errno) << "\n";
         return;
@@ -605,8 +614,7 @@ void feature_recorder::carve(const sbuf_t &sbuf,size_t pos,size_t len,
 
     ssize_t ret = sbuf.write(fd,pos,len);
     if(ret!=(ssize_t)len){
-        cerr << "*** carve: Cannot write(" << fd << "," << pos
-             << "," << len << ")=" << ret
+        cerr << "*** carve: Cannot write(" << fd << "," << pos << "," << len << ")=" << ret
              << ": "<< strerror(errno) << "\n";
     }
     ::close(fd);
