@@ -62,7 +62,7 @@ private:
     feature_recorder(const feature_recorder &fr) __attribute__((__noreturn__)) :
         flags(0),histogram_enabled(false),
         outdir(),input_fname(),name(),count(0),ios(),Mf(),Mr(),
-        stop_list_recorder(0),carved_set(),file_number(0),file_extension()
+        stop_list_recorder(0),carved_set(),file_number(0),file_extension(),carve_mode()
         {
         throw new not_impl();
     }
@@ -172,17 +172,23 @@ public:
     // Context is written automatically
     virtual void write_buf(const sbuf_t &sbuf,size_t pos,size_t len); /* writes with context */
 
-    void set_file_extension(std::string e){file_extension=e;}
-
     /**
      * support for carving.
      * Carving writes the filename to the feature file; the context is the file's hash using the provided function.
      * Automatically de-duplicates.
      */
+    enum carve_mode_t {
+        CARVE_NONE=0,
+        CARVE_ENCODED=1,
+        CARVE_ALL=2};
+
     std::set<std::string>     carved_set;    /* set of hex hash values of objects we've carved;  */
     int64_t     file_number;            /* starts at 0; gets incremented by carve() */
     string      file_extension;         /* includes "."; must be set by caller */
+    carve_mode_t carve_mode;
     typedef std::string (*hashing_function_t)(const sbuf_t &sbuf); // returns a hex value
+    void set_file_extension(std::string e){file_extension=e;}
+    void set_carve_mode(carve_mode_t aMode){carve_mode=aMode;}
     virtual void carve(const sbuf_t &sbuf,size_t pos,size_t len,const class be13::hash_def &hasher);
 
     /**

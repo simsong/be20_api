@@ -101,7 +101,7 @@ feature_recorder::feature_recorder(string outdir_,string input_fname_,string nam
     flags(0),histogram_enabled(false),
     outdir(outdir_),input_fname(input_fname_),name(name_),count(0),ios(),Mf(),Mr(), 
     stop_list_recorder(0),carved_set(),
-    file_number(0),file_extension("."+name)
+    file_number(0),file_extension("."+name),carve_mode(CARVE_ENCODED)
 {
 }
 
@@ -555,7 +555,29 @@ void feature_recorder::carve(const sbuf_t &sbuf,size_t pos,size_t len,
      * that's okay, because the second one will fail.
      */
 
-    string dirname = outdir + "/" + name;
+    /* Get the hex hash value of the object to be carved */
+    std::string dirname = outdir + "/" + name;
+    std::string carved_hash_hexvalue = (*hasher.func)(sbuf.buf,sbuf.bufsize);
+    std::string fname = dirname + "/" + sbuf.pos0.str() + file_extension;
+
+    /* Record what was found in the feature file.
+     */
+    stringstream ss;
+    ss << "<fileobject><filename>" << fname << "</filename><filesize>" << len << "</filesize>"
+       << "<hashdigest type='" << hasher.name << "'>" << carved_hash_hexvalue << "</hashdigest></fileobject>";
+    this->write(sbuf.pos0+len,fname,ss.str());
+    
+    /* Now carve to a file depending on the carving mode */
+    switch(carve_mode){
+    case CARVE_NONE:
+        return;
+    case CARVE_ENCODED:
+        if(sbuf.pos0.isRecursive()==false) return;
+    case CARVE_ALL:
+        break;
+    }
+
+    /* First make sure that the directory is avaialble */
     if (access(dirname.c_str(),R_OK)!=0){
 #ifdef WIN32
         mkdir(dirname.c_str());
@@ -574,38 +596,7 @@ void feature_recorder::carve(const sbuf_t &sbuf,size_t pos,size_t len,
         return;
     }
 
-    /* Get the hex hash value of the object to be carved */
-    std::string carved_hash_hexvalue = (*hasher.func)(sbuf.buf,sbuf.bufsize);
-    std::string fname = dirname + "/" + sbuf.pos0.str() + file_extension;
-
-#if 0
-    char fname[MAXPATHLEN+1];
-    
-    {
-        /* New code: grab the lock. It is automatically freed on return. */
-        cppmutex::lock lock(Mf);
-        bool previously_carved = (carved_set.find(carved_hash_hexvalue)!=carved_set.end());
-
-        if(previously_carved) return;
-
-        /* Insert it into the set */
-        carved_set.insert(carved_hash_hexvalue);
-
-        /* Generate the file name */
-        int myfilenumber = file_number++;
-        snprintf(fname,sizeof(fname),"%s/%06d%s",dirname.c_str(),myfilenumber,file_extension.c_str());
-        /* mutex must be freed before call to write, since write() will lock it again */
-    }
-#endif
-    
-    /* Record what was found in the feature file.
-     */
-    stringstream ss;
-    ss << "<fileobject><filename>" << fname << "</filename><filesize>" << len << "</filesize>"
-       << "<hashdigest type='" << hasher.name << "'>" << carved_hash_hexvalue << "</hashdigest></fileobject>";
-    this->write(sbuf.pos0+len,fname,ss.str());
-    
-    /* Now carve to a file */
+    /* Write the file into the directory */
     int fd = ::open(fname.c_str(),O_CREAT|O_BINARY|O_RDWR,0666);
     if(fd<0){
         cerr << "*** carve: Cannot create " << fname << ": " << strerror(errno) << "\n";
