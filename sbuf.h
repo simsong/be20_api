@@ -30,7 +30,7 @@
 #define __STDC_FORMAT_MACROS
 #endif
 
-using namespace std;
+//using namespace std;
 
 #include <stdlib.h>
 #include <inttypes.h>
@@ -76,14 +76,14 @@ inline int64_t stoi64(std::string str){
 }
 class pos0_t {
 public:
-    string   path;                      /* forensic path of decoders*/
+    std::string   path;                      /* forensic path of decoders*/
     uint64_t offset;                    /* location of buf[0] */
     
     explicit pos0_t():path(""),offset(0){}
-    pos0_t(string s):path(s),offset(0){}
+    pos0_t(std::string s):path(s),offset(0){}
     pos0_t(const pos0_t &obj):path(obj.path),offset(obj.offset){ }
-    string str() const {
-        stringstream ss;
+    std::string str() const {
+        std::stringstream ss;
         if(path.size()>0){
             ss << path << "-";
         }
@@ -93,21 +93,21 @@ public:
     bool isRecursive() const {
         return path.size() > 0;
     } 
-    string firstPart() const {
+    std::string firstPart() const {
         size_t p = path.find('-');
-        if(p==string::npos) return string("");
+        if(p==std::string::npos) return std::string("");
         return path.substr(0,p);
     }
-    string lastAddedPart() const {
+    std::string lastAddedPart() const {
         size_t p = path.rfind('-');
-        if(p==string::npos) return string("");
+        if(p==std::string::npos) return std::string("");
         return path.substr(p+1);
     }
-    string alphaPart() const {          // return the non-numeric parts
+    std::string alphaPart() const {          // return the non-numeric parts
         std::string desc;
         bool inalpha = false;
-        /* Now get the string part of pos0 */
-        for(string::const_iterator it = path.begin();it!=path.end();it++){
+        /* Now get the std::string part of pos0 */
+        for(std::string::const_iterator it = path.begin();it!=path.end();it++){
             if((*it)=='-'){
                 desc += '/';
                 inalpha=false;
@@ -127,14 +127,14 @@ public:
         if(s==0) return *this;
         pos0_t ret;
         size_t p = path.find('-');
-        if(p==string::npos){            // no path
+        if(p==std::string::npos){            // no path
             ret.path="";
             ret.offset = offset + s;
             return ret;
         }
         /* Figure out the value of the shift */
         int64_t baseOffset = stoi64(path.substr(0,p-1));
-        stringstream ss;
+        std::stringstream ss;
         ss << (baseOffset+s) << path.substr(p);
         ret.path = ss.str();
         ret.offset = offset;
@@ -152,8 +152,8 @@ inline std::ostream & operator <<(std::ostream &os,const class pos0_t &pos0) {
 /** Append a string (subdir).
  * The current offset is a prefix to the subdir.
  */
-inline class pos0_t operator +(pos0_t pos0,const string &subdir) {
-    stringstream ss;
+inline class pos0_t operator +(pos0_t pos0,const std::string &subdir) {
+    std::stringstream ss;
     ss << pos0.offset;
     pos0.path    += (pos0.path.size()>0 ? "-" : "") + ss.str() + "-" + subdir;
     pos0.offset  = 0;
@@ -234,7 +234,7 @@ public:
  */
 class sbuf_t {
 private:
-    class not_impl: public exception {
+    class not_impl: public std::exception {
         virtual const char *what() const throw() {
             return "sbuf_t assignment is not implemented.";
         }
@@ -414,7 +414,7 @@ public:
      * asString - returns the sbuf as a string
      */
 
-    string asString() const {return string((reinterpret_cast<const char *>(buf)),bufsize);}
+    std::string asString() const {return std::string((reinterpret_cast<const char *>(buf)),bufsize);}
 
     /****************************************************************
      *** range_exception_t
@@ -520,8 +520,8 @@ public:
      * @{
      * These get functions safely read string
      */
-    void getUTF8WithQuoting(size_t i, size_t num_octets_requested, string &utf8_string) const;
-    void getUTF8WithQuoting(size_t i, string &utf8_string) const;
+    void getUTF8WithQuoting(size_t i, size_t num_octets_requested, std::string &utf8_string) const;
+    void getUTF8WithQuoting(size_t i, std::string &utf8_string) const;
     /** @} */
 
     /**
@@ -529,10 +529,10 @@ public:
      * @{
      * These get functions safely read wstring
      */
-    void getUTF16(size_t i, size_t num_code_units_requested, wstring &utf16_string) const;
-    void getUTF16(size_t i, wstring &utf16_string) const;
-    void getUTF16(size_t i, size_t num_code_units_requested, byte_order_t bo, wstring &utf16_string) const;
-    void getUTF16(size_t i, byte_order_t bo, wstring &utf16_string) const;
+    void getUTF16(size_t i, size_t num_code_units_requested, std::wstring &utf16_string) const;
+    void getUTF16(size_t i, std::wstring &utf16_string) const;
+    void getUTF16(size_t i, size_t num_code_units_requested, byte_order_t bo, std::wstring &utf16_string) const;
+    void getUTF16(size_t i, byte_order_t bo, std::wstring &utf16_string) const;
     /** @} */
 
     /**
@@ -577,7 +577,7 @@ public:
         return -1;
     }
 
-    string substr(size_t loc,size_t len) const; /* make a substring */
+    std::string substr(size_t loc,size_t len) const; /* make a substring */
     bool is_constant(size_t loc,size_t len,uint8_t ch) const; // verify that it's constant
     bool is_constant(uint8_t ch) const { return is_constant(0,this->pagesize,ch); }
 
