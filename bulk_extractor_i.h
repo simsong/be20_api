@@ -4,7 +4,7 @@
 #define BULK_EXTRACTOR_I_H
 
 #define DEBUG_PEDANTIC    0x0001	// check values more rigorously
-#define DEBUG_PRINT_STEPS 0x0002
+#define DEBUG_PRINT_STEPS 0x0002        // prints as each scanner is started
 #define DEBUG_SCANNER     0x0004	// dump all feature writes to stderr
 #define DEBUG_NO_SCANNERS 0x0008        /* do not run the scanners */
 #define DEBUG_DUMP_DATA   0x0010	/* dump data as it is seen */

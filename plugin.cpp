@@ -110,7 +110,7 @@ void be13::plugin::set_scanner_enabled(const std::string &name,bool enable)
         }
     }
     if(name=="all") return;
-    cerr << "Invalid scanner name '" << name << "'\n";
+    std::cerr << "Invalid scanner name '" << name << "'\n";
     exit(1);
 }
 
@@ -595,7 +595,7 @@ void be13::plugin::process_sbuf(const class scanner_params &sp)
 #endif
 #ifdef DEBUG_PRINT_STEPS
     if(debug & DEBUG_PRINT_STEPS) {
-        cerr << "process_extract(" << pos0 << "," << sp.sbuf << ")\n";
+        cerr << "be13::plugin::process_sbuf(" << pos0 << "," << sp.sbuf << ")\n";
     }
 #endif
 #ifdef DEBUG_DUMP_DATA
