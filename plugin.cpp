@@ -149,8 +149,7 @@ void be13::plugin::load_scanner(scanner_t scanner,const scanner_info::scanner_co
     }
 
     /* make an empty sbuf and feature recorder set */
-    pos0_t      pos0;
-    sbuf_t      sbuf(pos0);
+    const sbuf_t sbuf;
     feature_recorder_set fs(feature_recorder_set::SET_DISABLED); // dummy
 
     //
@@ -283,13 +282,12 @@ void be13::plugin::load_scanner_packet_handlers()
 void be13::plugin::message_enabled_scanners(scanner_params::phase_t phase) // send every enabled scanner the phase message
 {
     feature_recorder_set fs(feature_recorder_set::SET_DISABLED); // dummy
-    recursion_control_block rcb(0,"",0); // dummy rcb
     /* make an empty sbuf and feature recorder set */
-    pos0_t      pos0;
-    sbuf_t      sbuf(pos0);
+    const sbuf_t sbuf;
     scanner_params sp(phase,sbuf,fs); 
     for(scanner_vector::iterator it = current_scanners.begin(); it!=current_scanners.end(); it++){
         if((*it)->enabled){
+            recursion_control_block rcb(0,"",0); // dummy rcb
             ((*it)->scanner)(sp,rcb);
         }
     }
@@ -390,8 +388,7 @@ void be13::plugin::phase_shutdown(feature_recorder_set &fs)
 {
     for(scanner_vector::iterator it = current_scanners.begin();it!=current_scanners.end();it++){
         if((*it)->enabled){
-            pos0_t pos0;
-            sbuf_t sbuf(pos0);
+            const sbuf_t sbuf; // empty sbuf
             scanner_params sp(scanner_params::PHASE_SHUTDOWN,sbuf,fs);
             recursion_control_block rcb(0,"",0);        // empty rcb 
             sp.phase=scanner_params::PHASE_SHUTDOWN;                          // shutdown

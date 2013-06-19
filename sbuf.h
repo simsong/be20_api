@@ -273,32 +273,30 @@ private:
     sbuf_t &operator=(const sbuf_t &that) {
         throw new not_impl();
     }
-    /* Empty allocator is never allowed */
-    explicit sbuf_t() __attribute__((__noreturn__)):fd(0),should_unmap(false),should_free(false),should_close(0),
-             page_number(0),pos0(),parent(0),children(0),buf(0),bufsize(0),pagesize(0) {
-        std::cerr << "sbuf_t() empty allocator is never allowed\n";
-        throw new not_impl();
-    }
 public:
-    /**
-     * Make an sbuf from a parent. 
-     */
-    sbuf_t(const sbuf_t &that ):
-        fd(0),should_unmap(false),should_free(false),should_close(false),
-        page_number(that.page_number),pos0(that.pos0),
-        parent(that.highest_parent()),
-        children(0),buf(that.buf),bufsize(that.bufsize),pagesize(that.pagesize){
-        parent->add_child(*this);
+    /** Make an empty sbuf.
+        It's used for situations where an sbuf is needed but not referenced */
+    explicit sbuf_t():fd(0),should_unmap(false),should_free(false),should_close(false),
+             page_number(0),pos0(),
+             parent(0),
+             children(0),buf(0),bufsize(0),pagesize(0){
     }
 
-    /* Allocate an sbuf with a position but no data. This is used for when an sbuf needs to be
-     * passed but the sbuf has no data.
+    /****************************************************************
+     *** Child allocators --- allocate an sbuf from another sbuf
+     ****************************************************************/
+
+    /**
+     * Make an sbuf from a parent. 
+     * note: don't add an 'explicit' --- it causes problems.
      */
-    explicit sbuf_t(const pos0_t &pos0_):
-        fd(0), should_unmap(false), should_free(false), should_close(false),
-        page_number(0),pos0(pos0_),parent(0),children(0),buf(0),bufsize(0),
-        pagesize(0) {
-    };
+    sbuf_t(const sbuf_t &that):
+             fd(0),should_unmap(false),should_free(false),should_close(false),
+             page_number(that.page_number),pos0(that.pos0),
+             parent(that.highest_parent()),
+             children(0),buf(that.buf),bufsize(that.bufsize),pagesize(that.pagesize){
+        parent->add_child(*this);
+    }
 
     /**
      * Make an sbuf from a parent but with a different path. 
@@ -311,7 +309,10 @@ public:
         parent->add_child(*this);
     }
 
-    explicit sbuf_t(const sbuf_t &that_sbuf,size_t off):
+    /**
+     * make an sbuf from a parent but with an indent.
+     */
+    sbuf_t(const sbuf_t &that_sbuf,size_t off):
         fd(0),should_unmap(false),should_free(false),should_close(false),
         page_number(that_sbuf.page_number),pos0(that_sbuf.pos0+off),
         parent(that_sbuf.highest_parent()),children(0),
@@ -320,28 +321,6 @@ public:
         pagesize(that_sbuf.pagesize > off ? that_sbuf.pagesize-off : 0){
     }
 
-    /* Allocators */
-    /** Allocate a new buffer of a given size for filling.
-     * This is the one case where buf is written into...
-     * This should probably be a subclass mutable_sbuf_t() for clarity.
-     */
-
-    /* Allocate from an existing buffer, optionally freeing that buffer */
-    explicit sbuf_t(const pos0_t &pos0_,const uint8_t *buf_,
-                    size_t bufsize_,size_t pagesize_,
-                    int fd_,
-                    bool should_unmap_,bool should_free_,bool should_close_):
-        fd(fd_), should_unmap(should_unmap_), should_free(should_free_),
-        should_close(should_close_),
-        page_number(0),pos0(pos0_),parent(0),children(0),buf(buf_),bufsize(bufsize_),
-        pagesize(min(pagesize_,bufsize_)){
-    };
-    explicit sbuf_t(const pos0_t &pos0_,const uint8_t *buf_,
-                    size_t bufsize_,size_t pagesize_,bool should_free_):
-        fd(0), should_unmap(false), should_free(should_free_), should_close(false),
-        page_number(0),pos0(pos0_),parent(0),children(0),buf(buf_),bufsize(bufsize_),
-        pagesize(min(pagesize_,bufsize_)){
-    };
     /** Allocate from an existing sbuf.
      * The allocated buf MUST be freed before the source, since no copy is made...
      */
@@ -355,12 +334,33 @@ public:
         parent->add_child(*this);
     };
 
-    /** Find the offset of a byte */
-    size_t offset(const uint8_t *loc) const {
-        if(loc<buf) return 0;
-        if(loc>buf+bufsize) return bufsize;
-        return loc-buf;
-    }
+    /****************************************************************
+     *** Allocators that allocate from memory
+     ****************************************************************/
+
+    /* Allocators */
+    /** Allocate a new buffer of a given size for filling.
+     * This is the one case where buf is written into...
+     * This should probably be a subclass mutable_sbuf_t() for clarity.
+     */
+
+    /* Allocate from an existing buffer, optionally freeing that buffer */
+    explicit sbuf_t(const pos0_t &pos0_,const uint8_t *buf_,
+                    size_t bufsize_,size_t pagesize_,
+                    int fd_, bool should_unmap_,bool should_free_,bool should_close_):
+        fd(fd_), should_unmap(should_unmap_), should_free(should_free_),
+        should_close(should_close_),
+        page_number(0),pos0(pos0_),parent(0),children(0),buf(buf_),bufsize(bufsize_),
+        pagesize(min(pagesize_,bufsize_)){
+    };
+
+    /* Similar to above, but with no fd */
+    explicit sbuf_t(const pos0_t &pos0_,const uint8_t *buf_,
+                    size_t bufsize_,size_t pagesize_,bool should_free_):
+        fd(0), should_unmap(false), should_free(should_free_), should_close(false),
+        page_number(0),pos0(pos0_),parent(0),children(0),buf(buf_),bufsize(bufsize_),
+        pagesize(min(pagesize_,bufsize_)){
+    };
 
     /**
      * the + operator returns a new sbuf that is i bytes in and, therefore, i bytes smaller.
@@ -368,10 +368,10 @@ public:
      * 1. We assume that pagesize is always smaller than or equal to bufsize.
      * 2. The child sbuf uses the parent's memory. If the parent gets deleted, the child points
      *    to invalid data.
-
+     *
      * 3. If i is bigger than pagesize, then an sbuf is returned with
      *    0 bytes in the page and all of the margin.
-
+     *
      *    (Because we won't return what's in the margin as page data.)
      */
     sbuf_t operator +(size_t off ) const {
@@ -408,6 +408,13 @@ public:
         std::cerr << "del_child(" << this << ")="<<children << "\n";
         assert(__sync_fetch_and_add(&children,0)>=0);
 #endif
+    }
+
+    /** Find the offset of a byte */
+    size_t offset(const uint8_t *loc) const {
+        if(loc<buf) return 0;
+        if(loc>buf+bufsize) return bufsize;
+        return loc-buf;
     }
 
     /**
