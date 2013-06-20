@@ -2,6 +2,7 @@
 #ifndef FEATURE_RECORDER_SET_H
 #define FEATURE_RECORDER_SET_H
 #include "feature_recorder.h"
+#include "cppmutex.h"
 
 /** \addtogroup internal_interfaces
  * @{
@@ -28,8 +29,8 @@ private:
             return "copying feature_recorder objects is not implemented.";
         }
     };
-    feature_recorder_set(const feature_recorder_set &fs) __attribute__((__noreturn__)) :
-        flags(0),input_fname(),outdir(),frm(),Mlock(),scanner_stats(){ throw new not_impl(); }
+    feature_recorder_set(const feature_recorder_set &fs) __attribute__ ((__noreturn__)) :
+    flags(0),input_fname(),outdir(),frm(),Mlock(),seen_set(),seen_set_lock(),scanner_stats(){ throw new not_impl(); }
     const feature_recorder_set &operator=(const feature_recorder_set &fs){ throw new not_impl(); }
     uint32_t flags;
 public:
@@ -39,11 +40,16 @@ public:
     std::string outdir;                 // where output goes
     feature_recorder_map  frm;          // map of feature recorders
     cppmutex Mlock;            // can be locked even in a const function
+private:
+    std::set<std::string>seen_set;
+    cppmutex  seen_set_lock;
+public:
     class pstats {
     public:
         double seconds;
         uint64_t calls;
     };
+
     typedef map<string,class pstats> scanner_stats_map;
     scanner_stats_map scanner_stats;
 
@@ -52,19 +58,20 @@ public:
     static const uint32_t SET_DISABLED=0x02;    // the set is effectively disabled; for path-printer
     static const uint32_t ONLY_ALERT=0x01;      // always return the alert recorder
 
-    /** Create a properly functioning feature recorder set. */
-    feature_recorder_set(const feature_file_names_t &feature_files,
-                         const std::string &input_fname,
-                         const std::string &outdir,
-                         bool create_stop_files);
-
-    /** create a dummy feature_recorder_set with only an alert or disabled recorder and no output directory */
-    feature_recorder_set(uint32_t flags_);
     virtual ~feature_recorder_set() {
         for(feature_recorder_map::iterator i = frm.begin();i!=frm.end();i++){
             delete i->second;
         }
     }
+
+    /** create a dummy feature_recorder_set with only an alert or disabled recorder and no output directory */
+    feature_recorder_set(uint32_t flags_);
+
+    /** Create a properly functioning feature recorder set. */
+    feature_recorder_set(const feature_file_names_t &feature_files,
+                         const std::string &input_fname,
+                         const std::string &outdir,
+                         bool create_stop_files);
 
     void flush_all();
     void close_all();
@@ -76,11 +83,17 @@ public:
     typedef void (*stat_callback_t)(void *user,const std::string &name,uint64_t calls,double seconds);
     void get_stats(void *user,stat_callback_t stat_callback);
 
+    // Management of previously seen data
+public:
+    virtual bool check_previously_processed(const uint8_t *buf,size_t bufsize);
+
     // NOTE:
     // only virtual functions may be called by plugins!
     virtual feature_recorder *get_name(const std::string &name);
     virtual feature_recorder *get_alert_recorder();
     static void get_alert_recorder_name(feature_file_names_t &feature_file_names);
+
+
 };
 
 

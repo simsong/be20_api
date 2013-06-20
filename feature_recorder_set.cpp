@@ -7,13 +7,13 @@
 #include "histogram.h"
 #endif
 
+#include "dfxml/src/hash_t.h"
+
 /****************************************************************
  *** feature_recorder_set
  *** No mutex is needed for the feature_recorder_set because it is never
  *** modified after it is created, only the contained feature_recorders are modified.
  ****************************************************************/
-
-
 
 const string feature_recorder_set::ALERT_RECORDER_NAME = "alerts";
 const string feature_recorder_set::DISABLED_RECORDER_NAME = "disabled";
@@ -21,7 +21,7 @@ feature_recorder  *feature_recorder_set::alert_recorder = 0; // no alert recorde
 
 /* Create an empty recorder */
 feature_recorder_set::feature_recorder_set(uint32_t flags_):flags(flags_),input_fname(),
-                                                            outdir(),frm(),Mlock(),scanner_stats()
+                                                            outdir(),frm(),Mlock(),seen_set(),seen_set_lock(),scanner_stats()
 {
     if(flags & SET_DISABLED){
         create_name(DISABLED_RECORDER_NAME,false);
@@ -39,7 +39,7 @@ feature_recorder_set::feature_recorder_set(const feature_file_names_t &feature_f
                                            const std::string &input_fname_,
                                            const std::string &outdir_,
                                            bool create_stop_files):
-    flags(0),input_fname(input_fname_),outdir(outdir_),frm(),Mlock(),scanner_stats()
+    flags(0),input_fname(input_fname_),outdir(outdir_),frm(),Mlock(),seen_set(),seen_set_lock(),scanner_stats()
 {
     if(flags & SET_DISABLED){
         create_name(DISABLED_RECORDER_NAME,false);
@@ -138,3 +138,15 @@ feature_recorder *feature_recorder_set::get_alert_recorder()
     return get_name(feature_recorder_set::ALERT_RECORDER_NAME);
 }
 
+
+bool feature_recorder_set::check_previously_processed(const uint8_t *buf,size_t bufsize)
+{
+    std::string hexhash = md5_generator::hash_buf(buf,bufsize).hexdigest();
+
+    cppmutex::lock lock(seen_set_lock);
+    if(seen_set.find(hexhash) == seen_set.end()){
+        seen_set.insert(hexhash);       // haven't seen it before; insert it
+        return false;
+    }
+    return true;                        // I've seen it before
+}
