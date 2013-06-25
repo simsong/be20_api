@@ -102,7 +102,7 @@ namespace be13 {
 
 
 #if defined(HAVE_LIBPCAP)
-#  ifdef GNUC_HAS_DIAGNOSTIC_PRAGMA
+#  ifdef GNUC_HAS_DIAGNOSTIC_REDUNDANT_DECLS
 #    pragma GCC diagnostic ignored "-Wredundant-decls"
 #  endif
 #  if defined(HAVE_PCAP_PCAP_H)
@@ -117,7 +117,7 @@ namespace be13 {
 #    include <wpcap/pcap.h>
 #    define GOT_PCAP
 #  endif
-#  ifdef GNUC_HAS_DIAGNOSTIC_PRAGMA
+#  ifdef GNUC_HAS_DIAGNOSTIC_REDUNDANT_DECLS
 #    pragma GCC diagnostic warning "-Wredundant-decls"
 #  endif
 #else
@@ -497,7 +497,7 @@ public:
     }
 
     // IPv4
-#  ifdef GNUC_HAS_DIAGNOSTIC_PRAGMA
+#  ifdef HAVE_DIAGNOSTIC_CAST_ALIGN
 #    pragma GCC diagnostic ignored "-Wcast-align"
 #  endif
     inline const struct in_addr *packet_info::get_ip4_src() const
@@ -514,7 +514,7 @@ public:
         }
         return (const struct in_addr *) ip_data + ip4_dst_off;
     }
-#  ifdef GNUC_HAS_DIAGNOSTIC_PRAGMA
+#  ifdef HAVE_DIAGNOSTIC_CAST_ALIGN
 #    pragma GCC diagnostic warning "-Wcast-align"
 #  endif
     inline uint8_t packet_info::get_ip4_proto() const
@@ -540,7 +540,7 @@ public:
         //return ntohs(*((uint16_t *) (ip_data + ip6_plen_off)));
         return nshort(ip_data,ip6_plen_off);
     }
-#  ifdef GNUC_HAS_DIAGNOSTIC_PRAGMA
+#  ifdef HAVE_DIAGNOSTIC_CAST_ALIGN
 #    pragma GCC diagnostic ignored "-Wcast-align"
 #  endif
     inline const struct ip6_addr *packet_info::get_ip6_src() const
@@ -557,7 +557,7 @@ public:
         }
         return (const struct ip6_addr *) ip_data + ip6_dst_off;
     }
-#  ifdef GNUC_HAS_DIAGNOSTIC_PRAGMA
+#  ifdef HAVE_DIAGNOSTIC_CAST_ALIGN
 #    pragma GCC diagnostic warning "-Wcast-align"
 #  endif
 
