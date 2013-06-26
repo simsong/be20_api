@@ -189,7 +189,7 @@ public:
     typedef std::string (*hashing_function_t)(const sbuf_t &sbuf); // returns a hex value
     void set_file_extension(std::string e){file_extension=e;}
     void set_carve_mode(carve_mode_t aMode){carve_mode=aMode;}
-    virtual void carve(const sbuf_t &sbuf,size_t pos,size_t len,const class be13::hash_def &hasher);
+    virtual void carve(const sbuf_t &sbuf,size_t pos,size_t len,const struct be13::hash_def &hasher);
 
     /**
      * EXPERIMENTAL!
