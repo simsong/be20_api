@@ -781,11 +781,11 @@ class scanner_params {
      *** INSTANCE VARIABLES ***
      **************************/
 
-    int      sp_version;                /* version number of this structure */
-    phase_t  phase;                     /* v1: 0=startup, 1=normal, 2=shutdown (changed to phase_t in v1.3) */
+    const int sp_version;                /* version number of this structure */
+    const phase_t phase;                 /* v1: 0=startup, 1=normal, 2=shutdown (changed to phase_t in v1.3) */
     const sbuf_t &sbuf;                 /* v1: what to scan / only valid in SCAN_PHASE */
     class feature_recorder_set &fs;     /* v1: where to put the results / only valid in SCAN_PHASE */
-    uint32_t   depth;                   /* v1: how far down are we? / only valid in SCAN_PHASE */
+    const uint32_t depth;               /* v1: how far down are we? / only valid in SCAN_PHASE */
 
     PrintOptions  &print_options;       /* v1: how to print / NOT USED IN SCANNERS */
     scanner_info  *info;                /* v2: set/get parameters on startup */
@@ -803,13 +803,11 @@ class recursion_control_block {
 /**
  * @param callback_ - the function to call back
  * @param partName_ - the part of the forensic path processed by this scanner.
- * @param raf       - return after free -- don't call *callback_
  */
- recursion_control_block(process_t *callback_,string partName_,bool raf):
-    callback(callback_),partName(partName_),returnAfterFound(raf){}
+ recursion_control_block(process_t *callback_,string partName_):
+    callback(callback_),partName(partName_){}
     process_t *callback;
     string partName;            /* eg "ZIP", "GZIP" */
-    bool returnAfterFound;      /* only run once */
 };
     
 /* plugin.cpp. This will become a class...  */

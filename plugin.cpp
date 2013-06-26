@@ -168,13 +168,11 @@ void be13::plugin::load_scanner(scanner_t scanner,const scanner_info::scanner_co
     sd->scanner = scanner;
     sd->info.config = &sc;              
 
-
-    sp.phase = scanner_params::PHASE_STARTUP;                         // startup
     sp.info  = &sd->info;
 
     // Make an empty recursion control block and call the scanner's
     // initialization function.
-    recursion_control_block rcb(0,"",0); 
+    recursion_control_block rcb(0,""); 
     (*scanner)(sp,rcb);                  // phase 0
     
     sd->enabled      = !(sd->info.flags & scanner_info::SCANNER_DISABLED);
@@ -287,7 +285,7 @@ void be13::plugin::message_enabled_scanners(scanner_params::phase_t phase) // se
     scanner_params sp(phase,sbuf,fs); 
     for(scanner_vector::iterator it = current_scanners.begin(); it!=current_scanners.end(); it++){
         if((*it)->enabled){
-            recursion_control_block rcb(0,"",0); // dummy rcb
+            recursion_control_block rcb(0,""); // dummy rcb
             ((*it)->scanner)(sp,rcb);
         }
     }
@@ -390,8 +388,7 @@ void be13::plugin::phase_shutdown(feature_recorder_set &fs)
         if((*it)->enabled){
             const sbuf_t sbuf; // empty sbuf
             scanner_params sp(scanner_params::PHASE_SHUTDOWN,sbuf,fs);
-            recursion_control_block rcb(0,"",0);        // empty rcb 
-            sp.phase=scanner_params::PHASE_SHUTDOWN;                          // shutdown
+            recursion_control_block rcb(0,"");        // empty rcb 
             (*(*it)->scanner)(sp,rcb);
         }
     }
@@ -655,7 +652,7 @@ void be13::plugin::process_sbuf(const class scanner_params &sp)
             aftimer t;
             t.start();
 #endif
-            recursion_control_block rcb(process_sbuf,upperstr(name),false);
+            recursion_control_block rcb(process_sbuf,upperstr(name));
             ((*it)->scanner)(sp,rcb);
 #ifdef HAVE_AFTIMER
             t.stop();
