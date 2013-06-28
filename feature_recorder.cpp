@@ -35,7 +35,7 @@
 #define DEBUG_PEDANTIC    0x0001// check values more rigorously
 #endif
 
-size_t  feature_recorder::context_window=16;                    /* number of bytes of context */
+size_t  feature_recorder::context_window_default=16;                    /* number of bytes of context */
 int64_t feature_recorder::offset_add   = 0;
 std::string  feature_recorder::banner_file;
 uint32_t feature_recorder::opt_max_context_size=1024*1024;
@@ -48,13 +48,13 @@ uint32_t feature_recorder::debug=0;
  * 3. Add the header
  */
 
-const string feature_recorder::UTF8_BOM("\xef\xbb\xbf");
-const string feature_recorder::BOM_EXPLAINATION("# UTF-8 Byte Order Marker; see http://unicode.org/faq/utf_bom.html\n");
+//const string feature_recorder::UTF8_BOM("\xef\xbb\xbf");
+//const string feature_recorder::BOM_EXPLAINATION("# UTF-8 Byte Order Marker; see http://unicode.org/faq/utf_bom.html\n");
 
 void feature_recorder::banner_stamp(std::ostream &os,const std::string &header)
 {
     int banner_lines = 0;
-    os << UTF8_BOM << BOM_EXPLAINATION;         // 
+    //os << UTF8_BOM << BOM_EXPLAINATION;         // 
     if(banner_file!=""){
         ifstream i(banner_file.c_str());
         if(i.is_open()){
@@ -99,15 +99,19 @@ void feature_recorder::banner_stamp(std::ostream &os,const std::string &header)
 
 feature_recorder::feature_recorder(string outdir_,string input_fname_,string name_):
     flags(0),histogram_enabled(false),
-    outdir(outdir_),input_fname(input_fname_),name(name_),count(0),ios(),Mf(),Mr(), 
+    outdir(outdir_),input_fname(input_fname_),name(name_),count(0),ios(),
+    context_window_before(context_window_default),context_window_after(context_window_default),
+    Mf(),Mr(), 
     stop_list_recorder(0),carved_set(),
     file_number(0),file_extension("."+name),carve_mode(CARVE_ENCODED)
 {
+    //std::cerr << "feature_recorder::feature_recorder()\n";
 }
 
 /* Don't have to erase the stop_list_recorder because it is in the set */
 feature_recorder::~feature_recorder()
 {
+    //std::cerr << "feature_recorder::~feature_recorder()\n";
     if(ios.is_open()){
         ios.close();
     }
@@ -516,8 +520,8 @@ void feature_recorder::write_buf(const sbuf_t &sbuf,size_t pos,size_t len)
 
     if((flags & FLAG_NO_CONTEXT)==0){
         /* Context write; create a clean context */
-        size_t p0 = context_window < pos ? pos-context_window : 0;
-        size_t p1 = pos+len+context_window;
+        size_t p0 = context_window_before < pos ? pos-context_window_before : 0;
+        size_t p1 = pos+len+context_window_after;
         
         if(p1>sbuf.bufsize) p1 = sbuf.bufsize;
         assert(p0<=p1);

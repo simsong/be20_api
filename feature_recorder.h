@@ -49,6 +49,8 @@ using namespace std;
 
 class feature_recorder {
 private:
+    //static const string UTF8_BOM;   // UTF-8 byte order mark
+    //static const string BOM_EXPLAINATION; // what is this BOM thing? Put at the top of each file
     uint32_t flags;
     static uint32_t debug;
     bool histogram_enabled;             /* do we automatically histogram? */
@@ -61,7 +63,7 @@ private:
     };
     feature_recorder(const feature_recorder &fr) __attribute__((__noreturn__)) :
         flags(0),histogram_enabled(false),
-        outdir(),input_fname(),name(),count(0),ios(),Mf(),Mr(),
+        outdir(),input_fname(),name(),count(0),ios(),context_window_before(),context_window_after(),Mf(),Mr(),
         stop_list_recorder(0),carved_set(),file_number(0),file_extension(),carve_mode()
         {
         throw new not_impl();
@@ -105,11 +107,8 @@ public:
     static const string histogram_file_header;
     static const string feature_file_header;
     static const string bulk_extractor_version_header;
-    static const string UTF8_BOM;   // UTF-8 byte order mark
-    static const string BOM_EXPLAINATION; // what is this BOM thing? Put at the top of each file
     static uint32_t opt_max_context_size;
     static uint32_t opt_max_feature_size;
-    static size_t context_window;       // global option
     static int64_t offset_add;          // added to every reported offset, for use with hadoop
     static string banner_file;          // banner for top of every file
     static string extract_feature(const string &line);
@@ -118,18 +117,30 @@ public:
     virtual ~feature_recorder();
 
     virtual void set_flag(uint32_t flags_){flags|=flags_;}
-    virtual void set_input_fname(const std::string &f){input_fname = f;}
+    //virtual void set_input_fname(const std::string &f){input_fname = f;}
 
-    string outdir;                      // where output goes (could be static, I guess 
-    string input_fname;                 // image we are analyzing
-    string name;                        /* name of this feature recorder */
+    static size_t context_window_default; // global option
+    const string outdir;                // where output goes (could be static, I guess 
+    const string input_fname;           // image we are analyzing
+    const string name;                  /* name of this feature recorder */
     int64_t count;                      /* number of records written */
+private:
     std::fstream ios;                   /* where features are written */
+    size_t context_window_before;       // context window
+    size_t context_window_after;       // context window
 
     cppmutex Mf;                        /* protects the file */
     cppmutex Mr;                        /* protects the redlist */
+public:
 
     void   banner_stamp(std::ostream &os,const std::string &header); // stamp BOM, banner, and header
+
+    void set_context_window(size_t win){
+        context_window_before = win;
+        context_window_after = win;
+    }
+    void set_context_window_before(size_t win){ context_window_before = win;}
+    void set_context_window_after(size_t win){ context_window_after = win; }
 
     /* where stopped items (on stop_list or context_stop_list) get recorded: */
     class feature_recorder *stop_list_recorder; // where stopped features get written

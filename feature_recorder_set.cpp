@@ -90,9 +90,7 @@ feature_recorder *feature_recorder_set::get_name(const std::string &name)
     cppmutex::lock lock(Mlock);
     feature_recorder_map::const_iterator it = frm.find(*thename);
     if(it!=frm.end()) return it->second;
-    std::cerr << "feature_recorder::get_name(" << *thename << ") does not exist\n";
-    assert(0);
-    exit(0);
+    return(0);                          // feature recorder does not exist
 }
 
 
