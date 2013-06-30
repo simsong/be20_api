@@ -537,6 +537,19 @@ void feature_recorder::write_buf(const sbuf_t &sbuf,size_t pos,size_t len)
 
 
 /**
+ * replace a character in a string with another
+ */
+std::string replace(const std::string &src,char f,char t)
+{
+    std::string ret;
+    for(size_t i=0;i<src.size();i++){
+        if(src[i]==f) ret.push_back(t);
+        else ret.push_back(src[i]);
+    }
+    return ret;
+}
+
+/**
  * Carving support.
  * 2013-06-08 - filenames are the forensic path.
  */
@@ -562,7 +575,7 @@ void feature_recorder::carve(const sbuf_t &sbuf,size_t pos,size_t len,
     /* Get the hex hash value of the object to be carved */
     std::string dirname = outdir + "/" + name;
     std::string carved_hash_hexvalue = (*hasher.func)(sbuf.buf,sbuf.bufsize);
-    std::string fname = dirname + "/" + sbuf.pos0.str() + file_extension;
+    std::string fname = dirname + "/" + replace(sbuf.pos0.str(),'/','_') + file_extension;
 
     /* Record what was found in the feature file.
      */
