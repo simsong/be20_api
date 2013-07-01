@@ -35,6 +35,7 @@ Executive summary:
 
 
 References:
+===========
 
 * http://www.emacswiki.org/emacs/NoTabs
 
@@ -45,3 +46,4 @@ References:
 * http://google-styleguide.googlecode.com/svn/trunk/cppguide.xml
 
 * http://www.python.org/dev/peps/pep-0008/#maximum-line-length
+
