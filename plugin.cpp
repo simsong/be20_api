@@ -464,15 +464,19 @@ GET_CONFIG(size_t)
 #endif
 
 
-/* uint8_t needs cast to uint32_t for << */
-void scanner_info::get_config(const std::string &n,uint8_t *val,const std::string &help)
+/* uint8_t needs cast to uint32_t for <<
+ * Otherwise it is interpreted as a character.
+ */
+void scanner_info::get_config(const std::string &n,uint8_t *val_,const std::string &help)
 {
+    uint32_t val = *val_;
     std::stringstream ss;
-    ss << (uint32_t)(*val);
+    ss << val;
     std::string v(ss.str());
     get_config(n,&v,help);
     ss.str(v);
-    ss >> *val;
+    ss >> val;
+    *val_ = (uint8_t)val;
 }
 
 /* bool needs special processing for YES/NO/TRUE/FALSE */
