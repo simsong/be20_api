@@ -16,3 +16,5 @@ Makefile.in
 /depcomp
 /install-sh
 /missing
+.deps
+.dirstamp
