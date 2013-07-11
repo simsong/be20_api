@@ -838,7 +838,7 @@ namespace be13 {
         static void load_scanner_directories(const std::vector<std::string> &dirnames,const scanner_info::scanner_config &sc);
         static void load_scanner_packet_handlers();
         
-        static void message_enabled_scanners(scanner_params::phase_t phase); // send every enabled scanner the phase message
+        static void message_enabled_scanners(scanner_params::phase_t phase,feature_recorder_set *fs); // send every enabled scanner the phase message
         static scanner_t *find_scanner(const std::string &name); // returns the named scanner, or 0 if no scanner of that name
         static void get_enabled_scanners(std::vector<std::string> &svector); // put the enabled scanners into the vector
         static bool find_scanner_enabled(); // return true if a find scanner is enabled
@@ -850,7 +850,8 @@ namespace be13 {
         static void set_scanner_enabled_all(bool enable);
         static void scanners_enable(const std::string &name); // saves a command to enable this scanner
         static void scanners_disable(const std::string &name); // saves a command to disable this scanner
-        static void scanners_process_commands();               // process the enable/disable and config commands
+        static void scanners_process_enable_disable_commands();               // process the enable/disable and config commands
+        static void scanners_init(feature_recorder_set *fs); // init the scanners
 
         static void info_scanners(bool detailed_info,
                                   bool detailed_settings,

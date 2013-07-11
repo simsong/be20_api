@@ -621,9 +621,8 @@ void feature_recorder::carve(const sbuf_t &sbuf,size_t pos,size_t len,
     }
 
     ssize_t ret = sbuf.write(fd,pos,len);
-    if(ret!=(ssize_t)len){
-        cerr << "*** carve: Cannot write(" << fd << "," << pos << "," << len << ")=" << ret
-             << ": "<< strerror(errno) << "\n";
+    if(ret<0){
+        cerr << "*** carve: Cannot write(pos=" << fd << "," << pos << " len=" << len << "): "<< strerror(errno) << "\n";
     }
     ::close(fd);
 }

@@ -277,18 +277,25 @@ void be13::plugin::load_scanner_packet_handlers()
     }
 }
 
-void be13::plugin::message_enabled_scanners(scanner_params::phase_t phase) // send every enabled scanner the phase message
+void be13::plugin::message_enabled_scanners(scanner_params::phase_t phase,feature_recorder_set *fs) // send every enabled scanner the phase message
 {
-    feature_recorder_set fs(feature_recorder_set::SET_DISABLED); // dummy
+    /* If a feature recorder set wasn't provided, make a dummy */
+    feature_recorder_set *tmpfs=0;
+    if(fs==0){
+        tmpfs = new feature_recorder_set(feature_recorder_set::SET_DISABLED);
+        fs = tmpfs;
+    }
+
     /* make an empty sbuf and feature recorder set */
     const sbuf_t sbuf;
-    scanner_params sp(phase,sbuf,fs); 
+    scanner_params sp(phase,sbuf,*fs); 
     for(scanner_vector::iterator it = current_scanners.begin(); it!=current_scanners.end(); it++){
         if((*it)->enabled){
             recursion_control_block rcb(0,""); // dummy rcb
             ((*it)->scanner)(sp,rcb);
         }
     }
+    if(tmpfs) delete tmpfs;
 }
 
 scanner_t *be13::plugin::find_scanner(const std::string &search_name)
@@ -335,33 +342,28 @@ public:
     string name;
 };
 static vector<scanner_command> scanner_commands;
-static bool commands_processed = false;
 
 void be13::plugin::scanners_disable_all()
 {
-    assert(commands_processed==false);
     scanner_commands.push_back(scanner_command(scanner_command::DISABLE_ALL,string("")));
 }
 
 void be13::plugin::scanners_enable_all()
 {
-    assert(commands_processed==false);
     scanner_commands.push_back(scanner_command(scanner_command::ENABLE_ALL,string("")));
 }
 
 void be13::plugin::scanners_enable(const std::string &name)
 {
-    assert(commands_processed==false);
     scanner_commands.push_back(scanner_command(scanner_command::ENABLE,name));
 }
 
 void be13::plugin::scanners_disable(const std::string &name)
 {
-    assert(commands_processed==false);
     scanner_commands.push_back(scanner_command(scanner_command::DISABLE,name));
 }
 
-void be13::plugin::scanners_process_commands()
+void be13::plugin::scanners_process_enable_disable_commands()
 {
     for(vector<scanner_command>::const_iterator it=scanner_commands.begin();
         it!=scanner_commands.end();it++){
@@ -373,10 +375,13 @@ void be13::plugin::scanners_process_commands()
         }
     }
     load_scanner_packet_handlers();     // can't do until enable/disable commands are run
-    message_enabled_scanners(scanner_params::PHASE_INIT); // tell all enabled scanners to init
-    commands_processed=true;
 }
 
+
+void be13::plugin::scanners_init(feature_recorder_set *fs)
+{
+    message_enabled_scanners(scanner_params::PHASE_INIT,fs); // tell all enabled scanners to init
+}
 
 /****************************************************************
  *** PHASE_SHUTDOWN (formerly phase 2): shut down the scanners
