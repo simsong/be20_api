@@ -77,7 +77,7 @@ inline int64_t stoi64(std::string str){
 class pos0_t {
 public:
     std::string   path;                      /* forensic path of decoders*/
-    uint64_t offset;                    /* location of buf[0] */
+    uint64_t      offset;                    /* location of buf[0] */
     
     explicit pos0_t():path(""),offset(0){}
     pos0_t(std::string s):path(s),offset(0){}
