@@ -629,10 +629,15 @@ void be13::plugin::process_sbuf(const class scanner_params &sp)
         if((*it)->enabled==false) continue; // not enabled
 
         if((ngram_size > 0) && (((*it)->info.flags & scanner_info::SCANNER_WANTS_NGRAMS)==0)){
-            // buffer contains ngrams
+            // buffer contains ngrams; by default they are not processed
             continue;
         }
         
+        if(sp.depth > 0 && ((*it)->info.flags & scanner_info::SCANNER_DEPTH_0)){
+            // depth >0 and we only run at depth 0
+            continue;
+        }
+
         string name = (*it)->info.name;
 
         try {

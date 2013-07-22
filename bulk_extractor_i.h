@@ -625,14 +625,15 @@ private:
     typedef std::map<std::string,std::string>  config_t; // configuration for scanner passed in
 
     /* scanner flags */
-    static const int SCANNER_DISABLED       = 0x01; // v1: enabled by default 
-    static const int SCANNER_NO_USAGE       = 0x02; // v1: do not show scanner in usage 
-    static const int SCANNER_NO_ALL         = 0x04; // v2: do not enable with -eall 
-    static const int SCANNER_FIND_SCANNER   = 0x08; // v2: this scanner uses the find_list 
-    static const int SCANNER_RECURSE        = 0x10; // v3: this scanner will recurse
-    static const int SCANNER_RECURSE_EXPAND = 0x20; // v3: recurses AND result is >= original size
-    static const int SCANNER_WANTS_NGRAMS   = 0x40; // v3: Scanner gets buffers that are constant n-grams
-    static const int SCANNER_FAST_FIND      = 0x80; // v3: This scanner is a very fast FIND scanner
+    static const int SCANNER_DISABLED       = 0x001; // v1: enabled by default 
+    static const int SCANNER_NO_USAGE       = 0x002; // v1: do not show scanner in usage 
+    static const int SCANNER_NO_ALL         = 0x004; // v2: do not enable with -eall 
+    static const int SCANNER_FIND_SCANNER   = 0x008; // v2: this scanner uses the find_list 
+    static const int SCANNER_RECURSE        = 0x010; // v3: this scanner will recurse
+    static const int SCANNER_RECURSE_EXPAND = 0x020; // v3: recurses AND result is >= original size
+    static const int SCANNER_WANTS_NGRAMS   = 0x040; // v3: Scanner gets buffers that are constant n-grams
+    static const int SCANNER_FAST_FIND      = 0x080; // v3: This scanner is a very fast FIND scanner
+    static const int SCANNER_DEPTH_0        = 0x100; // v3: scanner only runs at detph 0 by default
     static const int CURRENT_SI_VERSION=3;          // 
 
     static const std::string flag_to_string(const int flag){
