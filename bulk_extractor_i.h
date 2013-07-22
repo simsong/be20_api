@@ -102,7 +102,7 @@ namespace be13 {
 
 
 #if defined(HAVE_LIBPCAP)
-#  ifdef GNUC_HAS_DIAGNOSTIC_REDUNDANT_DECLS
+#  ifdef HAVE_DIAGNOSTIC_REDUNDANT_DECLS
 #    pragma GCC diagnostic ignored "-Wredundant-decls"
 #  endif
 #  if defined(HAVE_PCAP_PCAP_H)
@@ -117,7 +117,7 @@ namespace be13 {
 #    include <wpcap/pcap.h>
 #    define GOT_PCAP
 #  endif
-#  ifdef GNUC_HAS_DIAGNOSTIC_REDUNDANT_DECLS
+#  ifdef HAVE_DIAGNOSTIC_REDUNDANT_DECLS
 #    pragma GCC diagnostic warning "-Wredundant-decls"
 #  endif
 #else
