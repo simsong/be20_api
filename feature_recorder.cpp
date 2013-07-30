@@ -105,13 +105,11 @@ feature_recorder::feature_recorder(string outdir_,string input_fname_,string nam
     stop_list_recorder(0),carved_set(),
     file_number(0),file_extension("."+name),carve_mode(CARVE_ENCODED)
 {
-    //std::cerr << "feature_recorder::feature_recorder()\n";
 }
 
 /* Don't have to erase the stop_list_recorder because it is in the set */
 feature_recorder::~feature_recorder()
 {
-    //std::cerr << "feature_recorder::~feature_recorder()\n";
     if(ios.is_open()){
         ios.close();
     }
@@ -335,6 +333,10 @@ void feature_recorder::make_histogram(const class histogram_def &def)
 }
 #endif
 
+
+/****************************************************************
+ *** WRITING SUPPORT
+ ****************************************************************/
 
 /* Write to the file.
  * This is the only place where writing happens.
