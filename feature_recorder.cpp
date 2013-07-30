@@ -551,8 +551,10 @@ std::string replace(const std::string &src,char f,char t)
 
 /**
  * Carving support.
+ * 2013-07-30 - automatically bin directories
  * 2013-06-08 - filenames are the forensic path.
  */
+#include <iomanip>
 void feature_recorder::carve(const sbuf_t &sbuf,size_t pos,size_t len,
                              const be13::hash_def &hasher)
 {
@@ -572,14 +574,19 @@ void feature_recorder::carve(const sbuf_t &sbuf,size_t pos,size_t len,
      * that's okay, because the second one will fail.
      */
 
-    /* Get the hex hash value of the object to be carved */
-    std::string dirname = outdir + "/" + name;
+    uint64_t this_file_number = __sync_add_and_fetch(&file_number,1);
+
+    std::string dirname1 = outdir + "/" + name;
+    std::stringstream ss;
+
+    ss << std::setfill('0') << std::setw(3) << dirname1 << "/" << (this_file_number / 1000);
+
+    std::string dirname2 = ss.str(); ss.str(std::string()); // get the string and clear it
+    std::string fname    = dirname2 + "/" + replace(sbuf.pos0.str(),'/','_') + file_extension;
     std::string carved_hash_hexvalue = (*hasher.func)(sbuf.buf,sbuf.bufsize);
-    std::string fname = dirname + "/" + replace(sbuf.pos0.str(),'/','_') + file_extension;
 
     /* Record what was found in the feature file.
      */
-    stringstream ss;
     ss << "<fileobject><filename>" << fname << "</filename><filesize>" << len << "</filesize>"
        << "<hashdigest type='" << hasher.name << "'>" << carved_hash_hexvalue << "</hashdigest></fileobject>";
     this->write(sbuf.pos0+len,fname,ss.str());
@@ -594,12 +601,14 @@ void feature_recorder::carve(const sbuf_t &sbuf,size_t pos,size_t len,
         break;
     }
 
-    /* First make sure that the directory is avaialble */
-    if (access(dirname.c_str(),R_OK)!=0){
+    /* Make the directory if it doesn't exist.  */
+    if (access(dirname2.c_str(),R_OK)!=0){
 #ifdef WIN32
-        mkdir(dirname.c_str());
+        mkdir(dirname1.c_str());
+        mkdir(dirname2.c_str());
 #else   
-        mkdir(dirname.c_str(),0777);
+        mkdir(dirname1.c_str(),0777);
+        mkdir(dirname2.c_str(),0777);
 #endif
     }
     /* Check to make sure that directory is there. We don't just the return code
@@ -608,8 +617,8 @@ void feature_recorder::carve(const sbuf_t &sbuf,size_t pos,size_t len,
      * remember the error number because the access() call may clear it.
      */
     int oerrno = errno;                 // remember error number
-    if (access(dirname.c_str(),R_OK)!=0){
-        cerr << "Could not make directory " << dirname << ": " << strerror(oerrno) << "\n";
+    if (access(dirname2.c_str(),R_OK)!=0){
+        cerr << "Could not make directory " << dirname2 << ": " << strerror(oerrno) << "\n";
         return;
     }
 
