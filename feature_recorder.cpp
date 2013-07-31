@@ -103,15 +103,13 @@ feature_recorder::feature_recorder(string outdir_,string input_fname_,string nam
     context_window_before(context_window_default),context_window_after(context_window_default),
     Mf(),Mr(), 
     stop_list_recorder(0),carved_set(),
-    file_number(0),file_extension("."+name),carve_mode(CARVE_ENCODED)
+    file_number(0),carve_mode(CARVE_ENCODED)
 {
-    //std::cerr << "feature_recorder::feature_recorder()\n";
 }
 
 /* Don't have to erase the stop_list_recorder because it is in the set */
 feature_recorder::~feature_recorder()
 {
-    //std::cerr << "feature_recorder::~feature_recorder()\n";
     if(ios.is_open()){
         ios.close();
     }
@@ -336,6 +334,10 @@ void feature_recorder::make_histogram(const class histogram_def &def)
 #endif
 
 
+/****************************************************************
+ *** WRITING SUPPORT
+ ****************************************************************/
+
 /* Write to the file.
  * This is the only place where writing happens.
  * So it's an easy place to do UTF-8 validation in debug mode.
@@ -549,11 +551,24 @@ std::string replace(const std::string &src,char f,char t)
     return ret;
 }
 
-/**
+/****************************************************************
+ *** CARVING SUPPORT
+ ****************************************************************
+ *
  * Carving support.
+ * 2013-07-30 - automatically bin directories
  * 2013-06-08 - filenames are the forensic path.
  */
+#include <iomanip>
+/**
+ * @param sbuf   - the buffer to carve
+ * @param pos    - offset in the buffer to carve
+ * @param len    - how many bytes to carve
+ * @param hasher - to compute the hash of the carved object.
+ *
+ */
 void feature_recorder::carve(const sbuf_t &sbuf,size_t pos,size_t len,
+                             const std::string &ext,
                              const be13::hash_def &hasher)
 {
     /* If we are in the margin, ignore; it will be processed again */
@@ -572,14 +587,20 @@ void feature_recorder::carve(const sbuf_t &sbuf,size_t pos,size_t len,
      * that's okay, because the second one will fail.
      */
 
-    /* Get the hex hash value of the object to be carved */
-    std::string dirname = outdir + "/" + name;
+    uint64_t this_file_number = __sync_add_and_fetch(&file_number,1);
+
+    std::string dirname1 = outdir + "/" + name;
+    std::stringstream ss;
+
+    ss << dirname1 << "/" << std::setw(3) << std::setfill('0') << (this_file_number / 1000);
+
+    std::string dirname2 = ss.str(); 
+    std::string fname    = dirname2 + "/" + replace(sbuf.pos0.str(),'/','_') + ext;
     std::string carved_hash_hexvalue = (*hasher.func)(sbuf.buf,sbuf.bufsize);
-    std::string fname = dirname + "/" + replace(sbuf.pos0.str(),'/','_') + file_extension;
 
     /* Record what was found in the feature file.
      */
-    stringstream ss;
+    ss.str(std::string()); // clear the stringstream
     ss << "<fileobject><filename>" << fname << "</filename><filesize>" << len << "</filesize>"
        << "<hashdigest type='" << hasher.name << "'>" << carved_hash_hexvalue << "</hashdigest></fileobject>";
     this->write(sbuf.pos0+len,fname,ss.str());
@@ -594,12 +615,14 @@ void feature_recorder::carve(const sbuf_t &sbuf,size_t pos,size_t len,
         break;
     }
 
-    /* First make sure that the directory is avaialble */
-    if (access(dirname.c_str(),R_OK)!=0){
+    /* Make the directory if it doesn't exist.  */
+    if (access(dirname2.c_str(),R_OK)!=0){
 #ifdef WIN32
-        mkdir(dirname.c_str());
+        mkdir(dirname1.c_str());
+        mkdir(dirname2.c_str());
 #else   
-        mkdir(dirname.c_str(),0777);
+        mkdir(dirname1.c_str(),0777);
+        mkdir(dirname2.c_str(),0777);
 #endif
     }
     /* Check to make sure that directory is there. We don't just the return code
@@ -608,8 +631,8 @@ void feature_recorder::carve(const sbuf_t &sbuf,size_t pos,size_t len,
      * remember the error number because the access() call may clear it.
      */
     int oerrno = errno;                 // remember error number
-    if (access(dirname.c_str(),R_OK)!=0){
-        cerr << "Could not make directory " << dirname << ": " << strerror(oerrno) << "\n";
+    if (access(dirname2.c_str(),R_OK)!=0){
+        cerr << "Could not make directory " << dirname2 << ": " << strerror(oerrno) << "\n";
         return;
     }
 

@@ -520,13 +520,13 @@ void be13::plugin::info_scanners(bool detailed_info,
     std::vector<std::string> disabled_wordlist;
     for(scanner_vector::const_iterator it = current_scanners.begin();it!=current_scanners.end();it++){
         if(detailed_info){
-            std::cout << "Scanner Name: " << (*it)->info.name << "\n";
+            if ((*it)->info.name.size()) std::cout << "Scanner Name: " << (*it)->info.name << "\n";
             std::cout << "flags:  " << scanner_info::flag_to_string((*it)->info.flags) << "\n";
             std::cout << "Scanner Interface version: " << (*it)->info.si_version << "\n";
-            std::cout << "Author: " << (*it)->info.author << "\n";
-            std::cout << "Description: " << (*it)->info.description << "\n";
-            std::cout << "URL: " << (*it)->info.url << "\n";
-            std::cout << "Scanner Version: " << (*it)->info.scanner_version << "\n";
+            if ((*it)->info.author.size()) std::cout << "Author: " << (*it)->info.author << "\n";
+            if ((*it)->info.description.size()) std::cout << "Description: " << (*it)->info.description << "\n";
+            if ((*it)->info.url.size()) std::cout << "URL: " << (*it)->info.url << "\n";
+            if ((*it)->info.scanner_version.size()) std::cout << "Scanner Version: " << (*it)->info.scanner_version << "\n";
             std::cout << "Feature Names: ";
             for(set<string>::const_iterator i2 = (*it)->info.feature_names.begin();
                 i2 != (*it)->info.feature_names.end();

@@ -64,7 +64,7 @@ private:
     feature_recorder(const feature_recorder &fr) __attribute__((__noreturn__)) :
         flags(0),histogram_enabled(false),
         outdir(),input_fname(),name(),count(0),ios(),context_window_before(),context_window_after(),Mf(),Mr(),
-        stop_list_recorder(0),carved_set(),file_number(0),file_extension(),carve_mode()
+        stop_list_recorder(0),carved_set(),file_number(0),carve_mode()
         {
         throw new not_impl();
     }
@@ -194,13 +194,13 @@ public:
         CARVE_ALL=2};
 
     std::set<std::string>     carved_set;    /* set of hex hash values of objects we've carved;  */
-    int64_t     file_number;            /* starts at 0; gets incremented by carve() */
-    string      file_extension;         /* includes "."; must be set by caller */
+    int64_t     file_number;            /* starts at 0; gets incremented by carve(); for binning */
     carve_mode_t carve_mode;
     typedef std::string (*hashing_function_t)(const sbuf_t &sbuf); // returns a hex value
-    void set_file_extension(std::string e){file_extension=e;}
     void set_carve_mode(carve_mode_t aMode){carve_mode=aMode;}
-    virtual void carve(const sbuf_t &sbuf,size_t pos,size_t len,const struct be13::hash_def &hasher);
+    virtual void carve(const sbuf_t &sbuf,size_t pos,size_t len,
+                       const std::string &ext, // appended to forensic path
+                       const struct be13::hash_def &hasher);
 
     /**
      * EXPERIMENTAL!
