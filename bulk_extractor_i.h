@@ -863,6 +863,7 @@ namespace be13 {
         static void phase_shutdown(feature_recorder_set &fs);
         typedef void (*xml_notifier_t)(const std::string &xmlstring);
         static void phase_histogram(feature_recorder_set &fs, xml_notifier_t xml_error_notifier);
+        static uint32_t get_max_depth_seen();
         static void process_sbuf(const class scanner_params &sp);                              /* process for feature extraction */
         static void process_packet_info(const be13::packet_info &pi);
 
