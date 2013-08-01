@@ -19,6 +19,33 @@
 
 #include "bulk_extractor_i.h"
 
+#include "../dfxml/src/hash_t.h"
+
+class atomic_hash_set 
+{
+    cppmutex M;
+    std::set<md5_t>myset;
+public:
+    atomic_hash_set():M(),myset(){}
+    bool in(const md5_t &s){
+        cppmutex::lock lock(M);
+        return myset.find(s)!=myset.end();
+    }
+    void insert(const md5_t &s){
+        cppmutex::lock lock(M);
+        myset.insert(s);
+    }
+    bool check_for_presence_and_insert(const md5_t &s){
+        cppmutex::lock lock(M);
+        if(myset.find(s)!=myset.end()) return true; // in the set
+        myset.insert(s);                // otherwise insert it
+        return false;                   // and return that it wasn't
+    }
+}seen_md5s;
+#define HAVE_ATOMIC
+
+
+
 uint32_t scanner_def::max_depth = 7;            // max recursion depth
 uint32_t scanner_def::max_ngram = 10;            // max recursion depth
 static int debug;                               // local debug variable
@@ -82,7 +109,11 @@ packet_plugin_info_vector_t  packet_handlers;   // pcap callback handlers
 
 /* plugin */
 
-be13::plugin::scanner_vector be13::plugin::current_scanners;                                // current scanners
+/**
+ * the vector of current scanners
+ */
+
+be13::plugin::scanner_vector be13::plugin::current_scanners;  
 
 void be13::plugin::set_scanner_debug(int adebug)
 {
@@ -127,7 +158,9 @@ void be13::plugin::set_scanner_enabled_all(bool enable)
  * The histogram should be done in the plug-in
  */
 
+#ifdef USE_HISTOGRAMS
 static histograms_t histograms;
+#endif
 
 /****************************************************************
  *** scanner plugin loading
@@ -179,12 +212,14 @@ void be13::plugin::load_scanner(scanner_t scanner,const scanner_info::scanner_co
     
     sd->enabled      = !(sd->info.flags & scanner_info::SCANNER_DISABLED);
 
+#ifdef USE_HISTOGRAMS
     // Catch histograms and add as a current scanner for all scanners,
     // as a scanner may be enabled after it is loaded.
     for(histograms_t::const_iterator it = sd->info.histogram_defs.begin();
         it != sd->info.histogram_defs.end(); it++){
         histograms.insert((*it));
     }
+#endif
     current_scanners.push_back(sd);
 }
 
@@ -310,7 +345,8 @@ scanner_t *be13::plugin::find_scanner(const std::string &search_name)
     return 0;
 }
 
-void be13::plugin::get_enabled_scanners(std::vector<std::string> &svector) // put the enabled scanners into the vector
+// put the enabled scanners into the vector
+void be13::plugin::get_enabled_scanners(std::vector<std::string> &svector) 
 {
     for(scanner_vector::const_iterator it=current_scanners.begin();it!=current_scanners.end();it++){
 	if((*it)->enabled){
@@ -585,51 +621,49 @@ static size_t find_ngram_size(const sbuf_t &sbuf)
     return 0;                           // no ngram size
 }
 
-/** process_extract is the main workhorse. It is calls each scanner on each page. 
- * @param sp    - the scanner params, including the sbuf to process 
- * It is also the recursive entry point for sub-analysis.
- */
-
 uint32_t be13::plugin::get_max_depth_seen()
 {
     cppmutex::lock lock(max_depth_seenM);
     return max_depth_seen;
 }
 
+/** process_sbuf is the main workhorse. It is calls each scanner on each page. 
+ * @param sp    - the scanner params, including the sbuf to process 
+ * It is also the recursive entry point for sub-analysis.
+ */
+
 void be13::plugin::process_sbuf(const class scanner_params &sp)
 {
     const pos0_t &pos0 = sp.sbuf.pos0;
     class feature_recorder_set &fs = sp.fs;
 
-#ifdef DEBUG_NO_SCANNERS_
-    if(debug & DEBUG_NO_SCANNERS) {
-        cerr << "DEBUG_NO_SCANNERS sbuf:" << sp.sbuf << "\n";
-        return;
-    }
-#endif
-#ifdef DEBUG_PRINT_STEPS
-    if(debug & DEBUG_PRINT_STEPS) {
-        cerr << "be13::plugin::process_sbuf(" << pos0 << "," << sp.sbuf << ")\n";
-    }
-#endif
-#ifdef DEBUG_DUMP_DATA
-    if(debug & DEBUG_DUMP_DATA) {
-        sp.sbuf.hex_dump(cerr);
-    }
-#endif
     {
+        /* note the maximum depth that we've seen */
         cppmutex::lock lock(max_depth_seenM);
         if(sp.depth > max_depth_seen) max_depth_seen = sp.depth;
     }
 
+    /* If we are too deep, error out */
     if(sp.depth >= scanner_def::max_depth){
         feature_recorder_set::alert_recorder->write(pos0,"process_extract: MAX DEPTH REACHED","");
         return;
     }
 
-    /* Determine if the sbuf consists of a repeating ngram */
+    /* Determine if we have seen this buffer before */
+    md5_t md5 = md5_generator::hash_buf(sp.sbuf.buf,sp.sbuf.bufsize);
+    bool seen_before = seen_md5s.check_for_presence_and_insert(md5);
+    if(seen_before){
+        feature_recorder *alert_recorder = fs.get_alert_recorder();
+        std::stringstream ss;
+        ss << "<buflen>" << sp.sbuf.bufsize  << "</buflen>";
+        if(alert_recorder) alert_recorder->write(sp.sbuf.pos0,"DUP SBUF "+md5.hexdigest(),ss.str());
+    }
 
-    /* Scan for a repeating ngram */
+    /* Determine if the sbuf consists of a repeating ngram. If so,
+     * it's only passed to the parsers that want ngrams. (By default,
+     * such sbufs are booring.)
+     */
+
     size_t ngram_size = find_ngram_size(sp.sbuf);
 
     /****************************************************************
@@ -638,29 +672,23 @@ void be13::plugin::process_sbuf(const class scanner_params &sp)
 
     for(scanner_vector::iterator it = current_scanners.begin();it!=current_scanners.end();it++){
         // Look for reasons not to run a scanner
-
         if((*it)->enabled==false) continue; // not enabled
 
-        if((ngram_size > 0) && (((*it)->info.flags & scanner_info::SCANNER_WANTS_NGRAMS)==0)){
-            // buffer contains ngrams; by default they are not processed
-            continue;
+        if(((*it)->info.flags & scanner_info::SCANNER_WANTS_NGRAMS)==0){
+            /* If the scanner does not want ngrams, don't run it if we have ngrams or duplicate data */
+            if(ngram_size > 0) continue;
+            if(seen_before)    continue;
         }
         
         if(sp.depth > 0 && ((*it)->info.flags & scanner_info::SCANNER_DEPTH_0)){
-            // depth >0 and we only run at depth 0
+            // depth >0 and this scanner only run at depth 0
             continue;
         }
 
-        string name = (*it)->info.name;
+        const std::string &name = (*it)->info.name;
 
         try {
 
-#ifdef DEBUG_PRINT_STEPS
-            if(debug & DEBUG_PRINT_STEPS){
-                cerr << "calling scanner " << name << "...\n";
-            }
-#endif
-                    
             /* Compute the effective path for stats */
             bool inname=false;
             string epath;
@@ -693,14 +721,23 @@ void be13::plugin::process_sbuf(const class scanner_params &sp)
 #endif
         }
         catch (const std::exception &e ) {
-            cerr << "Scanner: " << name
-                 << " Exception: " << e.what()
-                 << " processing " << sp.sbuf.pos0 << " bufsize=" << sp.sbuf.bufsize << "\n";
+            std::stringstream ss;
+            ss << "std::exception Scanner: " << name
+               << " Exception: " << e.what()
+               << " sbuf.pos0: " << sp.sbuf.pos0 << " bufsize=" << sp.sbuf.bufsize << "\n";
+            std::cerr << ss.str();
+            feature_recorder *alert_recorder = fs.get_alert_recorder();
+            if(alert_recorder) alert_recorder->write(sp.sbuf.pos0,"scanner="+name,
+                                                     std::string("<exception>")+e.what()+"</exception>");
         }
         catch (...) {
-            cerr << "Scanner: " << name
-                 << " Unknown Exception (...) " 
-                 << " processing " << sp.sbuf.pos0 << " bufsize=" << sp.sbuf.bufsize << "\n";
+            std::stringstream ss;
+            ss << "std::exception Scanner: " << name
+               << " Unknown Exception " 
+               << " sbuf.pos0: " << sp.sbuf.pos0 << " bufsize=" << sp.sbuf.bufsize << "\n";
+            std::cerr << ss.str();
+            feature_recorder *alert_recorder = fs.get_alert_recorder();
+            if(alert_recorder) alert_recorder->write(sp.sbuf.pos0,"scanner="+name,"<unknown_exception/>");
         }
     }
     fs.flush_all();
