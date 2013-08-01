@@ -707,6 +707,7 @@ void be13::plugin::process_sbuf(const class scanner_params &sp)
             aftimer t;
             t.start();
 #endif
+            /* Create a RCB that will recursively call process_sbuf() */
             recursion_control_block rcb(process_sbuf,upperstr(name));
             ((*it)->scanner)(sp,rcb);
 #ifdef HAVE_AFTIMER
