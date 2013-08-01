@@ -22,6 +22,8 @@
 uint32_t scanner_def::max_depth = 7;            // max recursion depth
 uint32_t scanner_def::max_ngram = 10;            // max recursion depth
 static int debug;                               // local debug variable
+static uint32_t max_depth_seen=0;
+static cppmutex max_depth_seenM;
 
 /****************************************************************
  *** misc support
@@ -518,13 +520,13 @@ void be13::plugin::info_scanners(bool detailed_info,
     std::vector<std::string> disabled_wordlist;
     for(scanner_vector::const_iterator it = current_scanners.begin();it!=current_scanners.end();it++){
         if(detailed_info){
-            std::cout << "Scanner Name: " << (*it)->info.name << "\n";
+            if ((*it)->info.name.size()) std::cout << "Scanner Name: " << (*it)->info.name << "\n";
             std::cout << "flags:  " << scanner_info::flag_to_string((*it)->info.flags) << "\n";
             std::cout << "Scanner Interface version: " << (*it)->info.si_version << "\n";
-            std::cout << "Author: " << (*it)->info.author << "\n";
-            std::cout << "Description: " << (*it)->info.description << "\n";
-            std::cout << "URL: " << (*it)->info.url << "\n";
-            std::cout << "Scanner Version: " << (*it)->info.scanner_version << "\n";
+            if ((*it)->info.author.size()) std::cout << "Author: " << (*it)->info.author << "\n";
+            if ((*it)->info.description.size()) std::cout << "Description: " << (*it)->info.description << "\n";
+            if ((*it)->info.url.size()) std::cout << "URL: " << (*it)->info.url << "\n";
+            if ((*it)->info.scanner_version.size()) std::cout << "Scanner Version: " << (*it)->info.scanner_version << "\n";
             std::cout << "Feature Names: ";
             for(set<string>::const_iterator i2 = (*it)->info.feature_names.begin();
                 i2 != (*it)->info.feature_names.end();
@@ -588,6 +590,12 @@ static size_t find_ngram_size(const sbuf_t &sbuf)
  * It is also the recursive entry point for sub-analysis.
  */
 
+uint32_t be13::plugin::get_max_depth_seen()
+{
+    cppmutex::lock lock(max_depth_seenM);
+    return max_depth_seen;
+}
+
 void be13::plugin::process_sbuf(const class scanner_params &sp)
 {
     const pos0_t &pos0 = sp.sbuf.pos0;
@@ -609,6 +617,11 @@ void be13::plugin::process_sbuf(const class scanner_params &sp)
         sp.sbuf.hex_dump(cerr);
     }
 #endif
+    {
+        cppmutex::lock lock(max_depth_seenM);
+        if(sp.depth > max_depth_seen) max_depth_seen = sp.depth;
+    }
+
     if(sp.depth >= scanner_def::max_depth){
         feature_recorder_set::alert_recorder->write(pos0,"process_extract: MAX DEPTH REACHED","");
         return;
