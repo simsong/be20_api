@@ -51,6 +51,8 @@ uint32_t scanner_def::max_ngram = 10;            // max recursion depth
 static int debug;                               // local debug variable
 static uint32_t max_depth_seen=0;
 static cppmutex max_depth_seenM;
+bool be13::plugin::dup_data_alerts = false; // by default, is disabled
+uint64_t be13::plugin::dup_data_encountered = 0; // amount that was not processed
 
 /****************************************************************
  *** misc support
@@ -656,7 +658,8 @@ void be13::plugin::process_sbuf(const class scanner_params &sp)
         feature_recorder *alert_recorder = fs.get_alert_recorder();
         std::stringstream ss;
         ss << "<buflen>" << sp.sbuf.bufsize  << "</buflen>";
-        if(alert_recorder) alert_recorder->write(sp.sbuf.pos0,"DUP SBUF "+md5.hexdigest(),ss.str());
+        if(alert_recorder && dup_data_alerts) alert_recorder->write(sp.sbuf.pos0,"DUP SBUF "+md5.hexdigest(),ss.str());
+        __sync_add_and_fetch(&dup_data_encountered,sp.sbuf.bufsize);
     }
 
     /* Determine if the sbuf consists of a repeating ngram. If so,

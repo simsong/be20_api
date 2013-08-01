@@ -829,6 +829,8 @@ namespace be13 {
     struct plugin {
         typedef vector<scanner_def *> scanner_vector;
         static scanner_vector current_scanners;                         // current scanners
+        static bool dup_data_alerts;  // notify when duplicate data is not processed
+        static uint64_t dup_data_encountered; // amount of dup data encountered
 
         static void set_scanner_debug(int debug);
 
