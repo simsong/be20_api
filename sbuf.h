@@ -82,7 +82,7 @@ public:
     explicit pos0_t():path(""),offset(0){}
     pos0_t(std::string s):path(s),offset(0){}
     pos0_t(const pos0_t &obj):path(obj.path),offset(obj.offset){ }
-    std::string str() const {
+    std::string str() const {           // convert to a string, with offset included
         std::stringstream ss;
         if(path.size()>0){
             ss << path << "-";
@@ -90,26 +90,26 @@ public:
         ss << offset;
         return ss.str();
     }
-    bool isRecursive() const {
+    bool isRecursive() const {          // is there a path?
         return path.size() > 0;
     } 
-    std::string firstPart() const {
+    std::string firstPart() const {     // the first part of the path
         size_t p = path.find('-');
         if(p==std::string::npos) return std::string("");
         return path.substr(0,p);
     }
-    std::string lastAddedPart() const {
+    std::string lastAddedPart() const { // the last part of the path, before the offset
         size_t p = path.rfind('-');
         if(p==std::string::npos) return std::string("");
         return path.substr(p+1);
     }
-    std::string alphaPart() const {          // return the non-numeric parts
+    std::string alphaPart() const {    // return the non-numeric parts, with /'s between each
         std::string desc;
         bool inalpha = false;
         /* Now get the std::string part of pos0 */
         for(std::string::const_iterator it = path.begin();it!=path.end();it++){
             if((*it)=='-'){
-                desc += '/';
+                if(desc.size()>0 && desc.at(desc.size()-1)!='/') desc += '/';
                 inalpha=false;
             }
             if(isalpha(*it) || (inalpha && isdigit(*it))){

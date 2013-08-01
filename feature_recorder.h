@@ -49,8 +49,6 @@ using namespace std;
 
 class feature_recorder {
 private:
-    //static const string UTF8_BOM;   // UTF-8 byte order mark
-    //static const string BOM_EXPLAINATION; // what is this BOM thing? Put at the top of each file
     uint32_t flags;
     static uint32_t debug;
     bool histogram_enabled;             /* do we automatically histogram? */
@@ -63,7 +61,7 @@ private:
     };
     feature_recorder(const feature_recorder &fr) __attribute__((__noreturn__)) :
         flags(0),histogram_enabled(false),
-        outdir(),input_fname(),name(),count(0),ios(),context_window_before(),context_window_after(),Mf(),Mr(),
+        outdir(),input_fname(),name(),ignore_encoding(),count_(0),ios(),context_window_before(),context_window_after(),Mf(),Mr(),
         stop_list_recorder(0),carved_set(),file_number(0),carve_mode()
         {
         throw new not_impl();
@@ -104,27 +102,27 @@ public:
 
     /** @} */
     static const int max_histogram_files = 10;  // don't make more than 10 files in low-memory conditions
-    static const string histogram_file_header;
-    static const string feature_file_header;
-    static const string bulk_extractor_version_header;
+    static const std::string histogram_file_header;
+    static const std::string feature_file_header;
+    static const std::string bulk_extractor_version_header;
     static uint32_t opt_max_context_size;
     static uint32_t opt_max_feature_size;
     static int64_t offset_add;          // added to every reported offset, for use with hadoop
-    static string banner_file;          // banner for top of every file
-    static string extract_feature(const string &line);
+    static std::string banner_file;          // banner for top of every file
+    static std::string extract_feature(const std::string &line);
 
     feature_recorder(string outdir,string input_fname,string name);
     virtual ~feature_recorder();
 
     virtual void set_flag(uint32_t flags_){flags|=flags_;}
-    //virtual void set_input_fname(const std::string &f){input_fname = f;}
 
     static size_t context_window_default; // global option
-    const string outdir;                // where output goes (could be static, I guess 
-    const string input_fname;           // image we are analyzing
-    const string name;                  /* name of this feature recorder */
-    int64_t count;                      /* number of records written */
+    const std::string outdir;                // where output goes (could be static, I guess 
+    const std::string input_fname;           // image we are analyzing
+    const std::string name;                  /* name of this feature recorder */
 private:
+    std::string ignore_encoding;       // encoding to ignore for carving
+    int64_t count_;                      /* number of records written */
     std::fstream ios;                   /* where features are written */
     size_t context_window_before;       // context window
     size_t context_window_after;       // context window
@@ -133,20 +131,23 @@ private:
     cppmutex Mr;                        /* protects the redlist */
 public:
 
-    void   banner_stamp(std::ostream &os,const std::string &header); // stamp BOM, banner, and header
-
+    /* these are not threadsafe and should only be called in startup */
     void set_context_window(size_t win){
         context_window_before = win;
         context_window_after = win;
     }
     void set_context_window_before(size_t win){ context_window_before = win;}
     void set_context_window_after(size_t win){ context_window_after = win; }
+    void set_carve_ignore_encoding(const std::string &encoding){ ignore_encoding = encoding;}
+    /* End non-threadsafe */
+
+    void   banner_stamp(std::ostream &os,const std::string &header); // stamp BOM, banner, and header
 
     /* where stopped items (on stop_list or context_stop_list) get recorded: */
     class feature_recorder *stop_list_recorder; // where stopped features get written
-    string fname_counter(string suffix);
-    string quote_string(const string &feature); // turns unprintable characters to octal escape
-    static string unquote_string(const string &feature); // turns octal escape back to binary characters
+    std::string fname_counter(string suffix);
+    static std::string quote_string(const std::string &feature); // turns unprintable characters to octal escape
+    static std::string unquote_string(const std::string &feature); // turns octal escape back to binary characters
 
     /* feature file management */
     void open();
@@ -154,6 +155,9 @@ public:
     void flush();
     void make_histogram(const class histogram_def &def);
     
+    /* Methods to get info */
+    uint64_t count(){return count_;}
+
     /* Methods to write.
      * write() is the basic write - you say where, and it does it.
      * write_buf() writes from a position within the buffer, with context.
@@ -177,7 +181,7 @@ public:
     virtual void printf(const char *fmt_,...) __attribute__((format(printf, 2, 3)));
     // 
     // write a feature and its context; the feature may be in the context, but doesn't need to be.
-    virtual void write(const pos0_t &pos0,const string &feature,const string &context);  
+    virtual void write(const pos0_t &pos0,const std::string &feature,const std::string &context);  
 
     // write a feature located at a given place within an sbuf.
     // Context is written automatically
@@ -192,23 +196,27 @@ public:
         CARVE_NONE=0,
         CARVE_ENCODED=1,
         CARVE_ALL=2};
-
+#define CARVE_MODE_DESCRIPTION "0=carve none; 1=carve encoded; 2=carve all"
     std::set<std::string>     carved_set;    /* set of hex hash values of objects we've carved;  */
     int64_t     file_number;            /* starts at 0; gets incremented by carve(); for binning */
     carve_mode_t carve_mode;
     typedef std::string (*hashing_function_t)(const sbuf_t &sbuf); // returns a hex value
     void set_carve_mode(carve_mode_t aMode){carve_mode=aMode;}
-    virtual void carve(const sbuf_t &sbuf,size_t pos,size_t len,
-                       const std::string &ext, // appended to forensic path
-                       const struct be13::hash_def &hasher);
+
+    // Carve a file; returns filename of carved file or empty string if nothing carved
+    virtual std::string carve(const sbuf_t &sbuf,size_t pos,size_t len, 
+                              const std::string &ext, // appended to forensic path
+                              const struct be13::hash_def &hasher);
+    // Set the time of the carved file to iso8601 file
+    virtual void set_carve_mtime(const std::string &fname, const std::string &mtime_iso8601);
 
     /**
      * EXPERIMENTAL!
      * support for tagging blocks with their type.
      * typically 'len' is the sector size, but it need not be.
      */
-    virtual void write_tag(const pos0_t &pos0,size_t len,const string &tagName);
-    virtual void write_tag(const sbuf_t &sbuf,const string &tagName){
+    virtual void write_tag(const pos0_t &pos0,size_t len,const std::string &tagName);
+    virtual void write_tag(const sbuf_t &sbuf,const std::string &tagName){
         write_tag(sbuf.pos0,sbuf.pagesize,tagName);
     }
 

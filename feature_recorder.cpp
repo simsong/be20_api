@@ -99,7 +99,7 @@ void feature_recorder::banner_stamp(std::ostream &os,const std::string &header)
 
 feature_recorder::feature_recorder(string outdir_,string input_fname_,string name_):
     flags(0),histogram_enabled(false),
-    outdir(outdir_),input_fname(input_fname_),name(name_),count(0),ios(),
+    outdir(outdir_),input_fname(input_fname_),name(name_),ignore_encoding(),count_(0),ios(),
     context_window_before(context_window_default),context_window_after(context_window_default),
     Mf(),Mr(), 
     stop_list_recorder(0),carved_set(),
@@ -145,7 +145,7 @@ void feature_recorder::open()
             if (ios.peek()=='\n'){           // we are finally on the \n
                 ios.seekg(1L,ios_base::cur); // move the getting one forward
                 ios.seekp(ios.tellg(),ios_base::beg); // put the putter at the getter location
-                count = 1;                            // greater than zero
+                count_ = 1;                            // greater than zero
                 return;
             }
         }
@@ -355,7 +355,7 @@ void feature_recorder::write(const std::string &str)
     }
     cppmutex::lock lock(Mf);
     if(ios.is_open()){
-        if(count==0){
+        if(count_==0){
             banner_stamp(ios,feature_file_header);
         }
 
@@ -364,7 +364,7 @@ void feature_recorder::write(const std::string &str)
             cerr << "DISK FULL\n";
             ios.close();
         }
-        count++;
+        count_++;
     }
 }
 
@@ -567,18 +567,18 @@ std::string replace(const std::string &src,char f,char t)
  * @param hasher - to compute the hash of the carved object.
  *
  */
-void feature_recorder::carve(const sbuf_t &sbuf,size_t pos,size_t len,
-                             const std::string &ext,
-                             const be13::hash_def &hasher)
+std::string feature_recorder::carve(const sbuf_t &sbuf,size_t pos,size_t len,
+                                    const std::string &ext,
+                                    const be13::hash_def &hasher)
 {
     /* If we are in the margin, ignore; it will be processed again */
     if(pos >= sbuf.pagesize && pos < sbuf.bufsize){
-        return;
+        return std::string();
     }
 
     if(pos >= sbuf.bufsize){    /* Sanity checks */
         cerr << "*** carve: WRITE OUTSIDE BUFFER.  pos=" << pos << " sbuf=" << sbuf << "\n";
-        return;
+        return std::string();
     }
 
     
@@ -605,12 +605,24 @@ void feature_recorder::carve(const sbuf_t &sbuf,size_t pos,size_t len,
        << "<hashdigest type='" << hasher.name << "'>" << carved_hash_hexvalue << "</hashdigest></fileobject>";
     this->write(sbuf.pos0+len,fname,ss.str());
     
-    /* Now carve to a file depending on the carving mode */
+    /* Now carve to a file depending on the carving mode.
+     * The purpose of CARVE_ENCODED is to allow us to carve JPEGs when they are embedded in, say, GZIP files,
+     * but not carve JPEGs that are bare.
+     * The difficulty arises when you have a tool that can go into, say, ZIP files. In this case, we don't
+     * want to carve every ZIP file, just the (for example) XORed ZIP files. So the ZIP carver doesn't carve every
+     * ZIP file, just the ZIP files that are in HIBER files.  That is, we want to not carve a path of ZIP-234234 but we
+     * do want to carve a path of 1000-HIBER-33423-ZIP-2343.
+     * This is implemented by having an ignore_encoding. the ZIP carver sets it to ZIP so it won't carve things that are just found
+     * in a ZIP file. This means that it won't carve disembodied ZIP files found in unallocated space. You might want to do that.
+     * If so, set ZIP's carve mode to CARVE_ALL.
+     */
     switch(carve_mode){
     case CARVE_NONE:
-        return;
+        return std::string();                         // carve nothing
     case CARVE_ENCODED:
-        if(sbuf.pos0.isRecursive()==false) return;
+        if(sbuf.pos0.path.size()==0) return std::string(); // not encoded
+        if(sbuf.pos0.alphaPart()==ignore_encoding) return std::string(); // ignore if it is just encoded with this
+        break;                                      // otherwise carve
     case CARVE_ALL:
         break;
     }
@@ -633,14 +645,14 @@ void feature_recorder::carve(const sbuf_t &sbuf,size_t pos,size_t len,
     int oerrno = errno;                 // remember error number
     if (access(dirname2.c_str(),R_OK)!=0){
         cerr << "Could not make directory " << dirname2 << ": " << strerror(oerrno) << "\n";
-        return;
+        return std::string();
     }
 
     /* Write the file into the directory */
     int fd = ::open(fname.c_str(),O_CREAT|O_BINARY|O_RDWR,0666);
     if(fd<0){
         cerr << "*** carve: Cannot create " << fname << ": " << strerror(errno) << "\n";
-        return;
+        return std::string();
     }
 
     ssize_t ret = sbuf.write(fd,pos,len);
@@ -648,6 +660,21 @@ void feature_recorder::carve(const sbuf_t &sbuf,size_t pos,size_t len,
         cerr << "*** carve: Cannot write(pos=" << fd << "," << pos << " len=" << len << "): "<< strerror(errno) << "\n";
     }
     ::close(fd);
+    return fname;
+}
+
+void feature_recorder::set_carve_mtime(const std::string &fname, const std::string &mtime_iso8601) 
+{
+    if(fname.size()){
+        struct tm tm;
+        if(strptime(mtime_iso8601.c_str(),"%Y-%m-%dT%H:%M:%S",&tm)){
+            time_t t = mktime(&tm);
+            if(t>0){
+                const struct timeval times[2] = {{t,0},{t,0}};
+                utimes(fname.c_str(),times);
+            }
+        }
+    }
 }
 
 /**
