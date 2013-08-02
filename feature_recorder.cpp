@@ -571,8 +571,6 @@ std::string feature_recorder::carve(const sbuf_t &sbuf,size_t pos,size_t len,
                                     const std::string &ext,
                                     const be13::hash_def &hasher)
 {
-    return std::string();               // EMERGENCY DISABLE
-
     /* If we are in the margin, ignore; it will be processed again */
     if(pos >= sbuf.pagesize && pos < sbuf.bufsize){
         return std::string();
@@ -667,7 +665,6 @@ std::string feature_recorder::carve(const sbuf_t &sbuf,size_t pos,size_t len,
 
 void feature_recorder::set_carve_mtime(const std::string &fname, const std::string &mtime_iso8601) 
 {
-    return;
     if(fname.size()){
         struct tm tm;
         if(strptime(mtime_iso8601.c_str(),"%Y-%m-%dT%H:%M:%S",&tm)){
