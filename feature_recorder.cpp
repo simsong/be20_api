@@ -581,7 +581,33 @@ std::string feature_recorder::carve(const sbuf_t &sbuf,size_t pos,size_t len,
         return std::string();
     }
 
-    
+    /* Carve to a file depending on the carving mode.  The purpose
+     * of CARVE_ENCODED is to allow us to carve JPEGs when they are
+     * embedded in, say, GZIP files, but not carve JPEGs that are
+     * bare.  The difficulty arises when you have a tool that can go
+     * into, say, ZIP files. In this case, we don't want to carve
+     * every ZIP file, just the (for example) XORed ZIP files. So the
+     * ZIP carver doesn't carve every ZIP file, just the ZIP files
+     * that are in HIBER files.  That is, we want to not carve a path
+     * of ZIP-234234 but we do want to carve a path of
+     * 1000-HIBER-33423-ZIP-2343.  This is implemented by having an
+     * ignore_encoding. the ZIP carver sets it to ZIP so it won't
+     * carve things that are just found in a ZIP file. This means that
+     * it won't carve disembodied ZIP files found in unallocated
+     * space. You might want to do that.  If so, set ZIP's carve mode
+     * to CARVE_ALL.
+     */
+    switch(carve_mode){
+    case CARVE_NONE:
+        return std::string();                         // carve nothing
+    case CARVE_ENCODED:
+        if(sbuf.pos0.path.size()==0) return std::string(); // not encoded
+        if(sbuf.pos0.alphaPart()==ignore_encoding) return std::string(); // ignore if it is just encoded with this
+        break;                                      // otherwise carve
+    case CARVE_ALL:
+        break;
+    }
+
     /* If the directory doesn't exist, make it.
      * If two threads try to make the directory,
      * that's okay, because the second one will fail.
@@ -605,28 +631,6 @@ std::string feature_recorder::carve(const sbuf_t &sbuf,size_t pos,size_t len,
        << "<hashdigest type='" << hasher.name << "'>" << carved_hash_hexvalue << "</hashdigest></fileobject>";
     this->write(sbuf.pos0+len,fname,ss.str());
     
-    /* Now carve to a file depending on the carving mode.
-     * The purpose of CARVE_ENCODED is to allow us to carve JPEGs when they are embedded in, say, GZIP files,
-     * but not carve JPEGs that are bare.
-     * The difficulty arises when you have a tool that can go into, say, ZIP files. In this case, we don't
-     * want to carve every ZIP file, just the (for example) XORed ZIP files. So the ZIP carver doesn't carve every
-     * ZIP file, just the ZIP files that are in HIBER files.  That is, we want to not carve a path of ZIP-234234 but we
-     * do want to carve a path of 1000-HIBER-33423-ZIP-2343.
-     * This is implemented by having an ignore_encoding. the ZIP carver sets it to ZIP so it won't carve things that are just found
-     * in a ZIP file. This means that it won't carve disembodied ZIP files found in unallocated space. You might want to do that.
-     * If so, set ZIP's carve mode to CARVE_ALL.
-     */
-    switch(carve_mode){
-    case CARVE_NONE:
-        return std::string();                         // carve nothing
-    case CARVE_ENCODED:
-        if(sbuf.pos0.path.size()==0) return std::string(); // not encoded
-        if(sbuf.pos0.alphaPart()==ignore_encoding) return std::string(); // ignore if it is just encoded with this
-        break;                                      // otherwise carve
-    case CARVE_ALL:
-        break;
-    }
-
     /* Make the directory if it doesn't exist.  */
     if (access(dirname2.c_str(),R_OK)!=0){
 #ifdef WIN32
