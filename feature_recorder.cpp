@@ -35,12 +35,14 @@
 #define DEBUG_PEDANTIC    0x0001// check values more rigorously
 #endif
 
+pthread_t feature_recorder::main_threadid = 0;
 size_t  feature_recorder::context_window_default=16;                    /* number of bytes of context */
 int64_t feature_recorder::offset_add   = 0;
 std::string  feature_recorder::banner_file;
 uint32_t feature_recorder::opt_max_context_size=1024*1024;
 uint32_t feature_recorder::opt_max_feature_size=1024*1024;
 uint32_t feature_recorder::debug=0;
+
 
 /** 
  * 1. Put the UTF-8 BOM in the file.
@@ -102,7 +104,7 @@ feature_recorder::feature_recorder(string outdir_,string input_fname_,string nam
     outdir(outdir_),input_fname(input_fname_),name(name_),ignore_encoding(),count_(0),ios(),
     context_window_before(context_window_default),context_window_after(context_window_default),
     Mf(),Mr(), 
-    stop_list_recorder(0),carved_set(),
+    stop_list_recorder(0),
     file_number(0),carve_mode(CARVE_ENCODED)
 {
 }

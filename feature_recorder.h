@@ -39,18 +39,23 @@
  
 using namespace std;
 #include <string>
-#include <pthread.h>
-#include <stdarg.h>
+#include <cstdarg>
 #include <fstream>
 #include <set>
+#include <cassert>
+
+#include <pthread.h>
 
 #include "regex.h"
 #include "cppmutex.h"
 
 class feature_recorder {
-private:
-    uint32_t flags;
-    static uint32_t debug;
+    static uint32_t debug;              // are we debugging?
+    static pthread_t main_threadid;     // main threads ID
+    static void MAINTHREAD(){// function that can only be called from main thread
+        assert(main_threadid==pthread_self());
+    };                
+    uint32_t flags;                     // flags for this feature recorder
     bool histogram_enabled;             /* do we automatically histogram? */
     /*** neither copying nor assignment is implemented                         ***
      *** We do this by making them private constructors that throw exceptions. ***/
@@ -62,7 +67,7 @@ private:
     feature_recorder(const feature_recorder &fr) __attribute__((__noreturn__)) :
         flags(0),histogram_enabled(false),
         outdir(),input_fname(),name(),ignore_encoding(),count_(0),ios(),context_window_before(),context_window_after(),Mf(),Mr(),
-        stop_list_recorder(0),carved_set(),file_number(0),carve_mode()
+        stop_list_recorder(0),file_number(0),carve_mode()
         {
         throw new not_impl();
     }
@@ -70,6 +75,7 @@ private:
     /****************************************************************/
 
 public:
+    static void set_main_threadid(){main_threadid=pthread_self();};             // set the main 
     static void set_debug(uint32_t ndebug){debug=ndebug;}
     typedef string offset_t;
 
@@ -79,13 +85,10 @@ public:
      * These flags control scanners.  Set them with set_flag().
      */
     /** Disable this recorder. */
-    static const int FLAG_DISABLED=0x01;        
-    /** Do not write context. */
-    static const int FLAG_NO_CONTEXT=0x02;      
-    /** Do not honor the stoplist/alertlist. */
-    static const int FLAG_NO_STOPLIST=0x04;     
-    /** Do not honor the stoplist/alertlist. */
-    static const int FLAG_NO_ALERTLIST=0x04;    
+    static const int FLAG_DISABLED=0x01;        // Disabled
+    static const int FLAG_NO_CONTEXT=0x02;        // Do not write context.
+    static const int FLAG_NO_STOPLIST=0x04;      // Do not honor the stoplist/alertlist.
+    static const int FLAG_NO_ALERTLIST=0x04;    // Do not honor the stoplist/alertlist.
     /**
      * Normally feature recorders automatically quote non-UTF8 characters
      * with \x00 notation and quote "\" as \x5C. Specify FLAG_NO_QUOTE to
@@ -99,12 +102,13 @@ public:
      */
     static const int FLAG_XML    = 0x10; // will be sending XML
 
-
     /** @} */
     static const int max_histogram_files = 10;  // don't make more than 10 files in low-memory conditions
     static const std::string histogram_file_header;
     static const std::string feature_file_header;
     static const std::string bulk_extractor_version_header;
+
+    // These must only be changed in the main thread:
     static uint32_t opt_max_context_size;
     static uint32_t opt_max_feature_size;
     static int64_t offset_add;          // added to every reported offset, for use with hadoop
@@ -133,12 +137,13 @@ public:
 
     /* these are not threadsafe and should only be called in startup */
     void set_context_window(size_t win){
+        MAINTHREAD();
         context_window_before = win;
         context_window_after = win;
     }
-    void set_context_window_before(size_t win){ context_window_before = win;}
-    void set_context_window_after(size_t win){ context_window_after = win; }
-    void set_carve_ignore_encoding(const std::string &encoding){ ignore_encoding = encoding;}
+    void set_context_window_before(size_t win){ MAINTHREAD(); context_window_before = win;}
+    void set_context_window_after(size_t win){ MAINTHREAD(); context_window_after = win; }
+    void set_carve_ignore_encoding(const std::string &encoding){ MAINTHREAD();ignore_encoding = encoding;}
     /* End non-threadsafe */
 
     void   banner_stamp(std::ostream &os,const std::string &header); // stamp BOM, banner, and header
@@ -197,11 +202,10 @@ public:
         CARVE_ENCODED=1,
         CARVE_ALL=2};
 #define CARVE_MODE_DESCRIPTION "0=carve none; 1=carve encoded; 2=carve all"
-    std::set<std::string>     carved_set;    /* set of hex hash values of objects we've carved;  */
-    int64_t     file_number;            /* starts at 0; gets incremented by carve(); for binning */
+    int64_t      file_number;            /* starts at 0; gets incremented by carve(); for binning */
     carve_mode_t carve_mode;
-    typedef std::string (*hashing_function_t)(const sbuf_t &sbuf); // returns a hex value
-    void set_carve_mode(carve_mode_t aMode){carve_mode=aMode;}
+    typedef      std::string (*hashing_function_t)(const sbuf_t &sbuf); // returns a hex value
+    void         set_carve_mode(carve_mode_t aMode){MAINTHREAD();carve_mode=aMode;}
 
     // Carve a file; returns filename of carved file or empty string if nothing carved
     virtual std::string carve(const sbuf_t &sbuf,size_t pos,size_t len, 

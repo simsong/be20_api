@@ -9,6 +9,7 @@
 #include <sys/stat.h>
 #include <dirent.h>
 #include <algorithm>
+#include <tr1/unordered_set>
 #ifdef HAVE_ERR_H
 #include <err.h>
 #endif
@@ -21,10 +22,21 @@
 
 #include "../dfxml/src/hash_t.h"
 
+namespace std {
+    namespace tr1 {
+        template<>
+        struct hash<md5_t> {
+            size_t operator()(const md5_t &key) const {
+                return *(size_t *)(key.final());
+            }
+        };
+    }
+}
+
 class atomic_hash_set 
 {
     cppmutex M;
-    std::set<md5_t>myset;
+    std::tr1::unordered_set<md5_t>myset;
 public:
     atomic_hash_set():M(),myset(){}
     bool in(const md5_t &s){
