@@ -35,7 +35,9 @@
 #define DEBUG_PEDANTIC    0x0001// check values more rigorously
 #endif
 
+#ifndef WIN32
 pthread_t feature_recorder::main_threadid = 0;
+#endif
 size_t  feature_recorder::context_window_default=16;                    /* number of bytes of context */
 int64_t feature_recorder::offset_add   = 0;
 std::string  feature_recorder::banner_file;
@@ -669,8 +671,12 @@ std::string feature_recorder::carve(const sbuf_t &sbuf,size_t pos,size_t len,
     return fname;
 }
 
+/**
+ * Currently, we need strptime() and utimes() to set the time.
+ */
 void feature_recorder::set_carve_mtime(const std::string &fname, const std::string &mtime_iso8601) 
 {
+#if defined(HAVE_STRPTIME) && defined(HAVE_UTIMES)
     if(fname.size()){
         struct tm tm;
         if(strptime(mtime_iso8601.c_str(),"%Y-%m-%dT%H:%M:%S",&tm)){
@@ -681,6 +687,7 @@ void feature_recorder::set_carve_mtime(const std::string &fname, const std::stri
             }
         }
     }
+#endif
 }
 
 /**

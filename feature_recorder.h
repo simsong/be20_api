@@ -53,7 +53,9 @@ class feature_recorder {
     static uint32_t debug;              // are we debugging?
     static pthread_t main_threadid;     // main threads ID
     static void MAINTHREAD(){// function that can only be called from main thread
+#ifndef WIN32
         assert(main_threadid==pthread_self());
+#endif
     };                
     uint32_t flags;                     // flags for this feature recorder
     bool histogram_enabled;             /* do we automatically histogram? */
@@ -75,7 +77,11 @@ class feature_recorder {
     /****************************************************************/
 
 public:
-    static void set_main_threadid(){main_threadid=pthread_self();};             // set the main 
+    static void set_main_threadid(){
+#ifndef WIN32
+        main_threadid=pthread_self();
+#endif
+    };             // set the main 
     static void set_debug(uint32_t ndebug){debug=ndebug;}
     typedef string offset_t;
 
