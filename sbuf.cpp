@@ -19,7 +19,9 @@ sbuf_t *sbuf_t::map_file(const std::string &fname,const pos0_t &pos0)
     int fd = open(fname.c_str(),O_RDONLY,0);
     if(fd<0) return 0;          /* cannot open file */
     sbuf_t *sbuf = sbuf_t::map_file(fname,pos0,fd);
-    sbuf->should_close = true;          // be sure to close the file
+    if(sbuf) {
+        sbuf->should_close = true;          // be sure to close the file
+    }
     return sbuf;
 }
 
