@@ -1,4 +1,5 @@
 BE13_API= \
+        be13_api/aftimer.h \
         be13_api/beregex.cpp \
         be13_api/beregex.h \
         be13_api/bulk_extractor_i.h \
