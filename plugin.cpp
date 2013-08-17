@@ -721,21 +721,22 @@ void be13::plugin::process_sbuf(const class scanner_params &sp)
             /* Create a RCB that will recursively call process_sbuf() */
             recursion_control_block rcb(process_sbuf,upperstr(name));
 
-            if(debug & DEBUG_PRINT_STEPS){
-                cerr << "sbuf.pos0=" << process_sbuf.pos0 << " calling scanner " << name << "\n";
-            }
             /* Call the scanner.*/
             {
                 aftimer t;
+                if(debug & DEBUG_PRINT_STEPS){
+                    cerr << "sbuf.pos0=" << sp.sbuf.pos0 << " calling scanner " << name << "\n";
+                }
                 t.start();
                 ((*it)->scanner)(sp,rcb);
                 t.stop();
+                if(debug & DEBUG_PRINT_STEPS){
+                    cerr << "sbuf.pos0=" << sp.sbuf.pos0 << " scanner "
+                         << name << " t=" << t.elapsed_seconds() << "\n";
+                }
                 sp.fs.add_stats(epath,t.elapsed_seconds());
             }
-            if(debug & DEBUG_PRINT_STEPS){
-                cerr << "sbuf.pos0=" << process_sbuf.pos0 << " scanner "
-                     << name << " t=" << t.elapsed_seconds() << "\n";
-            }
+                
         }
         catch (const std::exception &e ) {
             std::stringstream ss;
