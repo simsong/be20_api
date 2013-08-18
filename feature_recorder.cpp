@@ -111,7 +111,9 @@ feature_recorder::feature_recorder(string outdir_,string input_fname_,string nam
 {
 }
 
-/* Don't have to erase the stop_list_recorder because it is in the set */
+/* Don't have to delete the stop_list_recorder because it is in the
+ * feature_recorder_set and will be separately deleted.
+ */
 feature_recorder::~feature_recorder()
 {
     if(ios.is_open()){

@@ -659,7 +659,8 @@ void be13::plugin::process_sbuf(const class scanner_params &sp)
 
     /* If we are too deep, error out */
     if(sp.depth >= scanner_def::max_depth){
-        feature_recorder_set::alert_recorder->write(pos0,"process_extract: MAX DEPTH REACHED","");
+        feature_recorder *fr = fs.get_alert_recorder();
+        if(fr) fr->write(pos0,"process_extract: MAX DEPTH REACHED","");
         return;
     }
 

@@ -35,7 +35,6 @@ private:
     uint32_t flags;
 public:
     // instance data //
-    static feature_recorder *alert_recorder;
     std::string input_fname;            // input file
     std::string outdir;                 // where output goes
     feature_recorder_map  frm;          // map of feature recorders
@@ -91,9 +90,6 @@ public:
     // only virtual functions may be called by plugins!
     virtual feature_recorder *get_name(const std::string &name);
     virtual feature_recorder *get_alert_recorder();
-    static void get_alert_recorder_name(feature_file_names_t &feature_file_names);
-
-
 };
 
 

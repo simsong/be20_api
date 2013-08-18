@@ -17,11 +17,11 @@
 
 const string feature_recorder_set::ALERT_RECORDER_NAME = "alerts";
 const string feature_recorder_set::DISABLED_RECORDER_NAME = "disabled";
-feature_recorder  *feature_recorder_set::alert_recorder = 0; // no alert recorder to start
 
 /* Create an empty recorder */
 feature_recorder_set::feature_recorder_set(uint32_t flags_):flags(flags_),input_fname(),
-                                                            outdir(),frm(),Mlock(),seen_set(),seen_set_lock(),scanner_stats()
+                                                            outdir(),frm(),Mlock(),seen_set(),
+                                                            seen_set_lock(),scanner_stats()
 {
     if(flags & SET_DISABLED){
         create_name(DISABLED_RECORDER_NAME,false);
@@ -39,13 +39,16 @@ feature_recorder_set::feature_recorder_set(const feature_file_names_t &feature_f
                                            const std::string &input_fname_,
                                            const std::string &outdir_,
                                            bool create_stop_files):
-    flags(0),input_fname(input_fname_),outdir(outdir_),frm(),Mlock(),seen_set(),seen_set_lock(),scanner_stats()
+    flags(0),input_fname(input_fname_),outdir(outdir_),frm(),Mlock(),
+    seen_set(),seen_set_lock(),scanner_stats()
 {
     if(flags & SET_DISABLED){
         create_name(DISABLED_RECORDER_NAME,false);
         frm[DISABLED_RECORDER_NAME]->set_flag(feature_recorder::FLAG_DISABLED);
         return;
     }
+
+    create_name(feature_recorder_set::ALERT_RECORDER_NAME,false); // make the alert recorder
 
     /* Create the requested feature files */
     for(set<string>::const_iterator it=feature_files.begin();it!=feature_files.end();it++){
@@ -111,6 +114,11 @@ void feature_recorder_set::get_stats(void *user,stat_callback_t stat_callback)
 
 void feature_recorder_set::create_name(string name,bool create_stop_file) 
 {
+    if(frm.find(name)!=frm.end()){
+        std::cerr << "create_name: feature recorder '" << name << "' already exists\n";
+        return;
+    }
+
     feature_recorder *fr = new feature_recorder(outdir,input_fname,name);
     frm[name] = fr;
     if(create_stop_file){
@@ -127,10 +135,6 @@ void feature_recorder_set::create_name(string name,bool create_stop_file)
     if(fr->stop_list_recorder) fr->stop_list_recorder->open();
 }
 
-void feature_recorder_set::get_alert_recorder_name(feature_file_names_t &feature_file_names)
-{
-    feature_file_names.insert(feature_recorder_set::ALERT_RECORDER_NAME); // we always have alerts
-}
 feature_recorder *feature_recorder_set::get_alert_recorder()
 {
     return get_name(feature_recorder_set::ALERT_RECORDER_NAME);
