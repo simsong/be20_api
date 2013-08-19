@@ -189,21 +189,15 @@ inline bool operator ==(const class pos0_t & pos0,const class pos0_t &pos1) {
 /**
  * \class managed_malloc Like new[], but it automatically gets freed when the object is dropped.
  */
-template < class Type > class managed_malloc {
-    class not_impl: public std::exception {
-        virtual const char *what() const throw() {
-            return "managed_malloc assignment is not implemented.";
-        }
-    };
-    managed_malloc &operator=(const managed_malloc &that) {
-        throw new not_impl();
-    }
-    managed_malloc(const managed_malloc &that):buf(0){
-        throw new not_impl();
-    }
+template < class TYPE > class managed_malloc {
+    // default construction, copy construction and assignment are meaningless
+    // and not implemented
+    managed_malloc& operator=(const managed_malloc&); 
+    managed_malloc(const managed_malloc&);
+    managed_malloc();
 public:
-    Type *buf;
-    managed_malloc(size_t bytes):buf(new Type[bytes]){ }
+    TYPE *buf;
+    managed_malloc(size_t bytes):buf(new TYPE[bytes]){ }
     ~managed_malloc(){
         if(buf) delete []buf;
     }
@@ -590,10 +584,10 @@ public:
 
     // Return a pointer to a structure contained within the sbuf if there is
     // room, otherwise return a null pointer.
-    template<class Type>
-    const Type * get_struct_ptr(uint32_t pos) const {
-        if (pos + sizeof(Type) <= bufsize) {
-            return reinterpret_cast<const Type *> (buf+pos);
+    template<class TYPE>
+    const TYPE * get_struct_ptr(uint32_t pos) const {
+        if (pos + sizeof(TYPE) <= bufsize) {
+            return reinterpret_cast<const TYPE *> (buf+pos);
         }
         return NULL;
     }
