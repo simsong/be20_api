@@ -50,6 +50,10 @@ using namespace std;
 #include "cppmutex.h"
 
 class feature_recorder {
+    // default copy construction and assignment are meaningless
+    // and not implemented
+    feature_recorder(const feature_recorder &fr);
+    feature_recorder &operator=(const feature_recorder &fr);
     static uint32_t debug;              // are we debugging?
     static pthread_t main_threadid;     // main threads ID
     static void MAINTHREAD(){// function that can only be called from main thread
@@ -59,21 +63,6 @@ class feature_recorder {
     };                
     uint32_t flags;                     // flags for this feature recorder
     bool histogram_enabled;             /* do we automatically histogram? */
-    /*** neither copying nor assignment is implemented                         ***
-     *** We do this by making them private constructors that throw exceptions. ***/
-    class not_impl: public exception {
-        virtual const char *what() const throw() {
-            return "copying feature_recorder objects is not implemented.";
-        }
-    };
-    feature_recorder(const feature_recorder &fr) __attribute__((__noreturn__)) :
-        flags(0),histogram_enabled(false),
-        outdir(),input_fname(),name(),ignore_encoding(),count_(0),ios(),context_window_before(),context_window_after(),Mf(),Mr(),
-        stop_list_recorder(0),file_number(0),carve_mode()
-        {
-        throw new not_impl();
-    }
-    const feature_recorder &operator=(const feature_recorder &fr){ throw new not_impl(); }
     /****************************************************************/
 
 public:

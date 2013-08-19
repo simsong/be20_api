@@ -22,16 +22,9 @@ typedef std::map<string,class feature_recorder *> feature_recorder_map;
 typedef std::set<string>feature_file_names_t;
 class feature_recorder_set {
 private:
-    /*** neither copying nor assignment is implemented ***
-     *** We do this by making them private constructors that throw exceptions. ***/
-    class not_impl: public exception {
-        virtual const char *what() const throw() {
-            return "copying feature_recorder objects is not implemented.";
-        }
-    };
-    feature_recorder_set(const feature_recorder_set &fs) __attribute__ ((__noreturn__)) :
-    flags(0),input_fname(),outdir(),frm(),Mlock(),seen_set(),seen_set_lock(),scanner_stats(){ throw new not_impl(); }
-    const feature_recorder_set &operator=(const feature_recorder_set &fs){ throw new not_impl(); }
+    // neither copying nor assignment is implemented 
+    feature_recorder_set(const feature_recorder_set &fs);
+    feature_recorder_set &operator=(const feature_recorder_set &fs);
     uint32_t flags;
 public:
     // instance data //

@@ -228,12 +228,6 @@ public:
  */
 class sbuf_t {
 private:
-    class not_impl: public std::exception {
-        virtual const char *what() const throw() {
-            return "sbuf_t assignment is not implemented.";
-        }
-    };
-private:
     /* The private structures keep track of memory management */
     int    fd;                          /* file this came from if mmapped file */
 public:;
@@ -264,9 +258,8 @@ public:
     
 private:
     void release();                     // release allocated storage
-    sbuf_t &operator=(const sbuf_t &that) {
-        throw new not_impl();
-    }
+    // default assignment not implemented
+    sbuf_t &operator=(const sbuf_t &that);
 public:
     /** Make an empty sbuf.
         It's used for situations where an sbuf is needed but not referenced */

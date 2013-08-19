@@ -608,18 +608,11 @@ typedef void packet_callback_t(void *user,const be13::packet_info &pi);
 class scanner_info {
 private:
     static std::stringstream helpstream; // where scanner info help messages are saved.
-    class not_impl: public exception {
-        virtual const char *what() const throw() {
-            return "copying scanner_info objects is not implemented.";
-        }
-    };
-    scanner_info(const scanner_info &i) __attribute__((__noreturn__))
-    :si_version(),name(),author(),description(),url(),
-        scanner_version(),flags(),feature_names(),histogram_defs(),
-        packet_user(),packet_cb(),config(){
-        throw new not_impl();}
-    ;
-    const scanner_info &operator=(const scanner_info &i){ throw new not_impl();}
+
+    // default copy construction and assignment are meaningless
+    // and not implemented
+    scanner_info(const scanner_info &i);
+    scanner_info &operator=(const scanner_info &i);
  public:
     static std::string helpstr(){return helpstream.str();}
     typedef std::map<std::string,std::string>  config_t; // configuration for scanner passed in
