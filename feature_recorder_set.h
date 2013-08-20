@@ -30,8 +30,8 @@ public:
     // instance data //
     std::string input_fname;            // input file
     std::string outdir;                 // where output goes
-    feature_recorder_map  frm;          // map of feature recorders
-    cppmutex Mlock;            // can be locked even in a const function
+    feature_recorder_map frm;          // map of feature recorders, by name
+    cppmutex Mlock;                    // locks frm and scanner_stats_map
 private:
     std::set<std::string>seen_set;
     cppmutex  seen_set_lock;

@@ -577,6 +577,8 @@ std::string feature_recorder::carve(const sbuf_t &sbuf,size_t pos,size_t len,
                                     const std::string &ext,
                                     const be13::hash_def &hasher)
 {
+    if(flags & FLAG_DISABLED) return std::string();           // disabled
+
     /* If we are in the margin, ignore; it will be processed again */
     if(pos >= sbuf.pagesize && pos < sbuf.bufsize){
         return std::string();
@@ -678,6 +680,7 @@ std::string feature_recorder::carve(const sbuf_t &sbuf,size_t pos,size_t len,
  */
 void feature_recorder::set_carve_mtime(const std::string &fname, const std::string &mtime_iso8601) 
 {
+    if(flags & FLAG_DISABLED) return;           // disabled
 #if defined(HAVE_STRPTIME) && defined(HAVE_UTIMES)
     if(fname.size()){
         struct tm tm;
@@ -699,6 +702,8 @@ void feature_recorder::set_carve_mtime(const std::string &fname, const std::stri
  */
 void feature_recorder::write_tag(const pos0_t &pos0,size_t len,const string &tagName)
 {
+    if(flags & FLAG_DISABLED) return;           // disabled
+
     stringstream ss;
     string desc = pos0.alphaPart();
 
