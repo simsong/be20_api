@@ -10,13 +10,17 @@
  *** SBUF_T
  ****************************************************************/
 
+#ifndef O_BINARY
+#define O_BINARY 0
+#endif
+
 /**
  *  Map a file; falls back to read if mmap is not available
  */
 std::string sbuf_t::U10001C("\xf4\x80\x80\x9c");
 sbuf_t *sbuf_t::map_file(const std::string &fname,const pos0_t &pos0)
 {
-    int fd = open(fname.c_str(),O_RDONLY,0);
+    int fd = open(fname.c_str(),O_RDONLY|O_BINARY,0);
     if(fd<0) return 0;          /* cannot open file */
     sbuf_t *sbuf = sbuf_t::map_file(fname,pos0,fd);
     if(sbuf) {
@@ -48,7 +52,8 @@ sbuf_t *sbuf_t::map_file(const std::string &fname,const pos0_t &pos0,int fd)
         return 0;
     }
     lseek(fd,0,SEEK_SET);               // go to beginning of file
-    if((size_t)read(fd,(void *)buf,st.st_size)!=(size_t)st.st_size){
+    size_t r = (size_t)read(fd,(void *)buf,st.st_size);
+    if(r!=(size_t)st.st_size){
         free((void *)buf);              /* read failed */
         return 0;
     }
