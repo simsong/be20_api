@@ -562,9 +562,30 @@ std::string replace(const std::string &src,char f,char t)
  ****************************************************************
  *
  * Carving support.
+ * 2013-08-29 - replace invalid characters in filenames
  * 2013-07-30 - automatically bin directories
  * 2013-06-08 - filenames are the forensic path.
  */
+
+std::string valid_dosname(std::string in)
+{
+    std::string out;
+    for(size_t i=0;i<out.size();i++){
+        uint8_t ch = out.at(i);
+        if(ch<=32 || ch>=128
+           || ch=='"' || ch=='*' || ch=='+' || ch==','
+           || ch=='/' || ch==':' || ch==';' || ch=='<'
+           || ch=='=' || ch=='>' || ch=='?' || ch=='\\'
+           || ch=='[' || ch==']' || ch=='|'){
+            out.push_back('_');
+        } else {
+            out.push_back(ch);
+        }
+    }
+    return out;
+}
+        
+
 #include <iomanip>
 /**
  * @param sbuf   - the buffer to carve
@@ -629,7 +650,7 @@ std::string feature_recorder::carve(const sbuf_t &sbuf,size_t pos,size_t len,
     ss << dirname1 << "/" << std::setw(3) << std::setfill('0') << (this_file_number / 1000);
 
     std::string dirname2 = ss.str(); 
-    std::string fname    = dirname2 + "/" + replace(sbuf.pos0.str(),'/','_') + ext;
+    std::string fname    = dirname2 + "/" + valid_dosname(sbuf.pos0.str()) + ext;
     std::string carved_hash_hexvalue = (*hasher.func)(sbuf.buf,sbuf.bufsize);
 
     /* Record what was found in the feature file.
