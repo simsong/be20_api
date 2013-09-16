@@ -672,7 +672,9 @@ void be13::plugin::process_sbuf(const class scanner_params &sp)
         std::stringstream ss;
         ss << "<buflen>" << sp.sbuf.bufsize  << "</buflen>";
         if(alert_recorder && dup_data_alerts) alert_recorder->write(sp.sbuf.pos0,"DUP SBUF "+md5.hexdigest(),ss.str());
+#ifdef HAVE__SYNC_ADD_AND_FETCH
         __sync_add_and_fetch(&dup_data_encountered,sp.sbuf.bufsize);
+#endif
     }
 
     /* Determine if the sbuf consists of a repeating ngram. If so,

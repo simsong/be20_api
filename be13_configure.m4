@@ -4,7 +4,7 @@
 
 AC_MSG_NOTICE([Including be13_configure.m4 from be13_api])
 AC_CHECK_HEADERS([err.h pwd.h sys/cdefs.h sys/mman.h sys/resource.h sys/utsname.h unistd.h])
-AC_CHECK_FUNCS([ishexnumber isxdigit unistd.h mmap err errx warn warnx pread64 pread strptime _lseeki64 utimes ])
+AC_CHECK_FUNCS([ishexnumber isxdigit unistd.h mmap err errx warn warnx pread64 pread strptime _lseeki64 utimes __sync_add_and_fetch])
 
 AC_TRY_COMPILE([#pragma GCC diagnostic ignored "-Wredundant-decls"],[int a=3;],
   [AC_DEFINE(HAVE_DIAGNOSTIC_REDUNDANT_DECLS,1,[define 1 if GCC supports -Wredundant-decls])]
