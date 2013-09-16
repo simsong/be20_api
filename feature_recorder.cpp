@@ -642,7 +642,15 @@ std::string feature_recorder::carve(const sbuf_t &sbuf,size_t pos,size_t len,
      * that's okay, because the second one will fail.
      */
 
+#ifdef HAVE___SYNC_ADD_AND_FETCH
     uint64_t this_file_number = __sync_add_and_fetch(&file_number,1);
+#else
+    uint64_t this_file_number = 0;
+    {
+        cppmutex::lock lock(Mr);
+        this_file_number = file_number++;
+    }
+#endif
 
     std::string dirname1 = outdir + "/" + name;
     std::stringstream ss;
