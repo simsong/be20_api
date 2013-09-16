@@ -647,7 +647,7 @@ std::string feature_recorder::carve(const sbuf_t &sbuf,size_t pos,size_t len,
 #else
     uint64_t this_file_number = 0;
     {
-        cppmutex::lock lock(Mr);
+        cppmutex::lock lock(Mf);
         this_file_number = file_number++;
     }
 #endif
