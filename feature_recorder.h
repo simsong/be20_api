@@ -52,8 +52,9 @@ using namespace std;
 class feature_recorder {
     // default copy construction and assignment are meaningless
     // and not implemented
-    feature_recorder(const feature_recorder &fr);
-    feature_recorder &operator=(const feature_recorder &fr);
+    feature_recorder(const feature_recorder &);
+    feature_recorder &operator=(const feature_recorder &);
+    //
     static uint32_t debug;              // are we debugging?
     static pthread_t main_threadid;     // main threads ID
     static void MAINTHREAD(){// function that can only be called from main thread
