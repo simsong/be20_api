@@ -570,8 +570,8 @@ std::string replace(const std::string &src,char f,char t)
 std::string valid_dosname(std::string in)
 {
     std::string out;
-    for(size_t i=0;i<out.size();i++){
-        uint8_t ch = out.at(i);
+    for(size_t i=0;i<in.size();i++){
+        uint8_t ch = in.at(i);
         if(ch<=32 || ch>=128
            || ch=='"' || ch=='*' || ch=='+' || ch==','
            || ch=='/' || ch==':' || ch==';' || ch=='<'
@@ -658,7 +658,7 @@ std::string feature_recorder::carve(const sbuf_t &sbuf,size_t pos,size_t len,
     ss << dirname1 << "/" << std::setw(3) << std::setfill('0') << (this_file_number / 1000);
 
     std::string dirname2 = ss.str(); 
-    std::string fname    = dirname2 + "/" + valid_dosname(sbuf.pos0.str() + ext);
+    std::string fname    = dirname2 + std::string("/") + valid_dosname(sbuf.pos0.str() + ext);
     std::string carved_hash_hexvalue = (*hasher.func)(sbuf.buf,sbuf.bufsize);
 
     /* Record what was found in the feature file.
