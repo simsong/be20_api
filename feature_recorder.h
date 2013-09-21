@@ -48,6 +48,7 @@ using namespace std;
 
 #include "regex.h"
 #include "cppmutex.h"
+#include "atomicmap.h"
 
 class feature_recorder {
     // default copy construction and assignment are meaningless
@@ -129,6 +130,7 @@ private:
 
     cppmutex Mf;                        /* protects the file */
     cppmutex Mr;                        /* protects the redlist */
+    atomicmap *mem_histogram;           // if we are building an in-memory-histogram
 public:
 
     /* these are not threadsafe and should only be called in startup */
@@ -140,6 +142,7 @@ public:
     void set_context_window_before(size_t win){ MAINTHREAD(); context_window_before = win;}
     void set_context_window_after(size_t win){ MAINTHREAD(); context_window_after = win; }
     void set_carve_ignore_encoding(const std::string &encoding){ MAINTHREAD();ignore_encoding = encoding;}
+    void set_in_memory_histogram();
     /* End non-threadsafe */
 
     void   banner_stamp(std::ostream &os,const std::string &header); // stamp BOM, banner, and header

@@ -46,6 +46,12 @@ uint32_t feature_recorder::opt_max_feature_size=1024*1024;
 uint32_t feature_recorder::debug=0;
 
 
+void feature_recorder::set_in_memory_histogram()
+{
+    MAINTHREAD();
+    TK
+}
+
 /** 
  * 1. Put the UTF-8 BOM in the file.
  * 2. Read the contents of the file pointed to by opt_banner and put each line into "f"
@@ -754,3 +760,4 @@ void feature_recorder::write_tag(const pos0_t &pos0,size_t len,const string &tag
     
     this->write(ss.str());
 }
+
