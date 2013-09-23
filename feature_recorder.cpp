@@ -49,7 +49,7 @@ uint32_t feature_recorder::debug=0;
 void feature_recorder::set_in_memory_histogram()
 {
     MAINTHREAD();
-    TK
+    //TK
 }
 
 /** 
@@ -111,7 +111,7 @@ feature_recorder::feature_recorder(string outdir_,string input_fname_,string nam
     flags(0),histogram_enabled(false),
     outdir(outdir_),input_fname(input_fname_),name(name_),ignore_encoding(),count_(0),ios(),
     context_window_before(context_window_default),context_window_after(context_window_default),
-    Mf(),Mr(), 
+    Mf(),Mr(),mem_histogram(),
     stop_list_recorder(0),
     file_number(0),carve_mode(CARVE_ENCODED)
 {
