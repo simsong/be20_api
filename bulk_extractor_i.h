@@ -84,7 +84,6 @@ namespace be13 {
 #include "feature_recorder.h"
 #include "feature_recorder_set.h"
 
-
 /* Network includes */
 
 /****************************************************************
@@ -884,6 +883,8 @@ inline std::string safe_utf16to8(std::wstring s){ // needs to be cleaned up
     return utf8_line;
 }
 
+// truncate string at the matching char
+void truncate_at(string &line, char ch);
 
 #ifndef HAVE_ISXDIGIT
 inline int isxdigit(int c)
