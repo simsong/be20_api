@@ -251,7 +251,7 @@ string feature_recorder::unquote_string(const string &s)
  *  Create a histogram for this feature recorder and an extraction pattern.
  */
 
-static void truncate_at(string &line,char ch)
+void truncate_at(string &line,char ch)
 {
     size_t pos = line.find(ch);
     if(pos!=string::npos) line.erase(pos);
