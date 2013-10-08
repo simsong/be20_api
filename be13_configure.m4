@@ -13,3 +13,17 @@ AC_TRY_COMPILE([#pragma GCC diagnostic ignored "-Wcast-align"],[int a=3;],
   [AC_DEFINE(HAVE_DIAGNOSTIC_CAST_ALIGN,1,[define 1 if GCC supports -Wcast-align])]
 )
 
+#
+# Figure out which version of unordered_map we are going to use
+#
+AC_CHECK_HEADERS([tr1/unordered_map tr1/unordered_set])
+  SAVE_CXXFLAGS="$CXXFLAGS"
+  CXX_FLAGS="$CXXFLAGS -std=c++11"
+  AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[]], [[]])],
+      [has_option=yes],
+      [has_option=no; CXXFLAGS="$SAVE_CXXFLAGS"])
+  if test $has_option = "yes" ; then
+    AC_MSG_RESULT([Has -std=c++11 support])
+    AC_CHECK_HEADERS([unordered_map unordered_set])
+  fi
+
