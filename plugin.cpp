@@ -9,7 +9,6 @@
 #include <sys/stat.h>
 #include <dirent.h>
 #include <algorithm>
-#include <tr1/unordered_set>
 #ifdef HAVE_ERR_H
 #include <err.h>
 #endif
@@ -22,6 +21,19 @@
 #include "aftimer.h"
 #include "../dfxml/src/hash_t.h"
 
+#if 0
+#if defined(HAVE_UNORDERED_SET)
+#include <unordered_set>
+#undef HAVE_TR1_UNORDERED_SET           // be sure we don't use it
+#else
+#if defined(HAVE_TR1_UNORDERED_SET)
+#include <tr1/unordered_set>
+#else
+#error Requires <unordered_set> or <tr1/unordered_set>
+#endif
+#endif
+
+
 namespace std {
     namespace tr1 {
         template<>
@@ -32,31 +44,7 @@ namespace std {
         };
     }
 }
-
-class atomic_hash_set 
-{
-    cppmutex M;
-    std::tr1::unordered_set<md5_t>myset;
-public:
-    atomic_hash_set():M(),myset(){}
-    bool in(const md5_t &s){
-        cppmutex::lock lock(M);
-        return myset.find(s)!=myset.end();
-    }
-    void insert(const md5_t &s){
-        cppmutex::lock lock(M);
-        myset.insert(s);
-    }
-    bool check_for_presence_and_insert(const md5_t &s){
-        cppmutex::lock lock(M);
-        if(myset.find(s)!=myset.end()) return true; // in the set
-        myset.insert(s);                // otherwise insert it
-        return false;                   // and return that it wasn't
-    }
-}seen_md5s;
-#define HAVE_ATOMIC
-
-
+#endif
 
 uint32_t scanner_def::max_depth = 7;            // max recursion depth
 uint32_t scanner_def::max_ngram = 10;            // max recursion depth
@@ -328,25 +316,18 @@ void be13::plugin::load_scanner_packet_handlers()
     }
 }
 
-void be13::plugin::message_enabled_scanners(scanner_params::phase_t phase,feature_recorder_set *fs) // send every enabled scanner the phase message
+// send every enabled scanner the phase message
+void be13::plugin::message_enabled_scanners(scanner_params::phase_t phase,feature_recorder_set &fs) 
 {
-    /* If a feature recorder set wasn't provided, make a dummy */
-    feature_recorder_set *tmpfs=0;
-    if(fs==0){
-        tmpfs = new feature_recorder_set(feature_recorder_set::SET_DISABLED);
-        fs = tmpfs;
-    }
-
     /* make an empty sbuf and feature recorder set */
     const sbuf_t sbuf;
-    scanner_params sp(phase,sbuf,*fs); 
+    scanner_params sp(phase,sbuf,fs); 
     for(scanner_vector::iterator it = current_scanners.begin(); it!=current_scanners.end(); it++){
         if((*it)->enabled){
             recursion_control_block rcb(0,""); // dummy rcb
             ((*it)->scanner)(sp,rcb);
         }
     }
-    if(tmpfs) delete tmpfs;
 }
 
 scanner_t *be13::plugin::find_scanner(const std::string &search_name)
@@ -430,7 +411,7 @@ void be13::plugin::scanners_process_enable_disable_commands()
 }
 
 
-void be13::plugin::scanners_init(feature_recorder_set *fs)
+void be13::plugin::scanners_init(feature_recorder_set &fs)
 {
     message_enabled_scanners(scanner_params::PHASE_INIT,fs); // tell all enabled scanners to init
 }
@@ -454,14 +435,34 @@ void be13::plugin::phase_shutdown(feature_recorder_set &fs)
 /****************************************************************
  *** PHASE HISTOGRAM (formerly phase 3): Create the histograms
  ****************************************************************/
+
+/**
+ * Note currently we have two kinds of histograms:
+ * post-processing histograms specified by the histogram library, and in-memory histograms.
+ * that are really only used by scan_bulk.
+ */
+
 #ifdef USE_HISTOGRAMS
+static const int LINE_LEN = 80;         // keep track of where we are on the line
 bool opt_enable_histograms=true;
 void be13::plugin::phase_histogram(feature_recorder_set &fs, xml_notifier_t xml_error_notifier)
 {
     if(!opt_enable_histograms) return;
-    int ctr = 0;
+    int pos  = 0;
+    bool need_nl = false;
+
+    /* Loop through all the histograms */
     for(histograms_t::const_iterator it = histograms.begin();it!=histograms.end();it++){
-        std::cout << "   " << (*it).feature << " " << (*it).suffix << "...";
+        std::string msg = string(" ") + (*it).feature + " " + (*it).suffix + "...";
+        if(msg.size() + pos > LINE_LEN){
+            std::cout << "\n";
+            pos = 0;
+            need_nl = false;
+        }
+        std::cout << msg;
+        std::cout.flush();
+        pos += msg.size();
+        need_nl = true;
         if(fs.has_name((*it).feature)){
             feature_recorder *fr = fs.get_name((*it).feature);
             try {
@@ -472,15 +473,14 @@ void be13::plugin::phase_histogram(feature_recorder_set &fs, xml_notifier_t xml_
                 std::cerr.flush();
                 std::cerr << e.what() << " computing histogram " << (*it).feature << "\n";
                 if(xml_error_notifier){
-                    std::string error = std::string("<error function='phase3' histogram='") + (*it).feature + std::string("</error>");
+                    std::string error = std::string("<error function='phase3' histogram='")
+                        + (*it).feature + std::string("</error>");
                     (*xml_error_notifier)(error);
                 }
             }
         }
-        if(++ctr % 3 == 0) std::cout << "\n";
-        std::cout.flush();
     }
-    if(ctr % 4 !=0) std::cout << "\n";
+    if (need_nl) std::cout << "\n";
 }
 #endif
 
@@ -665,9 +665,9 @@ void be13::plugin::process_sbuf(const class scanner_params &sp)
     }
 
     /* Determine if we have seen this buffer before */
-    md5_t md5 = md5_generator::hash_buf(sp.sbuf.buf,sp.sbuf.bufsize);
-    bool seen_before = seen_md5s.check_for_presence_and_insert(md5);
+    bool seen_before = fs.check_previously_processed(sp.sbuf.buf,sp.sbuf.bufsize);
     if(seen_before){
+        md5_t md5 = md5_generator::hash_buf(sp.sbuf.buf,sp.sbuf.bufsize);
         feature_recorder *alert_recorder = fs.get_alert_recorder();
         std::stringstream ss;
         ss << "<buflen>" << sp.sbuf.bufsize  << "</buflen>";

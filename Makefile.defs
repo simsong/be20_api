@@ -1,5 +1,5 @@
 BE13_API= \
-        be13_api/atomicmap.h \
+        be13_api/atomic_set_map.h \
         be13_api/aftimer.h \
         be13_api/beregex.cpp \
         be13_api/beregex.h \

@@ -61,13 +61,6 @@
  * in a 64-bit number.  
  */
 
-inline int stoi(std::string str){
-    std::istringstream ss(str);
-    int val(0);
-    ss >> val;
-    return val;
-}
-
 inline int64_t stoi64(std::string str){
     int64_t val(0);
     std::istringstream ss(str);

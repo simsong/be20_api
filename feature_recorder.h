@@ -48,7 +48,7 @@ using namespace std;
 
 #include "regex.h"
 #include "cppmutex.h"
-#include "atomicmap.h"
+#include "atomic_set_map.h"
 
 class feature_recorder {
     // default copy construction and assignment are meaningless
@@ -58,13 +58,8 @@ class feature_recorder {
     //
     static uint32_t debug;              // are we debugging?
     static pthread_t main_threadid;     // main threads ID
-    static void MAINTHREAD(){// function that can only be called from main thread
-#ifndef WIN32
-        assert(main_threadid==pthread_self());
-#endif
-    };                
+    static void MAINTHREAD();           // called if can only be run in the main thread
     uint32_t flags;                     // flags for this feature recorder
-    bool histogram_enabled;             /* do we automatically histogram? */
     /****************************************************************/
 
 public:
@@ -82,22 +77,28 @@ public:
      * These flags control scanners.  Set them with set_flag().
      */
     /** Disable this recorder. */
-    static const int FLAG_DISABLED=0x01;        // Disabled
-    static const int FLAG_NO_CONTEXT=0x02;        // Do not write context.
+    static const int FLAG_DISABLED=0x01;         // Disabled
+    static const int FLAG_NO_CONTEXT=0x02;       // Do not write context.
     static const int FLAG_NO_STOPLIST=0x04;      // Do not honor the stoplist/alertlist.
-    static const int FLAG_NO_ALERTLIST=0x04;    // Do not honor the stoplist/alertlist.
+    static const int FLAG_NO_ALERTLIST=0x04;     // Do not honor the stoplist/alertlist.
     /**
      * Normally feature recorders automatically quote non-UTF8 characters
      * with \x00 notation and quote "\" as \x5C. Specify FLAG_NO_QUOTE to
      * disable this behavior.
      */
-    static const int FLAG_NO_QUOTE=0x08;        // do not escape UTF8 codes
+    static const int FLAG_NO_QUOTE=0x08;         // do not escape UTF8 codes
 
     /**
      * Use this flag the feature recorder is sending UTF-8 XML.
      * non-UTF8 will be quoted but "\" will not be escaped.
      */
-    static const int FLAG_XML    = 0x10; // will be sending XML
+    static const int FLAG_XML    = 0x10;         // will be sending XML
+
+    /**
+     * histogram support.
+     */
+    static const int FLAG_MEM_HISTOGRAM = 0x20;  // enable the in-memory histogram
+    static const int FLAG_NO_FEATURES   = 0x40;  // do not record features (just histogram)
 
     /** @} */
     static const int max_histogram_files = 10;  // don't make more than 10 files in low-memory conditions
@@ -115,7 +116,9 @@ public:
     feature_recorder(string outdir,string input_fname,string name);
     virtual ~feature_recorder();
 
-    virtual void set_flag(uint32_t flags_){flags|=flags_;}
+    virtual void set_flag(uint32_t flags_);
+    bool flag_set(uint32_t f){return flags & f;}
+    bool flag_notset(uint32_t f){return !flag_set(f);}
 
     static size_t context_window_default; // global option
     const std::string outdir;                // where output goes (could be static, I guess 
@@ -130,7 +133,8 @@ private:
 
     cppmutex Mf;                        /* protects the file */
     cppmutex Mr;                        /* protects the redlist */
-    atomicmap *mem_histogram;           // if we are building an in-memory-histogram
+    typedef atomic_histogram<std::string> mhistogram_t;
+    mhistogram_t *mhistogram;           // if we are building an in-memory-histogram
 public:
 
     /* these are not threadsafe and should only be called in startup */
@@ -142,7 +146,6 @@ public:
     void set_context_window_before(size_t win){ MAINTHREAD(); context_window_before = win;}
     void set_context_window_after(size_t win){ MAINTHREAD(); context_window_after = win; }
     void set_carve_ignore_encoding(const std::string &encoding){ MAINTHREAD();ignore_encoding = encoding;}
-    void set_in_memory_histogram();
     /* End non-threadsafe */
 
     void   banner_stamp(std::ostream &os,const std::string &header); // stamp BOM, banner, and header
@@ -212,18 +215,17 @@ public:
                               const struct be13::hash_def &hasher);
     // Set the time of the carved file to iso8601 file
     virtual void set_carve_mtime(const std::string &fname, const std::string &mtime_iso8601);
-
-    /**
-     * EXPERIMENTAL!
-     * support for tagging blocks with their type.
-     * typically 'len' is the sector size, but it need not be.
-     */
-    virtual void write_tag(const pos0_t &pos0,size_t len,const std::string &tagName);
-    virtual void write_tag(const sbuf_t &sbuf,const std::string &tagName){
-        write_tag(sbuf.pos0,sbuf.pagesize,tagName);
-    }
-
 };
+
+// function that can only be called from main thread
+inline void feature_recorder::MAINTHREAD()
+{
+    //::printf("main_threadid=%d  pthread_self()=%d\n",(int)main_threadid,(int)pthread_self());
+#ifndef WIN32
+        assert(main_threadid==pthread_self());
+#endif
+};                
+
 
 /** @} */
 

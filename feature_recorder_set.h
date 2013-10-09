@@ -1,8 +1,10 @@
 /* -*- mode: C++; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 #ifndef FEATURE_RECORDER_SET_H
 #define FEATURE_RECORDER_SET_H
+
 #include "feature_recorder.h"
 #include "cppmutex.h"
+#include "dfxml/src/hash_t.h"
 
 /** \addtogroup internal_interfaces
  * @{
@@ -26,24 +28,21 @@ private:
     feature_recorder_set(const feature_recorder_set &fs);
     feature_recorder_set &operator=(const feature_recorder_set &fs);
     uint32_t flags;
+    atomic_set<std::string> seen_set;
 public:
-    // instance data //
-    std::string input_fname;            // input file
-    std::string outdir;                 // where output goes
-    feature_recorder_map frm;          // map of feature recorders, by name
-    cppmutex Mlock;                    // locks frm and scanner_stats_map
-private:
-    std::set<std::string>seen_set;
-    cppmutex  seen_set_lock;
-public:
-    class pstats {
-    public:
+    struct pstats {
         double seconds;
         uint64_t calls;
     };
+    typedef map<std::string,struct pstats> scanner_stats_map;
 
-    typedef map<string,class pstats> scanner_stats_map;
-    scanner_stats_map scanner_stats;
+    // instance data //
+//    atomic_set<md5_t>     seen_sbuf_hashes; // hashes of SBUFs that have already been seen
+    std::string           input_fname;      // input file
+    std::string           outdir;           // where output goes
+    feature_recorder_map  frm;     // map of feature recorders, by name
+    cppmutex              map_lock;               // locks frm and scanner_stats_map
+    scanner_stats_map     scanner_stats;
 
     static const string   ALERT_RECORDER_NAME;  // the name of the alert recorder
     static const string   DISABLED_RECORDER_NAME; // the fake disabled feature recorder

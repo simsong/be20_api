@@ -3,14 +3,14 @@
 #ifndef BULK_EXTRACTOR_I_H
 #define BULK_EXTRACTOR_I_H
 
-#define DEBUG_PEDANTIC    0x0001	// check values more rigorously
+#define DEBUG_PEDANTIC    0x0001        // check values more rigorously
 #define DEBUG_PRINT_STEPS 0x0002        // prints as each scanner is started
-#define DEBUG_SCANNER     0x0004	// dump all feature writes to stderr
-#define DEBUG_NO_SCANNERS 0x0008        /* do not run the scanners */
-#define DEBUG_DUMP_DATA   0x0010	/* dump data as it is seen */
-#define DEBUG_INFO        0x0040	// print extra info
-#define DEBUG_EXIT_EARLY  1000		/* just print the size of the volume and exis */
-#define DEBUG_ALLOCATE_512MiB 1002	/* Allocate 512MiB, but don't set any flags */
+#define DEBUG_SCANNER     0x0004        // dump all feature writes to stderr
+#define DEBUG_NO_SCANNERS 0x0008        // do not run the scanners
+#define DEBUG_DUMP_DATA   0x0010        // dump data as it is seen
+#define DEBUG_INFO        0x0040        // print extra info
+#define DEBUG_EXIT_EARLY  1000          // just print the size of the volume and exis 
+#define DEBUG_ALLOCATE_512MiB 1002      // Allocate 512MiB, but don't set any flags 
 
 /* We need netinet/in.h or windowsx.h */
 #ifdef HAVE_NETINET_IN_H
@@ -833,8 +833,11 @@ namespace be13 {
         static void load_scanner_directories(const std::vector<std::string> &dirnames,const scanner_info::scanner_config &sc);
         static void load_scanner_packet_handlers();
         
-        static void message_enabled_scanners(scanner_params::phase_t phase,feature_recorder_set *fs); // send every enabled scanner the phase message
-        static scanner_t *find_scanner(const std::string &name); // returns the named scanner, or 0 if no scanner of that name
+        // send every enabled scanner the phase message
+        static void message_enabled_scanners(scanner_params::phase_t phase,feature_recorder_set &fs);
+
+        // returns the named scanner, or 0 if no scanner of that name
+        static scanner_t *find_scanner(const std::string &name); 
         static void get_enabled_scanners(std::vector<std::string> &svector); // put the enabled scanners into the vector
         static bool find_scanner_enabled(); // return true if a find scanner is enabled
         
@@ -846,7 +849,7 @@ namespace be13 {
         static void scanners_enable(const std::string &name); // saves a command to enable this scanner
         static void scanners_disable(const std::string &name); // saves a command to disable this scanner
         static void scanners_process_enable_disable_commands();               // process the enable/disable and config commands
-        static void scanners_init(feature_recorder_set *fs); // init the scanners
+        static void scanners_init(feature_recorder_set &fs); // init the scanners
 
         static void info_scanners(bool detailed_info,
                                   bool detailed_settings,
@@ -884,7 +887,10 @@ inline std::string safe_utf16to8(std::wstring s){ // needs to be cleaned up
 }
 
 // truncate string at the matching char
-void truncate_at(string &line, char ch);
+inline void truncate_at(std::string &line, char ch) {
+    size_t pos = line.find(ch);
+    if(pos != std::string::npos) line.resize(pos);
+}
 
 #ifndef HAVE_ISXDIGIT
 inline int isxdigit(int c)
@@ -923,8 +929,8 @@ inline std::string microsoftDateToISODate(const uint64_t &time)
 inline bool validASCIIName(const std::string &name)
 {
     for(size_t i = 0; i< name.size(); i++){
-	if(((u_char)name[i]) & 0x80) return false; // high bit should not be set
-	if(((u_char)name[i]) < ' ') return false;  // should not be control character
+        if(((u_char)name[i]) & 0x80) return false; // high bit should not be set
+        if(((u_char)name[i]) < ' ') return false;  // should not be control character
     }
     return true;
 }

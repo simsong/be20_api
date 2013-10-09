@@ -46,21 +46,6 @@ uint32_t feature_recorder::opt_max_feature_size=1024*1024;
 uint32_t feature_recorder::debug=0;
 
 
-void feature_recorder::set_in_memory_histogram()
-{
-    MAINTHREAD();
-    //TK
-}
-
-/** 
- * 1. Put the UTF-8 BOM in the file.
- * 2. Read the contents of the file pointed to by opt_banner and put each line into "f"
- * 3. Add the header
- */
-
-//const string feature_recorder::UTF8_BOM("\xef\xbb\xbf");
-//const string feature_recorder::BOM_EXPLAINATION("# UTF-8 Byte Order Marker; see http://unicode.org/faq/utf_bom.html\n");
-
 void feature_recorder::banner_stamp(std::ostream &os,const std::string &header)
 {
     int banner_lines = 0;
@@ -103,15 +88,17 @@ void feature_recorder::banner_stamp(std::ostream &os,const std::string &header)
  * and thus a different feature recorder, to avoid locking
  * problems. 
  *
- * @param name - the name of the feature being recorded.
- * @param histogram_enabled - whether or not a histogram should be created.
+ * @param outdir_      - where the feature file is written
+ * @param input_fname_ - the file (disk image) that these features were extracted from.
+ *                     - We should probably have a callback function to annotate the feature file.
+ * @param name         - the name of the feature being recorded.
  */
 
 feature_recorder::feature_recorder(string outdir_,string input_fname_,string name_):
-    flags(0),histogram_enabled(false),
+    flags(0),
     outdir(outdir_),input_fname(input_fname_),name(name_),ignore_encoding(),count_(0),ios(),
     context_window_before(context_window_default),context_window_after(context_window_default),
-    Mf(),Mr(),mem_histogram(),
+    Mf(),Mr(),mhistogram(),
     stop_list_recorder(0),
     file_number(0),carve_mode(CARVE_ENCODED)
 {
@@ -246,16 +233,23 @@ string feature_recorder::unquote_string(const string &s)
     return line.substr(feature_start);  // no context to remove
 }
 
+void feature_recorder::set_flag(uint32_t flags_)
+{
+    MAINTHREAD();
+    flags|=flags_;
+
+#ifdef USE_HISTOGRAMS
+    if((flags & FLAG_MEM_HISTOGRAM) && mhistogram==0){
+        /* Create the in-memory histogram */
+        mhistogram = new mhistogram_t();
+    }
+#endif
+}
+
 #ifdef USE_HISTOGRAMS
 /**
  *  Create a histogram for this feature recorder and an extraction pattern.
  */
-
-void truncate_at(string &line,char ch)
-{
-    size_t pos = line.find(ch);
-    if(pos!=string::npos) line.erase(pos);
-}
 
 void feature_recorder::make_histogram(const class histogram_def &def)
 {
@@ -431,12 +425,12 @@ void feature_recorder::write(const pos0_t &pos0,const string &feature_,const str
     string feature = validateOrEscapeUTF8(feature_, escape_bad_utf8,escape_backslash);
 
     string context;
-    if((flags & FLAG_NO_CONTEXT)==0){
+    if(flag_notset(FLAG_NO_CONTEXT)){
         context = validateOrEscapeUTF8(context_,escape_bad_utf8,escape_backslash);
     }
 
-    if(feature.size() > opt_max_feature_size) feature = feature.substr(0,opt_max_feature_size);
-    if(context.size() > opt_max_context_size) context = context.substr(0,opt_max_context_size);
+    if(feature.size() > opt_max_feature_size) feature.resize(opt_max_feature_size);
+    if(context.size() > opt_max_context_size) context.resize(opt_max_context_size);
     if(feature.size()==0){
         cerr << "zero length feature at " << pos0 << "\n";
         if(debug & DEBUG_PEDANTIC) assert(0);
@@ -456,14 +450,12 @@ void feature_recorder::write(const pos0_t &pos0,const string &feature_,const str
         }
     }
         
-
-
 #ifdef USE_STOP_LIST
     /* First check to see if the feature is on the stop list.
      * Only do this if we have a stop_list_recorder (the stop list recorder itself
      * does not have a stop list recorder. If it did we would infinitely recurse.
      */
-    if(((flags & FLAG_NO_STOPLIST)==0) && stop_list_recorder){          
+    if(flag_notset(FLAG_NO_STOPLIST) && stop_list_recorder){          
         if(stop_list.check_feature_context(feature,context)){
             stop_list_recorder->write(pos0,feature,context);
             return;
@@ -475,7 +467,7 @@ void feature_recorder::write(const pos0_t &pos0,const string &feature_,const str
     /* The alert list is a special features that are called out.
      * If we have one of those, write it to the redlist.
      */
-    if(((flags & FLAG_NO_ALERTLIST)==0) && alert_list.check_feature_context(feature,context)){
+    if(flag_notset(FLAG_NO_ALERTLIST) && alert_list.check_feature_context(feature,context)){
         string alert_fn = outdir + "/ALERTS_found.txt";
 
         cppmutex::lock lock(Mr);                // notce we are locking the redlist
@@ -486,11 +478,19 @@ void feature_recorder::write(const pos0_t &pos0,const string &feature_,const str
     }
 #endif
 
+    /* Support in-memory histogram */
+    if(flag_set(FLAG_MEM_HISTOGRAM)){
+        mhistogram->add(feature);
+    }
+
+
     /* Finally write out the feature and the context */
-    stringstream ss;
-    ss << pos0.shift(feature_recorder::offset_add).str() << '\t' << feature;
-    if(((flags & FLAG_NO_CONTEXT)==0) && (context.size()>0)) ss << '\t' << context;
-    this->write(ss.str());
+    if(flag_notset(FLAG_NO_FEATURES)){
+        stringstream ss;
+        ss << pos0.shift(feature_recorder::offset_add).str() << '\t' << feature;
+        if(flag_notset(FLAG_NO_CONTEXT) && (context.size()>0)) ss << '\t' << context;
+        this->write(ss.str());
+    }
 }
 
 /**
@@ -728,36 +728,5 @@ void feature_recorder::set_carve_mtime(const std::string &fname, const std::stri
         }
     }
 #endif
-}
-
-/**
- * Tagging support.
- * Tags are a system of providing identifiers for regions of the input image.
- * Currently tags are just used for fragment type.
- */
-void feature_recorder::write_tag(const pos0_t &pos0,size_t len,const string &tagName)
-{
-    if(flags & FLAG_DISABLED) return;           // disabled
-
-    stringstream ss;
-    string desc = pos0.alphaPart();
-
-    // This allows you to set a breakpoint at a specific position
-    // it could be a configurable variable, I guess...
-#ifdef DEBUG_OFFSET
-    if(len==DEBUG_OFFSET){
-        std::cerr << "write_tag debug point pos0=" << pos0 << " len=" << len <<" name=" << tagName << "\n";
-    }
-#endif    
-
-    /* offset is either the sbuf offset or the path offset */
-    uint64_t offset = pos0.offset>0 ? pos0.offset : stoi64(pos0.path);
-
-    /** Create what will got to the feature file */
-    ss << offset << ":" << len << "\t";
-    if(desc.size()>0) ss << desc << '/';
-    ss << tagName;
-    
-    this->write(ss.str());
 }
 

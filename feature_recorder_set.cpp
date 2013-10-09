@@ -7,7 +7,6 @@
 #include "histogram.h"
 #endif
 
-#include "dfxml/src/hash_t.h"
 
 /****************************************************************
  *** feature_recorder_set
@@ -20,8 +19,7 @@ const string feature_recorder_set::DISABLED_RECORDER_NAME = "disabled";
 
 /* Create an empty recorder */
 feature_recorder_set::feature_recorder_set(uint32_t flags_):flags(flags_),input_fname(),
-                                                            outdir(),frm(),Mlock(),seen_set(),
-                                                            seen_set_lock(),scanner_stats()
+                                                            outdir(),frm(),map_lock(),scanner_stats()
 {
     if(flags & SET_DISABLED){
         create_name(DISABLED_RECORDER_NAME,false);
@@ -39,8 +37,8 @@ feature_recorder_set::feature_recorder_set(const feature_file_names_t &feature_f
                                            const std::string &input_fname_,
                                            const std::string &outdir_,
                                            bool create_stop_files):
-    flags(0),input_fname(input_fname_),outdir(outdir_),frm(),Mlock(),
-    seen_set(),seen_set_lock(),scanner_stats()
+    flags(0),input_fname(input_fname_),outdir(outdir_),frm(),map_lock(),
+    scanner_stats()
 {
     if(flags & SET_DISABLED){
         create_name(DISABLED_RECORDER_NAME,false);
@@ -90,7 +88,7 @@ feature_recorder *feature_recorder_set::get_name(const std::string &name)
         thename = &feature_recorder_set::ALERT_RECORDER_NAME;
     }
 
-    cppmutex::lock lock(Mlock);
+    cppmutex::lock lock(map_lock);
     feature_recorder_map::const_iterator it = frm.find(*thename);
     if(it!=frm.end()) return it->second;
     return(0);                          // feature recorder does not exist
@@ -99,8 +97,8 @@ feature_recorder *feature_recorder_set::get_name(const std::string &name)
 
 void feature_recorder_set::add_stats(string bucket,double seconds)
 {
-    cppmutex::lock lock(Mlock);
-    class pstats &p = scanner_stats[bucket]; // get the location of the stats
+    cppmutex::lock lock(map_lock);
+    struct pstats &p = scanner_stats[bucket]; // get the location of the stats
     p.seconds += seconds;
     p.calls ++;
 }
@@ -143,12 +141,6 @@ feature_recorder *feature_recorder_set::get_alert_recorder()
 
 bool feature_recorder_set::check_previously_processed(const uint8_t *buf,size_t bufsize)
 {
-    std::string hexhash = md5_generator::hash_buf(buf,bufsize).hexdigest();
-
-    cppmutex::lock lock(seen_set_lock);
-    if(seen_set.find(hexhash) == seen_set.end()){
-        seen_set.insert(hexhash);       // haven't seen it before; insert it
-        return false;
-    }
-    return true;                        // I've seen it before
+    std::string md5 = md5_generator::hash_buf(buf,bufsize).hexdigest();
+    return seen_set.check_for_presence_and_insert(md5);
 }
