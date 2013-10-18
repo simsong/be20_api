@@ -60,7 +60,9 @@ public:
             (*dump_cb)((*it).first,(*it).second);
         }
     }
-    void     dump_sorted(dump_cb_t dump_cb,int (*sorter)(const TYPE &val,uint64_t count)){
+    void     dump_sorted(dump_cb_t dump_cb,
+                         int (*sorter)(std::pair<const TYPE &,uint64_t>,
+                                       std::pair<const TYPE &,uint64_t>)){
         /* Create a list, sort it, then report the sorted list */
         cppmutex::lock lock(M);
         for(typename hmap_t::const_iterator it = amap.begin();it!=amap.end();it++){

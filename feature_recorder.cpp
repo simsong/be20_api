@@ -247,12 +247,30 @@ void feature_recorder::set_flag(uint32_t flags_)
 }
 
 #ifdef USE_HISTOGRAMS
+
 /**
  *  Create a histogram for this feature recorder and an extraction pattern.
  */
 
+void dump_cb(const std::string &str,uint64_t count)
+{
+    std::cerr << "dump_cb: " << str << " - " << count << "\n";
+}
+
+int dump_cb_sorter(std::pair<const std::string &,uint64_t>a,
+                   std::pair<const std::string &,uint64_t>b)
+{
+    if(a.first<b.first) return -1;
+    return 1;
+}
+
 void feature_recorder::make_histogram(const class histogram_def &def)
 {
+    if(flag_set(FLAG_MEM_HISTOGRAM)){
+        std::cerr << "MEMORY HISTOGRAM:\n";
+        mhistogram->dump_sorted(dump_cb,dump_cb_sorter);
+    }
+
     beregex reg(def.pattern,REG_EXTENDED);
     string ifname = fname_counter("");  // source of features
 
@@ -482,7 +500,6 @@ void feature_recorder::write(const pos0_t &pos0,const string &feature_,const str
     if(flag_set(FLAG_MEM_HISTOGRAM)){
         mhistogram->add(feature);
     }
-
 
     /* Finally write out the feature and the context */
     if(flag_notset(FLAG_NO_FEATURES)){
