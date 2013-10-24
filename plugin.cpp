@@ -454,7 +454,7 @@ void be13::plugin::phase_histogram(feature_recorder_set &fs, xml_notifier_t xml_
     /* Loop through all the histograms */
     for(histograms_t::const_iterator it = histograms.begin();it!=histograms.end();it++){
         std::string msg = string(" ") + (*it).feature + " " + (*it).suffix + "...";
-        if(msg.size() + pos > LINE_LEN){
+        if(msg.size() + pos > (unsigned) LINE_LEN){
             std::cout << "\n";
             pos = 0;
             need_nl = false;

@@ -18,7 +18,7 @@ const string feature_recorder_set::ALERT_RECORDER_NAME = "alerts";
 const string feature_recorder_set::DISABLED_RECORDER_NAME = "disabled";
 
 /* Create an empty recorder */
-feature_recorder_set::feature_recorder_set(uint32_t flags_):flags(flags_),input_fname(),
+feature_recorder_set::feature_recorder_set(uint32_t flags_):flags(flags_),seen_set(),input_fname(),
                                                             outdir(),frm(),map_lock(),scanner_stats()
 {
     if(flags & SET_DISABLED){
@@ -37,7 +37,7 @@ feature_recorder_set::feature_recorder_set(const feature_file_names_t &feature_f
                                            const std::string &input_fname_,
                                            const std::string &outdir_,
                                            bool create_stop_files):
-    flags(0),input_fname(input_fname_),outdir(outdir_),frm(),map_lock(),
+    flags(0),seen_set(),input_fname(input_fname_),outdir(outdir_),frm(),map_lock(),
     scanner_stats()
 {
     if(flags & SET_DISABLED){
