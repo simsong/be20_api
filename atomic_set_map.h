@@ -46,6 +46,7 @@ template <class TYPE> class atomic_histogram {
     cppmutex M;                         // my lock
 public:
     atomic_histogram():amap(),M(){};
+
     typedef void (*dump_cb_t)(const TYPE &val,uint64_t count);
     // add and return the count
     uint64_t add(const TYPE &val,uint64_t addend=1){
@@ -60,14 +61,35 @@ public:
             (*dump_cb)((*it).first,(*it).second);
         }
     }
-    void     dump_sorted(dump_cb_t dump_cb,
-                         int (*sorter)(std::pair<const TYPE &,uint64_t>,
-                                       std::pair<const TYPE &,uint64_t>)){
-        /* Create a list, sort it, then report the sorted list */
-        cppmutex::lock lock(M);
-        for(typename hmap_t::const_iterator it = amap.begin();it!=amap.end();it++){
-            (*dump_cb)((*it).first,(*it).second);
+    struct ReportElement {
+        ReportElement(TYPE aValue,uint64_t aTally):value(aValue),tally(aTally){ }
+        TYPE value;
+        uint64_t   tally;
+        static bool compare(const ReportElement *e1,
+                            const ReportElement *e2) {
+	    if (e1->tally > e2->tally) return true;
+	    if (e1->tally < e2->tally) return false;
+	    return e1->value < e2->value;
+	}
+        virtual ~ReportElement(){};
+    };
+    typedef std::vector< const ReportElement *> element_vector_t;
+
+    void     dump_sorted(dump_cb_t dump_cb){
+        /* Create a list of new elements, sort it, then report the sorted list */
+        element_vector_t  evect;
+        {
+            cppmutex::lock lock(M);
+            for(typename hmap_t::const_iterator it = amap.begin();it!=amap.end();it++){
+                evect.push_back( new ReportElement((*it).first, (*it).second));
+            }
         }
+        std::sort(evect.begin(),evect.end(),ReportElement::compare);
+        for(typename element_vector_t::const_iterator it = evect.begin();it!=evect.end();it++){
+            (*dump_cb)((*it)->value,(*it)->tally);
+            delete *it;
+        }
+
     }
     uint64_t size_estimate();     // Estimate the size of the database 
 };

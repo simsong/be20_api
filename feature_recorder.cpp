@@ -257,18 +257,11 @@ void dump_cb(const std::string &str,uint64_t count)
     std::cerr << "dump_cb: " << str << " - " << count << "\n";
 }
 
-int dump_cb_sorter(std::pair<const std::string &,uint64_t>a,
-                   std::pair<const std::string &,uint64_t>b)
-{
-    if(a.first<b.first) return -1;
-    return 1;
-}
-
 void feature_recorder::make_histogram(const class histogram_def &def)
 {
     if(flag_set(FLAG_MEM_HISTOGRAM)){
-        std::cerr << "MEMORY HISTOGRAM:\n";
-        mhistogram->dump_sorted(dump_cb,dump_cb_sorter);
+        mhistogram->dump_sorted(dump_cb);
+        return;
     }
 
     beregex reg(def.pattern,REG_EXTENDED);
