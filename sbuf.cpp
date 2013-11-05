@@ -18,11 +18,11 @@
  *  Map a file; falls back to read if mmap is not available
  */
 std::string sbuf_t::U10001C("\xf4\x80\x80\x9c");
-sbuf_t *sbuf_t::map_file(const std::string &fname,const pos0_t &pos0)
+sbuf_t *sbuf_t::map_file(const std::string &fname)
 {
     int fd = open(fname.c_str(),O_RDONLY|O_BINARY,0);
     if(fd<0) return 0;          /* cannot open file */
-    sbuf_t *sbuf = sbuf_t::map_file(fname,pos0,fd);
+    sbuf_t *sbuf = sbuf_t::map_file(fname,fd);
     if(sbuf) {
         sbuf->should_close = true;          // be sure to close the file
     }
@@ -34,7 +34,7 @@ sbuf_t *sbuf_t::map_file(const std::string &fname,const pos0_t &pos0)
  * If there is no mmap, just allocate space and read the file
  */
 
-sbuf_t *sbuf_t::map_file(const std::string &fname,const pos0_t &pos0,int fd)
+sbuf_t *sbuf_t::map_file(const std::string &fname,int fd)
 {
     struct stat st;
     if(fstat(fd,&st)){
@@ -62,7 +62,7 @@ sbuf_t *sbuf_t::map_file(const std::string &fname,const pos0_t &pos0,int fd)
     bool should_free = true;
     bool should_unmap = false;
 #endif
-    sbuf_t *sbuf = new sbuf_t(pos0,// set the filename followed by U+10001C in UTF-8
+    sbuf_t *sbuf = new sbuf_t(pos0_t(fname+sbuf_t::U10001C),
                               buf,
                               st.st_size,
                               st.st_size,

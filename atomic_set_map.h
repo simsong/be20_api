@@ -35,23 +35,29 @@
 #endif
 #endif
 
-template <class TYPE> class atomic_histogram {
+template <class TYPE,class CTYPE> class atomic_histogram {
 #ifdef HAVE_UNORDERED_MAP
-    typedef std::unordered_map<TYPE,uint64_t> hmap_t;
+    typedef std::unordered_map<TYPE,CTYPE> hmap_t;
 #endif
 #ifdef HAVE_TR1_UNORDERED_MAP
-    typedef std::tr1::unordered_map<TYPE,uint64_t> hmap_t;
+    typedef std::tr1::unordered_map<TYPE,CTYPE> hmap_t;
 #endif
     hmap_t amap; // the locked atomic map
     cppmutex M;                         // my lock
 public:
     atomic_histogram():amap(),M(){};
 
-    typedef void (*dump_cb_t)(const TYPE &val,uint64_t count);
+    typedef void (*dump_cb_t)(const TYPE &val,const CTYPE &count);
     // add and return the count
-    uint64_t add(const TYPE &val,uint64_t addend=1){
+    // http://www.cplusplus.com/reference/unordered_map/unordered_map/insert/
+    CTYPE add(const TYPE &val,const CTYPE &count){
         cppmutex::lock lock(M);
-        return (amap[val] += addend);
+        std::pair<typename hmap_t::iterator,bool> p = amap.insert(std::make_pair(val,count));
+
+        if (!p.second) {
+            p.first->second += count;
+        }
+        return p.first->second;
     }
 
     // Dump the database to a user-provided callback.
@@ -64,7 +70,7 @@ public:
     struct ReportElement {
         ReportElement(TYPE aValue,uint64_t aTally):value(aValue),tally(aTally){ }
         TYPE value;
-        uint64_t   tally;
+        CTYPE tally;
         static bool compare(const ReportElement *e1,
                             const ReportElement *e2) {
 	    if (e1->tally > e2->tally) return true;

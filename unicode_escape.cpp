@@ -30,10 +30,6 @@
 #endif
 
 #include "unicode_escape.h"
-//#include "bulk_extractor.h" // for DEBUG_PEDANTIC
-#ifndef DEBUG_PEDANTIC
-#define DEBUG_PEDANTIC 0x0001
-#endif
 
 #include <stdio.h>
 #include <assert.h>
@@ -52,7 +48,7 @@
 
 #include "utf8.h"
 
-extern int debug;
+//extern int debug;
 
 std::string hexesc(unsigned char ch)
 {
@@ -117,12 +113,13 @@ bool valid_utf8codepoint(uint32_t unichar)
  *   - UTF8 string.  If do_escape is set, then corruptions are escaped in \xFF notation where FF is a hex character.
  */
 
-int count=0;
+//int count=0;
+bool validateOrEscapeUTF8_validate=false;
 std::string validateOrEscapeUTF8(const std::string &input, bool escape_bad_utf8,bool escape_backslash)
 {
     // 
     // skip the validation if not escaping and not DEBUG_PEDANTIC
-    if (escape_bad_utf8==false && escape_backslash==false && ((debug & DEBUG_PEDANTIC) == 0)){
+    if (escape_bad_utf8==false && escape_backslash==false && !validateOrEscapeUTF8_validate){
         return input;
     }
         
@@ -211,7 +208,7 @@ std::string validateOrEscapeUTF8(const std::string &input, bool escape_bad_utf8,
             // fatal if we are debug pedantic, otherwise just ignore
             // note: we shouldn't be here anyway, since if we are not escaping and we are not
             // pedantic we should have returned above
-            if(debug & DEBUG_PEDANTIC){
+            if(validateOrEscapeUTF8_validate){
                 std::ofstream os("bad_unicode.txt");
                 os << input << "\n";
                 os.close();
@@ -258,7 +255,7 @@ void check(const std::string &ugly,bool verbose)
 
 void testfile(const char *fn)
 {
-    debug |= DEBUG_PEDANTIC;
+    validateOrEscapeUTF8_validate = true;
 
     std::cout << "testing file " << fn << "\n";
     ifstream i(fn);
@@ -278,7 +275,6 @@ void testfile(const char *fn)
     exit(0);
 }
 
-int debug=0;
 int main(int argc,char **argv)
 {
     std::cout << "Unicode Escape Regression Tester\n";

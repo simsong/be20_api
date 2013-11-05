@@ -770,7 +770,7 @@ void be13::plugin::process_sbuf(const class scanner_params &sp)
  * Process a pcap packet.
  * Designed to be very efficient because we have so many packets.
  */
-void be13::plugin::process_packet_info(const be13::packet_info &pi)
+void be13::plugin::process_packet(const be13::packet_info &pi)
 {
     for(packet_plugin_info_vector_t::iterator it = packet_handlers.begin(); it != packet_handlers.end(); it++){
         (*(*it).callback)((*it).user,pi);

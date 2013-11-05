@@ -8,6 +8,7 @@
  * @{
  */
 /** \file */
+extern bool validateOrEscapeUTF8_validate;
 std::string validateOrEscapeUTF8(const std::string &input, bool escape_bad_UTF8,bool escape_backslash);
 
 #endif

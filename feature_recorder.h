@@ -133,7 +133,7 @@ private:
 
     cppmutex Mf;                        /* protects the file */
     cppmutex Mr;                        /* protects the redlist */
-    typedef atomic_histogram<std::string> mhistogram_t;
+    typedef atomic_histogram<std::string,uint64_t> mhistogram_t;
     mhistogram_t *mhistogram;           // if we are building an in-memory-histogram
 public:
 

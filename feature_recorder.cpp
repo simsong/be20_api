@@ -252,7 +252,7 @@ void feature_recorder::set_flag(uint32_t flags_)
  *  Create a histogram for this feature recorder and an extraction pattern.
  */
 
-void dump_cb(const std::string &str,uint64_t count)
+void dump_cb(const std::string &str,const uint64_t &count)
 {
     std::cerr << "dump_cb: " << str << " - " << count << "\n";
 }
@@ -491,7 +491,7 @@ void feature_recorder::write(const pos0_t &pos0,const string &feature_,const str
 
     /* Support in-memory histogram */
     if(flag_set(FLAG_MEM_HISTOGRAM)){
-        mhistogram->add(feature);
+        mhistogram->add(feature,1);
     }
 
     /* Finally write out the feature and the context */

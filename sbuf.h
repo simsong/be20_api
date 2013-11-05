@@ -181,6 +181,7 @@ inline bool operator ==(const class pos0_t & pos0,const class pos0_t &pos1) {
 
 /**
  * \class managed_malloc Like new[], but it automatically gets freed when the object is dropped.
+ * throws std::bad_alloc if no memory.
  */
 template < class TYPE > class managed_malloc {
     // default construction, copy construction and assignment are meaningless
@@ -367,8 +368,8 @@ public:
     }
 
     /* Allocate a sbuf from a file mapped into memory */
-    static sbuf_t *map_file(const std::string &fname,const pos0_t &pos0); 
-    static sbuf_t *map_file(const std::string &fname,const pos0_t &pos0,int fd); 
+    static sbuf_t *map_file(const std::string &fname); 
+    static sbuf_t *map_file(const std::string &fname,int fd); // if file is already opened
     static std::string U10001C;         // delimeter character in bulk_extractor
 
     /* Properties */
@@ -547,6 +548,7 @@ public:
      * Find the next occurance of a char* string in the buffer
      * starting at a give point.
      * Return offset or -1 if there is none to find.
+     * This would benefit from a boyer-Moore implementation
      */
     ssize_t find(const char *str,size_t start) const {
         if(str[0]==0) return -1;        // nothing to search for
