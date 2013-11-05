@@ -444,10 +444,8 @@ void be13::plugin::phase_shutdown(feature_recorder_set &fs)
 
 #ifdef USE_HISTOGRAMS
 static const int LINE_LEN = 80;         // keep track of where we are on the line
-bool opt_enable_histograms=true;
 void be13::plugin::phase_histogram(feature_recorder_set &fs, xml_notifier_t xml_error_notifier)
 {
-    if(!opt_enable_histograms) return;
     int pos  = 0;
     bool need_nl = false;
 
