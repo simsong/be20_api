@@ -9,6 +9,7 @@
 #include <sys/stat.h>
 #include <dirent.h>
 #include <algorithm>
+
 #ifdef HAVE_ERR_H
 #include <err.h>
 #endif
@@ -21,30 +22,18 @@
 #include "aftimer.h"
 #include "../dfxml/src/hash_t.h"
 
-#if 0
-#if defined(HAVE_UNORDERED_SET)
-#include <unordered_set>
-#undef HAVE_TR1_UNORDERED_SET           // be sure we don't use it
-#else
-#if defined(HAVE_TR1_UNORDERED_SET)
-#include <tr1/unordered_set>
-#else
-#error Requires <unordered_set> or <tr1/unordered_set>
-#endif
-#endif
 
-
-namespace std {
-    namespace tr1 {
-        template<>
-        struct hash<md5_t> {
-            size_t operator()(const md5_t &key) const {
-                return *(size_t *)(key.final());
-            }
-        };
-    }
-}
-#endif
+//namespace std {
+//    namespace tr1 {
+//        template<>
+//        struct hash<md5_t> {
+//            size_t operator()(const md5_t &key) const {
+//                return *(size_t *)(key.final());
+//            }
+//        };
+//    }
+//}
+//#endif
 
 uint32_t scanner_def::max_depth = 7;            // max recursion depth
 uint32_t scanner_def::max_ngram = 10;            // max recursion depth
@@ -185,9 +174,11 @@ void be13::plugin::load_scanner(scanner_t scanner,const scanner_info::scanner_co
         if((*it)->scanner==scanner) return;
     }
 
-    /* make an empty sbuf and feature recorder set */
-    const sbuf_t sbuf;
-    feature_recorder_set fs(feature_recorder_set::SET_DISABLED); // dummy
+    /* Use an empty sbuf and an empty feature recorder set as the parameters for the sp below.
+     * we use static values so that the sbuf is not constantly being created and destroyed.
+     */
+    static const sbuf_t sbuf;
+    static feature_recorder_set fs(feature_recorder_set::SET_DISABLED); // dummy
 
     //
     // Each scanner's params are stored in a scanner_def object that

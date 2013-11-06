@@ -94,7 +94,7 @@ void feature_recorder::banner_stamp(std::ostream &os,const std::string &header)
  * @param name         - the name of the feature being recorded.
  */
 
-feature_recorder::feature_recorder(string outdir_,string input_fname_,string name_):
+feature_recorder::feature_recorder(const std::string &outdir_,const std::string &input_fname_,const std::string &name_):
     flags(0),
     outdir(outdir_),input_fname(input_fname_),name(name_),ignore_encoding(),count_(0),ios(),
     context_window_before(context_window_default),context_window_after(context_window_default),
@@ -152,7 +152,7 @@ void feature_recorder::open()
     // Just open the stream for output
     ios.open(fname.c_str(),ios_base::out);
     if(!ios.is_open()){
-        cerr << "*** CANNOT OPEN FEATURE FILE "
+        cerr << "*** feature_recorder::open CANNOT OPEN FEATURE FILE FOR WRITING "
              << fname << ":" << strerror(errno) << "\n";
         exit(1);
     }

@@ -113,7 +113,7 @@ public:
     static std::string banner_file;          // banner for top of every file
     static std::string extract_feature(const std::string &line);
 
-    feature_recorder(string outdir,string input_fname,string name);
+    feature_recorder(const std::string &outdir,const std::string &input_fname,const std::string &name);
     virtual ~feature_recorder();
 
     virtual void set_flag(uint32_t flags_);
@@ -131,6 +131,7 @@ private:
     size_t context_window_before;       // context window
     size_t context_window_after;       // context window
 
+protected:;
     cppmutex Mf;                        /* protects the file */
     cppmutex Mr;                        /* protects the redlist */
     typedef atomic_histogram<std::string,uint64_t> mhistogram_t;
@@ -157,10 +158,10 @@ public:
     static std::string unquote_string(const std::string &feature); // turns octal escape back to binary characters
 
     /* feature file management */
-    void open();
-    void close();                       
-    void flush();
-    void make_histogram(const class histogram_def &def);
+    virtual void open();
+    virtual void close();                       
+    virtual void flush();
+    virtual void make_histogram(const class histogram_def &def);
     
     /* Methods to get info */
     uint64_t count(){return count_;}
@@ -177,7 +178,7 @@ public:
      * It uses locks and is threadsafe.
      * Callers therefore do not need locks.
      */
-    void write(const std::string &str);
+    virtual void write(const std::string &str);
 
     /**
      * support for writing features

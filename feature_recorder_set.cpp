@@ -24,33 +24,25 @@ feature_recorder_set::feature_recorder_set(uint32_t flags_):flags(flags_),seen_s
     if(flags & SET_DISABLED){
         create_name(DISABLED_RECORDER_NAME,false);
         frm[DISABLED_RECORDER_NAME]->set_flag(feature_recorder::FLAG_DISABLED);
-        return;
     }
-    assert(0);                          // need to have a disabled recorder
 }
 
 /**
  * Create a properly functioning feature recorder set.
  * If disabled, create a disabled feature_recorder that can respond to functions as requested.
  */
-feature_recorder_set::feature_recorder_set(const feature_file_names_t &feature_files,
-                                           const std::string &input_fname_,
-                                           const std::string &outdir_,
-                                           bool create_stop_files):
-    flags(0),seen_set(),input_fname(input_fname_),outdir(outdir_),frm(),map_lock(),
-    scanner_stats()
+void feature_recorder_set::init(const feature_file_names_t &feature_files,
+                           const std::string &input_fname_,
+                           const std::string &outdir_)
 {
-    if(flags & SET_DISABLED){
-        create_name(DISABLED_RECORDER_NAME,false);
-        frm[DISABLED_RECORDER_NAME]->set_flag(feature_recorder::FLAG_DISABLED);
-        return;
-    }
+    input_fname = input_fname_;
+    outdir      = outdir_;
 
     create_name(feature_recorder_set::ALERT_RECORDER_NAME,false); // make the alert recorder
 
     /* Create the requested feature files */
     for(set<string>::const_iterator it=feature_files.begin();it!=feature_files.end();it++){
-        create_name(*it,create_stop_files);
+        create_name(*it,flags & CREATE_STOP_LIST_RECORDERS);
     }
 }
 
@@ -95,34 +87,25 @@ feature_recorder *feature_recorder_set::get_name(const std::string &name)
 }
 
 
-void feature_recorder_set::add_stats(string bucket,double seconds)
-{
-    cppmutex::lock lock(map_lock);
-    struct pstats &p = scanner_stats[bucket]; // get the location of the stats
-    p.seconds += seconds;
-    p.calls ++;
+feature_recorder *feature_recorder_set::create_name_factory(const std::string &outdir_,const std::string &input_fname_,const std::string &name_){
+    return new feature_recorder(outdir_,input_fname_,name_);
 }
 
-void feature_recorder_set::get_stats(void *user,stat_callback_t stat_callback)
-{
-    for(scanner_stats_map::const_iterator it = scanner_stats.begin();it!=scanner_stats.end();it++){
-        (*stat_callback)(user,(*it).first,(*it).second.calls,(*it).second.seconds);
-    }
-}
 
-void feature_recorder_set::create_name(string name,bool create_stop_file) 
+void feature_recorder_set::create_name(const std::string &name,bool create_stop_file) 
 {
     if(frm.find(name)!=frm.end()){
         std::cerr << "create_name: feature recorder '" << name << "' already exists\n";
         return;
     }
 
-    feature_recorder *fr = new feature_recorder(outdir,input_fname,name);
+    feature_recorder *fr = create_name_factory(outdir,input_fname,name);
+
     frm[name] = fr;
     if(create_stop_file){
         string name_stopped = name+"_stopped";
         
-        fr->stop_list_recorder = new feature_recorder(outdir,input_fname,name_stopped);
+        fr->stop_list_recorder = create_name_factory(outdir,input_fname,name_stopped);
         frm[name_stopped] = fr->stop_list_recorder;
     }
     
@@ -139,8 +122,27 @@ feature_recorder *feature_recorder_set::get_alert_recorder()
 }
 
 
+/*
+ * uses md5 to determine if a block was prevously seen.
+ */
 bool feature_recorder_set::check_previously_processed(const uint8_t *buf,size_t bufsize)
 {
     std::string md5 = md5_generator::hash_buf(buf,bufsize).hexdigest();
     return seen_set.check_for_presence_and_insert(md5);
 }
+
+void feature_recorder_set::add_stats(string bucket,double seconds)
+{
+    cppmutex::lock lock(map_lock);
+    struct pstats &p = scanner_stats[bucket]; // get the location of the stats
+    p.seconds += seconds;
+    p.calls ++;
+}
+
+void feature_recorder_set::get_stats(void *user,stat_callback_t stat_callback)
+{
+    for(scanner_stats_map::const_iterator it = scanner_stats.begin();it!=scanner_stats.end();it++){
+        (*stat_callback)(user,(*it).first,(*it).second.calls,(*it).second.seconds);
+    }
+}
+
