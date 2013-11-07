@@ -420,7 +420,6 @@ void feature_recorder::write0(const pos0_t &pos0,const string &feature,const str
 
 void feature_recorder::write(const pos0_t &pos0,const string &feature_,const string &context_)
 {
-    std::cerr << "pos0: " << pos0 << "feature_= " << feature_ << "\n";
     if(flags & FLAG_DISABLED) return;           // disabled
     if(debug & DEBUG_PEDANTIC){
         if(feature_.size() > opt_max_feature_size){
@@ -447,7 +446,6 @@ void feature_recorder::write(const pos0_t &pos0,const string &feature_,const str
         escape_backslash = false;
     }
 
-    std::cerr << "feature_=" << feature_ << "\n";    
     string feature = validateOrEscapeUTF8(feature_, escape_bad_utf8,escape_backslash);
 
     string context;
