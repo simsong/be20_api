@@ -401,12 +401,26 @@ void feature_recorder::printf(const char *fmt, ...)
 
 
 /**
+ * Combine the pos0, feature and context into a single line and write it to the feature file.
+ */
+
+void feature_recorder::write0(const pos0_t &pos0,const string &feature,const string &context)
+{
+    stringstream ss;
+    ss << pos0.shift(feature_recorder::offset_add).str() << '\t' << feature;
+    if(flag_notset(FLAG_NO_CONTEXT) && (context.size()>0)) ss << '\t' << context;
+    this->write(ss.str());
+}
+
+
+/**
  * the main entry point of writing a feature and its context to the feature file.
  * processes the stop list
  */
 
 void feature_recorder::write(const pos0_t &pos0,const string &feature_,const string &context_)
 {
+    std::cerr << "pos0: " << pos0 << "feature_= " << feature_ << "\n";
     if(flags & FLAG_DISABLED) return;           // disabled
     if(debug & DEBUG_PEDANTIC){
         if(feature_.size() > opt_max_feature_size){
@@ -433,6 +447,7 @@ void feature_recorder::write(const pos0_t &pos0,const string &feature_,const str
         escape_backslash = false;
     }
 
+    std::cerr << "feature_=" << feature_ << "\n";    
     string feature = validateOrEscapeUTF8(feature_, escape_bad_utf8,escape_backslash);
 
     string context;
@@ -496,10 +511,7 @@ void feature_recorder::write(const pos0_t &pos0,const string &feature_,const str
 
     /* Finally write out the feature and the context */
     if(flag_notset(FLAG_NO_FEATURES)){
-        stringstream ss;
-        ss << pos0.shift(feature_recorder::offset_add).str() << '\t' << feature;
-        if(flag_notset(FLAG_NO_CONTEXT) && (context.size()>0)) ss << '\t' << context;
-        this->write(ss.str());
+        this->write0(pos0,feature,context);
     }
 }
 

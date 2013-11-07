@@ -173,6 +173,10 @@ public:
      * pos0 gives the location and prefix for the beginning of the buffer
      */ 
 
+    /****************************************************************
+     *** External entry points.
+     ****************************************************************/
+
     /**
      * write() actually does the writing to the file.
      * It uses locks and is threadsafe.
@@ -189,6 +193,11 @@ public:
     virtual void printf(const char *fmt_,...) __attribute__((format(printf, 2, 3)));
     // 
     // write a feature and its context; the feature may be in the context, but doesn't need to be.
+    // write() calls write0() after histogram, quoting, and stoplist processing
+    virtual void write0(const pos0_t &pos0,const std::string &feature,const std::string &context);  
+
+    // write a feature and its context; the feature may be in the context, but doesn't need to be.
+    // entries processed by write below will be processed by histogram system
     virtual void write(const pos0_t &pos0,const std::string &feature,const std::string &context);  
 
     // write a feature located at a given place within an sbuf.
