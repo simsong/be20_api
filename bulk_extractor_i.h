@@ -407,17 +407,48 @@ public:
     
 #ifndef ETHERTYPE_PUP
 #define ETHERTYPE_PUP           0x0200          /* Xerox PUP */
+#endif
+
+#ifndef ETHERTYPE_SPRITE
 #define ETHERTYPE_SPRITE        0x0500          /* Sprite */
+#endif
+
+#ifndef ETHERTYPE_IP
 #define ETHERTYPE_IP            0x0800          /* IP */
+#endif
+
+#ifndef ETHERTYPE_ARP
 #define ETHERTYPE_ARP           0x0806          /* Address resolution */
+#endif
+
+#ifndef ETHERTYPE_REVARP
 #define ETHERTYPE_REVARP        0x8035          /* Reverse ARP */
+#endif
+
+#ifndef ETHERTYPE_AT
 #define ETHERTYPE_AT            0x809B          /* AppleTalk protocol */
+#endif
+
+#ifndef ETHERTYPE_AARP
 #define ETHERTYPE_AARP          0x80F3          /* AppleTalk ARP */
+#endif
+
+#ifndef ETHERTYPE_VLAN
 #define ETHERTYPE_VLAN          0x8100          /* IEEE 802.1Q VLAN tagging */
+#endif
+
+#ifndef ETHERTYPE_IPX
 #define ETHERTYPE_IPX           0x8137          /* IPX */
+#endif
+
+#ifndef ETHERTYPE_IPV6
 #define ETHERTYPE_IPV6          0x86dd          /* IP protocol version 6 */
+#endif
+
+#ifndef ETHERTYPE_LOOPBACK
 #define ETHERTYPE_LOOPBACK      0x9000          /* used to test interfaces */
 #endif
+
     
     inline u_short packet_info::nshort(const u_char *buf,size_t pos) 
     {
