@@ -774,8 +774,7 @@ class scanner_params {
     }
 
     /* A scanner params with no print options */
-    scanner_params(phase_t phase_,const sbuf_t &sbuf_,
-                   class feature_recorder_set &fs_):
+    scanner_params(phase_t phase_,const sbuf_t &sbuf_, class feature_recorder_set &fs_):
         sp_version(CURRENT_SP_VERSION),
         phase(phase_),sbuf(sbuf_),fs(fs_),depth(0),print_options(no_options),info(0),sbufxml(0){
     }

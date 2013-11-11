@@ -94,10 +94,12 @@ void feature_recorder::banner_stamp(std::ostream &os,const std::string &header)
  * @param name         - the name of the feature being recorded.
  */
 
-feature_recorder::feature_recorder(const std::string &outdir_,const std::string &input_fname_,const std::string &name_):
+feature_recorder::feature_recorder(class feature_recorder_set &fs_,
+                                   const std::string &outdir_,const std::string &input_fname_,const std::string &name_):
     flags(0),
-    outdir(outdir_),input_fname(input_fname_),name(name_),ignore_encoding(),count_(0),ios(),
-    context_window_before(context_window_default),context_window_after(context_window_default),
+    outdir(outdir_),input_fname(input_fname_),name(name_),ignore_encoding(),ios(),
+    fs(fs_),
+    count_(0),context_window_before(context_window_default),context_window_after(context_window_default),
     Mf(),Mr(),mhistogram(),
     stop_list_recorder(0),
     file_number(0),carve_mode(CARVE_ENCODED)

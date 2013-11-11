@@ -88,7 +88,7 @@ feature_recorder *feature_recorder_set::get_name(const std::string &name)
 
 
 feature_recorder *feature_recorder_set::create_name_factory(const std::string &outdir_,const std::string &input_fname_,const std::string &name_){
-    return new feature_recorder(outdir_,input_fname_,name_);
+    return new feature_recorder(*this,outdir_,input_fname_,name_);
 }
 
 
@@ -100,20 +100,22 @@ void feature_recorder_set::create_name(const std::string &name,bool create_stop_
     }
 
     feature_recorder *fr = create_name_factory(outdir,input_fname,name);
+    feature_recorder *fr_stopped = 0;
 
     frm[name] = fr;
     if(create_stop_file){
         string name_stopped = name+"_stopped";
         
-        fr->stop_list_recorder = create_name_factory(outdir,input_fname,name_stopped);
-        frm[name_stopped] = fr->stop_list_recorder;
+        fr_stopped = create_name_factory(outdir,input_fname,name_stopped);
+        fr->set_stop_list_recorder(fr_stopped);
+        frm[name_stopped] = fr_stopped;
     }
     
     if(flags & SET_DISABLED) return;        // don't open if we are disabled
     
     /* Open the output!*/
     fr->open();
-    if(fr->stop_list_recorder) fr->stop_list_recorder->open();
+    if(fr_stopped) fr_stopped->open();
 }
 
 feature_recorder *feature_recorder_set::get_alert_recorder()

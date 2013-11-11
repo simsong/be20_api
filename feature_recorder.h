@@ -13,10 +13,6 @@
  *
  * System for recording features from the scanners into the feature files.
  *
- * This module defines three classes:
- * class feature_recorder - the individual recorders.
- * class feature_recorder_set - the set of recorders.
- * 
  * There is one feature_recorder per feature file. It is used both to record
  * the features and to perform the histogram calculation.
  * (That should probably be moved to a different class.) It also also previously
@@ -55,7 +51,7 @@ class feature_recorder {
     // and not implemented
     feature_recorder(const feature_recorder &);
     feature_recorder &operator=(const feature_recorder &);
-    //
+
     static uint32_t debug;              // are we debugging?
     static pthread_t main_threadid;     // main threads ID
     static void MAINTHREAD();           // called if can only be run in the main thread
@@ -107,13 +103,15 @@ public:
     static const std::string bulk_extractor_version_header;
 
     // These must only be changed in the main thread:
-    static uint32_t opt_max_context_size;
-    static uint32_t opt_max_feature_size;
-    static int64_t offset_add;          // added to every reported offset, for use with hadoop
+    static uint32_t    opt_max_context_size;
+    static uint32_t    opt_max_feature_size;
+    static int64_t     offset_add;          // added to every reported offset, for use with hadoop
     static std::string banner_file;          // banner for top of every file
     static std::string extract_feature(const std::string &line);
 
-    feature_recorder(const std::string &outdir,const std::string &input_fname,const std::string &name);
+    feature_recorder(class feature_recorder_set &fs,
+                     const std::string &outdir,
+                     const std::string &input_fname,const std::string &name);
     virtual ~feature_recorder();
 
     virtual void set_flag(uint32_t flags_);
@@ -124,21 +122,31 @@ public:
     const std::string outdir;                // where output goes (could be static, I guess 
     const std::string input_fname;           // image we are analyzing
     const std::string name;                  /* name of this feature recorder */
+
 private:
-    std::string ignore_encoding;       // encoding to ignore for carving
-    int64_t count_;                      /* number of records written */
-    std::fstream ios;                   /* where features are written */
-    size_t context_window_before;       // context window
-    size_t context_window_after;       // context window
+    std::string  ignore_encoding;            // encoding to ignore for carving
+    std::fstream ios;                        /* where features are written */
 
 protected:;
+    class feature_recorder_set &fs;     // the set in which this feature_recorder resides
+
+    int64_t      count_;                     /* number of records written */
+    size_t       context_window_before;      // context window
+    size_t       context_window_after;       // context window
+
     cppmutex Mf;                        /* protects the file */
     cppmutex Mr;                        /* protects the redlist */
     typedef atomic_histogram<std::string,uint64_t> mhistogram_t;
     mhistogram_t *mhistogram;           // if we are building an in-memory-histogram
-public:
 
+    class feature_recorder     *stop_list_recorder; // where stopped features get written
+
+public:
     /* these are not threadsafe and should only be called in startup */
+    void set_stop_list_recorder(class feature_recorder *fr){
+        MAINTHREAD();
+        stop_list_recorder = fr;
+    }
     void set_context_window(size_t win){
         MAINTHREAD();
         context_window_before = win;
@@ -152,7 +160,6 @@ public:
     void   banner_stamp(std::ostream &os,const std::string &header); // stamp BOM, banner, and header
 
     /* where stopped items (on stop_list or context_stop_list) get recorded: */
-    class feature_recorder *stop_list_recorder; // where stopped features get written
     std::string fname_counter(string suffix);
     static std::string quote_string(const std::string &feature); // turns unprintable characters to octal escape
     static std::string unquote_string(const std::string &feature); // turns octal escape back to binary characters
