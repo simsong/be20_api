@@ -360,7 +360,7 @@ public:
     }
 
     virtual ~sbuf_t(){
-#ifdef SBUF_TRACK
+#if defined(SBUF_TRACK) && defined(HAVE___SYNC_ADD_AND_FETCH)
         assert(__sync_fetch_and_add(&children,0)==0);
 #endif
         if(parent) parent->del_child(*this);
@@ -378,14 +378,14 @@ public:
 
     const sbuf_t *highest_parent() const; // returns the parent of the parent...
     void add_child(const sbuf_t &child) const {
+#if defined(HAVE___SYNC_ADD_AND_FETCH) && defined(SBUF_TRACK)
         __sync_fetch_and_add(&children,1);
-#ifdef SBUF_TRACK
         std::cerr << "add_child(" << this << ")="<<children << "\n";
 #endif
     }
     void del_child(const sbuf_t &child) const {
+#if defined(HAVE___SYNC_ADD_AND_FETCH) && defined(SBUF_TRACK)
         __sync_fetch_and_add(&children,-1);
-#ifdef SBUF_TRACK
         std::cerr << "del_child(" << this << ")="<<children << "\n";
         assert(__sync_fetch_and_add(&children,0)>=0);
 #endif

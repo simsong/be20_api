@@ -25,4 +25,9 @@ BE13_API= \
         be13_api/utf8/core.h \
         be13_api/utf8/unchecked.h \
         be13_api/utils.cpp \
-        be13_api/utils.h
+        be13_api/utils.h \
+        be13_api/word_and_context_list.cpp \
+        be13_api/word_and_context_list.h 
+
+
+
