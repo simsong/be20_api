@@ -13,10 +13,9 @@ AC_TRY_COMPILE([#pragma GCC diagnostic ignored "-Wcast-align"],[int a=3;],
   [AC_DEFINE(HAVE_DIAGNOSTIC_CAST_ALIGN,1,[define 1 if GCC supports -Wcast-align])]
 )
 
-AC_TRY_COMPILE([#include <inttypes.h>],
+AC_TRY_LINK([#include <inttypes.h>],
                [uint64_t ul; __sync_add_and_fetch(&ul,0);],
                AC_DEFINE(HAVE___SYNC_ADD_AND_FETCH,1,[define 1 if __sync_add_and_fetch works on 64-bit numbers]))
-
 
 
 #

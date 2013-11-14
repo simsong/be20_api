@@ -1,7 +1,9 @@
 #include "config.h"
 #include "word_and_context_list.h"
+#include "beregex.h"
+//#include "feature_recorder.h"
 
-void word_and_context_list::add_regex(const string &pat)
+void word_and_context_list::add_regex(const std::string &pat)
 {
     patterns.push_back(new beregex(pat,0));
 }
@@ -10,42 +12,36 @@ void word_and_context_list::add_regex(const string &pat)
  * Insert a feature and context, but only if not already present.
  * Returns true if added.
  */
-bool word_and_context_list::add_fc(const string &f,const string &c)
+bool word_and_context_list::add_fc(const std::string &f,const std::string &c)
 {
     context ctx(f,c);			// ctx includes feature, before and after
 
     if(c.size()>0 && context_set.find(c) != context_set.end()) return false; // already present
-
-    //for(stopmap_t::const_iterator it = fcmap.find(f);it!=fcmap.end();it++){
-    //if((*it).second == ctx) return false;
-    //}
     context_set.insert(c);		// now we've seen it.
-    fcmap.insert(pair<string,context>(f,ctx));
+    fcmap.insert(std::pair<std::string,context>(f,ctx));
     if(fcmap.size()%100==0) std::cerr << "fcmap size=" << fcmap.size()  << "\n";
     return true;
 }
 
 /** returns 0 if success, -1 if fail. */
-int word_and_context_list::readfile(const string &filename)
+int word_and_context_list::readfile(const std::string &filename)
 {
-    ifstream i(filename.c_str());
+    std::ifstream i(filename.c_str());
     if(!i.is_open()) return -1;
     printf("Reading context stop list %s\n",filename.c_str());
-    string line;
+    std::string line;
     uint64_t total_context=0;
     uint64_t line_counter = 0;
     uint64_t features_read = 0;
     while(getline(i,line)){
 	line_counter++;
 	if(line.size()==0) continue;
-#if 0
-	if(line_counter==1 && line.size()>3
-	   && line[0]==feature_recorder::UTF8_BOM[0]
-	   && line[1]==feature_recorder::UTF8_BOM[1]
-	   && line[2]==feature_recorder::UTF8_BOM[2]){
-	    line = line.substr(3);	// remove the UTF8 BOM
-	}
-#endif
+//	if(line_counter==1 && line.size()>3
+//	   && line[0]==feature_recorder::UTF8_BOM[0]
+//	   && line[1]==feature_recorder::UTF8_BOM[1]
+//	   && line[2]==feature_recorder::UTF8_BOM[2]){
+//	    line = line.substr(3);	// remove the UTF8 BOM
+//	}
 	if(line[0]=='#') continue; // it's a comment
 	if((*line.end())=='\r'){
 	    line.erase(line.end());	/* remove the last character if it is a \r */
@@ -55,18 +51,18 @@ int word_and_context_list::readfile(const string &filename)
 
 	// If there are two tabs, this is a line from a feature file
 	size_t tab1 = line.find('\t');
-	if(tab1!=string::npos){
+	if(tab1!=std::string::npos){
 	    size_t tab2 = line.find('\t',tab1+1);
-	    if(tab2!=string::npos){
+	    if(tab2!=std::string::npos){
 		size_t tab3 = line.find('\t',tab2+1);
-		if(tab3==string::npos) tab3=line.size();
-		string f = line.substr(tab1+1,(tab2-1)-tab1);
-		string c = line.substr(tab2+1,(tab3-1)-tab2);
+		if(tab3==std::string::npos) tab3=line.size();
+                std::string f = line.substr(tab1+1,(tab2-1)-tab1);
+                std::string c = line.substr(tab2+1,(tab3-1)-tab2);
 		if(add_fc(f,c)){
 		    ++total_context;
 		}
 	    } else {
-		string f = line.substr(tab1+1);
+                std::string f = line.substr(tab1+1);
 		add_fc(f,"");		// Insert a feature with no context
 	    }
 	    continue;
@@ -78,7 +74,7 @@ int word_and_context_list::readfile(const string &filename)
 	    patterns.push_back(new beregex(line,REG_ICASE));
 	} else {
 	    // Otherwise, add it as a feature with no context
-	    fcmap.insert(pair<string,context>(line,context(line)));
+	    fcmap.insert(std::pair<std::string,context>(line,context(line)));
 	}
     }
     std::cout << "Stop list read.\n";
@@ -90,7 +86,7 @@ int word_and_context_list::readfile(const string &filename)
 }
 
 /** check() is threadsafe. */
-bool word_and_context_list::check(const string &probe,const string &before,const string &after) const
+bool word_and_context_list::check(const std::string &probe,const std::string &before,const std::string &after) const
 {
     /* First check literals, because they are faster */
     for(stopmap_t::const_iterator it =fcmap.find(probe);it!=fcmap.end();it++){
@@ -110,10 +106,10 @@ bool word_and_context_list::check(const string &probe,const string &before,const
     return false;
 };
 
-bool word_and_context_list::check_feature_context(const string &probe,const string &context) const 
+bool word_and_context_list::check_feature_context(const std::string &probe,const std::string &context) const 
 {
-    string before;
-    string after;
+    std::string before;
+    std::string after;
     context::extract_before_after(probe,context,before,after);
     return check(probe,before,after);
 }

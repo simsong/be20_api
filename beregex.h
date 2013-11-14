@@ -9,7 +9,13 @@
 #ifndef BEREGEX_H
 #define BEREGEX_H
 
-#include "config.h"
+#ifdef HAVE_TRE_TRE_H
+# include <tre/tre.h>
+#else
+# ifdef HAVE_REGEX_H
+#  include <regex.h>
+# endif
+#endif
 
 #include <string>
 #include <iostream>

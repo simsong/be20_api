@@ -11,9 +11,7 @@
 #include "unicode_escape.h"
 #include "beregex.h"
 
-#ifdef USE_HISTOGRAMS
 #include "histogram.h"
-#endif
 
 #include <unistd.h>
 #include <fcntl.h>
@@ -102,7 +100,7 @@ feature_recorder::feature_recorder(class feature_recorder_set &fs_,
     count_(0),context_window_before(context_window_default),context_window_after(context_window_default),
     Mf(),Mr(),mhistogram(),
     stop_list_recorder(0),
-    file_number(0),carve_mode(CARVE_ENCODED)
+    file_number_(0),carve_mode(CARVE_ENCODED)
 {
 }
 
@@ -240,15 +238,12 @@ void feature_recorder::set_flag(uint32_t flags_)
     MAINTHREAD();
     flags|=flags_;
 
-#ifdef USE_HISTOGRAMS
     if((flags & FLAG_MEM_HISTOGRAM) && mhistogram==0){
         /* Create the in-memory histogram */
         mhistogram = new mhistogram_t();
     }
-#endif
 }
 
-#ifdef USE_HISTOGRAMS
 
 /**
  *  Create a histogram for this feature recorder and an extraction pattern.
@@ -259,7 +254,7 @@ void dump_cb(const std::string &str,const uint64_t &count)
     std::cerr << "dump_cb: " << str << " - " << count << "\n";
 }
 
-void feature_recorder::make_histogram(const class histogram_def &def)
+void feature_recorder::make_histogram(const class histogram_def &def,feature_recorder::callback_t cb)
 {
     if(flag_set(FLAG_MEM_HISTOGRAM)){
         mhistogram->dump_sorted(dump_cb);
@@ -350,7 +345,6 @@ void feature_recorder::make_histogram(const class histogram_def &def)
     std::cerr << "Looped " << max_histogram_files
               << " times on histogram; something seems wrong\n";
 }
-#endif
 
 
 /****************************************************************
@@ -476,24 +470,24 @@ void feature_recorder::write(const pos0_t &pos0,const string &feature_,const str
         }
     }
         
-#ifdef USE_STOP_LIST
     /* First check to see if the feature is on the stop list.
      * Only do this if we have a stop_list_recorder (the stop list recorder itself
      * does not have a stop list recorder. If it did we would infinitely recurse.
      */
     if(flag_notset(FLAG_NO_STOPLIST) && stop_list_recorder){          
-        if(stop_list.check_feature_context(feature,context)){
+        if(fs.stop_list
+           && fs.stop_list->check_feature_context(feature,context)){
             stop_list_recorder->write(pos0,feature,context);
             return;
         }
     }
-#endif
 
-#ifdef USE_ALERT_LIST
     /* The alert list is a special features that are called out.
      * If we have one of those, write it to the redlist.
      */
-    if(flag_notset(FLAG_NO_ALERTLIST) && alert_list.check_feature_context(feature,context)){
+    if(flag_notset(FLAG_NO_ALERTLIST)
+       && fs.alert_list
+       && fs.alert_list->check_feature_context(feature,context)){
         string alert_fn = outdir + "/ALERTS_found.txt";
 
         cppmutex::lock lock(Mr);                // notce we are locking the redlist
@@ -502,7 +496,6 @@ void feature_recorder::write(const pos0_t &pos0,const string &feature_,const str
             rf << pos0.shift(feature_recorder::offset_add).str() << '\t' << feature << '\t' << "\n";
         }
     }
-#endif
 
     /* Support in-memory histogram */
     if(flag_set(FLAG_MEM_HISTOGRAM)){
@@ -670,16 +663,7 @@ std::string feature_recorder::carve(const sbuf_t &sbuf,size_t pos,size_t len,
      * that's okay, because the second one will fail.
      */
 
-#ifdef HAVE___SYNC_ADD_AND_FETCH
-    uint64_t this_file_number = __sync_add_and_fetch(&file_number,1);
-#else
-    uint64_t this_file_number = 0;
-    {
-        cppmutex::lock lock(Mf);
-        this_file_number = file_number++;
-    }
-#endif
-
+    uint64_t this_file_number = file_number_add(1);
     std::string dirname1 = outdir + "/" + name;
     std::stringstream ss;
 

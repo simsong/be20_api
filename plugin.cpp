@@ -149,9 +149,7 @@ void be13::plugin::set_scanner_enabled_all(bool enable)
  * The histogram should be done in the plug-in
  */
 
-#ifdef USE_HISTOGRAMS
-static histograms_t histograms;
-#endif
+//static histograms_t histograms;
 
 /****************************************************************
  *** scanner plugin loading
@@ -167,7 +165,7 @@ static histograms_t histograms;
  * This is called before scanners are enabled or disabled, so the pcap handlers
  * need to be set afterwards
  */
-void be13::plugin::load_scanner(scanner_t scanner,const scanner_info::scanner_config &sc)
+void be13::plugin::load_scanner(scanner_t scanner,scanner_info::scanner_config &sc)
 {
     /* If scanner is already loaded, return */
     for(scanner_vector::const_iterator it = current_scanners.begin();it!=current_scanners.end();it++){
@@ -205,18 +203,16 @@ void be13::plugin::load_scanner(scanner_t scanner,const scanner_info::scanner_co
     
     sd->enabled      = !(sd->info.flags & scanner_info::SCANNER_DISABLED);
 
-#ifdef USE_HISTOGRAMS
     // Catch histograms and add as a current scanner for all scanners,
     // as a scanner may be enabled after it is loaded.
     for(histograms_t::const_iterator it = sd->info.histogram_defs.begin();
         it != sd->info.histogram_defs.end(); it++){
-        histograms.insert((*it));
+        sc.histograms.insert((*it));
     }
-#endif
     current_scanners.push_back(sd);
 }
 
-void be13::plugin::load_scanner_file(string fn,const scanner_info::scanner_config &sc)
+void be13::plugin::load_scanner_file(string fn,scanner_info::scanner_config &sc)
 {
     /* Figure out the function name */
     size_t extloc = fn.rfind('.');
@@ -256,14 +252,14 @@ void be13::plugin::load_scanner_file(string fn,const scanner_info::scanner_confi
     load_scanner(*scanner,sc);
 }
 
-void be13::plugin::load_scanners(scanner_t * const *scanners, const scanner_info::scanner_config &sc)
+void be13::plugin::load_scanners(scanner_t * const *scanners,scanner_info::scanner_config &sc)
 {
     for(int i=0;scanners[i];i++){
         load_scanner(scanners[i],sc);
     }
 }
 
-void be13::plugin::load_scanner_directory(const string &dirname, const scanner_info::scanner_config &sc )
+void be13::plugin::load_scanner_directory(const string &dirname,scanner_info::scanner_config &sc )
 {
     DIR *dirp = opendir(dirname.c_str());
     if(dirp==0){
@@ -287,7 +283,7 @@ void be13::plugin::load_scanner_directory(const string &dirname, const scanner_i
 }
 
 void be13::plugin::load_scanner_directories(const std::vector<std::string> &dirnames,
-                              const scanner_info::scanner_config &sc)
+                                            scanner_info::scanner_config &sc)
 {
     for(std::vector<std::string>::const_iterator it = dirnames.begin();it!=dirnames.end();it++){
         load_scanner_directory(*it,sc);
@@ -433,46 +429,6 @@ void be13::plugin::phase_shutdown(feature_recorder_set &fs)
  * that are really only used by scan_bulk.
  */
 
-#ifdef USE_HISTOGRAMS
-static const int LINE_LEN = 80;         // keep track of where we are on the line
-void be13::plugin::phase_histogram(feature_recorder_set &fs, xml_notifier_t xml_error_notifier)
-{
-    int pos  = 0;
-    bool need_nl = false;
-
-    /* Loop through all the histograms */
-    for(histograms_t::const_iterator it = histograms.begin();it!=histograms.end();it++){
-        std::string msg = string(" ") + (*it).feature + " " + (*it).suffix + "...";
-        if(msg.size() + pos > (unsigned) LINE_LEN){
-            std::cout << "\n";
-            pos = 0;
-            need_nl = false;
-        }
-        std::cout << msg;
-        std::cout.flush();
-        pos += msg.size();
-        need_nl = true;
-        if(fs.has_name((*it).feature)){
-            feature_recorder *fr = fs.get_name((*it).feature);
-            try {
-                fr->make_histogram((*it));
-            }
-            catch (const std::exception &e) {
-                std::cerr << "ERROR: " ;
-                std::cerr.flush();
-                std::cerr << e.what() << " computing histogram " << (*it).feature << "\n";
-                if(xml_error_notifier){
-                    std::string error = std::string("<error function='phase3' histogram='")
-                        + (*it).feature + std::string("</error>");
-                    (*xml_error_notifier)(error);
-                }
-            }
-        }
-    }
-    if (need_nl) std::cout << "\n";
-}
-#endif
-
 /* option processing */
 /* Get the config and build the help strings at the same time! */
 std::stringstream scanner_info::helpstream;
@@ -545,13 +501,14 @@ void scanner_info::get_config(const std::string &n,bool *val,const std::string &
 /**
  * Print a list of scanners.
  * We need to load them to do this, so they are loaded with empty config
+ * Note that scanners can only be loaded once, so this exits.
  */
 void be13::plugin::info_scanners(bool detailed_info,
                                  bool detailed_settings,
                                  scanner_t * const *scanners_builtin,
                                  const char enable_opt,const char disable_opt)
 {
-    const scanner_info::scanner_config empty_config;
+    scanner_info::scanner_config empty_config;
 
     load_scanners(scanners_builtin,empty_config);
     std::cout << "\n";
@@ -596,6 +553,7 @@ void be13::plugin::info_scanners(bool detailed_info,
     for(std::vector<std::string>::const_iterator it = enabled_wordlist.begin();it!=enabled_wordlist.end();it++){
         std::cout << "   -" << disable_opt << " " <<  *it << " - disable scanner " << *it << "\n";
     }
+    exit(0);
 }
 
 /**

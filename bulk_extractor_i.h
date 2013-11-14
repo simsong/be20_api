@@ -1,5 +1,10 @@
 /* -*- mode: C++; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 
+/*
+ * By design, this file can be read without reading config.h
+ * #include "config.h" must appear as the first line of your .cpp file.
+ */
+
 #ifndef BULK_EXTRACTOR_I_H
 #define BULK_EXTRACTOR_I_H
 
@@ -54,7 +59,6 @@
  * The scanners respond by setting fields in the SP and returning.
  * 
  * When executing, once again each scanner is called with the SP and RCB.
- * By design, this file can be read without reading config.h
  * This is the only file that needs to be included for a scanner.
  *
  * \li \c phase_startup - scanners are loaded and register the names of the feature files they want.
@@ -133,45 +137,6 @@ namespace be13 {
  *                        that the feature files should have context enabled. Do not scan.
  * @param fs   - where the features should be saved. Must be provided if feature_names==0.
  **/
-
-class histogram_def {
- public:
-    /**
-     * @param feature- the feature file to histogram (no .txt)
-     * @param re     - the regular expression to extract
-     * @param require- require this string on the line (usually in context)
-     * @param suffix - the suffix to add to the histogram file after feature name before .txt
-     * @param flags  - any flags (see above)
-     */
-
-    histogram_def(string feature_,string re_,string suffix_,uint32_t flags_=0):
-        feature(feature_),pattern(re_),require(),suffix(suffix_),flags(flags_){}
-    histogram_def(string feature_,string re_,string require_,string suffix_,uint32_t flags_=0):
-        feature(feature_),pattern(re_),require(require_),suffix(suffix_),flags(flags_){}
-    string feature;                     /* feature file */
-    string pattern;                     /* extract pattern; "" means use entire feature */
-    string require;
-    string suffix;                      /* suffix to append; "" means "histogram" */
-    uint32_t flags;                     // defined in histogram.h
-};
-
-typedef  set<histogram_def> histograms_t;
-
-inline bool operator <(class histogram_def h1,class histogram_def h2)  {
-    if (h1.feature<h2.feature) return true;
-    if (h1.feature>h2.feature) return false;
-    if (h1.pattern<h2.pattern) return true;
-    if (h1.pattern>h2.pattern) return false;
-    if (h1.suffix<h2.suffix) return true;
-    if (h1.suffix>h2.suffix) return false;
-    return false;                       /* equal */
-};
-
-inline bool operator !=(class histogram_def h1,class histogram_def h2)  {
-    return h1.feature!=h2.feature || h1.pattern!=h2.pattern || h1.suffix!=h2.suffix;
-};
-
-
 
 /*****************************************************************
  *** bulk_extractor has a private implementation of IPv4 and IPv6,
@@ -657,7 +622,7 @@ private:
     static const int SCANNER_WANTS_NGRAMS   = 0x040; // v3: Scanner gets buffers that are constant n-grams
     static const int SCANNER_FAST_FIND      = 0x080; // v3: This scanner is a very fast FIND scanner
     static const int SCANNER_DEPTH_0        = 0x100; // v3: scanner only runs at detph 0 by default
-    static const int CURRENT_SI_VERSION=3;          // 
+    static const int CURRENT_SI_VERSION     = 4;     
 
     static const std::string flag_to_string(const int flag){
         std::string ret;
@@ -672,13 +637,16 @@ private:
         return ret;
     }
 
-    /* Global config is passed to each scanner as a pointer */
+    /* Global config is passed to each scanner as a pointer when it is loaded.
+     * Scanner histograms are added to 'histograms' by machinery.
+     */
     struct scanner_config {
         scanner_config():namevals(),debug(),hasher(){};
         virtual ~scanner_config(){}
-        config_t  namevals; // v3: (input) name=val map
-        int       debug; // v3: (input) current debug level
-        struct be13::hash_def  hasher;
+        config_t  namevals;             // v3: (input) name=val map
+        int       debug;                // v3: (input) current debug level
+        struct be13::hash_def  hasher;  // v3: (input) hasher to use
+        histograms_t    histograms;     // v4: output
     };
 
     // never change the order or delete old fields, or else you will
@@ -856,11 +824,11 @@ namespace be13 {
 
         static void set_scanner_debug(int debug);
 
-        static void load_scanner(scanner_t scanner,const scanner_info::scanner_config &sc); // load a specific scanner
-        static void load_scanner_file(string fn,const scanner_info::scanner_config &sc);    // load a scanner from a file
-        static void load_scanners(scanner_t * const *scanners_builtin,const scanner_info::scanner_config &sc);           // load the scan_ plugins
-        static void load_scanner_directory(const string &dirname,const scanner_info::scanner_config &sc); // load scanners in the directory
-        static void load_scanner_directories(const std::vector<std::string> &dirnames,const scanner_info::scanner_config &sc);
+        static void load_scanner(scanner_t scanner,scanner_info::scanner_config &sc); // load a specific scanner
+        static void load_scanner_file(string fn,scanner_info::scanner_config &sc);    // load a scanner from a file
+        static void load_scanners(scanner_t * const *scanners_builtin,scanner_info::scanner_config &sc);           // load the scan_ plugins
+        static void load_scanner_directory(const string &dirname,scanner_info::scanner_config &sc); // load scanners in the directory
+        static void load_scanner_directories(const std::vector<std::string> &dirnames,scanner_info::scanner_config &sc);
         static void load_scanner_packet_handlers();
         
         // send every enabled scanner the phase message
@@ -883,13 +851,12 @@ namespace be13 {
 
         static void info_scanners(bool detailed_info,
                                   bool detailed_settings,
-                                  scanner_t * const *scanners_builtin,const char enable_opt,const char disable_opt);
+                                  scanner_t * const *scanners_builtin,const char enable_opt,const char disable_opt)
+            __attribute__((__noreturn__));
         
 
         /* Run the phases on the scanners */
         static void phase_shutdown(feature_recorder_set &fs);
-        typedef void (*xml_notifier_t)(const std::string &xmlstring);
-        static void phase_histogram(feature_recorder_set &fs, xml_notifier_t xml_error_notifier);
         static uint32_t get_max_depth_seen();
         static void process_sbuf(const class scanner_params &sp);                              /* process for feature extraction */
         static void process_packet(const be13::packet_info &pi);

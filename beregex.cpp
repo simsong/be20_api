@@ -1,13 +1,15 @@
 /* -*- mode: C++; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 
 #include "config.h"
+#include "beregex.h"
+
 #include <sys/types.h>
 #include <inttypes.h>
+#include <stdlib.h>
+#include <unistd.h>
+
 
 #if defined(HAVE_LIBTRE) && defined(HAVE_TRE_REGCOMP)
-#ifdef HAVE_TRE_TRE_H
-#include <tre/tre.h>
-#endif
 #define REGCOMP tre_regcomp
 #define REGFREE tre_regfree
 #define REGEXEC tre_regexec
@@ -18,9 +20,6 @@ static const char *regex_version = "tre";
 
 /* use regcomp() if tre_regcomp() is not available */
 #if defined(HAVE_REGCOMP) && !defined(HAVE_REGULAR_EXPRESSIONS)
-#ifdef HAVE_REGEX_H
-#include <regex.h>
-#endif
 #define REGCOMP regcomp
 #define REGFREE regfree
 #define REGEXEC regexec
@@ -33,10 +32,6 @@ static const char *regex_version = "system";
 #error bulk_extractor requires tre_regcomp or regcomp to run
 #error download tre from "http://laurikari.net/tre/download/"
 #endif
-
-#include "beregex.h"
-#include <stdlib.h>
-#include <unistd.h>
 
 const char *beregex::version(){return regex_version;}
 

@@ -9,6 +9,8 @@ BE13_API= \
         be13_api/feature_recorder.h \
         be13_api/feature_recorder_set.cpp \
         be13_api/feature_recorder_set.h \
+        be13_api/histogram.h \
+        be13_api/histogram.cpp \
         be13_api/net_ethernet.h \
         be13_api/pcap_fake.cpp \
         be13_api/pcap_fake.h \

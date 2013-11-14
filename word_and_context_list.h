@@ -17,7 +17,7 @@
  * - a feature that is stopped, with optional context.
  * - a regular expression
  * 
- * Context is represented as a string before the feature and a string after.
+ * Context is represented as a std::string before the feature and a std::string after.
  * 
  * The stop list contains is a map of features that are stopped. 
  * For each feature, there may be no context or a list of context. 
@@ -29,21 +29,26 @@
  * Typically this is used for stop lists and alert lists. 
  */
 
-#ifdef HAVE_UNORDERED_MAP
-#define UNORDERED_MAP std::unordered_map
-#define UNORDERED_MULTIMAP std::unordered_multimap
-#define UNORDERED_SET std::unordered_set
+#if defined(HAVE_UNORDERED_SET)
+#include <unordered_set>
+#else
+#include <tr1/unordered_set>
+#endif
+
+/* <unordered_map> includes both unordered_map and unordered_multimap */
+#if defined(HAVE_UNORDERED_MAP)
+#include <unordered_map>
 #else
 #include <tr1/unordered_map>
-#include <tr1/unordered_set>
-#define UNORDERED_MAP std::tr1::unordered_map
-#define UNORDERED_MULTIMAP std::tr1::unordered_multimap
-#define UNORDERED_SET std::tr1::unordered_set
 #endif
+
+#include <map>                          // brings in map and multimap
+#include <unordered_map>
 
 class context {
 public:
-    static void extract_before_after(const string &feature,const string &ctx,string &before,string &after){
+    static void extract_before_after(const std::string &feature,const std::string &ctx,
+                                     std::string &before,std::string &after){
 	if(feature.size() <= ctx.size()){
 	    /* The most simple algorithm is a sliding window */
 	    for(size_t i = 0;i<ctx.size() - feature.size();i++){
@@ -59,14 +64,14 @@ public:
     }
 
     // constructors to make a context with nothing before or after, with just a context, or with all three
-    context(const string &f):feature(f),before(),after(){}
-    context(const string &f,const string &c):feature(f),before(),after(){
+    context(const std::string &f):feature(f),before(),after(){}
+    context(const std::string &f,const std::string &c):feature(f),before(),after(){
 	extract_before_after(f,c,before,after);
     }
-    context(const string &f,const string &b,const string &a):feature(f),before(b),after(a){}
-    string feature;
-    string before;
-    string after;
+    context(const std::string &f,const std::string &b,const std::string &a):feature(f),before(b),after(a){}
+    std::string feature;
+    std::string before;
+    std::string after;
 };
 
 inline std::ostream & operator <<(std::ostream &os,const class context &c)
@@ -85,19 +90,27 @@ inline bool operator ==(const class context &a,const class context &b)
  */
 class word_and_context_list {
 private:
-    typedef UNORDERED_MULTIMAP<string,context> stopmap_t;
+#if defined(HAVE_UNORDERED_MAP)
+    typedef std::unordered_multimap<std::string,context> stopmap_t;
+#else
+    typedef std::tr1::unordered_multimap<std::string,context> stopmap_t;
+#endif
     stopmap_t fcmap;			// maps features to contexts; for finding them
 
-    typedef UNORDERED_SET< string > stopset_t;
+#if defined(HAVE_UNORDERED_SET)
+    typedef std::unordered_set< std::string > stopset_t;
+#else
+    typedef std::tr1::unordered_set< std::string > stopset_t;
+#endif
     stopset_t context_set;			// presence of a pair in fcmap
 
     beregex_vector patterns;
 public:
     /**
-     * rstrcmp is like strcmp, except it compares strings right-aligned
-     * and only compares the minimum sized string of the two.
+     * rstrcmp is like strcmp, except it compares std::strings right-aligned
+     * and only compares the minimum sized std::string of the two.
      */
-    static int rstrcmp(const string &a,const string &b);
+    static int rstrcmp(const std::string &a,const std::string &b);
 
     word_and_context_list():fcmap(),context_set(),patterns(){ }
     ~word_and_context_list(){
@@ -106,22 +119,22 @@ public:
 	}
     }
     size_t size(){ return fcmap.size() + patterns.size();}
-    void add_regex(const string &pat);	// not threadsafe
-    bool add_fc(const string &f,const string &c); // not threadsafe
-    int readfile(const string &fname);	// not threadsafe
+    void add_regex(const std::string &pat);	// not threadsafe
+    bool add_fc(const std::string &f,const std::string &c); // not threadsafe
+    int readfile(const std::string &fname);	// not threadsafe
 
     // return true if the probe with context is in the list or in the stopmap
-    bool check(const string &probe,const string &before, const string &after) const; // threadsafe
-    bool check_feature_context(const string &probe,const string &context) const; // threadsafe
+    bool check(const std::string &probe,const std::string &before, const std::string &after) const; // threadsafe
+    bool check_feature_context(const std::string &probe,const std::string &context) const; // threadsafe
     void dump();
 };
 
 
-inline int word_and_context_list::rstrcmp(const string &a,const string &b)
+inline int word_and_context_list::rstrcmp(const std::string &a,const std::string &b)
 {
     size_t alen = a.size();
     size_t blen = b.size();
-    size_t len = min(alen,blen);
+    size_t len = alen < blen ? alen : blen;
     for(size_t i=0;i<len;i++){
 	size_t apos = alen - len + i;
 	size_t bpos = blen - len + i;
