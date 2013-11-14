@@ -1,16 +1,9 @@
 /* -*- mode: C++; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 
 #include "config.h"
-
-#ifdef BULK_EXTRACTOR
-#include "bulk_extractor.h"
-#else
 #include "bulk_extractor_i.h"
-#endif
-
 #include "unicode_escape.h"
 #include "beregex.h"
-
 #include "histogram.h"
 
 #include <unistd.h>
