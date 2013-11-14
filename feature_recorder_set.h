@@ -98,6 +98,8 @@ public:
         }
     }
 
+    std::string get_input_fname() const {return input_fname;}
+    std::string get_outdir() const {return outdir;}
     void set_stop_list(const word_and_context_list *alist){stop_list=alist;}
     void set_alert_list(const word_and_context_list *alist){alert_list=alist;}
 
