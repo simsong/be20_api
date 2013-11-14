@@ -3,9 +3,7 @@
 #include "config.h"
 #include "bulk_extractor_i.h"
 
-#ifdef USE_HISTOGRAMS
 #include "histogram.h"
-#endif
 
 
 /****************************************************************
@@ -19,7 +17,10 @@ const string feature_recorder_set::DISABLED_RECORDER_NAME = "disabled";
 
 /* Create an empty recorder */
 feature_recorder_set::feature_recorder_set(uint32_t flags_):flags(flags_),seen_set(),input_fname(),
-                                                            outdir(),frm(),map_lock(),scanner_stats()
+                                                            outdir(),
+                                                            frm(),map_lock(),
+                                                            alert_list(),stop_list(),
+                                                            scanner_stats()
 {
     if(flags & SET_DISABLED){
         create_name(DISABLED_RECORDER_NAME,false);
@@ -32,11 +33,13 @@ feature_recorder_set::feature_recorder_set(uint32_t flags_):flags(flags_),seen_s
  * If disabled, create a disabled feature_recorder that can respond to functions as requested.
  */
 void feature_recorder_set::init(const feature_file_names_t &feature_files,
-                           const std::string &input_fname_,
-                           const std::string &outdir_)
+                                const std::string &input_fname_,
+                                const std::string &outdir_,
+                                const histograms_t *histogram_defs_)
 {
-    input_fname = input_fname_;
-    outdir      = outdir_;
+    input_fname    = input_fname_;
+    outdir         = outdir_;
+    histogram_defs = histogram_defs_;
 
     create_name(feature_recorder_set::ALERT_RECORDER_NAME,false); // make the alert recorder
 
@@ -146,5 +149,60 @@ void feature_recorder_set::get_stats(void *user,stat_callback_t stat_callback)
     for(scanner_stats_map::const_iterator it = scanner_stats.begin();it!=scanner_stats.end();it++){
         (*stat_callback)(user,(*it).first,(*it).second.calls,(*it).second.seconds);
     }
+}
+
+void feature_recorder_set::dump_name_count_stats(dfxml_writer &writer)
+{
+    cppmutex::lock lock(map_lock);
+    writer.push("feature_files");
+    for(feature_recorder_map::const_iterator ij = frm.begin(); ij != frm.end(); ij++){
+        writer.set_oneline(true);
+        writer.push("feature_file");
+        writer.xmlout("name",ij->second->name);
+        writer.xmlout("count",ij->second->count());
+        writer.pop();
+        writer.set_oneline(false);
+    }
+}
+
+
+static const int LINE_LEN = 80;         // keep track of where we are on the line
+void feature_recorder_set::process_histograms(feature_recorder_set::xml_notifier_t xml_error_notifier)
+{
+    if(histogram_defs==0) return;       // no defs!
+
+    int pos  = 0;                       // for generating \n when printing
+    bool need_nl = false;
+
+    /* Loop through all the histograms */
+    for(histograms_t::const_iterator it = histogram_defs->begin();it!=histogram_defs->end();it++){
+        std::string msg = string(" ") + (*it).feature + " " + (*it).suffix + "...";
+        if(msg.size() + pos > (unsigned) LINE_LEN){
+            std::cout << "\n";
+            pos = 0;
+            need_nl = false;
+        }
+        std::cout << msg;
+        std::cout.flush();
+        pos += msg.size();
+        need_nl = true;
+        if(has_name((*it).feature)){
+            feature_recorder *fr = get_name((*it).feature);
+            try {
+                fr->make_histogram((*it),0);
+            }
+            catch (const std::exception &e) {
+                std::cerr << "ERROR: " ;
+                std::cerr.flush();
+                std::cerr << e.what() << " computing histogram " << (*it).feature << "\n";
+                if(xml_error_notifier){
+                    std::string error = std::string("<error function='phase3' histogram='")
+                        + (*it).feature + std::string("</error>");
+                    (*xml_error_notifier)(error);
+                }
+            }
+        }
+    }
+    if (need_nl) std::cout << "\n";
 }
 

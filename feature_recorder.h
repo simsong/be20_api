@@ -59,6 +59,7 @@ class feature_recorder {
     /****************************************************************/
 
 public:
+    typedef void (callback_t)(const std::string &histogram_name,const std::string &feature,uint64_t count);
     static void set_main_threadid(){
 #ifndef WIN32
         main_threadid=pthread_self();
@@ -113,7 +114,6 @@ public:
                      const std::string &outdir,
                      const std::string &input_fname,const std::string &name);
     virtual ~feature_recorder();
-
     virtual void set_flag(uint32_t flags_);
     bool flag_set(uint32_t f){return flags & f;}
     bool flag_notset(uint32_t f){return !flag_set(f);}
@@ -139,8 +139,8 @@ protected:;
     typedef atomic_histogram<std::string,uint64_t> mhistogram_t;
     mhistogram_t *mhistogram;           // if we are building an in-memory-histogram
 
-    class feature_recorder     *stop_list_recorder; // where stopped features get written
-
+    class feature_recorder *stop_list_recorder; // where stopped features get written
+    int64_t                file_number_;            /* starts at 0; gets incremented by carve(); for binning */
 public:
     /* these are not threadsafe and should only be called in startup */
     void set_stop_list_recorder(class feature_recorder *fr){
@@ -157,10 +157,20 @@ public:
     void set_carve_ignore_encoding(const std::string &encoding){ MAINTHREAD();ignore_encoding = encoding;}
     /* End non-threadsafe */
 
+    uint64_t file_number_add(uint64_t i){
+#ifdef HAVE___SYNC_ADD_AND_FETCH
+        return __sync_add_and_fetch(&file_number_,i);
+#else
+        cppmutex::lock lock(Mf);
+        file_number_ += i;
+        return file_number_;
+#endif
+    }
+
     void   banner_stamp(std::ostream &os,const std::string &header); // stamp BOM, banner, and header
 
     /* where stopped items (on stop_list or context_stop_list) get recorded: */
-    std::string fname_counter(string suffix);
+    std::string        fname_counter(string suffix);
     static std::string quote_string(const std::string &feature); // turns unprintable characters to octal escape
     static std::string unquote_string(const std::string &feature); // turns octal escape back to binary characters
 
@@ -168,7 +178,7 @@ public:
     virtual void open();
     virtual void close();                       
     virtual void flush();
-    virtual void make_histogram(const class histogram_def &def);
+    virtual void make_histogram(const class histogram_def &def,callback_t cb);
     
     /* Methods to get info */
     uint64_t count(){return count_;}
@@ -221,7 +231,6 @@ public:
         CARVE_ENCODED=1,
         CARVE_ALL=2};
 #define CARVE_MODE_DESCRIPTION "0=carve none; 1=carve encoded; 2=carve all"
-    int64_t      file_number;            /* starts at 0; gets incremented by carve(); for binning */
     carve_mode_t carve_mode;
     typedef      std::string (*hashing_function_t)(const sbuf_t &sbuf); // returns a hex value
     void         set_carve_mode(carve_mode_t aMode){MAINTHREAD();carve_mode=aMode;}
@@ -237,7 +246,6 @@ public:
 // function that can only be called from main thread
 inline void feature_recorder::MAINTHREAD()
 {
-    //::printf("main_threadid=%d  pthread_self()=%d\n",(int)main_threadid,(int)pthread_self());
 #ifndef WIN32
         assert(main_threadid==pthread_self());
 #endif
