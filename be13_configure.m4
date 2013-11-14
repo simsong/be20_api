@@ -29,7 +29,7 @@ AC_LANG_PUSH(C++)
       [has_option=yes],
       [has_option=no])
   if test $has_option = "yes" ; then
-    AC_MSG_RESULT([Has -std=c++11 support.])
+    AC_MSG_RESULT([Has -std=c++11 support. Checking for unordered_map])
     AC_CHECK_HEADERS([unordered_map unordered_set])
   else
     AC_MSG_RESULT([No -std=c++11 support. Checking for legacy tr1 support])

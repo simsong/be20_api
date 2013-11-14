@@ -1,5 +1,4 @@
-#include "bulk_extractor.h"
-#include "beregex.h"
+#include "config.h"
 #include "word_and_context_list.h"
 
 void word_and_context_list::add_regex(const string &pat)
