@@ -5,6 +5,10 @@
  * #include "config.h" must appear as the first line of your .cpp file.
  */
 
+#ifndef PACKAGE_NAME
+#error bulk_extractor_i.h included before config.h
+#endif
+
 #ifndef BULK_EXTRACTOR_I_H
 #define BULK_EXTRACTOR_I_H
 
