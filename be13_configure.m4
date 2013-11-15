@@ -23,7 +23,7 @@ AC_TRY_LINK([#include <inttypes.h>],
 #
 AC_LANG_PUSH(C++)
   SAVE_CXXFLAGS="$CXXFLAGS"
-  CXX_FLAGS="$CXXFLAGS -std=c++11"
+  CXXFLAGS="$CXXFLAGS -std=c++11"
   AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[]], [[]])],
       [has_option=yes],
       [has_option=no])
