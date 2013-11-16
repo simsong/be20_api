@@ -43,7 +43,6 @@
 #endif
 
 #include <map>                          // brings in map and multimap
-#include <unordered_map>
 
 class context {
 public:
