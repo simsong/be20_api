@@ -22,18 +22,7 @@ AC_TRY_LINK([#include <inttypes.h>],
 # Figure out which version of unordered_map we are going to use
 #
 AC_LANG_PUSH(C++)
-  SAVE_CXXFLAGS="$CXXFLAGS"
-  CXXFLAGS="$CXXFLAGS -std=c++11"
-  AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[]], [[]])],
-      [has_option=yes],
-      [has_option=no])
-  if test $has_option = "yes" ; then
-    AC_MSG_RESULT([Has -std=c++11 support. Checking for unordered_map])
-    AC_CHECK_HEADERS([unordered_map unordered_set])
-  else
-    AC_MSG_RESULT([No -std=c++11 support. Checking for legacy tr1 support])
-    CXXFLAGS="$SAVE_CXXFLAGS"
-    AC_CHECK_HEADERS([tr1/unordered_map tr1/unordered_set])
-  fi
+  AC_CHECK_HEADERS([unordered_map unordered_set],[],[
+    AC_CHECK_HEADERS([tr1/unordered_map tr1/unordered_set])])
 AC_LANG_POP()    
 

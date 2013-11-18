@@ -19,6 +19,7 @@ const string feature_recorder_set::DISABLED_RECORDER_NAME = "disabled";
 feature_recorder_set::feature_recorder_set(uint32_t flags_):flags(flags_),seen_set(),input_fname(),
                                                             outdir(),
                                                             frm(),map_lock(),
+                                                            histogram_defs(),
                                                             alert_list(),stop_list(),
                                                             scanner_stats()
 {
