@@ -645,7 +645,7 @@ private:
      * Scanner histograms are added to 'histograms' by machinery.
      */
     struct scanner_config {
-        scanner_config():namevals(),debug(),hasher(){};
+        scanner_config():namevals(),debug(),hasher(),histograms(){};
         virtual ~scanner_config(){}
         config_t  namevals;             // v3: (input) name=val map
         int       debug;                // v3: (input) current debug level
