@@ -42,7 +42,6 @@ using namespace std;
 
 #include <pthread.h>
 
-#include "regex.h"
 #include "cppmutex.h"
 #include "atomic_set_map.h"
 
