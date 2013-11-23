@@ -30,8 +30,6 @@
 #define __STDC_FORMAT_MACROS
 #endif
 
-//using namespace std;
-
 #include <stdlib.h>
 #include <inttypes.h>
 #include <string>
@@ -370,7 +368,11 @@ public:
     /* Allocate a sbuf from a file mapped into memory */
     static sbuf_t *map_file(const std::string &fname); 
     static sbuf_t *map_file(const std::string &fname,int fd); // if file is already opened
-    static std::string U10001C;         // delimeter character in bulk_extractor
+    static const std::string U10001C;         // default delimeter character in bulk_extractor
+    static std::string map_file_delimiter; // character placed
+    static void set_map_file_delimiter(const std::string &new_delim){
+        map_file_delimiter = new_delim;
+    }
 
     /* Properties */
     size_t size() const {return bufsize;} // return the number of bytes

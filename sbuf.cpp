@@ -17,7 +17,8 @@
 /**
  *  Map a file; falls back to read if mmap is not available
  */
-std::string sbuf_t::U10001C("\xf4\x80\x80\x9c");
+const std::string sbuf_t::U10001C("\xf4\x80\x80\x9c");
+std::string sbuf_t::map_file_delimiter(sbuf_t::U10001C);
 sbuf_t *sbuf_t::map_file(const std::string &fname)
 {
     int fd = open(fname.c_str(),O_RDONLY|O_BINARY,0);
@@ -62,7 +63,7 @@ sbuf_t *sbuf_t::map_file(const std::string &fname,int fd)
     bool should_free = true;
     bool should_unmap = false;
 #endif
-    sbuf_t *sbuf = new sbuf_t(pos0_t(fname+sbuf_t::U10001C),
+    sbuf_t *sbuf = new sbuf_t(pos0_t(fname+sbuf_t::map_file_delimiter),
                               buf,
                               st.st_size,
                               st.st_size,
