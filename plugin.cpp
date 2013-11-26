@@ -407,12 +407,12 @@ void be13::plugin::scanners_init(feature_recorder_set &fs)
  *** PHASE_SHUTDOWN (formerly phase 2): shut down the scanners
  ****************************************************************/
 
-void be13::plugin::phase_shutdown(feature_recorder_set &fs)
+void be13::plugin::phase_shutdown(feature_recorder_set &fs,std::stringstream *sxml)
 {
     for(scanner_vector::iterator it = current_scanners.begin();it!=current_scanners.end();it++){
         if((*it)->enabled){
             const sbuf_t sbuf; // empty sbuf
-            scanner_params sp(scanner_params::PHASE_SHUTDOWN,sbuf,fs);
+            scanner_params sp(scanner_params::PHASE_SHUTDOWN,sbuf,fs,sxml);
             recursion_control_block rcb(0,"");        // empty rcb 
             (*(*it)->scanner)(sp,rcb);
         }
@@ -553,7 +553,6 @@ void be13::plugin::info_scanners(bool detailed_info,
     for(std::vector<std::string>::const_iterator it = enabled_wordlist.begin();it!=enabled_wordlist.end();it++){
         std::cout << "   -" << disable_opt << " " <<  *it << " - disable scanner " << *it << "\n";
     }
-    exit(0);
 }
 
 /**

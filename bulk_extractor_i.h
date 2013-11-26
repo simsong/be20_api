@@ -742,20 +742,19 @@ class scanner_params {
     scanner_params(phase_t phase_,const sbuf_t &sbuf_,class feature_recorder_set &fs_,
                    PrintOptions &print_options_):
         sp_version(CURRENT_SP_VERSION),
-        phase(phase_),sbuf(sbuf_),fs(fs_),depth(0),print_options(print_options_),info(0),sbufxml(0){
+        phase(phase_),sbuf(sbuf_),fs(fs_),depth(0),print_options(print_options_),info(0),sxml(0){
     }
 
     /* A scanner params with no print options */
     scanner_params(phase_t phase_,const sbuf_t &sbuf_, class feature_recorder_set &fs_):
         sp_version(CURRENT_SP_VERSION),
-        phase(phase_),sbuf(sbuf_),fs(fs_),depth(0),print_options(no_options),info(0),sbufxml(0){
+        phase(phase_),sbuf(sbuf_),fs(fs_),depth(0),print_options(no_options),info(0),sxml(0){
     }
 
-    /* A scanner params with no print options but xmlstream */
-    scanner_params(phase_t phase_,const sbuf_t &sbuf_,
-                   class feature_recorder_set &fs_,std::stringstream *xmladd):
+    /* A scanner params with no print options but an xmlstream */
+    scanner_params(phase_t phase_,const sbuf_t &sbuf_,class feature_recorder_set &fs_,std::stringstream *xmladd):
         sp_version(CURRENT_SP_VERSION),
-        phase(phase_),sbuf(sbuf_),fs(fs_),depth(0),print_options(no_options),info(0),sbufxml(xmladd){
+        phase(phase_),sbuf(sbuf_),fs(fs_),depth(0),print_options(no_options),info(0),sxml(xmladd){
     }
 
     /** Construct a scanner_params for recursion from an existing sp and a new sbuf.
@@ -764,7 +763,7 @@ class scanner_params {
     scanner_params(const scanner_params &sp_existing,const sbuf_t &sbuf_new):
         sp_version(CURRENT_SP_VERSION),phase(sp_existing.phase),
         sbuf(sbuf_new),fs(sp_existing.fs),depth(sp_existing.depth+1),
-        print_options(sp_existing.print_options),info(sp_existing.info),sbufxml(0){
+        print_options(sp_existing.print_options),info(sp_existing.info),sxml(0){
         assert(sp_existing.sp_version==CURRENT_SP_VERSION);
     };
 
@@ -780,11 +779,11 @@ class scanner_params {
     const phase_t phase;                 /* v1: 0=startup, 1=normal, 2=shutdown (changed to phase_t in v1.3) */
     const sbuf_t &sbuf;                 /* v1: what to scan / only valid in SCAN_PHASE */
     class feature_recorder_set &fs;     /* v1: where to put the results / only valid in SCAN_PHASE */
-    const uint32_t depth;               /* v1: how far down are we? / only valid in SCAN_PHASE */
+    const uint32_t depth;            /* v1: how far down are we? / only valid in SCAN_PHASE */
 
-    PrintOptions  &print_options;       /* v1: how to print / NOT USED IN SCANNERS */
-    scanner_info  *info;                /* v2: set/get parameters on startup */
-    std::stringstream *sbufxml;         /* v3: tags added to the sbuf's XML stream (advanced feature) */
+    PrintOptions  &print_options;    /* v1: how to print / NOT USED IN SCANNERS */
+    scanner_info  *info;             /* v2: set/get parameters on startup */
+    std::stringstream *sxml;         /* v3: on scanning and shutdown: CDATA added to XML stream (advanced feature) */
 };
 
 
@@ -855,12 +854,11 @@ namespace be13 {
 
         static void info_scanners(bool detailed_info,
                                   bool detailed_settings,
-                                  scanner_t * const *scanners_builtin,const char enable_opt,const char disable_opt)
-            __attribute__((__noreturn__));
+                                  scanner_t * const *scanners_builtin,const char enable_opt,const char disable_opt);
         
 
         /* Run the phases on the scanners */
-        static void phase_shutdown(feature_recorder_set &fs);
+        static void phase_shutdown(feature_recorder_set &fs,std::stringstream *sxml=0); // sxml is where to put XML from scanners that shutdown
         static uint32_t get_max_depth_seen();
         static void process_sbuf(const class scanner_params &sp);                              /* process for feature extraction */
         static void process_packet(const be13::packet_info &pi);
