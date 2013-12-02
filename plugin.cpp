@@ -400,7 +400,7 @@ void be13::plugin::scanners_process_enable_disable_commands()
         }
     }
     load_scanner_packet_handlers();     // can't do until enable/disable commands are run
-    scaner_commands_processed = true;
+    scanner_commands_processed = true;
 }
 
 
