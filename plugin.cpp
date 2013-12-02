@@ -362,24 +362,29 @@ public:
     string name;
 };
 static vector<scanner_command> scanner_commands;
+bool scanner_commands_processed = false;
 
 void be13::plugin::scanners_disable_all()
 {
+    assert(scanner_commands_processed==false);
     scanner_commands.push_back(scanner_command(scanner_command::DISABLE_ALL,string("")));
 }
 
 void be13::plugin::scanners_enable_all()
 {
+    assert(scanner_commands_processed==false);
     scanner_commands.push_back(scanner_command(scanner_command::ENABLE_ALL,string("")));
 }
 
 void be13::plugin::scanners_enable(const std::string &name)
 {
+    assert(scanner_commands_processed==false);
     scanner_commands.push_back(scanner_command(scanner_command::ENABLE,name));
 }
 
 void be13::plugin::scanners_disable(const std::string &name)
 {
+    assert(scanner_commands_processed==false);
     scanner_commands.push_back(scanner_command(scanner_command::DISABLE,name));
 }
 
@@ -395,11 +400,13 @@ void be13::plugin::scanners_process_enable_disable_commands()
         }
     }
     load_scanner_packet_handlers();     // can't do until enable/disable commands are run
+    scaner_commands_processed = true;
 }
 
 
 void be13::plugin::scanners_init(feature_recorder_set &fs)
 {
+    assert(scanner_commands_processed==true);
     message_enabled_scanners(scanner_params::PHASE_INIT,fs); // tell all enabled scanners to init
 }
 
@@ -409,6 +416,7 @@ void be13::plugin::scanners_init(feature_recorder_set &fs)
 
 void be13::plugin::phase_shutdown(feature_recorder_set &fs,std::stringstream *sxml)
 {
+    assert(scanner_commands_processed==true);
     for(scanner_vector::iterator it = current_scanners.begin();it!=current_scanners.end();it++){
         if((*it)->enabled){
             const sbuf_t sbuf; // empty sbuf
