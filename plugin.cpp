@@ -149,8 +149,6 @@ void be13::plugin::set_scanner_enabled_all(bool enable)
  * The histogram should be done in the plug-in
  */
 
-//static histograms_t histograms;
-
 /****************************************************************
  *** scanner plugin loading
  ****************************************************************/
@@ -289,7 +287,6 @@ void be13::plugin::load_scanner_directories(const std::vector<std::string> &dirn
         load_scanner_directory(*it,sc);
     }
 }
-
 
 void be13::plugin::load_scanner_packet_handlers()
 {
