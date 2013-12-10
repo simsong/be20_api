@@ -23,18 +23,6 @@
 #include "../dfxml/src/hash_t.h"
 
 
-//namespace std {
-//    namespace tr1 {
-//        template<>
-//        struct hash<md5_t> {
-//            size_t operator()(const md5_t &key) const {
-//                return *(size_t *)(key.final());
-//            }
-//        };
-//    }
-//}
-//#endif
-
 uint32_t scanner_def::max_depth = 7;            // max recursion depth
 uint32_t scanner_def::max_ngram = 10;            // max recursion depth
 static int debug;                               // local debug variable
