@@ -151,7 +151,7 @@ void be13::plugin::set_scanner_enabled_all(bool enable)
  * This is called before scanners are enabled or disabled, so the pcap handlers
  * need to be set afterwards
  */
-void be13::plugin::load_scanner(scanner_t scanner,scanner_info::scanner_config &sc)
+void be13::plugin::load_scanner(scanner_t scanner,const scanner_info::scanner_config &sc)
 {
     /* If scanner is already loaded, return */
     for(scanner_vector::const_iterator it = current_scanners.begin();it!=current_scanners.end();it++){
@@ -188,17 +188,10 @@ void be13::plugin::load_scanner(scanner_t scanner,scanner_info::scanner_config &
     (*scanner)(sp,rcb);                  // phase 0
     
     sd->enabled      = !(sd->info.flags & scanner_info::SCANNER_DISABLED);
-
-    // Catch histograms and add as a current scanner for all scanners,
-    // as a scanner may be enabled after it is loaded.
-    for(histograms_t::const_iterator it = sd->info.histogram_defs.begin();
-        it != sd->info.histogram_defs.end(); it++){
-        sc.histograms.insert((*it));
-    }
     current_scanners.push_back(sd);
 }
 
-void be13::plugin::load_scanner_file(string fn,scanner_info::scanner_config &sc)
+void be13::plugin::load_scanner_file(string fn,const scanner_info::scanner_config &sc)
 {
     /* Figure out the function name */
     size_t extloc = fn.rfind('.');
@@ -238,14 +231,14 @@ void be13::plugin::load_scanner_file(string fn,scanner_info::scanner_config &sc)
     load_scanner(*scanner,sc);
 }
 
-void be13::plugin::load_scanners(scanner_t * const *scanners,scanner_info::scanner_config &sc)
+void be13::plugin::load_scanners(scanner_t * const *scanners,const scanner_info::scanner_config &sc)
 {
     for(int i=0;scanners[i];i++){
         load_scanner(scanners[i],sc);
     }
 }
 
-void be13::plugin::load_scanner_directory(const string &dirname,scanner_info::scanner_config &sc )
+void be13::plugin::load_scanner_directory(const string &dirname,const scanner_info::scanner_config &sc )
 {
     DIR *dirp = opendir(dirname.c_str());
     if(dirp==0){
@@ -269,7 +262,7 @@ void be13::plugin::load_scanner_directory(const string &dirname,scanner_info::sc
 }
 
 void be13::plugin::load_scanner_directories(const std::vector<std::string> &dirnames,
-                                            scanner_info::scanner_config &sc)
+                                            const scanner_info::scanner_config &sc)
 {
     for(std::vector<std::string>::const_iterator it = dirnames.begin();it!=dirnames.end();it++){
         load_scanner_directory(*it,sc);
@@ -331,6 +324,20 @@ bool be13::plugin::find_scanner_enabled()
         }
     }
     return false;
+}
+
+
+void be13::plugin::get_enabled_scanner_histograms(histograms_t &histogram_defs)
+{
+    for(scanner_vector::const_iterator it = current_scanners.begin(); it!=current_scanners.end(); it++){
+        if((*it)->enabled){
+            const scanner_def *sd = (*it);
+            for(histograms_t::const_iterator i2 = sd->info.histogram_defs.begin();
+                i2 != sd->info.histogram_defs.end(); i2++){
+                histogram_defs.insert((*i2));
+            }
+        }
+    }
 }
 
 
@@ -501,7 +508,7 @@ void be13::plugin::info_scanners(bool detailed_info,
                                  scanner_t * const *scanners_builtin,
                                  const char enable_opt,const char disable_opt)
 {
-    scanner_info::scanner_config empty_config;
+    const scanner_info::scanner_config empty_config;
 
     load_scanners(scanners_builtin,empty_config);
     std::cout << "\n";

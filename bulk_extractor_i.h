@@ -645,12 +645,12 @@ private:
      * Scanner histograms are added to 'histograms' by machinery.
      */
     struct scanner_config {
-        scanner_config():namevals(),debug(),hasher(),histograms(){};
+        scanner_config():namevals(),debug(),hasher() /* ,histograms() */{};
         virtual ~scanner_config(){}
         config_t  namevals;             // v3: (input) name=val map
         int       debug;                // v3: (input) current debug level
         struct be13::hash_def  hasher;  // v3: (input) hasher to use
-        histograms_t    histograms;     // v4: output
+        //histograms_t    histograms;     // v4: output
     };
 
     // never change the order or delete old fields, or else you will
@@ -827,11 +827,11 @@ namespace be13 {
 
         static void set_scanner_debug(int debug);
 
-        static void load_scanner(scanner_t scanner,scanner_info::scanner_config &sc); // load a specific scanner
-        static void load_scanner_file(string fn,scanner_info::scanner_config &sc);    // load a scanner from a file
-        static void load_scanners(scanner_t * const *scanners_builtin,scanner_info::scanner_config &sc);           // load the scan_ plugins
-        static void load_scanner_directory(const string &dirname,scanner_info::scanner_config &sc); // load scanners in the directory
-        static void load_scanner_directories(const std::vector<std::string> &dirnames,scanner_info::scanner_config &sc);
+        static void load_scanner(scanner_t scanner,const scanner_info::scanner_config &sc); // load a specific scanner
+        static void load_scanner_file(string fn,const scanner_info::scanner_config &sc);    // load a scanner from a file
+        static void load_scanners(scanner_t * const *scanners_builtin,const scanner_info::scanner_config &sc); // load the scan_ plugins
+        static void load_scanner_directory(const string &dirname,const scanner_info::scanner_config &sc); // load scanners in the directory
+        static void load_scanner_directories(const std::vector<std::string> &dirnames,const scanner_info::scanner_config &sc);
         static void load_scanner_packet_handlers();
         
         // send every enabled scanner the phase message
@@ -840,6 +840,7 @@ namespace be13 {
         // returns the named scanner, or 0 if no scanner of that name
         static scanner_t *find_scanner(const std::string &name); 
         static void get_enabled_scanners(std::vector<std::string> &svector); // put the enabled scanners into the vector
+        static void get_enabled_scanner_histograms(histograms_t &histogram_defs); // fills the vector
         static bool find_scanner_enabled(); // return true if a find scanner is enabled
         
         // print info about the scanners:

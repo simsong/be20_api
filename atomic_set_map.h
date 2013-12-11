@@ -47,7 +47,7 @@ template <class TYPE,class CTYPE> class atomic_histogram {
 public:
     atomic_histogram():amap(),M(){};
 
-    typedef void (*dump_cb_t)(const TYPE &val,const CTYPE &count);
+    typedef void (*dump_cb_t)(void *user,const TYPE &val,const CTYPE &count);
     // add and return the count
     // http://www.cplusplus.com/reference/unordered_map/unordered_map/insert/
     CTYPE add(const TYPE &val,const CTYPE &count){
@@ -61,10 +61,10 @@ public:
     }
 
     // Dump the database to a user-provided callback.
-    void     dump(dump_cb_t dump_cb){
+    void     dump(void *user,dump_cb_t dump_cb){
         cppmutex::lock lock(M);
         for(typename hmap_t::const_iterator it = amap.begin();it!=amap.end();it++){
-            (*dump_cb)((*it).first,(*it).second);
+            (*dump_cb)(user,(*it).first,(*it).second);
         }
     }
     struct ReportElement {
@@ -81,7 +81,7 @@ public:
     };
     typedef std::vector< const ReportElement *> element_vector_t;
 
-    void     dump_sorted(dump_cb_t dump_cb){
+    void     dump_sorted(void *user,dump_cb_t dump_cb){
         /* Create a list of new elements, sort it, then report the sorted list */
         element_vector_t  evect;
         {
@@ -92,7 +92,7 @@ public:
         }
         std::sort(evect.begin(),evect.end(),ReportElement::compare);
         for(typename element_vector_t::const_iterator it = evect.begin();it!=evect.end();it++){
-            (*dump_cb)((*it)->value,(*it)->tally);
+            (*dump_cb)(user,(*it)->value,(*it)->tally);
             delete *it;
         }
 

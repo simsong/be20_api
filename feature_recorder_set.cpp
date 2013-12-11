@@ -170,14 +170,27 @@ void feature_recorder_set::dump_name_count_stats(dfxml_writer &writer)
 static const int LINE_LEN = 80;         // keep track of where we are on the line
 void feature_recorder_set::process_histograms(feature_recorder_set::xml_notifier_t xml_error_notifier)
 {
-    if(histogram_defs==0) return;       // no defs!
+    if(histogram_defs==0){
+        return;
+    }
 
+    // these are both for formatted printing
     int pos  = 0;                       // for generating \n when printing
-    bool need_nl = false;
+    bool need_nl = false;               // formatted
 
+    /* Loop through all of the feature recorders to see if they have in-memory histograms */
+    for(feature_recorder_map::const_iterator it = frm.begin(); it!=frm.end(); it++){
+        //std::cerr << "checking for memory histogram ... " << it->first << " flag=" << it->second->get_flags() << "\n";
+        feature_recorder *fr = it->second;
+        if(fr->flag_set(feature_recorder::FLAG_MEM_HISTOGRAM)){
+            std::cerr << "***************** " << it->first << " has a memory histogram\n";
+        }
+    }
+       
     /* Loop through all the histograms */
     for(histograms_t::const_iterator it = histogram_defs->begin();it!=histogram_defs->end();it++){
-        std::string msg = string(" ") + (*it).feature + " " + (*it).suffix + "...";
+        const std::string &name = (*it).feature; // feature recorder name
+        std::string msg = string(" ") + name + " " + (*it).suffix + "...";
         if(msg.size() + pos > (unsigned) LINE_LEN){
             std::cout << "\n";
             pos = 0;
@@ -187,18 +200,23 @@ void feature_recorder_set::process_histograms(feature_recorder_set::xml_notifier
         std::cout.flush();
         pos += msg.size();
         need_nl = true;
-        if(has_name((*it).feature)){
-            feature_recorder *fr = get_name((*it).feature);
+        if(has_name(name)){
+            feature_recorder *fr = get_name(name);
             try {
-                fr->make_histogram((*it),0);
+                //std::cerr << "make_histogram " << name << "\n";
+                if(fr->flag_set(feature_recorder::FLAG_MEM_HISTOGRAM)){
+                    std::cerr << name << " cannot have both a regular histogram and a memory histogram\n";
+                } else {
+                    fr->make_histogram((*it),0,0);
+                }
             }
             catch (const std::exception &e) {
                 std::cerr << "ERROR: " ;
                 std::cerr.flush();
-                std::cerr << e.what() << " computing histogram " << (*it).feature << "\n";
+                std::cerr << e.what() << " computing histogram " << name << "\n";
                 if(xml_error_notifier){
                     std::string error = std::string("<error function='phase3' histogram='")
-                        + (*it).feature + std::string("</error>");
+                        + name + std::string("</error>");
                     (*xml_error_notifier)(error);
                 }
             }

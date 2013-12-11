@@ -242,15 +242,19 @@ void feature_recorder::set_flag(uint32_t flags_)
  *  Create a histogram for this feature recorder and an extraction pattern.
  */
 
-void dump_cb(const std::string &str,const uint64_t &count)
+/* dump_cb_test is a simple callback that just prints to stderr. It's for testing */
+void feature_recorder::dump_cb_test(void *user,const std::string &str,const uint64_t &count)
 {
-    std::cerr << "dump_cb: " << str << " - " << count << "\n";
+    (void)user;
+    std::cerr << "dump_cb: user=" << user << " " << str << ": " << count << "\n";
 }
 
-void feature_recorder::make_histogram(const class histogram_def &def,feature_recorder::callback_t cb)
+/* Make a histogram. If a callback is provided, send the output there. */
+void feature_recorder::make_histogram(const class histogram_def &def,void *user,mhistogram_t::dump_cb_t cb)
 {
     if(flag_set(FLAG_MEM_HISTOGRAM)){
-        mhistogram->dump_sorted(dump_cb);
+        assert(cb!=0);
+        mhistogram->dump_sorted(user,cb);
         return;
     }
 

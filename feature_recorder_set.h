@@ -71,9 +71,9 @@ class feature_recorder_set {
     atomic_set<std::string> seen_set;   // hex hash values of pages that have been seen
     std::string           input_fname;      // input file
     std::string           outdir;           // where output goes
-    feature_recorder_map  frm;                  // map of feature recorders, by name
-    cppmutex              map_lock;             // locks frm and scanner_stats_map
-    const histograms_t    *histogram_defs;      // points to a set created elsewhere
+    feature_recorder_map  frm;              // map of feature recorders, by name
+    cppmutex              map_lock;         // locks frm and scanner_stats_map
+    const histograms_t    *histogram_defs;  // histograms that are to be created.
 public:
     struct pstats {
         double seconds;

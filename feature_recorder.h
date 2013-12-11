@@ -58,7 +58,7 @@ class feature_recorder {
     /****************************************************************/
 
 public:
-    typedef void (callback_t)(const std::string &histogram_name,const std::string &feature,uint64_t count);
+    //typedef void (callback_t)(const std::string &histogram_name,const std::string &feature,uint64_t count);
     static void set_main_threadid(){
 #ifndef WIN32
         main_threadid=pthread_self();
@@ -116,6 +116,7 @@ public:
     virtual void set_flag(uint32_t flags_);
     bool flag_set(uint32_t f){return flags & f;}
     bool flag_notset(uint32_t f){return !flag_set(f);}
+    uint32_t get_flags(){return flags;}
 
     static size_t context_window_default; // global option
     const std::string outdir;                // where output goes (could be static, I guess 
@@ -177,7 +178,9 @@ public:
     virtual void open();
     virtual void close();                       
     virtual void flush();
-    virtual void make_histogram(const class histogram_def &def,callback_t cb);
+    //virtual void make_histogram(const class histogram_def &def,callback_t cb);
+    static  void dump_cb_test(void *user,const std::string &str,const uint64_t &count); // test callback for you to use!
+    virtual void make_histogram(const class histogram_def &def,void *user,mhistogram_t::dump_cb_t cb);
     
     /* Methods to get info */
     uint64_t count(){return count_;}
