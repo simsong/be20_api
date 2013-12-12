@@ -168,7 +168,8 @@ void feature_recorder_set::dump_name_count_stats(dfxml_writer &writer)
 
 
 static const int LINE_LEN = 80;         // keep track of where we are on the line
-void feature_recorder_set::process_histograms(feature_recorder_set::xml_notifier_t xml_error_notifier)
+void feature_recorder_set::dump_histograms(void *user,feature_recorder::dump_callback_t cb,
+                                           feature_recorder_set::xml_notifier_t xml_error_notifier)
 {
     if(histogram_defs==0){
         return;
@@ -184,6 +185,8 @@ void feature_recorder_set::process_histograms(feature_recorder_set::xml_notifier
         feature_recorder *fr = it->second;
         if(fr->flag_set(feature_recorder::FLAG_MEM_HISTOGRAM)){
             std::cerr << "***************** " << it->first << " has a memory histogram\n";
+            histogram_def d("","","",0);            // empty
+            fr->dump_histogram(d,user,cb);
         }
     }
        
@@ -207,7 +210,7 @@ void feature_recorder_set::process_histograms(feature_recorder_set::xml_notifier
                 if(fr->flag_set(feature_recorder::FLAG_MEM_HISTOGRAM)){
                     std::cerr << name << " cannot have both a regular histogram and a memory histogram\n";
                 } else {
-                    fr->make_histogram((*it),0,0);
+                    fr->dump_histogram((*it),user,cb);
                 }
             }
             catch (const std::exception &e) {

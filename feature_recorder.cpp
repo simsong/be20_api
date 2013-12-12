@@ -111,7 +111,7 @@ feature_recorder::~feature_recorder()
 /**
  * Return the filename with a counter
  */
-string feature_recorder::fname_counter(string suffix)
+string feature_recorder::fname_counter(string suffix) const
 {
     return outdir + "/" + this->name + (suffix.size()>0 ? (string("_") + suffix) : "") + ".txt";
 }
@@ -242,19 +242,41 @@ void feature_recorder::set_flag(uint32_t flags_)
  *  Create a histogram for this feature recorder and an extraction pattern.
  */
 
-/* dump_cb_test is a simple callback that just prints to stderr. It's for testing */
-void feature_recorder::dump_cb_test(void *user,const std::string &str,const uint64_t &count)
+/* dump_callback_test is a simple callback that just prints to stderr. It's for testing */
+void feature_recorder::dump_callback_test(void *user,const feature_recorder &fr,
+                                          const std::string &str,const uint64_t &count)
 {
     (void)user;
     std::cerr << "dump_cb: user=" << user << " " << str << ": " << count << "\n";
 }
 
 /* Make a histogram. If a callback is provided, send the output there. */
-void feature_recorder::make_histogram(const class histogram_def &def,void *user,mhistogram_t::dump_cb_t cb)
+class mhistogram_callback_data {
+    mhistogram_callback_data(const mhistogram_callback_data&);
+    mhistogram_callback_data &operator=(const mhistogram_callback_data &);
+public:
+    mhistogram_callback_data(void *user_,
+                             feature_recorder::dump_callback_t *cb_,
+                             const feature_recorder &fr_):user(user_),cb(cb_),fr(fr_){}
+    void *user;
+    feature_recorder::dump_callback_t *cb;
+    const feature_recorder &fr;
+};
+    
+static void mhistogram_callback(void *user,const std::string &str,const uint64_t &count)
+{
+    mhistogram_callback_data &mcbo = *(mhistogram_callback_data *)(user);
+    mcbo.cb(mcbo.user,mcbo.fr,str,count);
+    
+}
+
+void feature_recorder::dump_histogram(const class histogram_def &def,void *user,feature_recorder::dump_callback_t cb) 
 {
     if(flag_set(FLAG_MEM_HISTOGRAM)){
         assert(cb!=0);
-        mhistogram->dump_sorted(user,cb);
+        (*cb)(0,*this,"str1",10);
+        mhistogram_callback_data mcbo(user,cb,*this);
+        mhistogram->dump_sorted(static_cast<void *>(&mcbo),mhistogram_callback);
         return;
     }
 

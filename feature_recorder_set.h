@@ -68,7 +68,7 @@ class feature_recorder_set {
     feature_recorder_set(const feature_recorder_set &fs);
     feature_recorder_set &operator=(const feature_recorder_set &fs);
     uint32_t flags;
-    atomic_set<std::string> seen_set;   // hex hash values of pages that have been seen
+    atomic_set<std::string> seen_set;       // hex hash values of pages that have been seen
     std::string           input_fname;      // input file
     std::string           outdir;           // where output goes
     feature_recorder_map  frm;              // map of feature recorders, by name
@@ -120,9 +120,8 @@ public:
     void    clear_flag(uint32_t f){flags|=f;}
 
     typedef void (*xml_notifier_t)(const std::string &xmlstring);
-    void    process_histograms(xml_notifier_t xml_error_notifier);
-
-
+    void    dump_histograms(void *user,feature_recorder::dump_callback_t cb,
+                            xml_notifier_t xml_error_notifier);
     virtual feature_recorder *create_name_factory(const std::string &outdir_,
                                                   const std::string &input_fname_,const std::string &name_);
     virtual void create_name(const std::string &name,bool create_stop_also);

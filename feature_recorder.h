@@ -58,7 +58,8 @@ class feature_recorder {
     /****************************************************************/
 
 public:
-    //typedef void (callback_t)(const std::string &histogram_name,const std::string &feature,uint64_t count);
+    typedef void (dump_callback_t)(void *,const feature_recorder &fr,
+                                   const std::string &feature,const uint64_t &count);
     static void set_main_threadid(){
 #ifndef WIN32
         main_threadid=pthread_self();
@@ -114,9 +115,9 @@ public:
                      const std::string &input_fname,const std::string &name);
     virtual ~feature_recorder();
     virtual void set_flag(uint32_t flags_);
-    bool flag_set(uint32_t f){return flags & f;}
-    bool flag_notset(uint32_t f){return !flag_set(f);}
-    uint32_t get_flags(){return flags;}
+    bool flag_set(uint32_t f)    const {return flags & f;}
+    bool flag_notset(uint32_t f) const {return !(flags & f);}
+    uint32_t get_flags()         const {return flags;}
 
     static size_t context_window_default; // global option
     const std::string outdir;                // where output goes (could be static, I guess 
@@ -134,8 +135,9 @@ protected:;
     size_t       context_window_before;      // context window
     size_t       context_window_after;       // context window
 
-    cppmutex Mf;                        /* protects the file */
-    cppmutex Mr;                        /* protects the redlist */
+    mutable cppmutex Mf;                        /* protects the file */
+    mutable cppmutex Mr;                        /* protects the redlist */
+protected:
     typedef atomic_histogram<std::string,uint64_t> mhistogram_t;
     mhistogram_t *mhistogram;           // if we are building an in-memory-histogram
 
@@ -167,10 +169,10 @@ public:
 #endif
     }
 
-    void   banner_stamp(std::ostream &os,const std::string &header); // stamp BOM, banner, and header
+    void   banner_stamp(std::ostream &os,const std::string &header); // stamp banner, and header
 
     /* where stopped items (on stop_list or context_stop_list) get recorded: */
-    std::string        fname_counter(string suffix);
+    std::string        fname_counter(string suffix) const;
     static std::string quote_string(const std::string &feature); // turns unprintable characters to octal escape
     static std::string unquote_string(const std::string &feature); // turns octal escape back to binary characters
 
@@ -179,11 +181,15 @@ public:
     virtual void close();                       
     virtual void flush();
     //virtual void make_histogram(const class histogram_def &def,callback_t cb);
-    static  void dump_cb_test(void *user,const std::string &str,const uint64_t &count); // test callback for you to use!
-    virtual void make_histogram(const class histogram_def &def,void *user,mhistogram_t::dump_cb_t cb);
+    static  void dump_callback_test(void *user,const feature_recorder &fr,
+                                    const std::string &str,const uint64_t &count); // test callback for you to use!
+    /* TK: The histogram_def should be provided at the beginning, so it can be used for in-memory histograms.
+     * The callback needs to have the specific atomic set as the callback as well.
+     */
+    virtual void dump_histogram(const class histogram_def &def,void *user,feature_recorder::dump_callback_t cb);
     
     /* Methods to get info */
-    uint64_t count(){return count_;}
+    uint64_t count() const {return count_;}
 
     /* Methods to write.
      * write() is the basic write - you say where, and it does it.

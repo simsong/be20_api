@@ -43,11 +43,11 @@ template <class TYPE,class CTYPE> class atomic_histogram {
     typedef std::tr1::unordered_map<TYPE,CTYPE> hmap_t;
 #endif
     hmap_t amap; // the locked atomic map
-    cppmutex M;                         // my lock
+    mutable cppmutex M;                         // my lock
 public:
     atomic_histogram():amap(),M(){};
 
-    typedef void (*dump_cb_t)(void *user,const TYPE &val,const CTYPE &count);
+    typedef void (*dump_callback_t)(void *user,const TYPE &val,const CTYPE &count);
     // add and return the count
     // http://www.cplusplus.com/reference/unordered_map/unordered_map/insert/
     CTYPE add(const TYPE &val,const CTYPE &count){
@@ -61,7 +61,7 @@ public:
     }
 
     // Dump the database to a user-provided callback.
-    void     dump(void *user,dump_cb_t dump_cb){
+    void     dump(void *user,dump_callback_t dump_cb) const{
         cppmutex::lock lock(M);
         for(typename hmap_t::const_iterator it = amap.begin();it!=amap.end();it++){
             (*dump_cb)(user,(*it).first,(*it).second);
@@ -81,7 +81,7 @@ public:
     };
     typedef std::vector< const ReportElement *> element_vector_t;
 
-    void     dump_sorted(void *user,dump_cb_t dump_cb){
+    void     dump_sorted(void *user,dump_callback_t dump_cb) const{
         /* Create a list of new elements, sort it, then report the sorted list */
         element_vector_t  evect;
         {
@@ -97,7 +97,7 @@ public:
         }
 
     }
-    uint64_t size_estimate();     // Estimate the size of the database 
+    uint64_t size_estimate() const;     // Estimate the size of the database 
 };
 
 template <class TYPE > class atomic_set {

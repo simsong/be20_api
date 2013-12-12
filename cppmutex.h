@@ -21,8 +21,7 @@
 #include <exception>
 
 class cppmutex {
-    // default copy construction and assignment are meaningless
-    // and not implemented
+    // default copy construction and assignment are meaningless and not implemented
     cppmutex(const cppmutex &c);
     cppmutex &operator=(const cppmutex &cp);
 
@@ -41,7 +40,8 @@ public:
     class lock {                        // get
     private:
         cppmutex &myMutex;      
-        lock(const lock &lock_):myMutex(lock_.myMutex){}
+        lock(const lock &l);            // copy of locks is meaningless
+        lock &operator=(const lock &l);
     public:
         lock(cppmutex &m):myMutex(m){
             pthread_mutex_lock(&myMutex.M);
