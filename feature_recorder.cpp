@@ -251,32 +251,28 @@ void feature_recorder::dump_callback_test(void *user,const feature_recorder &fr,
 }
 
 /* Make a histogram. If a callback is provided, send the output there. */
-class mhistogram_callback_data {
-    mhistogram_callback_data(const mhistogram_callback_data&);
-    mhistogram_callback_data &operator=(const mhistogram_callback_data &);
+class mhistogram_callback {
+    mhistogram_callback(const mhistogram_callback&);
+    mhistogram_callback &operator=(const mhistogram_callback &);
 public:
-    mhistogram_callback_data(void *user_,
+    mhistogram_callback(void *user_,
                              feature_recorder::dump_callback_t *cb_,
                              const feature_recorder &fr_):user(user_),cb(cb_),fr(fr_){}
     void *user;
     feature_recorder::dump_callback_t *cb;
     const feature_recorder &fr;
+    static void callback(void *user,const std::string &str,const uint64_t &count) {
+        mhistogram_callback &mcbo = *(mhistogram_callback *)(user);
+        mcbo.cb(mcbo.user,mcbo.fr,str,count);
+    }
 };
-    
-static void mhistogram_callback(void *user,const std::string &str,const uint64_t &count)
-{
-    mhistogram_callback_data &mcbo = *(mhistogram_callback_data *)(user);
-    mcbo.cb(mcbo.user,mcbo.fr,str,count);
-    
-}
 
 void feature_recorder::dump_histogram(const class histogram_def &def,void *user,feature_recorder::dump_callback_t cb) 
 {
     if(flag_set(FLAG_MEM_HISTOGRAM)){
         assert(cb!=0);
-        (*cb)(0,*this,"str1",10);
-        mhistogram_callback_data mcbo(user,cb,*this);
-        mhistogram->dump_sorted(static_cast<void *>(&mcbo),mhistogram_callback);
+        mhistogram_callback mcbo(user,cb,*this);
+        mhistogram->dump_sorted(static_cast<void *>(&mcbo),mhistogram_callback::callback);
         return;
     }
 
