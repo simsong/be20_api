@@ -650,7 +650,6 @@ private:
         config_t  namevals;             // v3: (input) name=val map
         int       debug;                // v3: (input) current debug level
         struct be13::hash_def  hasher;  // v3: (input) hasher to use
-        //histograms_t    histograms;     // v4: output
     };
 
     // never change the order or delete old fields, or else you will
@@ -660,13 +659,13 @@ private:
                    histogram_defs(),packet_user(),packet_cb(),config(){}
     /* PASSED FROM SCANNER to API: */
     int         si_version;             // version number for this structure
-    string      name;                   // v1: (output) scanner name
-    string      author;                 // v1: (output) who wrote me?
-    string      description;            // v1: (output) what do I do?
-    string      url;                    // v1: (output) where I come from
-    string      scanner_version;        // v1: (output) version for the scanner
+    std::string      name;                   // v1: (output) scanner name
+    std::string      author;                 // v1: (output) who wrote me?
+    std::string      description;            // v1: (output) what do I do?
+    std::string      url;                    // v1: (output) where I come from
+    std::string      scanner_version;        // v1: (output) version for the scanner
     uint64_t    flags;                  // v1: (output) flags
-    set<string> feature_names;          // v1: (output) features I need
+    std::set<std::string> feature_names;          // v1: (output) features I need
     histograms_t histogram_defs;        // v1: (output) histogram definition info
     void        *packet_user;           // v2: (output) data for network callback
     packet_callback_t *packet_cb;       // v2: (output) callback for processing network packets, or NULL
@@ -702,7 +701,7 @@ class scanner_params {
     enum print_mode_t {MODE_NONE=0,MODE_HEX,MODE_RAW,MODE_HTTP};
     static const int CURRENT_SP_VERSION=3;
 
-    typedef std::map<string,string> PrintOptions;
+    typedef std::map<std::string,std::string> PrintOptions;
     static print_mode_t getPrintMode(const PrintOptions &po){
         PrintOptions::const_iterator p = po.find("print_mode_t");
         if(p != po.end()){
@@ -798,10 +797,10 @@ class recursion_control_block {
  * @param callback_ - the function to call back
  * @param partName_ - the part of the forensic path processed by this scanner.
  */
- recursion_control_block(process_t *callback_,string partName_):
-    callback(callback_),partName(partName_){}
+    recursion_control_block(process_t *callback_,std::string partName_):
+        callback(callback_),partName(partName_){}
     process_t *callback;
-    string partName;            /* eg "ZIP", "GZIP" */
+    std::string partName;            /* eg "ZIP", "GZIP" */
 };
     
 /* plugin.cpp. This will become a class...  */
@@ -813,14 +812,14 @@ public:;
     scanner_t  *scanner;                // pointer to the primary entry point
     bool        enabled;                // is enabled?
     scanner_info info;                  // info block sent to and returned by scanner
-    string      pathPrefix;             /* path prefix for recursive scanners */
+    std::string      pathPrefix;             /* path prefix for recursive scanners */
 };
 
 namespace be13 {
     /* plugin.cpp */
 
     struct plugin {
-        typedef vector<scanner_def *> scanner_vector;
+        typedef std::vector<scanner_def *> scanner_vector;
         static scanner_vector current_scanners;                         // current scanners
         static bool dup_data_alerts;  // notify when duplicate data is not processed
         static uint64_t dup_data_encountered; // amount of dup data encountered
@@ -828,9 +827,9 @@ namespace be13 {
         static void set_scanner_debug(int debug);
 
         static void load_scanner(scanner_t scanner,const scanner_info::scanner_config &sc); // load a specific scanner
-        static void load_scanner_file(string fn,const scanner_info::scanner_config &sc);    // load a scanner from a file
+        static void load_scanner_file(std::string fn,const scanner_info::scanner_config &sc);    // load a scanner from a file
         static void load_scanners(scanner_t * const *scanners_builtin,const scanner_info::scanner_config &sc); // load the scan_ plugins
-        static void load_scanner_directory(const string &dirname,const scanner_info::scanner_config &sc); // load scanners in the directory
+        static void load_scanner_directory(const std::string &dirname,const scanner_info::scanner_config &sc); // load scanners in the directory
         static void load_scanner_directories(const std::vector<std::string> &dirnames,const scanner_info::scanner_config &sc);
         static void load_scanner_packet_handlers();
         
@@ -922,7 +921,7 @@ inline std::string microsoftDateToISODate(const uint64_t &time)
     gmtime_r(&tmp, &time_tm);
     char buf[256];
     strftime(buf, sizeof(buf), "%Y-%m-%dT%H:%M:%SZ", &time_tm); // Zulu time
-    return string(buf);
+    return std::string(buf);
 }
 
 /* Many internal windows and Linux structures require a valid printable name in ASCII */

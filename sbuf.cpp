@@ -104,7 +104,7 @@ void sbuf_t::raw_dump(int fd2,uint64_t start,uint64_t len) const
     if(len>bufsize-start) len=bufsize-start; // maximum left
     uint64_t written = ::write(fd2,buf+start,len);
     if(written!=len){
-      cerr << "write: cannot write sbuf.\n";
+        std::cerr << "write: cannot write sbuf.\n";
     }
 }
 

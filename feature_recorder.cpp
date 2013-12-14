@@ -42,9 +42,9 @@ void feature_recorder::banner_stamp(std::ostream &os,const std::string &header)
     int banner_lines = 0;
     //os << UTF8_BOM << BOM_EXPLAINATION;         // 
     if(banner_file!=""){
-        ifstream i(banner_file.c_str());
+        std::ifstream i(banner_file.c_str());
         if(i.is_open()){
-            string line;
+            std::string line;
             while(getline(i,line)){
                 if(line.size()>0 && ((*line.end()=='\r') || (*line.end()=='\n'))){
                     line.erase(line.end()); /* remove the last character while it is a \n or \r */
@@ -111,9 +111,9 @@ feature_recorder::~feature_recorder()
 /**
  * Return the filename with a counter
  */
-string feature_recorder::fname_counter(string suffix) const
+std::string feature_recorder::fname_counter(std::string suffix) const
 {
-    return outdir + "/" + this->name + (suffix.size()>0 ? (string("_") + suffix) : "") + ".txt";
+    return outdir + "/" + this->name + (suffix.size()>0 ? (std::string("_") + suffix) : "") + ".txt";
 }
 
 
@@ -123,29 +123,29 @@ string feature_recorder::fname_counter(string suffix) const
 
 void feature_recorder::open()
 { 
-    string fname = fname_counter("");
-    ios.open(fname.c_str(),ios_base::in|ios_base::out|ios_base::ate);
+    std::string fname = fname_counter("");
+    ios.open(fname.c_str(),std::ios_base::in|std::ios_base::out|std::ios_base::ate);
     if(ios.is_open()){                  // opened existing stream
-        ios.seekg(0L,ios_base::end);
+        ios.seekg(0L,std::ios_base::end);
         while(ios.is_open()){
             /* Get current position */
             if(int(ios.tellg())==0){            // at beginning of file; stamp and return
-                ios.seekp(0L,ios_base::beg);    // be sure we are at the beginning of the file
+                ios.seekp(0L,std::ios_base::beg);    // be sure we are at the beginning of the file
                 return;
             }
-            ios.seekg(-1,ios_base::cur); // backup to once less than the end of the file
+            ios.seekg(-1,std::ios_base::cur); // backup to once less than the end of the file
             if (ios.peek()=='\n'){           // we are finally on the \n
-                ios.seekg(1L,ios_base::cur); // move the getting one forward
-                ios.seekp(ios.tellg(),ios_base::beg); // put the putter at the getter location
+                ios.seekg(1L,std::ios_base::cur); // move the getting one forward
+                ios.seekp(ios.tellg(),std::ios_base::beg); // put the putter at the getter location
                 count_ = 1;                            // greater than zero
                 return;
             }
         }
     }
     // Just open the stream for output
-    ios.open(fname.c_str(),ios_base::out);
+    ios.open(fname.c_str(),std::ios_base::out);
     if(!ios.is_open()){
-        cerr << "*** feature_recorder::open CANNOT OPEN FEATURE FILE FOR WRITING "
+        std::cerr << "*** feature_recorder::open CANNOT OPEN FEATURE FILE FOR WRITING "
              << fname << ":" << strerror(errno) << "\n";
         exit(1);
     }
@@ -186,12 +186,12 @@ static inline int hexval(char ch)
 /**
  * Unquote Python or octal-style quoting of a string
  */
-string feature_recorder::unquote_string(const string &s)
+std::string feature_recorder::unquote_string(const std::string &s)
 {
     size_t len = s.size();
     if(len<4) return s;                 // too small for a quote
 
-    string out;
+    std::string out;
     for(size_t i=0;i<len;i++){
         /* Look for octal coding */
         if(i+3<len && s[i]=='\\' && isodigit(s[i+1]) && isodigit(s[i+2]) && isodigit(s[i+3])){
@@ -216,13 +216,13 @@ string feature_recorder::unquote_string(const string &s)
  * Get the feature which is defined as being between a \t and [\t\n]
  */
 
-/*static*/ string feature_recorder::extract_feature(const string &line)
+/*static*/ std::string feature_recorder::extract_feature(const std::string &line)
 {
     size_t tab1 = line.find('\t');
-    if(tab1==string::npos) return "";   // no feature
+    if(tab1==std::string::npos) return "";   // no feature
     size_t feature_start = tab1+1;
     size_t tab2 = line.find('\t',feature_start);
-    if(tab2!=string::npos) return line.substr(feature_start,tab2-feature_start);
+    if(tab2!=std::string::npos) return line.substr(feature_start,tab2-feature_start);
     return line.substr(feature_start);  // no context to remove
 }
 
@@ -277,9 +277,9 @@ void feature_recorder::dump_histogram(const class histogram_def &def,void *user,
     }
 
     beregex reg(def.pattern,REG_EXTENDED);
-    string ifname = fname_counter("");  // source of features
+    std::string ifname = fname_counter("");  // source of features
 
-    ifstream f(ifname.c_str());
+    std::ifstream f(ifname.c_str());
     if(!f.is_open()){
         std::cerr << "Cannot open histogram input file: " << ifname << "\n";
         return;
@@ -292,7 +292,7 @@ void feature_recorder::dump_histogram(const class histogram_def &def,void *user,
     for(int histogram_counter = 0;histogram_counter<max_histogram_files;histogram_counter++){
         HistogramMaker h(def.flags);            /* of seen features, created in pass two */
         try {
-            string line;
+            std::string line;
             while(getline(f,line)){
                 if(line.size()==0) continue; // empty line
                 if(line[0]=='#') continue;   // comment line
@@ -305,13 +305,13 @@ void feature_recorder::dump_histogram(const class histogram_def &def,void *user,
                     }
                 }
 
-                string feature = extract_feature(line);
-                if(feature.find('\\')!=string::npos){
+                std::string feature = extract_feature(line);
+                if(feature.find('\\')!=std::string::npos){
                     feature = unquote_string(feature);  // reverse \xxx encoding
                 }
                 /** If there is a pattern to use to prune down the feature, use it */
                 if(def.pattern.size()){
-                    string new_feature = feature;
+                    std::string new_feature = feature;
                     if(!reg.search(feature,&new_feature,0,0)){
                         // no search match; avoid this feature
                         continue;               
@@ -321,7 +321,7 @@ void feature_recorder::dump_histogram(const class histogram_def &def,void *user,
         
                 /* Remove what follows after \t if this is a context file */
                 size_t tab=feature.find('\t');
-                if(tab!=string::npos) feature.erase(tab); // erase from tab to end
+                if(tab!=std::string::npos) feature.erase(tab); // erase from tab to end
                 h.add(feature);
             }
             f.close();
@@ -332,15 +332,15 @@ void feature_recorder::dump_histogram(const class histogram_def &def,void *user,
         }
             
         /* Output what we have */
-        stringstream real_suffix;
+        std::stringstream real_suffix;
 
         real_suffix << def.suffix;
         if(histogram_counter>0) real_suffix << histogram_counter;
-        string ofname = fname_counter(real_suffix.str()); // histogram name
-        ofstream o;
+        std::string ofname = fname_counter(real_suffix.str()); // histogram name
+        std::ofstream o;
         o.open(ofname.c_str());
         if(!o.is_open()){
-            cerr << "Cannot open histogram output file: " << ofname << "\n";
+            std::cerr << "Cannot open histogram output file: " << ofname << "\n";
             return;
         }
 
@@ -389,7 +389,7 @@ void feature_recorder::write(const std::string &str)
 
         ios << str << '\n';
         if(ios.fail()){
-            cerr << "DISK FULL\n";
+            std::cerr << "DISK FULL\n";
             ios.close();
         }
         count_++;
@@ -415,9 +415,9 @@ void feature_recorder::printf(const char *fmt, ...)
  * Combine the pos0, feature and context into a single line and write it to the feature file.
  */
 
-void feature_recorder::write0(const pos0_t &pos0,const string &feature,const string &context)
+void feature_recorder::write0(const pos0_t &pos0,const std::string &feature,const std::string &context)
 {
-    stringstream ss;
+    std::stringstream ss;
     ss << pos0.shift(feature_recorder::offset_add).str() << '\t' << feature;
     if(flag_notset(FLAG_NO_CONTEXT) && (context.size()>0)) ss << '\t' << context;
     this->write(ss.str());
@@ -429,7 +429,7 @@ void feature_recorder::write0(const pos0_t &pos0,const string &feature,const str
  * processes the stop list
  */
 
-void feature_recorder::write(const pos0_t &pos0,const string &feature_,const string &context_)
+void feature_recorder::write(const pos0_t &pos0,const std::string &feature_,const std::string &context_)
 {
     if(flags & FLAG_DISABLED) return;           // disabled
     if(debug & DEBUG_PEDANTIC){
@@ -457,9 +457,9 @@ void feature_recorder::write(const pos0_t &pos0,const string &feature_,const str
         escape_backslash = false;
     }
 
-    string feature = validateOrEscapeUTF8(feature_, escape_bad_utf8,escape_backslash);
+    std::string feature = validateOrEscapeUTF8(feature_, escape_bad_utf8,escape_backslash);
 
-    string context;
+    std::string context;
     if(flag_notset(FLAG_NO_CONTEXT)){
         context = validateOrEscapeUTF8(context_,escape_bad_utf8,escape_backslash);
     }
@@ -467,7 +467,7 @@ void feature_recorder::write(const pos0_t &pos0,const string &feature_,const str
     if(feature.size() > opt_max_feature_size) feature.resize(opt_max_feature_size);
     if(context.size() > opt_max_context_size) context.resize(opt_max_context_size);
     if(feature.size()==0){
-        cerr << "zero length feature at " << pos0 << "\n";
+        std::cerr << "zero length feature at " << pos0 << "\n";
         if(debug & DEBUG_PEDANTIC) assert(0);
         return;
     }
@@ -503,10 +503,10 @@ void feature_recorder::write(const pos0_t &pos0,const string &feature_,const str
     if(flag_notset(FLAG_NO_ALERTLIST)
        && fs.alert_list
        && fs.alert_list->check_feature_context(feature,context)){
-        string alert_fn = outdir + "/ALERTS_found.txt";
+        std::string alert_fn = outdir + "/ALERTS_found.txt";
 
         cppmutex::lock lock(Mr);                // notce we are locking the redlist
-        ofstream rf(alert_fn.c_str(),ios_base::app);
+        std::ofstream rf(alert_fn.c_str(),std::ios_base::app);
         if(rf.is_open()){
             rf << pos0.shift(feature_recorder::offset_add).str() << '\t' << feature << '\t' << "\n";
         }
@@ -559,8 +559,8 @@ void feature_recorder::write_buf(const sbuf_t &sbuf,size_t pos,size_t len)
         len = sbuf.bufsize - pos;
     }
 
-    string feature = sbuf.substr(pos,len);
-    string context;
+    std::string feature = sbuf.substr(pos,len);
+    std::string context;
 
     if((flags & FLAG_NO_CONTEXT)==0){
         /* Context write; create a clean context */
@@ -642,7 +642,7 @@ std::string feature_recorder::carve(const sbuf_t &sbuf,size_t pos,size_t len,
     }
 
     if(pos >= sbuf.bufsize){    /* Sanity checks */
-        cerr << "*** carve: WRITE OUTSIDE BUFFER.  pos=" << pos << " sbuf=" << sbuf << "\n";
+        std::cerr << "*** carve: WRITE OUTSIDE BUFFER.  pos=" << pos << " sbuf=" << sbuf << "\n";
         return std::string();
     }
 
@@ -712,20 +712,20 @@ std::string feature_recorder::carve(const sbuf_t &sbuf,size_t pos,size_t len,
      */
     int oerrno = errno;                 // remember error number
     if (access(dirname2.c_str(),R_OK)!=0){
-        cerr << "Could not make directory " << dirname2 << ": " << strerror(oerrno) << "\n";
+        std::cerr << "Could not make directory " << dirname2 << ": " << strerror(oerrno) << "\n";
         return std::string();
     }
 
     /* Write the file into the directory */
     int fd = ::open(fname.c_str(),O_CREAT|O_BINARY|O_RDWR,0666);
     if(fd<0){
-        cerr << "*** carve: Cannot create " << fname << ": " << strerror(errno) << "\n";
+        std::cerr << "*** carve: Cannot create " << fname << ": " << strerror(errno) << "\n";
         return std::string();
     }
 
     ssize_t ret = sbuf.write(fd,pos,len);
     if(ret<0){
-        cerr << "*** carve: Cannot write(pos=" << fd << "," << pos << " len=" << len << "): "<< strerror(errno) << "\n";
+        std::cerr << "*** carve: Cannot write(pos=" << fd << "," << pos << " len=" << len << "): "<< strerror(errno) << "\n";
     }
     ::close(fd);
     return fname;

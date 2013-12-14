@@ -33,7 +33,6 @@
  * The file assumes that bulk_extractor.h is being included.
  */
  
-using namespace std;
 #include <string>
 #include <cstdarg>
 #include <fstream>
@@ -66,7 +65,7 @@ public:
 #endif
     };             // set the main 
     static void set_debug(uint32_t ndebug){debug=ndebug;}
-    typedef string offset_t;
+    typedef std::string offset_t;
 
     /**
      * \name Flags that control scanners
@@ -172,7 +171,7 @@ public:
     void   banner_stamp(std::ostream &os,const std::string &header); // stamp banner, and header
 
     /* where stopped items (on stop_list or context_stop_list) get recorded: */
-    std::string        fname_counter(string suffix) const;
+    std::string        fname_counter(std::string suffix) const;
     static std::string quote_string(const std::string &feature); // turns unprintable characters to octal escape
     static std::string unquote_string(const std::string &feature); // turns octal escape back to binary characters
 

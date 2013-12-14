@@ -12,8 +12,8 @@
  *** modified after it is created, only the contained feature_recorders are modified.
  ****************************************************************/
 
-const string feature_recorder_set::ALERT_RECORDER_NAME = "alerts";
-const string feature_recorder_set::DISABLED_RECORDER_NAME = "disabled";
+const std::string feature_recorder_set::ALERT_RECORDER_NAME = "alerts";
+const std::string feature_recorder_set::DISABLED_RECORDER_NAME = "disabled";
 
 /* Create an empty recorder */
 feature_recorder_set::feature_recorder_set(uint32_t flags_):flags(flags_),seen_set(),input_fname(),
@@ -45,7 +45,7 @@ void feature_recorder_set::init(const feature_file_names_t &feature_files,
     create_name(feature_recorder_set::ALERT_RECORDER_NAME,false); // make the alert recorder
 
     /* Create the requested feature files */
-    for(set<string>::const_iterator it=feature_files.begin();it!=feature_files.end();it++){
+    for(std::set<std::string>::const_iterator it=feature_files.begin();it!=feature_files.end();it++){
         create_name(*it,flags & CREATE_STOP_LIST_RECORDERS);
     }
 }
@@ -65,7 +65,7 @@ void feature_recorder_set::close_all()
 }
 
 
-bool feature_recorder_set::has_name(string name) const
+bool feature_recorder_set::has_name(std::string name) const
 {
     return frm.find(name) != frm.end();
 }
@@ -108,7 +108,7 @@ void feature_recorder_set::create_name(const std::string &name,bool create_stop_
 
     frm[name] = fr;
     if(create_stop_file){
-        string name_stopped = name+"_stopped";
+        std::string name_stopped = name+"_stopped";
         
         fr_stopped = create_name_factory(outdir,input_fname,name_stopped);
         fr->set_stop_list_recorder(fr_stopped);
@@ -137,7 +137,7 @@ bool feature_recorder_set::check_previously_processed(const uint8_t *buf,size_t 
     return seen_set.check_for_presence_and_insert(md5);
 }
 
-void feature_recorder_set::add_stats(string bucket,double seconds)
+void feature_recorder_set::add_stats(const std::string &bucket,double seconds)
 {
     cppmutex::lock lock(map_lock);
     struct pstats &p = scanner_stats[bucket]; // get the location of the stats
@@ -193,7 +193,7 @@ void feature_recorder_set::dump_histograms(void *user,feature_recorder::dump_cal
     /* Loop through all the histograms */
     for(histograms_t::const_iterator it = histogram_defs->begin();it!=histogram_defs->end();it++){
         const std::string &name = (*it).feature; // feature recorder name
-        std::string msg = string(" ") + name + " " + (*it).suffix + "...";
+        std::string msg = std::string(" ") + name + " " + (*it).suffix + "...";
         if(msg.size() + pos > (unsigned) LINE_LEN){
             std::cout << "\n";
             pos = 0;

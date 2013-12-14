@@ -26,18 +26,18 @@ class histogram_def {
      * @param flags  - any flags (see above)
      */
 
-    histogram_def(string feature_,string re_,string suffix_,uint32_t flags_=0):
+    histogram_def(std::string feature_,std::string re_,std::string suffix_,uint32_t flags_=0):
         feature(feature_),pattern(re_),require(),suffix(suffix_),flags(flags_){}
-    histogram_def(string feature_,string re_,string require_,string suffix_,uint32_t flags_=0):
+    histogram_def(std::string feature_,std::string re_,std::string require_,std::string suffix_,uint32_t flags_=0):
         feature(feature_),pattern(re_),require(require_),suffix(suffix_),flags(flags_){}
-    string feature;                     /* feature file */
-    string pattern;                     /* extract pattern; "" means use entire feature */
-    string require;
-    string suffix;                      /* suffix to append; "" means "histogram" */
+    std::string feature;                     /* feature file */
+    std::string pattern;                     /* extract pattern; "" means use entire feature */
+    std::string require;
+    std::string suffix;                      /* suffix to append; "" means "histogram" */
     uint32_t flags;                     // defined in histogram.h
 };
 
-typedef  set<histogram_def> histograms_t;
+typedef  std::set<histogram_def> histograms_t;
 
 inline bool operator <(class histogram_def h1,class histogram_def h2)  {
     if (h1.feature<h2.feature) return true;
@@ -61,8 +61,8 @@ inline bool operator !=(class histogram_def h1,class histogram_def h2)  {
  * 
  */
 
-typedef std::map<string,class feature_recorder *> feature_recorder_map;
-typedef std::set<string>feature_file_names_t;
+typedef std::map<std::string,class feature_recorder *> feature_recorder_map;
+typedef std::set<std::string>feature_file_names_t;
 class feature_recorder_set {
     // neither copying nor assignment is implemented 
     feature_recorder_set(const feature_recorder_set &fs);
@@ -79,14 +79,14 @@ public:
         double seconds;
         uint64_t calls;
     };
-    typedef map<std::string,struct pstats> scanner_stats_map;
+    typedef std::map<std::string,struct pstats> scanner_stats_map;
 
     const word_and_context_list *alert_list;		/* shold be flagged */
     const word_and_context_list *stop_list;		/* should be ignored */
     scanner_stats_map     scanner_stats;
 
-    static const string   ALERT_RECORDER_NAME;  // the name of the alert recorder
-    static const string   DISABLED_RECORDER_NAME; // the fake disabled feature recorder
+    static const std::string   ALERT_RECORDER_NAME;  // the name of the alert recorder
+    static const std::string   DISABLED_RECORDER_NAME; // the fake disabled feature recorder
     /* flags */
     static const uint32_t ONLY_ALERT=0x01;      // always return the alert recorder
     static const uint32_t SET_DISABLED=0x02;    // the set is effectively disabled; for path-printer
@@ -108,6 +108,10 @@ public:
 
     /** Initialize a feature_recorder_set. Previously this was a constructor, but it turns out that
      * virtual functions for the create_name_factory aren't honored in constructors.
+     *
+     * init() is called after all of the scanners have been loaded. It
+     * tells each feature file about its histograms (among other
+     * things)
      */
     void init(const feature_file_names_t &feature_files,
               const std::string &input_fname,const std::string &outdir,
@@ -115,7 +119,7 @@ public:
 
     void    flush_all();
     void    close_all();
-    bool    has_name(string name) const;           /* does the named feature exist? */
+    bool    has_name(std::string name) const;           /* does the named feature exist? */
     void    set_flag(uint32_t f){flags|=f;}         
     void    clear_flag(uint32_t f){flags|=f;}
 
@@ -127,7 +131,7 @@ public:
     virtual void create_name(const std::string &name,bool create_stop_also);
     virtual const std::string &get_outdir(){ return outdir;}
 
-    void    add_stats(string bucket,double seconds);
+    void    add_stats(const std::string &bucket,double seconds);
     typedef void (*stat_callback_t)(void *user,const std::string &name,uint64_t calls,double seconds);
     void    get_stats(void *user,stat_callback_t stat_callback);
     void    dump_name_count_stats(dfxml_writer &writer);

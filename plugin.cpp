@@ -82,7 +82,7 @@ public:
     packet_callback_t *callback;
 };
 
-typedef vector<packet_plugin_info> packet_plugin_info_vector_t;
+typedef std::vector<packet_plugin_info> packet_plugin_info_vector_t;
 packet_plugin_info_vector_t  packet_handlers;   // pcap callback handlers
 
 
@@ -191,18 +191,18 @@ void be13::plugin::load_scanner(scanner_t scanner,const scanner_info::scanner_co
     current_scanners.push_back(sd);
 }
 
-void be13::plugin::load_scanner_file(string fn,const scanner_info::scanner_config &sc)
+void be13::plugin::load_scanner_file(std::string fn,const scanner_info::scanner_config &sc)
 {
     /* Figure out the function name */
     size_t extloc = fn.rfind('.');
-    if(extloc==string::npos){
+    if(extloc==std::string::npos){
         errx(1,"Cannot find '.' in %s",fn.c_str());
     }
-    string func_name = fn.substr(0,extloc);
+    std::string func_name = fn.substr(0,extloc);
     size_t slashloc = func_name.rfind('/');
-    if(slashloc!=string::npos) func_name = func_name.substr(slashloc+1);
+    if(slashloc!=std::string::npos) func_name = func_name.substr(slashloc+1);
     slashloc = func_name.rfind('\\');
-    if(slashloc!=string::npos) func_name = func_name.substr(slashloc+1);
+    if(slashloc!=std::string::npos) func_name = func_name.substr(slashloc+1);
 
     std::cout << "Loading: " << fn << " (" << func_name << ")\n";
     scanner_t *scanner = 0;
@@ -238,7 +238,7 @@ void be13::plugin::load_scanners(scanner_t * const *scanners,const scanner_info:
     }
 }
 
-void be13::plugin::load_scanner_directory(const string &dirname,const scanner_info::scanner_config &sc )
+void be13::plugin::load_scanner_directory(const std::string &dirname,const scanner_info::scanner_config &sc )
 {
     DIR *dirp = opendir(dirname.c_str());
     if(dirp==0){
@@ -246,11 +246,11 @@ void be13::plugin::load_scanner_directory(const string &dirname,const scanner_in
     }
     struct dirent *dp;
     while ((dp = readdir(dirp)) != NULL){
-        string fname = dp->d_name;
+        std::string fname = dp->d_name;
         if(fname.substr(0,5)=="scan_" || fname.substr(0,5)=="SCAN_"){
             size_t extloc = fname.rfind('.');
-            if(extloc==string::npos) continue; // no '.'
-            string ext = fname.substr(extloc+1);
+            if(extloc==std::string::npos) continue; // no '.'
+            std::string ext = fname.substr(extloc+1);
 #ifdef WIN32
             if(ext!="DLL") continue;    // not a DLL
 #else
@@ -349,23 +349,23 @@ class scanner_command {
 public:
     enum command_t {DISABLE_ALL=0,ENABLE_ALL,DISABLE,ENABLE};
     scanner_command(const scanner_command &sc):command(sc.command),name(sc.name){};
-    scanner_command(scanner_command::command_t c,const string &n):command(c),name(n){};
+    scanner_command(scanner_command::command_t c,const std::string &n):command(c),name(n){};
     command_t command;
-    string name;
+    std::string name;
 };
-static vector<scanner_command> scanner_commands;
+static std::vector<scanner_command> scanner_commands;
 bool scanner_commands_processed = false;
 
 void be13::plugin::scanners_disable_all()
 {
     assert(scanner_commands_processed==false);
-    scanner_commands.push_back(scanner_command(scanner_command::DISABLE_ALL,string("")));
+    scanner_commands.push_back(scanner_command(scanner_command::DISABLE_ALL,std::string("")));
 }
 
 void be13::plugin::scanners_enable_all()
 {
     assert(scanner_commands_processed==false);
-    scanner_commands.push_back(scanner_command(scanner_command::ENABLE_ALL,string("")));
+    scanner_commands.push_back(scanner_command(scanner_command::ENABLE_ALL,std::string("")));
 }
 
 void be13::plugin::scanners_enable(const std::string &name)
@@ -382,7 +382,7 @@ void be13::plugin::scanners_disable(const std::string &name)
 
 void be13::plugin::scanners_process_enable_disable_commands()
 {
-    for(vector<scanner_command>::const_iterator it=scanner_commands.begin();
+    for(std::vector<scanner_command>::const_iterator it=scanner_commands.begin();
         it!=scanner_commands.end();it++){
         switch((*it).command){
         case scanner_command::ENABLE_ALL:  set_scanner_enabled_all(true);break;
@@ -524,7 +524,7 @@ void be13::plugin::info_scanners(bool detailed_info,
             if ((*it)->info.url.size()) std::cout << "URL: " << (*it)->info.url << "\n";
             if ((*it)->info.scanner_version.size()) std::cout << "Scanner Version: " << (*it)->info.scanner_version << "\n";
             std::cout << "Feature Names: ";
-            for(set<string>::const_iterator i2 = (*it)->info.feature_names.begin();
+            for(std::set<std::string>::const_iterator i2 = (*it)->info.feature_names.begin();
                 i2 != (*it)->info.feature_names.end();
                 i2++){
                 std::cout << *i2 << " ";
@@ -655,14 +655,14 @@ void be13::plugin::process_sbuf(const class scanner_params &sp)
 
             /* Compute the effective path for stats */
             bool inname=false;
-            string epath;
-            for(string::const_iterator cc=sp.sbuf.pos0.path.begin();cc!=sp.sbuf.pos0.path.end();cc++){
+            std::string epath;
+            for(std::string::const_iterator cc=sp.sbuf.pos0.path.begin();cc!=sp.sbuf.pos0.path.end();cc++){
                 if(isupper(*cc)) inname=true;
                 if(inname) epath.push_back(toupper(*cc));
                 if(*cc=='-') inname=false;
             }
             if(epath.size()>0) epath.push_back('-');
-            for(string::const_iterator cc=name.begin();cc!=name.end();cc++){
+            for(std::string::const_iterator cc=name.begin();cc!=name.end();cc++){
                 epath.push_back(toupper(*cc));
             }
 
@@ -674,13 +674,13 @@ void be13::plugin::process_sbuf(const class scanner_params &sp)
             {
                 aftimer t;
                 if(debug & DEBUG_PRINT_STEPS){
-                    cerr << "sbuf.pos0=" << sp.sbuf.pos0 << " calling scanner " << name << "\n";
+                    std::cerr << "sbuf.pos0=" << sp.sbuf.pos0 << " calling scanner " << name << "\n";
                 }
                 t.start();
                 ((*it)->scanner)(sp,rcb);
                 t.stop();
                 if(debug & DEBUG_PRINT_STEPS){
-                    cerr << "sbuf.pos0=" << sp.sbuf.pos0 << " scanner "
+                    std::cerr << "sbuf.pos0=" << sp.sbuf.pos0 << " scanner "
                          << name << " t=" << t.elapsed_seconds() << "\n";
                 }
                 sp.fs.add_stats(epath,t.elapsed_seconds());
@@ -728,7 +728,7 @@ void be13::plugin::get_scanner_feature_file_names(feature_file_names_t &feature_
 {
     for(scanner_vector::const_iterator it=current_scanners.begin();it!=current_scanners.end();it++){
         if((*it)->enabled){
-            for(set<string>::const_iterator fi=(*it)->info.feature_names.begin();
+            for(std::set<std::string>::const_iterator fi=(*it)->info.feature_names.begin();
                 fi!=(*it)->info.feature_names.end();
                 fi++){
                 feature_file_names.insert(*fi);
