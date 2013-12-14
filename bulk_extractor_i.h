@@ -666,7 +666,7 @@ private:
     std::string      scanner_version;        // v1: (output) version for the scanner
     uint64_t    flags;                  // v1: (output) flags
     std::set<std::string> feature_names;          // v1: (output) features I need
-    histograms_t histogram_defs;        // v1: (output) histogram definition info
+    histogram_defs_t histogram_defs;        // v1: (output) histogram definition info
     void        *packet_user;           // v2: (output) data for network callback
     packet_callback_t *packet_cb;       // v2: (output) callback for processing network packets, or NULL
 
@@ -839,7 +839,7 @@ namespace be13 {
         // returns the named scanner, or 0 if no scanner of that name
         static scanner_t *find_scanner(const std::string &name); 
         static void get_enabled_scanners(std::vector<std::string> &svector); // put the enabled scanners into the vector
-        static void get_enabled_scanner_histograms(histograms_t &histogram_defs); // fills the vector
+        static void add_enabled_scanner_histograms_to_feature_recorder_set(feature_recorder_set &fs); 
         static bool find_scanner_enabled(); // return true if a find scanner is enabled
         
         // print info about the scanners:

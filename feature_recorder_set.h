@@ -15,45 +15,6 @@
  */
 /** \file */
 
-/* histogram_def should be within the feature_recorder_set class. Oh well. */
-class histogram_def {
- public:
-    /**
-     * @param feature- the feature file to histogram (no .txt)
-     * @param re     - the regular expression to extract
-     * @param require- require this string on the line (usually in context)
-     * @param suffix - the suffix to add to the histogram file after feature name before .txt
-     * @param flags  - any flags (see above)
-     */
-
-    histogram_def(std::string feature_,std::string re_,std::string suffix_,uint32_t flags_=0):
-        feature(feature_),pattern(re_),require(),suffix(suffix_),flags(flags_){}
-    histogram_def(std::string feature_,std::string re_,std::string require_,std::string suffix_,uint32_t flags_=0):
-        feature(feature_),pattern(re_),require(require_),suffix(suffix_),flags(flags_){}
-    std::string feature;                     /* feature file */
-    std::string pattern;                     /* extract pattern; "" means use entire feature */
-    std::string require;
-    std::string suffix;                      /* suffix to append; "" means "histogram" */
-    uint32_t flags;                     // defined in histogram.h
-};
-
-typedef  std::set<histogram_def> histograms_t;
-
-inline bool operator <(class histogram_def h1,class histogram_def h2)  {
-    if (h1.feature<h2.feature) return true;
-    if (h1.feature>h2.feature) return false;
-    if (h1.pattern<h2.pattern) return true;
-    if (h1.pattern>h2.pattern) return false;
-    if (h1.suffix<h2.suffix) return true;
-    if (h1.suffix>h2.suffix) return false;
-    return false;                       /* equal */
-};
-
-inline bool operator !=(class histogram_def h1,class histogram_def h2)  {
-    return h1.feature!=h2.feature || h1.pattern!=h2.pattern || h1.suffix!=h2.suffix;
-};
-
-
 /**
  * \class feature_recorder_set
  * A singleton class that holds a set of recorders.
@@ -73,7 +34,7 @@ class feature_recorder_set {
     std::string           outdir;           // where output goes
     feature_recorder_map  frm;              // map of feature recorders, by name
     cppmutex              map_lock;         // locks frm and scanner_stats_map
-    const histograms_t    *histogram_defs;  // histograms that are to be created.
+    histogram_defs_t      histogram_defs;   // histograms that are to be created.
 public:
     struct pstats {
         double seconds;
@@ -114,8 +75,7 @@ public:
      * things)
      */
     void init(const feature_file_names_t &feature_files,
-              const std::string &input_fname,const std::string &outdir,
-              const histograms_t *histogram_defs);
+              const std::string &input_fname,const std::string &outdir);
 
     void    flush_all();
     void    close_all();
@@ -124,6 +84,7 @@ public:
     void    clear_flag(uint32_t f){flags|=f;}
 
     typedef void (*xml_notifier_t)(const std::string &xmlstring);
+    void    add_histogram(const histogram_def &def); // adds it to a local set or to the specific feature recorder
     void    dump_histograms(void *user,feature_recorder::dump_callback_t cb,
                             xml_notifier_t xml_error_notifier);
     virtual feature_recorder *create_name_factory(const std::string &outdir_,

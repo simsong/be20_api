@@ -31,6 +31,17 @@ static cppmutex max_depth_seenM;
 bool be13::plugin::dup_data_alerts = false; // by default, is disabled
 uint64_t be13::plugin::dup_data_encountered = 0; // amount that was not processed
 
+class scanner_command {
+public:
+    enum command_t {DISABLE_ALL=0,ENABLE_ALL,DISABLE,ENABLE};
+    scanner_command(const scanner_command &sc):command(sc.command),name(sc.name){};
+    scanner_command(scanner_command::command_t c,const std::string &n):command(c),name(n){};
+    command_t command;
+    std::string name;
+};
+static std::vector<scanner_command> scanner_commands;
+bool scanner_commands_processed = false;
+
 /****************************************************************
  *** misc support
  ****************************************************************/
@@ -327,17 +338,23 @@ bool be13::plugin::find_scanner_enabled()
 }
 
 
-void be13::plugin::get_enabled_scanner_histograms(histograms_t &histogram_defs)
+void be13::plugin::add_enabled_scanner_histograms_to_feature_recorder_set(feature_recorder_set &fs)
 {
     for(scanner_vector::const_iterator it = current_scanners.begin(); it!=current_scanners.end(); it++){
         if((*it)->enabled){
             const scanner_def *sd = (*it);
-            for(histograms_t::const_iterator i2 = sd->info.histogram_defs.begin();
+            for(histogram_defs_t::const_iterator i2 = sd->info.histogram_defs.begin();
                 i2 != sd->info.histogram_defs.end(); i2++){
-                histogram_defs.insert((*i2));
+                fs.add_histogram((*i2));
             }
         }
     }
+}
+
+void be13::plugin::scanners_init(feature_recorder_set &fs)
+{
+    assert(scanner_commands_processed==true);
+    message_enabled_scanners(scanner_params::PHASE_INIT,fs); // tell all enabled scanners to init
 }
 
 
@@ -345,16 +362,6 @@ void be13::plugin::get_enabled_scanner_histograms(histograms_t &histogram_defs)
 /****************************************************************
  *** Scanner Commands (which one is enabled or disabled)
  ****************************************************************/
-class scanner_command {
-public:
-    enum command_t {DISABLE_ALL=0,ENABLE_ALL,DISABLE,ENABLE};
-    scanner_command(const scanner_command &sc):command(sc.command),name(sc.name){};
-    scanner_command(scanner_command::command_t c,const std::string &n):command(c),name(n){};
-    command_t command;
-    std::string name;
-};
-static std::vector<scanner_command> scanner_commands;
-bool scanner_commands_processed = false;
 
 void be13::plugin::scanners_disable_all()
 {
@@ -395,12 +402,6 @@ void be13::plugin::scanners_process_enable_disable_commands()
     scanner_commands_processed = true;
 }
 
-
-void be13::plugin::scanners_init(feature_recorder_set &fs)
-{
-    assert(scanner_commands_processed==true);
-    message_enabled_scanners(scanner_params::PHASE_INIT,fs); // tell all enabled scanners to init
-}
 
 /****************************************************************
  *** PHASE_SHUTDOWN (formerly phase 2): shut down the scanners

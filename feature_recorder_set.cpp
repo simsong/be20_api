@@ -35,12 +35,10 @@ feature_recorder_set::feature_recorder_set(uint32_t flags_):flags(flags_),seen_s
  */
 void feature_recorder_set::init(const feature_file_names_t &feature_files,
                                 const std::string &input_fname_,
-                                const std::string &outdir_,
-                                const histograms_t *histogram_defs_)
+                                const std::string &outdir_)
 {
     input_fname    = input_fname_;
     outdir         = outdir_;
-    histogram_defs = histogram_defs_;
 
     create_name(feature_recorder_set::ALERT_RECORDER_NAME,false); // make the alert recorder
 
@@ -168,13 +166,14 @@ void feature_recorder_set::dump_name_count_stats(dfxml_writer &writer)
 
 
 static const int LINE_LEN = 80;         // keep track of where we are on the line
+void feature_recorder_set::add_histogram(const histogram_def &def)
+{
+    histogram_defs.insert(def);
+}
+
 void feature_recorder_set::dump_histograms(void *user,feature_recorder::dump_callback_t cb,
                                            feature_recorder_set::xml_notifier_t xml_error_notifier)
 {
-    if(histogram_defs==0){
-        return;
-    }
-
     // these are both for formatted printing
     int pos  = 0;                       // for generating \n when printing
     bool need_nl = false;               // formatted
@@ -191,7 +190,7 @@ void feature_recorder_set::dump_histograms(void *user,feature_recorder::dump_cal
     }
        
     /* Loop through all the histograms */
-    for(histograms_t::const_iterator it = histogram_defs->begin();it!=histogram_defs->end();it++){
+    for(histogram_defs_t::const_iterator it = histogram_defs.begin();it!=histogram_defs.end();it++){
         const std::string &name = (*it).feature; // feature recorder name
         std::string msg = std::string(" ") + name + " " + (*it).suffix + "...";
         if(msg.size() + pos > (unsigned) LINE_LEN){

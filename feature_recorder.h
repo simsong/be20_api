@@ -44,6 +44,45 @@
 #include "cppmutex.h"
 #include "atomic_set_map.h"
 
+/* histogram_def should be within the feature_recorder_set class. Oh well. */
+class histogram_def {
+ public:
+    /**
+     * @param feature- the feature file to histogram (no .txt)
+     * @param re     - the regular expression to extract
+     * @param require- require this string on the line (usually in context)
+     * @param suffix - the suffix to add to the histogram file after feature name before .txt
+     * @param flags  - any flags (see above)
+     */
+
+    histogram_def(std::string feature_,std::string re_,std::string suffix_,uint32_t flags_=0):
+        feature(feature_),pattern(re_),require(),suffix(suffix_),flags(flags_){}
+    histogram_def(std::string feature_,std::string re_,std::string require_,std::string suffix_,uint32_t flags_=0):
+        feature(feature_),pattern(re_),require(require_),suffix(suffix_),flags(flags_){}
+    std::string feature;                     /* feature file */
+    std::string pattern;                     /* extract pattern; "" means use entire feature */
+    std::string require;
+    std::string suffix;                      /* suffix to append; "" means "histogram" */
+    uint32_t    flags;                     // defined in histogram.h
+};
+
+typedef  std::set<histogram_def> histogram_defs_t; // a set of histogram definitions
+
+inline bool operator <(class histogram_def h1,class histogram_def h2)  {
+    if (h1.feature<h2.feature) return true;
+    if (h1.feature>h2.feature) return false;
+    if (h1.pattern<h2.pattern) return true;
+    if (h1.pattern>h2.pattern) return false;
+    if (h1.suffix<h2.suffix) return true;
+    if (h1.suffix>h2.suffix) return false;
+    return false;                       /* equal */
+};
+
+inline bool operator !=(class histogram_def h1,class histogram_def h2)  {
+    return h1.feature!=h2.feature || h1.pattern!=h2.pattern || h1.suffix!=h2.suffix;
+};
+
+
 class feature_recorder {
     // default copy construction and assignment are meaningless
     // and not implemented
@@ -57,6 +96,7 @@ class feature_recorder {
     /****************************************************************/
 
 public:
+    typedef atomic_histogram<std::string,uint64_t> mhistogram_t; // memory histogram
     typedef void (dump_callback_t)(void *,const feature_recorder &fr,
                                    const std::string &feature,const uint64_t &count);
     static void set_main_threadid(){
@@ -119,26 +159,24 @@ public:
     uint32_t get_flags()         const {return flags;}
 
     static size_t context_window_default; // global option
-    const std::string outdir;                // where output goes (could be static, I guess 
-    const std::string input_fname;           // image we are analyzing
-    const std::string name;                  /* name of this feature recorder */
+    const  std::string outdir;                // where output goes (could be static, I guess 
+    const  std::string input_fname;           // image we are analyzing
+    const  std::string name;                  // name of this feature recorder 
 
 private:
     std::string  ignore_encoding;            // encoding to ignore for carving
-    std::fstream ios;                        /* where features are written */
+    std::fstream ios;                        // where features are written 
 
 protected:;
-    class feature_recorder_set &fs;     // the set in which this feature_recorder resides
-
+    class        feature_recorder_set &fs; // the set in which this feature_recorder resides
     int64_t      count_;                     /* number of records written */
     size_t       context_window_before;      // context window
     size_t       context_window_after;       // context window
 
-    mutable cppmutex Mf;                        /* protects the file */
-    mutable cppmutex Mr;                        /* protects the redlist */
+    mutable cppmutex Mf;                     // protects the file 
+    mutable cppmutex Mr;                     // protects the redlist 
 protected:
-    typedef atomic_histogram<std::string,uint64_t> mhistogram_t;
-    mhistogram_t *mhistogram;           // if we are building an in-memory-histogram
+    mhistogram_t *mhistogram;                // if we are building an in-memory-histogram
 
     class feature_recorder *stop_list_recorder; // where stopped features get written
     int64_t                file_number_;            /* starts at 0; gets incremented by carve(); for binning */
@@ -179,12 +217,12 @@ public:
     virtual void open();
     virtual void close();                       
     virtual void flush();
-    //virtual void make_histogram(const class histogram_def &def,callback_t cb);
     static  void dump_callback_test(void *user,const feature_recorder &fr,
                                     const std::string &str,const uint64_t &count); // test callback for you to use!
     /* TK: The histogram_def should be provided at the beginning, so it can be used for in-memory histograms.
      * The callback needs to have the specific atomic set as the callback as well.
      */
+    //virtual void add_histogram(const class histogram_def &def); // adds a histogram to process
     virtual void dump_histogram(const class histogram_def &def,void *user,feature_recorder::dump_callback_t cb);
     
     /* Methods to get info */
