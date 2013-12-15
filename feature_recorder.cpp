@@ -89,6 +89,7 @@ feature_recorder::feature_recorder(class feature_recorder_set &fs_,
                                    const std::string &outdir_,const std::string &input_fname_,const std::string &name_):
     flags(0),
     outdir(outdir_),input_fname(input_fname_),name(name_),ignore_encoding(),ios(),
+    histogram_defs(),
     fs(fs_),
     count_(0),context_window_before(context_window_default),context_window_after(context_window_default),
     Mf(),Mr(),mhistogram(),
@@ -360,6 +361,50 @@ void feature_recorder::dump_histogram(const class histogram_def &def,void *user,
     std::cerr << "Looped " << max_histogram_files
               << " times on histogram; something seems wrong\n";
 }
+
+
+void feature_recorder::add_histogram(const histogram_def &def)
+{
+    histogram_defs.insert(def);
+}
+
+/* Dump all of our histograms */
+
+
+void feature_recorder::dump_histograms(void *user,feature_recorder::dump_callback_t cb,
+                                           feature_recorder_set::xml_notifier_t xml_error_notifier)
+{
+    /* See if we have an in-memory histograms */
+    if(flag_set(feature_recorder::FLAG_MEM_HISTOGRAM)){
+        std::cerr << "***************** " << name << " has a memory histogram\n";
+        histogram_def d("","","",0);            // empty
+        dump_histogram(d,user,cb);
+    }
+       
+    /* Loop through all the histograms */
+    for(histogram_defs_t::const_iterator it = histogram_defs.begin();it!=histogram_defs.end();it++){
+        std::cout << std::string(" ") << name << " " << (*it).suffix + "...\n";
+        std::cout.flush();
+        try {
+            if(flag_set(feature_recorder::FLAG_MEM_HISTOGRAM)){
+                std::cerr << name << " cannot have both a regular histogram and a memory histogram\n";
+            } else {
+                dump_histogram((*it),user,cb);
+            }
+        }
+        catch (const std::exception &e) {
+            std::cerr << "ERROR: " ;
+            std::cerr.flush();
+            std::cerr << e.what() << " computing histogram " << name << "\n";
+            if(xml_error_notifier){
+                std::string error = std::string("<error function='phase3' histogram='")
+                    + name + std::string("</error>");
+                (*xml_error_notifier)(error);
+            }
+        }
+    }
+}
+
 
 
 /****************************************************************

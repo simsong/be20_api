@@ -42,6 +42,8 @@
 #include <pthread.h>
 
 #include "cppmutex.h"
+#include "dfxml/src/dfxml_writer.h"
+#include "dfxml/src/hash_t.h"
 #include "atomic_set_map.h"
 
 /* histogram_def should be within the feature_recorder_set class. Oh well. */
@@ -168,6 +170,7 @@ private:
     std::fstream ios;                        // where features are written 
 
 protected:;
+    histogram_defs_t      histogram_defs;   // histograms that are to be created for this feature recorder
     class        feature_recorder_set &fs; // the set in which this feature_recorder resides
     int64_t      count_;                     /* number of records written */
     size_t       context_window_before;      // context window
@@ -222,8 +225,10 @@ public:
     /* TK: The histogram_def should be provided at the beginning, so it can be used for in-memory histograms.
      * The callback needs to have the specific atomic set as the callback as well.
      */
-    //virtual void add_histogram(const class histogram_def &def); // adds a histogram to process
+    virtual void add_histogram(const class histogram_def &def); // adds a histogram to process
     virtual void dump_histogram(const class histogram_def &def,void *user,feature_recorder::dump_callback_t cb);
+    typedef void (*xml_notifier_t)(const std::string &xmlstring);
+    virtual void dump_histograms(void *user,feature_recorder::dump_callback_t cb, xml_notifier_t xml_error_notifier);
     
     /* Methods to get info */
     uint64_t count() const {return count_;}
