@@ -156,6 +156,7 @@ public:
                      const std::string &input_fname,const std::string &name);
     virtual ~feature_recorder();
     virtual void set_flag(uint32_t flags_);
+    virtual void unset_flag(uint32_t flags_);
     bool flag_set(uint32_t f)    const {return flags & f;}
     bool flag_notset(uint32_t f) const {return !(flags & f);}
     uint32_t get_flags()         const {return flags;}

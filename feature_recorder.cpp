@@ -40,7 +40,6 @@ uint32_t feature_recorder::debug=0;
 void feature_recorder::banner_stamp(std::ostream &os,const std::string &header)
 {
     int banner_lines = 0;
-    //os << UTF8_BOM << BOM_EXPLAINATION;         // 
     if(banner_file!=""){
         std::ifstream i(banner_file.c_str());
         if(i.is_open()){
@@ -238,6 +237,16 @@ void feature_recorder::set_flag(uint32_t flags_)
     }
 }
 
+void feature_recorder::unset_flag(uint32_t flags_)
+{
+    MAINTHREAD();
+    flags &= (~flags_);
+
+    if((flags & FLAG_MEM_HISTOGRAM) && mhistogram!=0){
+        assert(0);                      // we can't turn it off at the moment
+    }
+}
+
 
 /**
  *  Create a histogram for this feature recorder and an extraction pattern.
@@ -270,7 +279,7 @@ public:
 
 void feature_recorder::dump_histogram(const class histogram_def &def,void *user,feature_recorder::dump_callback_t cb) 
 {
-    if(flag_set(FLAG_MEM_HISTOGRAM)){
+    if(mhistogram){
         assert(cb!=0);
         mhistogram_callback mcbo(user,cb,*this);
         mhistogram->dump_sorted(static_cast<void *>(&mcbo),mhistogram_callback::callback);
@@ -291,6 +300,7 @@ void feature_recorder::dump_histogram(const class histogram_def &def,void *user,
      * on the next histogram.
      */
     for(int histogram_counter = 0;histogram_counter<max_histogram_files;histogram_counter++){
+
         HistogramMaker h(def.flags);            /* of seen features, created in pass two */
         try {
             std::string line;
@@ -557,8 +567,8 @@ void feature_recorder::write(const pos0_t &pos0,const std::string &feature_,cons
         }
     }
 
-    /* Support in-memory histogram */
-    if(flag_set(FLAG_MEM_HISTOGRAM)){
+    /* Support in-memory histograms */
+    if(mhistogram){
         mhistogram->add(feature,1);
     }
 
