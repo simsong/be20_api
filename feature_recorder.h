@@ -60,10 +60,10 @@ class histogram_def {
     histogram_def(std::string feature_,std::string re_,std::string suffix_,uint32_t flags_=0):
         feature(feature_),pattern(re_),require(),suffix(suffix_),flags(flags_){}
     histogram_def(std::string feature_,std::string re_,std::string require_,std::string suffix_,uint32_t flags_=0):
-        feature(feature_),pattern(re_),require(require_),suffix(suffix_),flags(flags_){}
+        feature(feature_),pattern(re_),require(require_),suffix(suffix_),flags(flags_){ }
     std::string feature;                     /* feature file */
     std::string pattern;                     /* extract pattern; "" means use entire feature */
-    std::string require;
+    std::string require;                     /* text required somewhere on the feature line; used for IP histograms */
     std::string suffix;                      /* suffix to append; "" means "histogram" */
     uint32_t    flags;                     // defined in histogram.h
 };
