@@ -81,14 +81,6 @@
 #include <set>
 #include <map>
 
-namespace be13 {
-    struct hash_def {
-        hash_def():name(),func(){};
-        std::string name; // v3: (input) function to perform hashing with        
-        std::string (*func)(const uint8_t *buf,size_t bufsize); // v3: (input) function to perform hashing with
-    };
-};
-
 #include "feature_recorder.h"
 #include "feature_recorder_set.h"
 
@@ -645,11 +637,10 @@ private:
      * Scanner histograms are added to 'histograms' by machinery.
      */
     struct scanner_config {
-        scanner_config():namevals(),debug(),hasher() /* ,histograms() */{};
+        scanner_config():namevals(),debug(){};
         virtual ~scanner_config(){}
         config_t  namevals;             // v3: (input) name=val map
         int       debug;                // v3: (input) current debug level
-        struct be13::hash_def  hasher;  // v3: (input) hasher to use
     };
 
     // never change the order or delete old fields, or else you will
@@ -774,15 +765,15 @@ class scanner_params {
      *** INSTANCE VARIABLES ***
      **************************/
 
-    const int sp_version;                /* version number of this structure */
-    const phase_t phase;                 /* v1: 0=startup, 1=normal, 2=shutdown (changed to phase_t in v1.3) */
-    const sbuf_t &sbuf;                 /* v1: what to scan / only valid in SCAN_PHASE */
-    class feature_recorder_set &fs;     /* v1: where to put the results / only valid in SCAN_PHASE */
-    const uint32_t depth;            /* v1: how far down are we? / only valid in SCAN_PHASE */
+    const int                   sp_version;                /* version number of this structure */
+    const phase_t               phase;                 /* v1: 0=startup, 1=normal, 2=shutdown (changed to phase_t in v1.3) */
+    const sbuf_t                &sbuf;                 /* v1: what to scan / only valid in SCAN_PHASE */
+    class feature_recorder_set  &fs;     /* v1: where to put the results / only valid in SCAN_PHASE */
+    const uint32_t              depth;            /* v1: how far down are we? / only valid in SCAN_PHASE */
 
-    PrintOptions  &print_options;    /* v1: how to print / NOT USED IN SCANNERS */
-    scanner_info  *info;             /* v2: set/get parameters on startup */
-    std::stringstream *sxml;         /* v3: on scanning and shutdown: CDATA added to XML stream (advanced feature) */
+    PrintOptions                &print_options;    /* v1: how to print / NOT USED IN SCANNERS */
+    scanner_info                *info;             /* v2: set/get parameters on startup, hasher */
+    std::stringstream           *sxml;         /* v3: on scanning and shutdown: CDATA added to XML stream (advanced feature) */
 };
 
 

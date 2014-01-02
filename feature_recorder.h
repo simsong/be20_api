@@ -98,6 +98,11 @@ class feature_recorder {
     /****************************************************************/
 
 public:
+    struct hash_def {
+        hash_def(std::string name_,std::string (*func_)(const uint8_t *buf,const size_t bufsize)):name(name_),func(func_){};
+        std::string name;                                             // name of hash
+        std::string (*func)(const uint8_t *buf,const size_t bufsize); // hash function
+    };
     typedef atomic_histogram<std::string,uint64_t> mhistogram_t; // memory histogram
     typedef void (dump_callback_t)(void *,const feature_recorder &fr,
                                    const std::string &feature,const uint64_t &count);
@@ -217,6 +222,10 @@ public:
     static std::string quote_string(const std::string &feature); // turns unprintable characters to octal escape
     static std::string unquote_string(const std::string &feature); // turns octal escape back to binary characters
 
+    /* Hasher */
+    static hash_def null_hasher;     // a default hasher available for all to use (it doesn't hash)
+    virtual const hash_def &hasher();
+
     /* feature file management */
     virtual void open();
     virtual void close();                       
@@ -288,8 +297,7 @@ public:
 
     // Carve a file; returns filename of carved file or empty string if nothing carved
     virtual std::string carve(const sbuf_t &sbuf,size_t pos,size_t len, 
-                              const std::string &ext, // appended to forensic path
-                              const struct be13::hash_def &hasher);
+                              const std::string &ext); // appended to forensic path
     // Set the time of the carved file to iso8601 file
     virtual void set_carve_mtime(const std::string &fname, const std::string &mtime_iso8601);
 };

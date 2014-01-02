@@ -677,17 +677,29 @@ std::string valid_dosname(std::string in)
 }
         
 
+const feature_recorder::hash_def &feature_recorder::hasher()
+{
+    return fs.hasher;
+}
+
+static std::string null_hasher_name("null");
+static std::string null_hasher_func(const uint8_t *buf,size_t bufsize)
+{
+    return std::string("0000000000000000");
+}
+
+feature_recorder::hash_def feature_recorder::null_hasher(null_hasher_name,null_hasher_func);
+
+
 #include <iomanip>
 /**
  * @param sbuf   - the buffer to carve
  * @param pos    - offset in the buffer to carve
  * @param len    - how many bytes to carve
- * @param hasher - to compute the hash of the carved object.
  *
  */
 std::string feature_recorder::carve(const sbuf_t &sbuf,size_t pos,size_t len,
-                                    const std::string &ext,
-                                    const be13::hash_def &hasher)
+                                    const std::string &ext)
 {
     if(flags & FLAG_DISABLED) return std::string();           // disabled
 
@@ -741,13 +753,13 @@ std::string feature_recorder::carve(const sbuf_t &sbuf,size_t pos,size_t len,
 
     std::string dirname2 = ss.str(); 
     std::string fname    = dirname2 + std::string("/") + valid_dosname(sbuf.pos0.str() + ext);
-    std::string carved_hash_hexvalue = (*hasher.func)(sbuf.buf,sbuf.bufsize);
+    std::string carved_hash_hexvalue = (*fs.hasher.func)(sbuf.buf,sbuf.bufsize);
 
     /* Record what was found in the feature file.
      */
     ss.str(std::string()); // clear the stringstream
     ss << "<fileobject><filename>" << fname << "</filename><filesize>" << len << "</filesize>"
-       << "<hashdigest type='" << hasher.name << "'>" << carved_hash_hexvalue << "</hashdigest></fileobject>";
+       << "<hashdigest type='" << fs.hasher.name << "'>" << carved_hash_hexvalue << "</hashdigest></fileobject>";
     this->write(sbuf.pos0+len,fname,ss.str());
     
     /* Make the directory if it doesn't exist.  */

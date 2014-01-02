@@ -44,7 +44,9 @@ public:
 
     const word_and_context_list *alert_list;		/* shold be flagged */
     const word_and_context_list *stop_list;		/* should be ignored */
-    scanner_stats_map     scanner_stats;
+    scanner_stats_map      scanner_stats;
+
+    const feature_recorder::hash_def  &hasher;  // function for hashing
 
     static const std::string   ALERT_RECORDER_NAME;  // the name of the alert recorder
     static const std::string   DISABLED_RECORDER_NAME; // the fake disabled feature recorder
@@ -65,7 +67,7 @@ public:
     void set_alert_list(const word_and_context_list *alist){alert_list=alist;}
 
     /** create an emptry feature recorder set. If disabled, create a disabled recorder. */
-    feature_recorder_set(uint32_t flags_);
+    feature_recorder_set(uint32_t flags_,const feature_recorder::hash_def &hasher_);
 
     /** Initialize a feature_recorder_set. Previously this was a constructor, but it turns out that
      * virtual functions for the create_name_factory aren't honored in constructors.

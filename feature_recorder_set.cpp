@@ -16,12 +16,13 @@ const std::string feature_recorder_set::ALERT_RECORDER_NAME = "alerts";
 const std::string feature_recorder_set::DISABLED_RECORDER_NAME = "disabled";
 
 /* Create an empty recorder */
-feature_recorder_set::feature_recorder_set(uint32_t flags_):flags(flags_),seen_set(),input_fname(),
-                                                            outdir(),
-                                                            frm(),map_lock(),
-                                                            histogram_defs(),
-                                                            alert_list(),stop_list(),
-                                                            scanner_stats()
+feature_recorder_set::feature_recorder_set(uint32_t flags_,const feature_recorder::hash_def &hasher_):
+    flags(flags_),seen_set(),input_fname(),
+    outdir(),
+    frm(),map_lock(),
+    histogram_defs(),
+    alert_list(),stop_list(),
+    scanner_stats(),hasher(hasher_)
 {
     if(flags & SET_DISABLED){
         create_name(DISABLED_RECORDER_NAME,false);
