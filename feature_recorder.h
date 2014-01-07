@@ -104,8 +104,8 @@ public:
         std::string (*func)(const uint8_t *buf,const size_t bufsize); // hash function
     };
     typedef atomic_histogram<std::string,uint64_t> mhistogram_t; // memory histogram
-    typedef void (dump_callback_t)(void *,const feature_recorder &fr,
-                                   const std::string &feature,const uint64_t &count);
+    typedef int (dump_callback_t)(void *,const feature_recorder &fr,
+                                  const std::string &feature,const uint64_t &count);
     static void set_main_threadid(){
 #ifndef WIN32
         main_threadid=pthread_self();
@@ -230,7 +230,7 @@ public:
     virtual void open();
     virtual void close();                       
     virtual void flush();
-    static  void dump_callback_test(void *user,const feature_recorder &fr,
+    static  int  dump_callback_test(void *user,const feature_recorder &fr,
                                     const std::string &str,const uint64_t &count); // test callback for you to use!
     /* TK: The histogram_def should be provided at the beginning, so it can be used for in-memory histograms.
      * The callback needs to have the specific atomic set as the callback as well.

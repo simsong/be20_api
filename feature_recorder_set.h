@@ -92,7 +92,7 @@ public:
     virtual void create_name(const std::string &name,bool create_stop_also);
 
     void    add_stats(const std::string &bucket,double seconds);
-    typedef void (*stat_callback_t)(void *user,const std::string &name,uint64_t calls,double seconds);
+    typedef int (*stat_callback_t)(void *user,const std::string &name,uint64_t calls,double seconds);
     void    get_stats(void *user,stat_callback_t stat_callback) const;
     void    dump_name_count_stats(dfxml_writer &writer) const;
 

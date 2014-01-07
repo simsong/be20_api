@@ -95,8 +95,9 @@ public:
         }
         std::sort(evect.begin(),evect.end(),ReportElement::compare);
         for(typename element_vector_t::const_iterator it = evect.begin();it!=evect.end();it++){
-            (*dump_cb)(user,(*it)->value,(*it)->tally);
+            int ret = (*dump_cb)(user,(*it)->value,(*it)->tally);
             delete *it;
+            if(ret<0) break;
         }
 
     }

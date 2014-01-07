@@ -263,11 +263,12 @@ void feature_recorder::set_memhist_limit(int64_t limit_)
  */
 
 /* dump_callback_test is a simple callback that just prints to stderr. It's for testing */
-void feature_recorder::dump_callback_test(void *user,const feature_recorder &fr,
+int feature_recorder::dump_callback_test(void *user,const feature_recorder &fr,
                                           const std::string &str,const uint64_t &count)
 {
     (void)user;
     std::cerr << "dump_cb: user=" << user << " " << str << ": " << count << "\n";
+    return 0;
 }
 
 /* Make a histogram. If a callback is provided, send the output there. */
@@ -278,17 +279,19 @@ public:
     mhistogram_callback(void *user_,
                         feature_recorder::dump_callback_t *cb_,
                         const feature_recorder &fr_,
-                        uint64_t limit_):user(user_),cb(cb_),fr(fr_),count(0),limit(limit_){}
+                        uint64_t limit_):user(user_),cb(cb_),fr(fr_),callback_count(0),limit(limit_){}
     void *user;
     feature_recorder::dump_callback_t *cb;
     const feature_recorder &fr;
-    uint64_t count;
+    uint64_t callback_count;
     uint64_t limit;
-    static int callback(void *user,const std::string &str,const uint64_t &count) {
-        mhistogram_callback &mcbo = *(mhistogram_callback *)(user);
-        mcbo.cb(mcbo.user,mcbo.fr,str,count);
-        if(mcbo.limit && ++mcbo.count == mcbo.limit) return -1;
+    int do_callback(const std::string &str,const uint64_t &tally){
+        (*cb)(user,fr,str,tally);
+        if(limit && ++callback_count >= limit) return -1;
         return 0;
+    }
+    static int callback(void *ptr,const std::string &str,const uint64_t &tally) {
+        return ((mhistogram_callback *)(ptr))->do_callback(str,tally);
     }
 };
 
@@ -401,7 +404,6 @@ void feature_recorder::dump_histograms(void *user,feature_recorder::dump_callbac
 {
     /* See if we have an in-memory histograms */
     if(flag_set(feature_recorder::FLAG_MEM_HISTOGRAM)){
-        std::cerr << "***************** " << name << " has a memory histogram\n";
         histogram_def d("","","",0);            // empty
         dump_histogram(d,user,cb);
     }

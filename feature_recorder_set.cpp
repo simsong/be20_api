@@ -2,7 +2,6 @@
 
 #include "config.h"
 #include "bulk_extractor_i.h"
-
 #include "histogram.h"
 
 
