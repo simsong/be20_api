@@ -37,10 +37,10 @@ uint32_t feature_recorder::opt_max_feature_size=1024*1024;
 uint32_t feature_recorder::debug=0;
 
 
-void feature_recorder::banner_stamp(std::ostream &os,const std::string &header)
+void feature_recorder::banner_stamp(std::ostream &os,const std::string &header) const
 {
     int banner_lines = 0;
-    if(banner_file!=""){
+    if(banner_file.size()>0){
         std::ifstream i(banner_file.c_str());
         if(i.is_open()){
             std::string line;
@@ -60,7 +60,7 @@ void feature_recorder::banner_stamp(std::ostream &os,const std::string &header)
     
     os << bulk_extractor_version_header;
     os << "# Feature-Recorder: " << name << "\n";
-    if(input_fname.size()) os << "# Filename: " << input_fname << "\n";
+    if(fs.get_input_fname().size()) os << "# Filename: " << fs.get_input_fname() << "\n";
     if(debug!=0){
         os << "# DEBUG: " << debug << " (";
         if(debug & DEBUG_PEDANTIC) os << " DEBUG_PEDANTIC ";
@@ -78,16 +78,14 @@ void feature_recorder::banner_stamp(std::ostream &os,const std::string &header)
  * and thus a different feature recorder, to avoid locking
  * problems. 
  *
- * @param outdir_      - where the feature file is written
- * @param input_fname_ - the file (disk image) that these features were extracted from.
- *                     - We should probably have a callback function to annotate the feature file.
+ * @param feature_recorder_set &fs - common information for all of the feature recorders
  * @param name         - the name of the feature being recorded.
  */
 
 feature_recorder::feature_recorder(class feature_recorder_set &fs_,
-                                   const std::string &outdir_,const std::string &input_fname_,const std::string &name_):
+                                   const std::string &name_):
     flags(0),
-    outdir(outdir_),input_fname(input_fname_),name(name_),ignore_encoding(),ios(),
+    name(name_),ignore_encoding(),ios(),
     histogram_defs(),
     fs(fs_),
     count_(0),context_window_before(context_window_default),context_window_after(context_window_default),
@@ -113,9 +111,14 @@ feature_recorder::~feature_recorder()
  */
 std::string feature_recorder::fname_counter(std::string suffix) const
 {
-    return outdir + "/" + this->name + (suffix.size()>0 ? (std::string("_") + suffix) : "") + ".txt";
+    return fs.get_outdir() + "/" + this->name + (suffix.size()>0 ? (std::string("_") + suffix) : "") + ".txt";
 }
 
+
+const std::string &feature_recorder::get_outdir() const 
+{
+    return fs.get_outdir();
+}
 
 /**
  * open a feature recorder file in the specified output directory.
@@ -247,6 +250,13 @@ void feature_recorder::unset_flag(uint32_t flags_)
     }
 }
 
+void feature_recorder::set_memhist_limit(int64_t limit_)
+{
+    MAINTHREAD();
+    mhistogram_limit = limit_;
+}
+
+
 
 /**
  *  Create a histogram for this feature recorder and an extraction pattern.
@@ -266,22 +276,27 @@ class mhistogram_callback {
     mhistogram_callback &operator=(const mhistogram_callback &);
 public:
     mhistogram_callback(void *user_,
-                             feature_recorder::dump_callback_t *cb_,
-                             const feature_recorder &fr_):user(user_),cb(cb_),fr(fr_){}
+                        feature_recorder::dump_callback_t *cb_,
+                        const feature_recorder &fr_,
+                        uint64_t limit_):user(user_),cb(cb_),fr(fr_),count(0),limit(limit_){}
     void *user;
     feature_recorder::dump_callback_t *cb;
     const feature_recorder &fr;
-    static void callback(void *user,const std::string &str,const uint64_t &count) {
+    uint64_t count;
+    uint64_t limit;
+    static int callback(void *user,const std::string &str,const uint64_t &count) {
         mhistogram_callback &mcbo = *(mhistogram_callback *)(user);
         mcbo.cb(mcbo.user,mcbo.fr,str,count);
+        if(mcbo.limit && ++mcbo.count == mcbo.limit) return -1;
+        return 0;
     }
 };
 
-void feature_recorder::dump_histogram(const class histogram_def &def,void *user,feature_recorder::dump_callback_t cb) 
+void feature_recorder::dump_histogram(const class histogram_def &def,void *user,feature_recorder::dump_callback_t cb) const
 {
     if(mhistogram){
         assert(cb!=0);
-        mhistogram_callback mcbo(user,cb,*this);
+        mhistogram_callback mcbo(user,cb,*this,mhistogram_limit);
         mhistogram->dump_sorted(static_cast<void *>(&mcbo),mhistogram_callback::callback);
         return;
     }
@@ -382,7 +397,7 @@ void feature_recorder::add_histogram(const histogram_def &def)
 
 
 void feature_recorder::dump_histograms(void *user,feature_recorder::dump_callback_t cb,
-                                           feature_recorder_set::xml_notifier_t xml_error_notifier)
+                                           feature_recorder_set::xml_notifier_t xml_error_notifier) const
 {
     /* See if we have an in-memory histograms */
     if(flag_set(feature_recorder::FLAG_MEM_HISTOGRAM)){
@@ -558,7 +573,7 @@ void feature_recorder::write(const pos0_t &pos0,const std::string &feature_,cons
     if(flag_notset(FLAG_NO_ALERTLIST)
        && fs.alert_list
        && fs.alert_list->check_feature_context(feature,context)){
-        std::string alert_fn = outdir + "/ALERTS_found.txt";
+        std::string alert_fn = fs.get_outdir() + "/ALERTS_found.txt";
 
         cppmutex::lock lock(Mr);                // notce we are locking the redlist
         std::ofstream rf(alert_fn.c_str(),std::ios_base::app);
@@ -746,7 +761,7 @@ std::string feature_recorder::carve(const sbuf_t &sbuf,size_t pos,size_t len,
      */
 
     uint64_t this_file_number = file_number_add(1);
-    std::string dirname1 = outdir + "/" + name;
+    std::string dirname1 = fs.get_outdir() + "/" + name;
     std::stringstream ss;
 
     ss << dirname1 << "/" << std::setw(3) << std::setfill('0') << (this_file_number / 1000);

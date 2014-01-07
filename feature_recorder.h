@@ -153,22 +153,21 @@ public:
     static uint32_t    opt_max_context_size;
     static uint32_t    opt_max_feature_size;
     static int64_t     offset_add;          // added to every reported offset, for use with hadoop
-    static std::string banner_file;          // banner for top of every file
+    static std::string banner_file;         // banner for top of every file
     static std::string extract_feature(const std::string &line);
 
     feature_recorder(class feature_recorder_set &fs,
-                     const std::string &outdir,
-                     const std::string &input_fname,const std::string &name);
+                     const std::string &name);
     virtual ~feature_recorder();
     virtual void set_flag(uint32_t flags_);
     virtual void unset_flag(uint32_t flags_);
+    virtual void set_memhist_limit(int64_t limit_);
     bool flag_set(uint32_t f)    const {return flags & f;}
     bool flag_notset(uint32_t f) const {return !(flags & f);}
     uint32_t get_flags()         const {return flags;}
+    virtual const std::string &get_outdir() const;
 
     static size_t context_window_default; // global option
-    const  std::string outdir;                // where output goes (could be static, I guess 
-    const  std::string input_fname;           // image we are analyzing
     const  std::string name;                  // name of this feature recorder 
 
 private:
@@ -186,6 +185,7 @@ protected:;
     mutable cppmutex Mr;                     // protects the redlist 
 protected:
     mhistogram_t *mhistogram;                // if we are building an in-memory-histogram
+    uint64_t      mhistogram_limit;          // how many we want
 
     class feature_recorder *stop_list_recorder; // where stopped features get written
     int64_t                file_number_;            /* starts at 0; gets incremented by carve(); for binning */
@@ -215,7 +215,7 @@ public:
 #endif
     }
 
-    void   banner_stamp(std::ostream &os,const std::string &header); // stamp banner, and header
+    void   banner_stamp(std::ostream &os,const std::string &header) const; // stamp banner, and header
 
     /* where stopped items (on stop_list or context_stop_list) get recorded: */
     std::string        fname_counter(std::string suffix) const;
@@ -236,9 +236,9 @@ public:
      * The callback needs to have the specific atomic set as the callback as well.
      */
     virtual void add_histogram(const class histogram_def &def); // adds a histogram to process
-    virtual void dump_histogram(const class histogram_def &def,void *user,feature_recorder::dump_callback_t cb);
+    virtual void dump_histogram(const class histogram_def &def,void *user,feature_recorder::dump_callback_t cb) const;
     typedef void (*xml_notifier_t)(const std::string &xmlstring);
-    virtual void dump_histograms(void *user,feature_recorder::dump_callback_t cb, xml_notifier_t xml_error_notifier);
+    virtual void dump_histograms(void *user,feature_recorder::dump_callback_t cb, xml_notifier_t xml_error_notifier) const;
     
     /* Methods to get info */
     uint64_t count() const {return count_;}

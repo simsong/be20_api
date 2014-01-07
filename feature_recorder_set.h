@@ -32,8 +32,8 @@ class feature_recorder_set {
     atomic_set<std::string> seen_set;       // hex hash values of pages that have been seen
     std::string           input_fname;      // input file
     std::string           outdir;           // where output goes
-    feature_recorder_map  frm;              // map of feature recorders, by name
-    cppmutex              map_lock;         // locks frm and scanner_stats_map
+    feature_recorder_map  frm;              // map of feature recorders, by name; TK-replace with an atomic_set
+    mutable cppmutex      map_lock;         // locks frm and scanner_stats_map
     histogram_defs_t      histogram_defs;   // histograms that are to be created.
 public:
     struct pstats {
@@ -61,8 +61,8 @@ public:
         }
     }
 
-    std::string get_input_fname() const {return input_fname;}
-    std::string get_outdir() const {return outdir;}
+    std::string get_input_fname()           const {return input_fname;}
+    virtual const std::string &get_outdir() const { return outdir;}
     void set_stop_list(const word_and_context_list *alist){stop_list=alist;}
     void set_alert_list(const word_and_context_list *alist){alert_list=alist;}
 
@@ -87,24 +87,22 @@ public:
 
     void    add_histogram(const histogram_def &def); // adds it to a local set or to the specific feature recorder
     typedef void (*xml_notifier_t)(const std::string &xmlstring);
-    void    dump_histograms(void *user,feature_recorder::dump_callback_t cb, xml_notifier_t xml_error_notifier);
-    virtual feature_recorder *create_name_factory(const std::string &outdir_,
-                                                  const std::string &input_fname_,const std::string &name_);
+    void    dump_histograms(void *user,feature_recorder::dump_callback_t cb, xml_notifier_t xml_error_notifier) const;
+    virtual feature_recorder *create_name_factory(const std::string &name_);
     virtual void create_name(const std::string &name,bool create_stop_also);
-    virtual const std::string &get_outdir(){ return outdir;}
 
     void    add_stats(const std::string &bucket,double seconds);
     typedef void (*stat_callback_t)(void *user,const std::string &name,uint64_t calls,double seconds);
-    void    get_stats(void *user,stat_callback_t stat_callback);
-    void    dump_name_count_stats(dfxml_writer &writer);
+    void    get_stats(void *user,stat_callback_t stat_callback) const;
+    void    dump_name_count_stats(dfxml_writer &writer) const;
 
     // Management of previously seen data
     virtual bool check_previously_processed(const uint8_t *buf,size_t bufsize);
 
     // NOTE:
     // only virtual functions may be called by plugins!
-    virtual feature_recorder *get_name(const std::string &name);
-    virtual feature_recorder *get_alert_recorder();
+    virtual feature_recorder *get_name(const std::string &name) const;
+    virtual feature_recorder *get_alert_recorder() const;
 };
 
 

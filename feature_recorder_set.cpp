@@ -72,7 +72,7 @@ bool feature_recorder_set::has_name(std::string name) const
 /*
  * Gets a feature_recorder_set.
  */
-feature_recorder *feature_recorder_set::get_name(const std::string &name) 
+feature_recorder *feature_recorder_set::get_name(const std::string &name) const
 {
     const std::string *thename = &name;
     if(flags & SET_DISABLED){           // if feature recorder set is disabled, return the disabled recorder.
@@ -90,8 +90,8 @@ feature_recorder *feature_recorder_set::get_name(const std::string &name)
 }
 
 
-feature_recorder *feature_recorder_set::create_name_factory(const std::string &outdir_,const std::string &input_fname_,const std::string &name_){
-    return new feature_recorder(*this,outdir_,input_fname_,name_);
+feature_recorder *feature_recorder_set::create_name_factory(const std::string &name_){
+    return new feature_recorder(*this,name_);
 }
 
 
@@ -102,14 +102,14 @@ void feature_recorder_set::create_name(const std::string &name,bool create_stop_
         return;
     }
 
-    feature_recorder *fr = create_name_factory(outdir,input_fname,name);
+    feature_recorder *fr = create_name_factory(name);
     feature_recorder *fr_stopped = 0;
 
     frm[name] = fr;
     if(create_stop_file){
         std::string name_stopped = name+"_stopped";
         
-        fr_stopped = create_name_factory(outdir,input_fname,name_stopped);
+        fr_stopped = create_name_factory(name_stopped);
         fr->set_stop_list_recorder(fr_stopped);
         frm[name_stopped] = fr_stopped;
     }
@@ -121,7 +121,7 @@ void feature_recorder_set::create_name(const std::string &name,bool create_stop_
     if(fr_stopped) fr_stopped->open();
 }
 
-feature_recorder *feature_recorder_set::get_alert_recorder()
+feature_recorder *feature_recorder_set::get_alert_recorder() const
 {
     return get_name(feature_recorder_set::ALERT_RECORDER_NAME);
 }
@@ -144,14 +144,14 @@ void feature_recorder_set::add_stats(const std::string &bucket,double seconds)
     p.calls ++;
 }
 
-void feature_recorder_set::get_stats(void *user,stat_callback_t stat_callback)
+void feature_recorder_set::get_stats(void *user,stat_callback_t stat_callback) const
 {
     for(scanner_stats_map::const_iterator it = scanner_stats.begin();it!=scanner_stats.end();it++){
         (*stat_callback)(user,(*it).first,(*it).second.calls,(*it).second.seconds);
     }
 }
 
-void feature_recorder_set::dump_name_count_stats(dfxml_writer &writer)
+void feature_recorder_set::dump_name_count_stats(dfxml_writer &writer) const
 {
     cppmutex::lock lock(map_lock);
     writer.push("feature_files");
@@ -174,7 +174,7 @@ void feature_recorder_set::add_histogram(const histogram_def &def)
 }
 
 void feature_recorder_set::dump_histograms(void *user,feature_recorder::dump_callback_t cb,
-                                           feature_recorder_set::xml_notifier_t xml_error_notifier)
+                                           feature_recorder_set::xml_notifier_t xml_error_notifier) const
 {
     /* Ask each feature recorder to dump its histograms */
     for(feature_recorder_map::const_iterator it = frm.begin(); it!=frm.end(); it++){

@@ -47,7 +47,9 @@ template <class TYPE,class CTYPE> class atomic_histogram {
 public:
     atomic_histogram():amap(),M(){};
 
-    typedef void (*dump_callback_t)(void *user,const TYPE &val,const CTYPE &count);
+    // The callback is used to report the histogram.
+    // The callback returns '0' if no error is encountered, '-1' if the dumping should stop
+    typedef int (*dump_callback_t)(void *user,const TYPE &val,const CTYPE &count);
     // add and return the count
     // http://www.cplusplus.com/reference/unordered_map/unordered_map/insert/
     CTYPE add(const TYPE &val,const CTYPE &count){
@@ -64,7 +66,8 @@ public:
     void     dump(void *user,dump_callback_t dump_cb) const{
         cppmutex::lock lock(M);
         for(typename hmap_t::const_iterator it = amap.begin();it!=amap.end();it++){
-            (*dump_cb)(user,(*it).first,(*it).second);
+            int ret = (*dump_cb)(user,(*it).first,(*it).second);
+            if(ret<0) return;
         }
     }
     struct ReportElement {
@@ -81,7 +84,7 @@ public:
     };
     typedef std::vector< const ReportElement *> element_vector_t;
 
-    void     dump_sorted(void *user,dump_callback_t dump_cb) const{
+    void     dump_sorted(void *user,dump_callback_t dump_cb) const {
         /* Create a list of new elements, sort it, then report the sorted list */
         element_vector_t  evect;
         {
