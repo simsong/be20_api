@@ -143,10 +143,15 @@ void feature_recorder_set::add_stats(const std::string &bucket,double seconds)
     p.calls ++;
 }
 
+/*
+ * Send the stats to a callback; if the callback returns less than 0, abort.
+ */
 void feature_recorder_set::get_stats(void *user,stat_callback_t stat_callback) const
 {
     for(scanner_stats_map::const_iterator it = scanner_stats.begin();it!=scanner_stats.end();it++){
-        (*stat_callback)(user,(*it).first,(*it).second.calls,(*it).second.seconds);
+        if((*stat_callback)(user,(*it).first,(*it).second.calls,(*it).second.seconds)<0){
+            break;
+        }
     }
 }
 
@@ -182,3 +187,9 @@ void feature_recorder_set::dump_histograms(void *user,feature_recorder::dump_cal
     }
 }
 
+void feature_recorder_set::get_feature_file_list(std::vector<std::string> &ret)
+{
+    for(feature_recorder_map::const_iterator it = frm.begin(); it!=frm.end(); it++){
+        ret.push_back(it->first);
+    }
+}

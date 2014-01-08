@@ -76,8 +76,8 @@ public:
      * tells each feature file about its histograms (among other
      * things)
      */
-    void init(const feature_file_names_t &feature_files,
-              const std::string &input_fname,const std::string &outdir);
+    void    init(const feature_file_names_t &feature_files,
+                 const std::string &input_fname,const std::string &outdir);
 
     void    flush_all();
     void    close_all();
@@ -103,6 +103,7 @@ public:
     // only virtual functions may be called by plugins!
     virtual feature_recorder *get_name(const std::string &name) const;
     virtual feature_recorder *get_alert_recorder() const;
+    virtual void get_feature_file_list(std::vector<std::string> &ret); // clears ret and fills with a list of feature file names
 };
 
 
