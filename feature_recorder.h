@@ -265,6 +265,8 @@ public:
      * support for writing features
      */
 
+    void quote_if_necessary(std::string &feature,std::string &context);
+
     // only virtual functions may be called by plug-ins
     // printf() prints to the feature file.
     virtual void printf(const char *fmt_,...) __attribute__((format(printf, 2, 3)));

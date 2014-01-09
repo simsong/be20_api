@@ -44,6 +44,7 @@ HistogramMaker::FrequencyReportVector *HistogramMaker::makeReport(int topN) cons
     return r2;
 }
 
+/* static */
 bool HistogramMaker::looks_like_utf16(const std::string &str,bool &little_endian)
 {
     if((uint8_t)str[0]==0xff && (uint8_t)str[1]==0xfe){
@@ -73,6 +74,56 @@ bool HistogramMaker::looks_like_utf16(const std::string &str,bool &little_endian
 }
 
 /**
+ * Converts a utf16 with a byte order to utf8, returning an ALLOCATED STRING if conversion is
+ * successful, and returning 0 if it is not.
+ */
+/* static */
+std::string *HistogramMaker::convert_utf16_to_utf8(const std::string &key,bool little_endian)
+{
+    /* re-image this string as UTF16*/
+    std::wstring utf16;
+    for(size_t i=0;i<key.size();i+=2){
+        if(little_endian) utf16.push_back(key[i] | (key[i+1]<<8));
+        else utf16.push_back(key[i]<<8 | (key[i+1]));
+    }
+    /* Now convert it to a UTF-8;
+     * set tempKey to be the utf-8 string that will be erased.
+     */
+    std::string *tempKey = new std::string;
+    try {
+        utf8::utf16to8(utf16.begin(),utf16.end(),std::back_inserter(*tempKey));
+        /* Erase any nulls if present */
+        while(tempKey->size()>0) {
+            size_t nullpos = tempKey->find('\000');
+            if(nullpos==string::npos) break;
+            tempKey->erase(nullpos,1);
+        }
+    } catch(utf8::invalid_utf16){
+        /* Exception; bad UTF16 encoding */
+        delete tempKey;
+        tempKey = 0;		// give up on temp key; otherwise its invalidated below
+        return 0;
+    }
+    return tempKey;
+}
+
+std::string *HistogramMaker::convert_utf16_to_utf8(const std::string &key)
+{
+    bool little_endian=false;
+    if(looks_like_utf16(key,little_endian)){
+        return convert_utf16_to_utf8(key,little_endian);
+    }
+    return 0;
+}
+
+std::string *HistogramMaker::make_utf8(const std::string &key)
+{
+    std::string *utf8 = convert_utf16_to_utf8(key);
+    if(utf8==0) utf8 = new std::string(key);
+    return utf8;
+}
+
+/**
  * Takes a string (the key) and adds it to the histogram.
  * automatically determines if the key is UTF-16 and converts
  * it to UTF8 if so.
@@ -96,31 +147,11 @@ void HistogramMaker::add(const std::string &key)
     bool found_utf16 = false;
     bool little_endian=false;
     if(looks_like_utf16(*keyToAdd,little_endian)){
-	/* re-image this string as UTF16*/
-	found_utf16 = true;
-	std::wstring utf16;
-	for(size_t i=0;i<key.size();i+=2){
-	    if(little_endian) utf16.push_back(key[i] | (key[i+1]<<8));
-	    else utf16.push_back(key[i]<<8 | (key[i+1]));
-	}
-	/* Now convert it to a UTF-8;
-	 * set tempKey to be the utf-8 string that will be erased.
-	 */
-	tempKey = new std::string;
-	try {
-	    utf8::utf16to8(utf16.begin(),utf16.end(),std::back_inserter(*tempKey));
-	    /* Erase any nulls if present */
-	    while(tempKey->size()>0) {
-		size_t nullpos = tempKey->find('\000');
-		if(nullpos==string::npos) break;
-		tempKey->erase(nullpos,1);
-	    } 
-	    keyToAdd = tempKey;
-	} catch(utf8::invalid_utf16){
-	    /* Exception; bad UTF16 encoding */
-	    delete tempKey;
-	    tempKey = 0;		// give up on temp key; otherwise its invalidated below
-	}
+        tempKey = convert_utf16_to_utf8(*keyToAdd,little_endian);
+        if(tempKey){
+            keyToAdd = tempKey;
+            found_utf16 = true;
+        }
     }
     
     /* If any conversion is necessary AND we have not converted key from UTF-16 to UTF-8,

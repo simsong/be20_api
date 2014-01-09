@@ -104,6 +104,12 @@ public:
      */
     static bool looks_like_utf16(const std::string &str,bool &little_endian); 
 
+    /* These all allocate a string that must be freed */
+
+    static std::string *convert_utf16_to_utf8(const std::string &str);
+    static std::string *convert_utf16_to_utf8(const std::string &str,bool little_endian);
+    static std::string *make_utf8(const std::string &key);
+
     HistogramMaker(uint32_t flags_):h(),flags(flags_){}
     void clear(){h.clear();}
     void add(const std::string &key);	// adds a string to the histogram count

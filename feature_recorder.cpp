@@ -501,20 +501,8 @@ void feature_recorder::write0(const pos0_t &pos0,const std::string &feature,cons
  * processes the stop list
  */
 
-void feature_recorder::write(const pos0_t &pos0,const std::string &feature_,const std::string &context_)
+void feature_recorder::quote_if_necessary(std::string &feature,std::string &context)
 {
-    if(flags & FLAG_DISABLED) return;           // disabled
-    if(debug & DEBUG_PEDANTIC){
-        if(feature_.size() > opt_max_feature_size){
-            std::cerr << "feature_recorder::write : feature_.size()=" << feature_.size() << "\n";
-            assert(0);
-        }
-        if(context_.size() > opt_max_context_size){
-            std::cerr << "feature_recorder::write : context_.size()=" << context_.size() << "\n";
-            assert(0);
-        }
-    }
-
     /* By default quote string that is not UTF-8, and quote backslashes. */
     bool escape_bad_utf8  = true;
     bool escape_backslash = true;
@@ -529,15 +517,34 @@ void feature_recorder::write(const pos0_t &pos0,const std::string &feature_,cons
         escape_backslash = false;
     }
 
-    std::string feature = validateOrEscapeUTF8(feature_, escape_bad_utf8,escape_backslash);
-
-    std::string context;
+    feature = validateOrEscapeUTF8(feature, escape_bad_utf8,escape_backslash);
+    if(feature.size() > opt_max_feature_size) feature.resize(opt_max_feature_size);
     if(flag_notset(FLAG_NO_CONTEXT)){
-        context = validateOrEscapeUTF8(context_,escape_bad_utf8,escape_backslash);
+        context = validateOrEscapeUTF8(context,escape_bad_utf8,escape_backslash);
+        if(context.size() > opt_max_context_size) context.resize(opt_max_context_size);
+    }
+}
+
+void feature_recorder::write(const pos0_t &pos0,const std::string &feature_,const std::string &context_)
+{
+    if(flags & FLAG_DISABLED) return;           // disabled
+    if(debug & DEBUG_PEDANTIC){
+        if(feature_.size() > opt_max_feature_size){
+            std::cerr << "feature_recorder::write : feature_.size()=" << feature_.size() << "\n";
+            assert(0);
+        }
+        if(context_.size() > opt_max_context_size){
+            std::cerr << "feature_recorder::write : context_.size()=" << context_.size() << "\n";
+            assert(0);
+        }
     }
 
-    if(feature.size() > opt_max_feature_size) feature.resize(opt_max_feature_size);
-    if(context.size() > opt_max_context_size) context.resize(opt_max_context_size);
+    std::string feature = feature_;
+    std::string context = flag_set(FLAG_NO_CONTEXT) ? "" : context_;
+    std::string *feature_utf8 = HistogramMaker::make_utf8(feature); // a utf8 feature
+
+    quote_if_necessary(feature,context);
+
     if(feature.size()==0){
         std::cerr << "zero length feature at " << pos0 << "\n";
         if(debug & DEBUG_PEDANTIC) assert(0);
@@ -563,8 +570,9 @@ void feature_recorder::write(const pos0_t &pos0,const std::string &feature_,cons
      */
     if(flag_notset(FLAG_NO_STOPLIST) && stop_list_recorder){          
         if(fs.stop_list
-           && fs.stop_list->check_feature_context(feature,context)){
+           && fs.stop_list->check_feature_context(*feature_utf8,context)){
             stop_list_recorder->write(pos0,feature,context);
+            delete feature_utf8;
             return;
         }
     }
@@ -574,10 +582,9 @@ void feature_recorder::write(const pos0_t &pos0,const std::string &feature_,cons
      */
     if(flag_notset(FLAG_NO_ALERTLIST)
        && fs.alert_list
-       && fs.alert_list->check_feature_context(feature,context)){
+       && fs.alert_list->check_feature_context(*feature_utf8,context)){
         std::string alert_fn = fs.get_outdir() + "/ALERTS_found.txt";
-
-        cppmutex::lock lock(Mr);                // notce we are locking the redlist
+        cppmutex::lock lock(Mr);                // notice we are locking the alert list
         std::ofstream rf(alert_fn.c_str(),std::ios_base::app);
         if(rf.is_open()){
             rf << pos0.shift(feature_recorder::offset_add).str() << '\t' << feature << '\t' << "\n";
@@ -586,13 +593,16 @@ void feature_recorder::write(const pos0_t &pos0,const std::string &feature_,cons
 
     /* Support in-memory histograms */
     if(mhistogram){
-        mhistogram->add(feature,1);
+        mhistogram->add(*feature_utf8,1);
+        delete feature_utf8;
+        return;
     }
 
     /* Finally write out the feature and the context */
     if(flag_notset(FLAG_NO_FEATURES)){
         this->write0(pos0,feature,context);
     }
+    delete feature_utf8;
 }
 
 /**
