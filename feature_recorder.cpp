@@ -275,15 +275,17 @@ class mhistogram_callback {
 public:
     mhistogram_callback(void *user_,
                         feature_recorder::dump_callback_t *cb_,
+                        const histogram_def &def_,
                         const feature_recorder &fr_,
-                        uint64_t limit_):user(user_),cb(cb_),fr(fr_),callback_count(0),limit(limit_){}
+                        uint64_t limit_):user(user_),cb(cb_),def(def_),fr(fr_),callback_count(0),limit(limit_){}
     void *user;
     feature_recorder::dump_callback_t *cb;
+    const histogram_def &def;
     const feature_recorder &fr;
     uint64_t callback_count;
     uint64_t limit;
     int do_callback(const std::string &str,const uint64_t &tally){
-        (*cb)(user,fr,str,tally);
+        (*cb)(user,fr,def,str,tally);
         if(limit && ++callback_count >= limit) return -1;
         return 0;
     }
@@ -297,7 +299,7 @@ void feature_recorder::dump_histogram(const histogram_def &def,void *user,featur
     mhistograms_t::const_iterator it = mhistograms.find(def);
     if(it!=mhistograms.end()){
         assert(cb!=0);
-        mhistogram_callback mcbo(user,cb,*this,mhistogram_limit);
+        mhistogram_callback mcbo(user,cb,def,*this,mhistogram_limit);
         it->second->dump_sorted(static_cast<void *>(&mcbo),mhistogram_callback::callback);
         return;
     }
@@ -592,12 +594,12 @@ void feature_recorder::write(const pos0_t &pos0,const std::string &feature_,cons
         if(def.require.size()==0 || new_feature.find_first_of(def.require)!=std::string::npos){
             /* If there is a pattern to use, use it */
             if(def.pattern.size()){
-                if(!def.reg.search(feature,&new_feature,0,0)){
+                if(!def.reg.search(new_feature,&new_feature,0,0)){
                     // no search match; avoid this feature
                     new_feature = "";
                 }
             }
-            m->add(new_feature,1);
+            if(new_feature.size()) m->add(new_feature,1);
         }
     }
 
