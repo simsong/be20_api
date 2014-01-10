@@ -45,10 +45,16 @@
 #include "dfxml/src/dfxml_writer.h"
 #include "dfxml/src/hash_t.h"
 #include "atomic_set_map.h"
+#include "beregex.h"
 
-/* histogram_def should be within the feature_recorder_set class. Oh well. */
-class histogram_def {
- public:
+/**
+ * histogram_def defines the histograms that will be made by a feature recorder.
+ * If the mhistogram is set, the histogram is generated when features are recorded
+ * and kept in memory. If mhistogram is not set, the histogram is generated when the feature recorder is closed.
+ */
+
+typedef atomic_histogram<std::string,uint64_t> mhistogram_t; // memory histogram
+struct histogram_def {
     /**
      * @param feature- the feature file to histogram (no .txt)
      * @param re     - the regular expression to extract
@@ -58,19 +64,20 @@ class histogram_def {
      */
 
     histogram_def(std::string feature_,std::string re_,std::string suffix_,uint32_t flags_=0):
-        feature(feature_),pattern(re_),require(),suffix(suffix_),flags(flags_){}
+        feature(feature_),pattern(re_),require(),suffix(suffix_),flags(flags_),reg(pattern,REG_EXTENDED){}
     histogram_def(std::string feature_,std::string re_,std::string require_,std::string suffix_,uint32_t flags_=0):
-        feature(feature_),pattern(re_),require(require_),suffix(suffix_),flags(flags_){ }
-    std::string feature;                     /* feature file */
-    std::string pattern;                     /* extract pattern; "" means use entire feature */
-    std::string require;                     /* text required somewhere on the feature line; used for IP histograms */
-    std::string suffix;                      /* suffix to append; "" means "histogram" */
-    uint32_t    flags;                     // defined in histogram.h
+        feature(feature_),pattern(re_),require(require_),suffix(suffix_),flags(flags_),reg(pattern,REG_EXTENDED){ }
+    const std::string feature;                     /* feature file */
+    const std::string pattern;                     /* extract pattern; "" means use entire feature */
+    const std::string require;                     /* text required somewhere on the feature line; used for IP histograms */
+    const std::string suffix;                      /* suffix to append; "" means "histogram" */
+    const uint32_t    flags;                     // defined in histogram.h
+    const beregex     reg;                       // regular expression for pattern
 };
 
 typedef  std::set<histogram_def> histogram_defs_t; // a set of histogram definitions
 
-inline bool operator <(class histogram_def h1,class histogram_def h2)  {
+inline bool operator <(const histogram_def &h1,const histogram_def &h2)  {
     if (h1.feature<h2.feature) return true;
     if (h1.feature>h2.feature) return false;
     if (h1.pattern<h2.pattern) return true;
@@ -80,7 +87,7 @@ inline bool operator <(class histogram_def h1,class histogram_def h2)  {
     return false;                       /* equal */
 };
 
-inline bool operator !=(class histogram_def h1,class histogram_def h2)  {
+inline bool operator !=(const histogram_def &h1,const histogram_def &h2)  {
     return h1.feature!=h2.feature || h1.pattern!=h2.pattern || h1.suffix!=h2.suffix;
 };
 
@@ -103,7 +110,6 @@ public:
         std::string name;                                             // name of hash
         std::string (*func)(const uint8_t *buf,const size_t bufsize); // hash function
     };
-    typedef atomic_histogram<std::string,uint64_t> mhistogram_t; // memory histogram
     typedef int (dump_callback_t)(void *,const feature_recorder &fr,
                                   const std::string &feature,const uint64_t &count);
     static void set_main_threadid(){
@@ -183,7 +189,6 @@ protected:;
 
     mutable cppmutex Mf;                     // protects the file 
     mutable cppmutex Mr;                     // protects the redlist 
-protected:
     mhistogram_t *mhistogram;                // if we are building an in-memory-histogram
     uint64_t      mhistogram_limit;          // how many we want
 
@@ -235,8 +240,8 @@ public:
     /* TK: The histogram_def should be provided at the beginning, so it can be used for in-memory histograms.
      * The callback needs to have the specific atomic set as the callback as well.
      */
-    virtual void add_histogram(const class histogram_def &def); // adds a histogram to process
-    virtual void dump_histogram(const class histogram_def &def,void *user,feature_recorder::dump_callback_t cb) const;
+    virtual void add_histogram(const histogram_def &def); // adds a histogram to process
+    virtual void dump_histogram(const histogram_def &def,void *user,feature_recorder::dump_callback_t cb) const;
     typedef void (*xml_notifier_t)(const std::string &xmlstring);
     virtual void dump_histograms(void *user,feature_recorder::dump_callback_t cb, xml_notifier_t xml_error_notifier) const;
     

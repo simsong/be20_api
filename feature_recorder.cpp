@@ -3,7 +3,6 @@
 #include "config.h"
 #include "bulk_extractor_i.h"
 #include "unicode_escape.h"
-#include "beregex.h"
 #include "histogram.h"
 
 #include <unistd.h>
@@ -295,7 +294,7 @@ public:
     }
 };
 
-void feature_recorder::dump_histogram(const class histogram_def &def,void *user,feature_recorder::dump_callback_t cb) const
+void feature_recorder::dump_histogram(const histogram_def &def,void *user,feature_recorder::dump_callback_t cb) const
 {
     if(mhistogram){
         assert(cb!=0);
@@ -304,7 +303,6 @@ void feature_recorder::dump_histogram(const class histogram_def &def,void *user,
         return;
     }
 
-    beregex reg(def.pattern,REG_EXTENDED);
     std::string ifname = fname_counter("");  // source of features
 
     std::ifstream f(ifname.c_str());
@@ -341,7 +339,7 @@ void feature_recorder::dump_histogram(const class histogram_def &def,void *user,
                 /** If there is a pattern to use to prune down the feature, use it */
                 if(def.pattern.size()){
                     std::string new_feature = feature;
-                    if(!reg.search(feature,&new_feature,0,0)){
+                    if(!def.reg.search(feature,&new_feature,0,0)){
                         // no search match; avoid this feature
                         continue;               
                     }
