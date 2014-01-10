@@ -88,7 +88,7 @@ feature_recorder::feature_recorder(class feature_recorder_set &fs_,
     histogram_defs(),
     fs(fs_),
     count_(0),context_window_before(context_window_default),context_window_after(context_window_default),
-    Mf(),Mr(),mhistogram(),
+    Mf(),Mr(),mhistograms(),
     stop_list_recorder(0),
     file_number_(0),carve_mode(CARVE_ENCODED)
 {
@@ -232,21 +232,12 @@ void feature_recorder::set_flag(uint32_t flags_)
 {
     MAINTHREAD();
     flags|=flags_;
-
-    if((flags & FLAG_MEM_HISTOGRAM) && mhistogram==0){
-        /* Create the in-memory histogram */
-        mhistogram = new mhistogram_t();
-    }
 }
 
 void feature_recorder::unset_flag(uint32_t flags_)
 {
     MAINTHREAD();
     flags &= (~flags_);
-
-    if((flags & FLAG_MEM_HISTOGRAM) && mhistogram!=0){
-        assert(0);                      // we can't turn it off at the moment
-    }
 }
 
 void feature_recorder::set_memhist_limit(int64_t limit_)
@@ -255,6 +246,13 @@ void feature_recorder::set_memhist_limit(int64_t limit_)
     mhistogram_limit = limit_;
 }
 
+
+void feature_recorder::enable_memory_histograms()
+{
+    for(histogram_defs_t::const_iterator it=histogram_defs.begin();it!=histogram_defs.end();it++){
+        mhistograms[*it] = new mhistogram_t(); // add a memory histogram; assume the position in the mhistograms is stable
+    }
+}
 
 
 /**
@@ -296,10 +294,11 @@ public:
 
 void feature_recorder::dump_histogram(const histogram_def &def,void *user,feature_recorder::dump_callback_t cb) const
 {
-    if(mhistogram){
+    mhistograms_t::const_iterator it = mhistograms.find(def);
+    if(it!=mhistograms.end()){
         assert(cb!=0);
         mhistogram_callback mcbo(user,cb,*this,mhistogram_limit);
-        mhistogram->dump_sorted(static_cast<void *>(&mcbo),mhistogram_callback::callback);
+        it->second->dump_sorted(static_cast<void *>(&mcbo),mhistogram_callback::callback);
         return;
     }
 
@@ -401,26 +400,22 @@ void feature_recorder::dump_histograms(void *user,feature_recorder::dump_callbac
                                            feature_recorder_set::xml_notifier_t xml_error_notifier) const
 {
     /* See if we have an in-memory histograms */
-    if(flag_set(feature_recorder::FLAG_MEM_HISTOGRAM)){
-        histogram_def d("","","",0);            // empty
-        dump_histogram(d,user,cb);
-    }
+    //if(flag_set(feature_recorder::FLAG_MEM_HISTOGRAM)){
+    //histogram_def d("","","",0);            // empty
+    //dump_histogram(d,user,cb);
+    //}
        
-    /* Loop through all the histograms */
+    /* Loop through all the histograms and dump each one.
+     * This now works for both memory histograms and non-memory histograms.
+     */
     for(histogram_defs_t::const_iterator it = histogram_defs.begin();it!=histogram_defs.end();it++){
         std::cout << std::string(" ") << name << " " << (*it).suffix + "...\n";
         std::cout.flush();
         try {
-            if(flag_set(feature_recorder::FLAG_MEM_HISTOGRAM)){
-                std::cerr << name << " cannot have both a regular histogram and a memory histogram\n";
-            } else {
-                dump_histogram((*it),user,cb);
-            }
+            dump_histogram((*it),user,cb);
         }
         catch (const std::exception &e) {
-            std::cerr << "ERROR: " ;
-            std::cerr.flush();
-            std::cerr << e.what() << " computing histogram " << name << "\n";
+            std::cerr << "ERROR: histogram " << name << ": " << e.what() << "\n";
             if(xml_error_notifier){
                 std::string error = std::string("<error function='phase3' histogram='")
                     + name + std::string("</error>");
@@ -590,10 +585,20 @@ void feature_recorder::write(const pos0_t &pos0,const std::string &feature_,cons
     }
 
     /* Support in-memory histograms */
-    if(mhistogram){
-        mhistogram->add(*feature_utf8,1);
-        delete feature_utf8;
-        return;
+    for(mhistograms_t::iterator it = mhistograms.begin(); it!=mhistograms.end();it++){
+        const histogram_def &def = it->first;
+        mhistogram_t *m = it->second;
+        std::string new_feature = *feature_utf8;
+        if(def.require.size()==0 || new_feature.find_first_of(def.require)!=std::string::npos){
+            /* If there is a pattern to use, use it */
+            if(def.pattern.size()){
+                if(!def.reg.search(feature,&new_feature,0,0)){
+                    // no search match; avoid this feature
+                    new_feature = "";
+                }
+            }
+            m->add(new_feature,1);
+        }
     }
 
     /* Finally write out the feature and the context */
@@ -702,18 +707,11 @@ std::string valid_dosname(std::string in)
 }
         
 
-const feature_recorder::hash_def &feature_recorder::hasher()
-{
-    return fs.hasher;
-}
+//const feature_recorder::hash_def &feature_recorder::hasher()
+//{
+//    return fs.hasher;
+//}
 
-static std::string null_hasher_name("null");
-static std::string null_hasher_func(const uint8_t *buf,size_t bufsize)
-{
-    return std::string("0000000000000000");
-}
-
-feature_recorder::hash_def feature_recorder::null_hasher(null_hasher_name,null_hasher_func);
 
 
 #include <iomanip>

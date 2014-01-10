@@ -37,7 +37,9 @@
 #include <cstdarg>
 #include <fstream>
 #include <set>
+#include <map>
 #include <cassert>
+
 
 #include <pthread.h>
 
@@ -53,7 +55,6 @@
  * and kept in memory. If mhistogram is not set, the histogram is generated when the feature recorder is closed.
  */
 
-typedef atomic_histogram<std::string,uint64_t> mhistogram_t; // memory histogram
 struct histogram_def {
     /**
      * @param feature- the feature file to histogram (no .txt)
@@ -67,15 +68,17 @@ struct histogram_def {
         feature(feature_),pattern(re_),require(),suffix(suffix_),flags(flags_),reg(pattern,REG_EXTENDED){}
     histogram_def(std::string feature_,std::string re_,std::string require_,std::string suffix_,uint32_t flags_=0):
         feature(feature_),pattern(re_),require(require_),suffix(suffix_),flags(flags_),reg(pattern,REG_EXTENDED){ }
-    const std::string feature;                     /* feature file */
-    const std::string pattern;                     /* extract pattern; "" means use entire feature */
-    const std::string require;                     /* text required somewhere on the feature line; used for IP histograms */
-    const std::string suffix;                      /* suffix to append; "" means "histogram" */
-    const uint32_t    flags;                     // defined in histogram.h
-    const beregex     reg;                       // regular expression for pattern
+    const std::string feature;      /* feature file name */
+    const std::string pattern;      /* extract pattern; "" means use entire feature */
+    const std::string require;      /* text required somewhere on the feature line; used for IP histograms */
+    const std::string suffix;       /* suffix to append; "" means "histogram" */
+    const uint32_t    flags;        // defined in histogram.h
+    const beregex     reg;          // regular expression for pattern
 };
 
-typedef  std::set<histogram_def> histogram_defs_t; // a set of histogram definitions
+/* Note: this typedef must remain outside the the feature_recorder due to historical reasons and cannot be made a vector */
+typedef  std::set<const histogram_def> histogram_defs_t; // a set of histogram definitions
+
 
 inline bool operator <(const histogram_def &h1,const histogram_def &h2)  {
     if (h1.feature<h2.feature) return true;
@@ -92,6 +95,10 @@ inline bool operator !=(const histogram_def &h1,const histogram_def &h2)  {
 };
 
 
+/* in-memory histograms */
+typedef atomic_histogram<std::string,uint64_t> mhistogram_t;             // memory histogram
+typedef std::map<histogram_def,mhistogram_t *> mhistograms_t;
+
 class feature_recorder {
     // default copy construction and assignment are meaningless
     // and not implemented
@@ -105,11 +112,6 @@ class feature_recorder {
     /****************************************************************/
 
 public:
-    struct hash_def {
-        hash_def(std::string name_,std::string (*func_)(const uint8_t *buf,const size_t bufsize)):name(name_),func(func_){};
-        std::string name;                                             // name of hash
-        std::string (*func)(const uint8_t *buf,const size_t bufsize); // hash function
-    };
     typedef int (dump_callback_t)(void *,const feature_recorder &fr,
                                   const std::string &feature,const uint64_t &count);
     static void set_main_threadid(){
@@ -146,8 +148,7 @@ public:
     /**
      * histogram support.
      */
-    static const int FLAG_MEM_HISTOGRAM = 0x20;  // enable the in-memory histogram
-    static const int FLAG_NO_FEATURES   = 0x40;  // do not record features (just histogram)
+    static const uint32_t FLAG_NO_FEATURES   = 0x40;  // do not record features (just histogram)
 
     /** @} */
     static const int max_histogram_files = 10;  // don't make more than 10 files in low-memory conditions
@@ -167,6 +168,7 @@ public:
     virtual ~feature_recorder();
     virtual void set_flag(uint32_t flags_);
     virtual void unset_flag(uint32_t flags_);
+    void    enable_memory_histograms();              // only called from feature_recorder_set
     virtual void set_memhist_limit(int64_t limit_);
     bool flag_set(uint32_t f)    const {return flags & f;}
     bool flag_notset(uint32_t f) const {return !(flags & f);}
@@ -181,16 +183,18 @@ private:
     std::fstream ios;                        // where features are written 
 
 protected:;
-    histogram_defs_t      histogram_defs;   // histograms that are to be created for this feature recorder
-    class        feature_recorder_set &fs; // the set in which this feature_recorder resides
+    histogram_defs_t      histogram_defs;    // histograms that are to be created for this feature recorder
+public:
+    class        feature_recorder_set &fs;   // the set in which this feature_recorder resides
+protected:
     int64_t      count_;                     /* number of records written */
     size_t       context_window_before;      // context window
     size_t       context_window_after;       // context window
 
     mutable cppmutex Mf;                     // protects the file 
     mutable cppmutex Mr;                     // protects the redlist 
-    mhistogram_t *mhistogram;                // if we are building an in-memory-histogram
-    uint64_t      mhistogram_limit;          // how many we want
+    mhistograms_t mhistograms;               // the memory histograms, if we are using them
+    uint64_t      mhistogram_limit;          // how many we want (per feature recorder limit, rather than per histogram)
 
     class feature_recorder *stop_list_recorder; // where stopped features get written
     int64_t                file_number_;            /* starts at 0; gets incremented by carve(); for binning */
@@ -227,9 +231,7 @@ public:
     static std::string quote_string(const std::string &feature); // turns unprintable characters to octal escape
     static std::string unquote_string(const std::string &feature); // turns octal escape back to binary characters
 
-    /* Hasher */
-    static hash_def null_hasher;     // a default hasher available for all to use (it doesn't hash)
-    virtual const hash_def &hasher();
+    //virtual const feature_recorder_set::hash_def &hasher();   // returns hasher in feature_recorder_set
 
     /* feature file management */
     virtual void open();

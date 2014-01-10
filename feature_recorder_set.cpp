@@ -14,8 +14,16 @@
 const std::string feature_recorder_set::ALERT_RECORDER_NAME = "alerts";
 const std::string feature_recorder_set::DISABLED_RECORDER_NAME = "disabled";
 
+static std::string null_hasher_name("null");
+static std::string null_hasher_func(const uint8_t *buf,size_t bufsize)
+{
+    return std::string("0000000000000000");
+}
+
+feature_recorder_set::hash_def feature_recorder_set::null_hasher(null_hasher_name,null_hasher_func);
+
 /* Create an empty recorder */
-feature_recorder_set::feature_recorder_set(uint32_t flags_,const feature_recorder::hash_def &hasher_):
+feature_recorder_set::feature_recorder_set(uint32_t flags_,const feature_recorder_set::hash_def &hasher_):
     flags(flags_),seen_set(),input_fname(),
     outdir(),
     frm(),map_lock(),
@@ -168,6 +176,33 @@ void feature_recorder_set::dump_name_count_stats(dfxml_writer &writer) const
         writer.set_oneline(false);
     }
 }
+
+
+void    feature_recorder_set::set_flag(uint32_t f)
+{
+    if(f & MEM_HISTOGRAM){
+        if(flags & MEM_HISTOGRAM){
+            std::cerr << "MEM_HISTOGRAM flag cannot be set twice\n";
+            assert(0);
+        }
+        /* Create the in-memory histograms for all of the feature recorders */
+        for(feature_recorder_map::const_iterator it = frm.begin(); it!=frm.end(); it++){
+            feature_recorder *fr = it->second;
+            fr->enable_memory_histograms();
+        }
+    }
+    flags|=f;
+}         
+
+void    feature_recorder_set::clear_flag(uint32_t f)
+{
+    if(f & MEM_HISTOGRAM){
+        std::cerr << "MEM_HISTOGRAM flag cannot be cleared\n";
+        assert(0);
+    }
+    flags|=f;
+}
+
 
 
 static const int LINE_LEN = 80;         // keep track of where we are on the line

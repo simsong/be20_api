@@ -36,6 +36,11 @@ class feature_recorder_set {
     mutable cppmutex      map_lock;         // locks frm and scanner_stats_map
     histogram_defs_t      histogram_defs;   // histograms that are to be created.
 public:
+    struct hash_def {
+        hash_def(std::string name_,std::string (*func_)(const uint8_t *buf,const size_t bufsize)):name(name_),func(func_){};
+        std::string name;                                             // name of hash
+        std::string (*func)(const uint8_t *buf,const size_t bufsize); // hash function
+    };
     struct pstats {
         double seconds;
         uint64_t calls;
@@ -46,14 +51,17 @@ public:
     const word_and_context_list *stop_list;		/* should be ignored */
     scanner_stats_map      scanner_stats;
 
-    const feature_recorder::hash_def  &hasher;  // function for hashing
+    const hash_def  &hasher;         // function for hashing; specified at creation
+    static hash_def null_hasher;     // a default hasher available for all to use (it doesn't hash)
+
 
     static const std::string   ALERT_RECORDER_NAME;  // the name of the alert recorder
     static const std::string   DISABLED_RECORDER_NAME; // the fake disabled feature recorder
     /* flags */
     static const uint32_t ONLY_ALERT=0x01;      // always return the alert recorder
     static const uint32_t SET_DISABLED=0x02;    // the set is effectively disabled; for path-printer
-    static const uint32_t CREATE_STOP_LIST_RECORDERS=0x04; // 
+    static const uint32_t CREATE_STOP_LIST_RECORDERS=0x04; //
+    static const uint32_t MEM_HISTOGRAM = 0x20;  // enable the in-memory histogram
 
     virtual ~feature_recorder_set() {
         for(feature_recorder_map::iterator i = frm.begin();i!=frm.end();i++){
@@ -67,7 +75,7 @@ public:
     void set_alert_list(const word_and_context_list *alist){alert_list=alist;}
 
     /** create an emptry feature recorder set. If disabled, create a disabled recorder. */
-    feature_recorder_set(uint32_t flags_,const feature_recorder::hash_def &hasher_);
+    feature_recorder_set(uint32_t flags_,const hash_def &hasher_);
 
     /** Initialize a feature_recorder_set. Previously this was a constructor, but it turns out that
      * virtual functions for the create_name_factory aren't honored in constructors.
@@ -82,8 +90,8 @@ public:
     void    flush_all();
     void    close_all();
     bool    has_name(std::string name) const;           /* does the named feature exist? */
-    void    set_flag(uint32_t f){flags|=f;}         
-    void    clear_flag(uint32_t f){flags|=f;}
+    void    set_flag(uint32_t f);
+    void    clear_flag(uint32_t f);
 
     void    add_histogram(const histogram_def &def); // adds it to a local set or to the specific feature recorder
     typedef void (*xml_notifier_t)(const std::string &xmlstring);
