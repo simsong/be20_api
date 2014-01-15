@@ -77,7 +77,8 @@ struct histogram_def {
 };
 
 /* Note: this typedef must remain outside the the feature_recorder due to historical reasons and cannot be made a vector */
-typedef  std::set<const histogram_def> histogram_defs_t; // a set of histogram definitions
+//typedef  std::set<const histogram_def> histogram_defs_t; // a set of histogram definitions
+typedef  std::set<histogram_def> histogram_defs_t; // a set of histogram definitions
 
 
 inline bool operator <(const histogram_def &h1,const histogram_def &h2)  {

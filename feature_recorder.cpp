@@ -88,7 +88,7 @@ feature_recorder::feature_recorder(class feature_recorder_set &fs_,
     histogram_defs(),
     fs(fs_),
     count_(0),context_window_before(context_window_default),context_window_after(context_window_default),
-    Mf(),Mr(),mhistograms(),
+    Mf(),Mr(),mhistograms(),mhistogram_limit(),
     stop_list_recorder(0),
     file_number_(0),carve_mode(CARVE_ENCODED)
 {
