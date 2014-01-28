@@ -617,7 +617,7 @@ private:
     static const int SCANNER_RECURSE_EXPAND = 0x020; // v3: recurses AND result is >= original size
     static const int SCANNER_WANTS_NGRAMS   = 0x040; // v3: Scanner gets buffers that are constant n-grams
     static const int SCANNER_FAST_FIND      = 0x080; // v3: This scanner is a very fast FIND scanner
-    static const int SCANNER_DEPTH_0        = 0x100; // v3: scanner only runs at detph 0 by default
+    static const int SCANNER_DEPTH_0        = 0x100; // v3: scanner only runs at depth 0 by default
     static const int CURRENT_SI_VERSION     = 4;     
 
     static const std::string flag_to_string(const int flag){
