@@ -45,6 +45,9 @@ public:
         double seconds;
         uint64_t calls;
     };
+    /** create an emptry feature recorder set. If disabled, create a disabled recorder. */
+    feature_recorder_set(uint32_t flags_,const hash_def &hasher_);
+
     typedef std::map<std::string,struct pstats> scanner_stats_map;
 
     const word_and_context_list *alert_list;		/* shold be flagged */
@@ -74,8 +77,6 @@ public:
     void set_stop_list(const word_and_context_list *alist){stop_list=alist;}
     void set_alert_list(const word_and_context_list *alist){alert_list=alist;}
 
-    /** create an emptry feature recorder set. If disabled, create a disabled recorder. */
-    feature_recorder_set(uint32_t flags_,const hash_def &hasher_);
 
     /** Initialize a feature_recorder_set. Previously this was a constructor, but it turns out that
      * virtual functions for the create_name_factory aren't honored in constructors.
