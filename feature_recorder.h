@@ -113,7 +113,7 @@ class feature_recorder {
     /****************************************************************/
 
 public:
-    typedef int (dump_callback_t)(void *,const feature_recorder &fr,const histogram_def &def,
+    typedef int (dump_callback_t)(void *user,const feature_recorder &fr,const histogram_def &def,
                                   const std::string &feature,const uint64_t &count);
     static void set_main_threadid(){
 #ifndef WIN32

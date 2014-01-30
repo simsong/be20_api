@@ -94,8 +94,8 @@ public:
     void    set_flag(uint32_t f);
     void    clear_flag(uint32_t f);
 
-    void    add_histogram(const histogram_def &def); // adds it to a local set or to the specific feature recorder
     typedef void (*xml_notifier_t)(const std::string &xmlstring);
+    void    add_histogram(const histogram_def &def); // adds it to a local set or to the specific feature recorder
     void    dump_histograms(void *user,feature_recorder::dump_callback_t cb, xml_notifier_t xml_error_notifier) const;
     virtual feature_recorder *create_name_factory(const std::string &name_);
     virtual void create_name(const std::string &name,bool create_stop_also);

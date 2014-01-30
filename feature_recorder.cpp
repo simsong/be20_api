@@ -296,6 +296,9 @@ public:
 
 void feature_recorder::dump_histogram(const histogram_def &def,void *user,feature_recorder::dump_callback_t cb) const
 {
+    /* Inform that we are dumping this histogram */
+    if(cb) cb(user,*this,def,"",0); 
+
     mhistograms_t::const_iterator it = mhistograms.find(def);
     if(it!=mhistograms.end()){
         assert(cb!=0);
@@ -411,8 +414,6 @@ void feature_recorder::dump_histograms(void *user,feature_recorder::dump_callbac
      * This now works for both memory histograms and non-memory histograms.
      */
     for(histogram_defs_t::const_iterator it = histogram_defs.begin();it!=histogram_defs.end();it++){
-        std::cout << std::string(" ") << name << " " << (*it).suffix + "...\n";
-        std::cout.flush();
         try {
             dump_histogram((*it),user,cb);
         }
