@@ -76,8 +76,12 @@ struct histogram_def {
     const beregex     reg;          // regular expression for pattern
 };
 
-/* Note: this typedef must remain outside the the feature_recorder due to historical reasons and cannot be made a vector */
-//typedef  std::set<const histogram_def> histogram_defs_t; // a set of histogram definitions
+/* NOTE:
+ * 1 - This typedef must remain outside the the feature_recorder due
+ *     to historical reasons and cannot be made a vector
+ * 2 - Do not make historam_def const!  It breaks some compilers.
+ */
+
 typedef  std::set<histogram_def> histogram_defs_t; // a set of histogram definitions
 
 
