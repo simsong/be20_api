@@ -3,6 +3,8 @@
  * Maintain a histogram for Unicode strings provided as UTF-8 and UTF-16 encodings.
  * Track number of each coding provided.
  * 
+ * TK: Reimplement top-n with a priority queue.
+ *  http://www.cplusplus.com/reference/queue/priority_queue/
  */
 
 #include "config.h"
