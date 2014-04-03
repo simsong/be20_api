@@ -35,6 +35,11 @@ class feature_recorder_set {
     feature_recorder_map  frm;              // map of feature recorders, by name; TK-replace with an atomic_set
     mutable cppmutex      map_lock;         // locks frm and scanner_stats_map
     histogram_defs_t      histogram_defs;   // histograms that are to be created.
+#ifdef HAVE_SQLITE3_H
+    sqlite3               *db3;
+#else
+    const void            *db3;
+#endif
 public:
     struct hash_def {
         hash_def(std::string name_,std::string (*func_)(const uint8_t *buf,const size_t bufsize)):name(name_),func(func_){};
@@ -60,11 +65,14 @@ public:
 
     static const std::string   ALERT_RECORDER_NAME;  // the name of the alert recorder
     static const std::string   DISABLED_RECORDER_NAME; // the fake disabled feature recorder
+
     /* flags */
-    static const uint32_t ONLY_ALERT=0x01;      // always return the alert recorder
-    static const uint32_t SET_DISABLED=0x02;    // the set is effectively disabled; for path-printer
-    static const uint32_t CREATE_STOP_LIST_RECORDERS=0x04; //
-    static const uint32_t MEM_HISTOGRAM = 0x20;  // enable the in-memory histogram
+    static const uint32_t ONLY_ALERT                = 0x01;  // always return the alert recorder
+    static const uint32_t SET_DISABLED              = 0x02;  // the set is effectively disabled; for path-printer
+    static const uint32_t CREATE_STOP_LIST_RECORDERS= 0x04;  //
+    static const uint32_t MEM_HISTOGRAM             = 0x20;  // enable the in-memory histogram
+    static const uint32_t ENABLE_SQLITE3_RECORDERS  = 0x40;  // save features to an SQLITE3 databse
+    static const uint32_t DISABLE_FILE_RECORDERS    = 0x80;  // do not save features to file-based recorders
 
     virtual ~feature_recorder_set() {
         for(feature_recorder_map::iterator i = frm.begin();i!=frm.end();i++){

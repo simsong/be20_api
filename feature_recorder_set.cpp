@@ -28,6 +28,7 @@ feature_recorder_set::feature_recorder_set(uint32_t flags_,const feature_recorde
     outdir(),
     frm(),map_lock(),
     histogram_defs(),
+    db3(),
     alert_list(),stop_list(),
     scanner_stats(),hasher(hasher_)
 {
@@ -205,7 +206,7 @@ void    feature_recorder_set::clear_flag(uint32_t f)
 
 
 
-static const int LINE_LEN = 80;         // keep track of where we are on the line
+//static const int LINE_LEN = 80;         // keep track of where we are on the line
 void feature_recorder_set::add_histogram(const histogram_def &def)
 {
     feature_recorder *fr = get_name(def.feature);

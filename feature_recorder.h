@@ -39,9 +39,11 @@
 #include <set>
 #include <map>
 #include <cassert>
-
-
 #include <pthread.h>
+
+#ifdef HAVE_SQLITE3_H
+#include <sqlite3.h>
+#endif
 
 #include "cppmutex.h"
 #include "dfxml/src/dfxml_writer.h"
@@ -186,6 +188,11 @@ public:
 private:
     std::string  ignore_encoding;            // encoding to ignore for carving
     std::fstream ios;                        // where features are written 
+#ifdef HAVE_SQLITE3_H
+    sqlite3_stmt *stmt;                 // prepared statement
+#else
+    const void *stmt;                 // so our initialization statements don't need conditional
+#endif
 
 protected:;
     histogram_defs_t      histogram_defs;    // histograms that are to be created for this feature recorder

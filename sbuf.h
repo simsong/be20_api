@@ -59,19 +59,22 @@
  * in a 64-bit number.  
  */
 
-inline int64_t stoi64(std::string str){
+inline int64_t stoi64(std::string str)
+{
     int64_t val(0);
     std::istringstream ss(str);
     ss >> val;
     return val;
 }
+
 class pos0_t {
 public:
-    std::string   path;                      /* forensic path of decoders*/
-    uint64_t      offset;                    /* location of buf[0] */
+    const std::string path;                     /* forensic path of decoders*/
+    const uint64_t    offset;                   /* location of buf[0] */
     
     explicit pos0_t():path(""),offset(0){}
     pos0_t(std::string s):path(s),offset(0){}
+    pos0_t(std::string s,uint64_t o):path(s),offset(o){}
     pos0_t(const pos0_t &obj):path(obj.path),offset(obj.offset){ }
     std::string str() const {           // convert to a string, with offset included
         std::stringstream ss;
@@ -116,20 +119,22 @@ public:
      */
     pos0_t shift(int64_t s) const {
         if(s==0) return *this;
-        pos0_t ret;
+        //pos0_t ret;
         size_t p = path.find('-');
         if(p==std::string::npos){            // no path
-            ret.path="";
-            ret.offset = offset + s;
-            return ret;
+            return pos0_t("",offset+s);
+            //ret.path="";
+            //ret.offset = offset + s;
+            //return ret;
         }
         /* Figure out the value of the shift */
         int64_t baseOffset = stoi64(path.substr(0,p-1));
         std::stringstream ss;
         ss << (baseOffset+s) << path.substr(p);
-        ret.path = ss.str();
-        ret.offset = offset;
-        return ret;
+        return pos0_t(ss.str(),offset);
+        //ret.path = ss.str();
+        //ret.offset = offset;
+        //return ret;
     }
 };
 
@@ -143,18 +148,15 @@ inline std::ostream & operator <<(std::ostream &os,const class pos0_t &pos0) {
 /** Append a string (subdir).
  * The current offset is a prefix to the subdir.
  */
-inline class pos0_t operator +(pos0_t pos0,const std::string &subdir) {
+inline class pos0_t operator +(pos0_t pos,const std::string &subdir) {
     std::stringstream ss;
-    ss << pos0.offset;
-    pos0.path    += (pos0.path.size()>0 ? "-" : "") + ss.str() + "-" + subdir;
-    pos0.offset  = 0;
-    return pos0;
+    ss << pos.path << (pos.path.size()>0 ? "-" : "") << pos.offset << "-" << subdir;
+    return pos0_t(ss.str(),0);
 };
 
 /** Adding an offset */
-inline class pos0_t operator +(pos0_t pos0,int64_t delta) {
-    pos0.offset += delta;               
-    return pos0;
+inline class pos0_t operator +(pos0_t pos,int64_t delta) {
+    return pos0_t(pos.path,pos.offset+delta);
 };
 
 /** \name Comparision operations

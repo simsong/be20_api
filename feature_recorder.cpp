@@ -84,7 +84,7 @@ void feature_recorder::banner_stamp(std::ostream &os,const std::string &header) 
 feature_recorder::feature_recorder(class feature_recorder_set &fs_,
                                    const std::string &name_):
     flags(0),
-    name(name_),ignore_encoding(),ios(),
+    name(name_),ignore_encoding(),ios(),stmt(),
     histogram_defs(),
     fs(fs_),
     count_(0),context_window_before(context_window_default),context_window_after(context_window_default),
@@ -247,10 +247,11 @@ void feature_recorder::set_memhist_limit(int64_t limit_)
 }
 
 
+// add a memory histogram; assume the position in the mhistograms is stable
 void feature_recorder::enable_memory_histograms()
 {
     for(histogram_defs_t::const_iterator it=histogram_defs.begin();it!=histogram_defs.end();it++){
-        mhistograms[*it] = new mhistogram_t(); // add a memory histogram; assume the position in the mhistograms is stable
+        mhistograms[*it] = new mhistogram_t(); 
     }
 }
 
@@ -778,7 +779,8 @@ std::string feature_recorder::carve(const sbuf_t &sbuf,size_t pos,size_t len,
     ss << dirname1 << "/" << std::setw(3) << std::setfill('0') << (this_file_number / 1000);
 
     std::string dirname2 = ss.str(); 
-    std::string fname    = dirname2 + std::string("/") + valid_dosname(sbuf.pos0.str() + ext);
+    std::string fname         = dirname2 + std::string("/") + valid_dosname(sbuf.pos0.str() + ext);
+    std::string fname_feature = fname.substr(fs.get_outdir().size()+1); 
     std::string carved_hash_hexvalue = (*fs.hasher.func)(sbuf.buf,sbuf.bufsize);
 
     /* Record what was found in the feature file.
@@ -786,7 +788,7 @@ std::string feature_recorder::carve(const sbuf_t &sbuf,size_t pos,size_t len,
     ss.str(std::string()); // clear the stringstream
     ss << "<fileobject><filename>" << fname << "</filename><filesize>" << len << "</filesize>"
        << "<hashdigest type='" << fs.hasher.name << "'>" << carved_hash_hexvalue << "</hashdigest></fileobject>";
-    this->write(sbuf.pos0+len,fname,ss.str());
+    this->write(sbuf.pos0+len,fname_feature,ss.str());
     
     /* Make the directory if it doesn't exist.  */
     if (access(dirname2.c_str(),R_OK)!=0){
