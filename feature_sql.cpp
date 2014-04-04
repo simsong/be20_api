@@ -4,18 +4,17 @@
 
 /* http://blog.quibb.org/2010/08/fast-bulk-inserts-into-sqlite/ */
 
-#include "../../config.h"
+#include "config.h"
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <sbuf.h>
+
+#include "bulk_extractor_i.h"
 
 #ifdef HAVE_LIBSQLITE3
-#ifdef HAVE_SQLITE3_H
-#include "sqlite3.h"
-#endif
-
-#include "stdio.h"
-#include "stdlib.h"
-#include "string.h"
-#include "unistd.h"
-#include "sbuf.h"
 
 static const char *schema_db[] = {
     /* These optimizations are unsafe and don't seem to improve performance significantly */
@@ -35,47 +34,48 @@ static const char *schema_tbl[] = {
     "INSERT INTO features (tablename,comment) VALUES ('f_%s','')",
     0};
 
-void send_sql(sqlite3 *db,const char **stmts,const char *arg1,const char *arg2)
+void feature_recorder_set::send_sql(const char **stmts,const char *arg1,const char *arg2)
 {
     for(int i=0;stmts[i];i++){
         char *errmsg = 0;
         char buf[65536];
         snprintf(buf,sizeof(buf),stmts[i],arg1,arg2);
-        if(sqlite3_exec(db,buf,NULL,NULL,&errmsg) != SQLITE_OK ) {
+        if(sqlite3_exec(db3,buf,NULL,NULL,&errmsg) != SQLITE_OK ) {
             fprintf(stderr,"Error executing '%s' : %s\n",buf,errmsg);
             exit(1);
         }
     }
 }
 
-sqlite3 *create_feature_database(const char *dbfile)
+void feature_recorder_set::create_feature_database()
 {
-    sqlite3 *db = 0;
-    if (sqlite3_open(dbfile, &db)) {
-        fprintf(stderr,"Cannot open database: %s\n",sqlite3_errmsg(db));
-        sqlite3_close(db);
+    assert(db3==0);
+    std::cerr << "create_feature_database\n";
+    std::string dbfname  = outdir + "/report.sqlite3";
+    if (sqlite3_open(dbfname.c_str(), &db3)) {
+        fprintf(stderr,"Cannot create database: %s\n",sqlite3_errmsg(db3));
+        sqlite3_close(db3);
         exit(1);
     }
-    send_sql(db,schema_db,"","");
-    return db;
+    send_sql(schema_db,"","");
 }
 
-void create_feature_table(sqlite3 *db,const char *featurename)
+void feature_recorder_set::create_feature_table(const char *featurename)
 {
-    send_sql(db,schema_tbl,featurename,featurename);
+    send_sql(schema_tbl,featurename,featurename);
 }
 
-sqlite3_stmt *prepare_insert_statement(sqlite3 *db,const char *featurename)
+sqlite3_stmt *feature_recorder_set::prepare_insert_statement(const char *featurename)
 {
     sqlite3_stmt *stmt = 0;
     const char *cmd = "INSERT INTO f_%s VALUES (?1, ?2, ?3, ?4)";
     char buf[1024];
     snprintf(buf,sizeof(buf),cmd,featurename);
-    sqlite3_prepare_v2(db,buf, strlen(buf), &stmt, NULL);
+    sqlite3_prepare_v2(db3,buf, strlen(buf), &stmt, NULL);
     return stmt;
 }
 
-void insert_statement(sqlite3_stmt *stmt,const pos0_t &pos,const std::string &feature,const std::string &context)
+void feature_recorder_set::insert_feature(sqlite3_stmt *stmt,const pos0_t &pos,const std::string &feature,const std::string &context)
 {
     const char *ps = pos.str().c_str();
     const char *fs = feature.c_str();
@@ -122,5 +122,13 @@ int main(int argc,char **argv)
     sqlite3_exec(db,"COMMIT TRANSACTION",NULL,NULL,&errmsg);
     sqlite3_finalize(stmt);
     sqlite3_close(db);
+}
+#else
+
+/* sqlite3 is typedef'ed to void if the .h is not available */
+
+sqlite3 *create_feature_database()
+{
+    return 0;
 }
 #endif

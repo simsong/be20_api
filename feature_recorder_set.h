@@ -17,9 +17,10 @@
 
 /**
  * \class feature_recorder_set
- * A singleton class that holds a set of recorders.
- * This used to be done with a set, but now it's done with a map.
- * 
+ * The feature_recorder_set is an object that controls output. It knows where the output goes (outdir),
+ * the various feature recorders that write to that output, and provides for synchronization. 
+ * It also has the factory method for new feature_recorders. Therefore if you want a different feature_recorder,
+ * this set should be subclassed as well.
  */
 
 typedef std::map<std::string,class feature_recorder *> feature_recorder_map;
@@ -35,11 +36,7 @@ class feature_recorder_set {
     feature_recorder_map  frm;              // map of feature recorders, by name; TK-replace with an atomic_set
     mutable cppmutex      map_lock;         // locks frm and scanner_stats_map
     histogram_defs_t      histogram_defs;   // histograms that are to be created.
-#ifdef HAVE_SQLITE3_H
     sqlite3               *db3;
-#else
-    const void            *db3;
-#endif
 public:
     struct hash_def {
         hash_def(std::string name_,std::string (*func_)(const uint8_t *buf,const size_t bufsize)):name(name_),func(func_){};
@@ -98,9 +95,14 @@ public:
 
     void    flush_all();
     void    close_all();
-    bool    has_name(std::string name) const;           /* does the named feature exist? */
-    void    set_flag(uint32_t f);
-    void    clear_flag(uint32_t f);
+    bool     has_name(std::string name) const;           /* does the named feature exist? */
+
+    /* flags */
+    void     set_flag(uint32_t f);
+    void     unset_flag(uint32_t f);
+    bool     flag_set(uint32_t f)    const {return flags & f;}
+    bool     flag_notset(uint32_t f) const {return !(flags & f);}
+    uint32_t get_flags()             const {return flags;}
 
     typedef void (*xml_notifier_t)(const std::string &xmlstring);
     void    add_histogram(const histogram_def &def); // adds it to a local set or to the specific feature recorder
@@ -112,6 +114,22 @@ public:
     typedef int (*stat_callback_t)(void *user,const std::string &name,uint64_t calls,double seconds);
     void    get_stats(void *user,stat_callback_t stat_callback) const;
     void    dump_name_count_stats(dfxml_writer &writer) const;
+
+    /****************************************************************
+     *** SQL interface
+     ****************************************************************/
+    
+
+    void    send_sql(const char **stmts,const char *arg1,const char *arg2);
+    void    create_feature_table(const char *featurename);
+    sqlite3_stmt *prepare_insert_statement(const char *featurename);
+    void    insert_feature(sqlite3_stmt *stmt,const pos0_t &pos,const std::string &feature,const std::string &context);
+    void    create_feature_database();
+
+    /****************************************************************
+     *** External Functions
+     ****************************************************************/
+    
 
     // Management of previously seen data
     virtual bool check_previously_processed(const uint8_t *buf,size_t bufsize);

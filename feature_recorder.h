@@ -43,7 +43,11 @@
 
 #ifdef HAVE_SQLITE3_H
 #include <sqlite3.h>
+#else
+typedef void sqlite3;
+typedef void sqlite3_stmt;
 #endif
+
 
 #include "cppmutex.h"
 #include "dfxml/src/dfxml_writer.h"
@@ -173,13 +177,13 @@ public:
     feature_recorder(class feature_recorder_set &fs,
                      const std::string &name);
     virtual ~feature_recorder();
-    virtual void set_flag(uint32_t flags_);
-    virtual void unset_flag(uint32_t flags_);
-    void    enable_memory_histograms();              // only called from feature_recorder_set
-    virtual void set_memhist_limit(int64_t limit_);
-    bool flag_set(uint32_t f)    const {return flags & f;}
-    bool flag_notset(uint32_t f) const {return !(flags & f);}
-    uint32_t get_flags()         const {return flags;}
+    virtual void   set_flag(uint32_t flags_);
+    virtual void   unset_flag(uint32_t flags_);
+    void           enable_memory_histograms();              // only called from feature_recorder_set
+    virtual void   set_memhist_limit(int64_t limit_);
+    bool           flag_set(uint32_t f)    const {return flags & f;}
+    bool           flag_notset(uint32_t f) const {return !(flags & f);}
+    uint32_t       get_flags()             const {return flags;}
     virtual const std::string &get_outdir() const;
 
     static size_t context_window_default; // global option
@@ -268,6 +272,7 @@ public:
      *             It won't write a feature that starts in the margin.
      * pos0 gives the location and prefix for the beginning of the buffer
      */ 
+
 
     /****************************************************************
      *** External entry points.

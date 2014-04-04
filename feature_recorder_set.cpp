@@ -22,7 +22,7 @@ static std::string null_hasher_func(const uint8_t *buf,size_t bufsize)
 
 feature_recorder_set::hash_def feature_recorder_set::null_hasher(null_hasher_name,null_hasher_func);
 
-/* Create an empty recorder */
+/* Create an empty recorder with no outdir. */
 feature_recorder_set::feature_recorder_set(uint32_t flags_,const feature_recorder_set::hash_def &hasher_):
     flags(flags_),seen_set(),input_fname(),
     outdir(),
@@ -39,7 +39,7 @@ feature_recorder_set::feature_recorder_set(uint32_t flags_,const feature_recorde
 }
 
 /**
- * Create a properly functioning feature recorder set.
+ * Initialize a properly functioning feature recorder set.
  * If disabled, create a disabled feature_recorder that can respond to functions as requested.
  */
 void feature_recorder_set::init(const feature_file_names_t &feature_files,
@@ -47,7 +47,13 @@ void feature_recorder_set::init(const feature_file_names_t &feature_files,
                                 const std::string &outdir_)
 {
     input_fname    = input_fname_;
-    outdir         = outdir_;
+    outdir         = outdir_;           // must exist
+    
+    assert (access(outdir.c_str(),W_OK)==0); // we must be able to write
+
+    if (flag_set(ENABLE_SQLITE3_RECORDERS)) {
+        create_feature_database();
+    }
 
     create_name(feature_recorder_set::ALERT_RECORDER_NAME,false); // make the alert recorder
 
@@ -195,7 +201,7 @@ void    feature_recorder_set::set_flag(uint32_t f)
     flags|=f;
 }         
 
-void    feature_recorder_set::clear_flag(uint32_t f)
+void    feature_recorder_set::unset_flag(uint32_t f)
 {
     if(f & MEM_HISTOGRAM){
         std::cerr << "MEM_HISTOGRAM flag cannot be cleared\n";
