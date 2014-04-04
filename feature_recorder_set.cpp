@@ -4,11 +4,10 @@
 #include "bulk_extractor_i.h"
 #include "histogram.h"
 
-
 /****************************************************************
- *** feature_recorder_set
- *** No mutex is needed for the feature_recorder_set because it is never
- *** modified after it is created, only the contained feature_recorders are modified.
+ *** feature_recorder_set:
+ *** Manage the set of feature recorders.
+ *** Handles both file-based feature recorders and the SQLite3 feature recorder.
  ****************************************************************/
 
 const std::string feature_recorder_set::ALERT_RECORDER_NAME = "alerts";
@@ -105,6 +104,9 @@ feature_recorder *feature_recorder_set::get_name(const std::string &name) const
 
 
 feature_recorder *feature_recorder_set::create_name_factory(const std::string &name_){
+    if (flag_set(ENABLE_SQLITE3_RECORDERS)) {
+        create_feature_table(name_);
+    }
     return new feature_recorder(*this,name_);
 }
 

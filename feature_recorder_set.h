@@ -121,9 +121,9 @@ public:
     
 
     void    send_sql(const char **stmts,const char *arg1,const char *arg2);
-    void    create_feature_table(const char *featurename);
     sqlite3_stmt *prepare_insert_statement(const char *featurename);
     void    insert_feature(sqlite3_stmt *stmt,const pos0_t &pos,const std::string &feature,const std::string &context);
+    void    create_feature_table(const std::string &name);
     void    create_feature_database();
 
     /****************************************************************

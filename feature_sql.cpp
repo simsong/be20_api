@@ -47,6 +47,11 @@ void feature_recorder_set::send_sql(const char **stmts,const char *arg1,const ch
     }
 }
 
+void feature_recorder_set::create_feature_table(const std::string &name)
+{
+    send_sql(schema_tbl,name.c_str(),name.c_str());
+}
+
 void feature_recorder_set::create_feature_database()
 {
     assert(db3==0);
@@ -58,11 +63,6 @@ void feature_recorder_set::create_feature_database()
         exit(1);
     }
     send_sql(schema_db,"","");
-}
-
-void feature_recorder_set::create_feature_table(const char *featurename)
-{
-    send_sql(schema_tbl,featurename,featurename);
 }
 
 sqlite3_stmt *feature_recorder_set::prepare_insert_statement(const char *featurename)
