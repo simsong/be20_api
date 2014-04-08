@@ -36,7 +36,7 @@ class feature_recorder_set {
     feature_recorder_map  frm;              // map of feature recorders, by name; TK-replace with an atomic_set
     mutable cppmutex      map_lock;         // locks frm and scanner_stats_map
     histogram_defs_t      histogram_defs;   // histograms that are to be created.
-    sqlite3               *db3;
+    BEAPI_SQLITE3         *db3;
 public:
     struct hash_def {
         hash_def(std::string name_,std::string (*func_)(const uint8_t *buf,const size_t bufsize)):name(name_),func(func_){};
@@ -121,8 +121,8 @@ public:
     
 
     void    send_sql(const char **stmts,const char *arg1,const char *arg2);
-    sqlite3_stmt *prepare_insert_statement(const char *featurename);
-    void    insert_feature(sqlite3_stmt *stmt,const pos0_t &pos,const std::string &feature,const std::string &context);
+    BEAPI_SQLITE3_STMT *prepare_insert_statement(const char *featurename);
+    void    insert_feature(BEAPI_SQLITE3_STMT *stmt,const pos0_t &pos,const std::string &feature,const std::string &context);
     void    create_feature_table(const std::string &name);
     void    create_feature_database();
 

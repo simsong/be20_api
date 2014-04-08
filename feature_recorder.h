@@ -43,9 +43,10 @@
 
 #ifdef HAVE_SQLITE3_H
 #include <sqlite3.h>
-#else
-typedef void sqlite3;
-typedef void sqlite3_stmt;
+#ifndef BEAPI_SQLITE
+#  define BEAPI_SQLITE sqlite3
+#  define BEAPI_SQLITE_STMT sqlite3_stmt
+#endif
 #endif
 
 
@@ -109,6 +110,12 @@ inline bool operator !=(const histogram_def &h1,const histogram_def &h2)  {
 /* in-memory histograms */
 typedef atomic_histogram<std::string,uint64_t> mhistogram_t;             // memory histogram
 typedef std::map<histogram_def,mhistogram_t *> mhistograms_t;
+
+
+#ifndef BEAPI_SQLITE3
+#define BEAPI_SQLITE3      void
+#define BEAPI_SQLITE3_STMT void
+#endif
 
 class feature_recorder {
     // default copy construction and assignment are meaningless
@@ -192,11 +199,7 @@ public:
 private:
     std::string  ignore_encoding;            // encoding to ignore for carving
     std::fstream ios;                        // where features are written 
-#ifdef HAVE_SQLITE3_H
-    sqlite3_stmt *stmt;                 // prepared statement
-#else
-    const void *stmt;                 // so our initialization statements don't need conditional
-#endif
+    BEAPI_SQLITE3_STMT *stmt;                 // prepared statement
 
 protected:;
     histogram_defs_t      histogram_defs;    // histograms that are to be created for this feature recorder

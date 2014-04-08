@@ -65,7 +65,7 @@ void feature_recorder_set::create_feature_database()
     send_sql(schema_db,"","");
 }
 
-sqlite3_stmt *feature_recorder_set::prepare_insert_statement(const char *featurename)
+BEAPI_SQLITE3_STMT *feature_recorder_set::prepare_insert_statement(const char *featurename)
 {
     sqlite3_stmt *stmt = 0;
     const char *cmd = "INSERT INTO f_%s VALUES (?1, ?2, ?3, ?4)";
@@ -89,6 +89,11 @@ void feature_recorder_set::insert_feature(sqlite3_stmt *stmt,const pos0_t &pos,c
     }
     sqlite3_reset(stmt);
 }
+#else
+/* sqlite3 is typedef'ed to void if the .h is not available */
+
+void feature_recorder_set::create_feature_table(const std::string &name) { }
+void feature_recorder_set::create_feature_database() {  }
 #endif
 
 #ifdef STAND
@@ -123,12 +128,5 @@ int main(int argc,char **argv)
     sqlite3_finalize(stmt);
     sqlite3_close(db);
 }
-#else
-
-/* sqlite3 is typedef'ed to void if the .h is not available */
-
-sqlite3 *create_feature_database()
-{
-    return 0;
-}
 #endif
+
