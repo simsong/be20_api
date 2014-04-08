@@ -38,6 +38,7 @@ class feature_recorder_set {
     histogram_defs_t      histogram_defs;   // histograms that are to be created.
     BEAPI_SQLITE3         *db3;
 public:
+    virtual void          heartbeat(){};    // called at a regular basis
     struct hash_def {
         hash_def(std::string name_,std::string (*func_)(const uint8_t *buf,const size_t bufsize)):name(name_),func(func_){};
         std::string name;                                             // name of hash

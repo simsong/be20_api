@@ -598,6 +598,8 @@ void be13::plugin::process_sbuf(const class scanner_params &sp)
     const pos0_t &pos0 = sp.sbuf.pos0;
     class feature_recorder_set &fs = sp.fs;
 
+    fs.heartbeat();                     // note that we are alive
+
     {
         /* note the maximum depth that we've seen */
         cppmutex::lock lock(max_depth_seenM);
