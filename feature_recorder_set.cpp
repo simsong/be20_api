@@ -12,6 +12,8 @@
 
 const std::string feature_recorder_set::ALERT_RECORDER_NAME = "alerts";
 const std::string feature_recorder_set::DISABLED_RECORDER_NAME = "disabled";
+const std::string feature_recorder_set::NO_INPUT = "<NO-INPUT>";
+const std::string feature_recorder_set::NO_OUTDIR = "<NO-OUTDIR>";
 
 static std::string null_hasher_name("null");
 static std::string null_hasher_func(const uint8_t *buf,size_t bufsize)
@@ -48,7 +50,7 @@ void feature_recorder_set::init(const feature_file_names_t &feature_files,
     input_fname    = input_fname_;
     outdir         = outdir_;           // must exist
     
-    assert (access(outdir.c_str(),W_OK)==0); // we must be able to write
+    assert (outdir == NO_OUTDIR || access(outdir.c_str(),W_OK)==0); // we must be able to write
 
     if (flag_set(ENABLE_SQLITE3_RECORDERS)) {
         create_feature_database();

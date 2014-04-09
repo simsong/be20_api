@@ -63,6 +63,8 @@ public:
 
     static const std::string   ALERT_RECORDER_NAME;  // the name of the alert recorder
     static const std::string   DISABLED_RECORDER_NAME; // the fake disabled feature recorder
+    static const std::string   NO_INPUT; // 'filename' indicator that the FRS has no input file
+    static const std::string   NO_OUTDIR; // 'dirname' indicator that the FRS produces no file output
 
     /* flags */
     static const uint32_t ONLY_ALERT                = 0x01;  // always return the alert recorder
