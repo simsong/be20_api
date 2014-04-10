@@ -21,3 +21,4 @@ Makefile.in
 _deps
 a.out
 *.sql3
+stand
