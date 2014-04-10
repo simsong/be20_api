@@ -36,8 +36,8 @@ class feature_recorder_set {
     feature_recorder_map  frm;              // map of feature recorders, by name; TK-replace with an atomic_set
     mutable cppmutex      map_lock;         // locks frm and scanner_stats_map
     histogram_defs_t      histogram_defs;   // histograms that are to be created.
-    BEAPI_SQLITE3         *db3;
 public:
+    BEAPI_SQLITE3         *db3;             // opened in SQLITE_OPEN_FULLMUTEX mode
     virtual void          heartbeat(){};    // called at a regular basis
     struct hash_def {
         hash_def(std::string name_,std::string (*func_)(const uint8_t *buf,const size_t bufsize)):name(name_),func(func_){};
@@ -98,13 +98,13 @@ public:
 
     void    flush_all();
     void    close_all();
-    bool     has_name(std::string name) const;           /* does the named feature exist? */
+    bool    has_name(std::string name) const;           /* does the named feature exist? */
 
     /* flags */
-    void     set_flag(uint32_t f);
-    void     unset_flag(uint32_t f);
-    bool     flag_set(uint32_t f)    const {return flags & f;}
-    bool     flag_notset(uint32_t f) const {return !(flags & f);}
+    void    set_flag(uint32_t f);
+    void    unset_flag(uint32_t f);
+    bool    flag_set(uint32_t f)    const {return flags & f;}
+    bool    flag_notset(uint32_t f) const {return !(flags & f);}
     uint32_t get_flags()             const {return flags;}
 
     typedef void (*xml_notifier_t)(const std::string &xmlstring);
@@ -119,15 +119,15 @@ public:
     void    dump_name_count_stats(dfxml_writer &writer) const;
 
     /****************************************************************
-     *** SQL interface
+     *** SQLite3 interface
      ****************************************************************/
     
 
-    void    send_sql(const char **stmts,const char *arg1,const char *arg2);
-    BEAPI_SQLITE3_STMT *prepare_insert_statement(const char *featurename);
-    void    insert_feature(BEAPI_SQLITE3_STMT *stmt,const pos0_t &pos,const std::string &feature,const std::string &context);
-    void    create_feature_table(const std::string &name);
-    void    create_feature_database();
+    void    db_send_sql(const char **stmts,const char *arg1,const char *arg2) ;
+    void    db_create_table(const std::string &name) ;
+    void    db_create() ;
+    void    db_commit() ;               // commit current transaction
+    void    db_close() ;             // 
 
     /****************************************************************
      *** External Functions

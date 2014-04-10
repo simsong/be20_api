@@ -53,7 +53,7 @@ void feature_recorder_set::init(const feature_file_names_t &feature_files,
     assert (outdir == NO_OUTDIR || access(outdir.c_str(),W_OK)==0); // we must be able to write
 
     if (flag_set(ENABLE_SQLITE3_RECORDERS)) {
-        create_feature_database();
+        db_create();
     }
 
     create_name(feature_recorder_set::ALERT_RECORDER_NAME,false); // make the alert recorder
@@ -64,11 +64,17 @@ void feature_recorder_set::init(const feature_file_names_t &feature_files,
     }
 }
 
+/** Flush all of the feature recorder files.
+ * Typically done at the end of an sbuf.
+ */
 void feature_recorder_set::flush_all()
 {
     for(feature_recorder_map::iterator i = frm.begin();i!=frm.end();i++){
         i->second->flush();
     } 
+    if ( flag_set(feature_recorder_set::ENABLE_SQLITE3_RECORDERS )) {
+        db_commit();
+    }
 }
 
 void feature_recorder_set::close_all()
@@ -105,9 +111,10 @@ feature_recorder *feature_recorder_set::get_name(const std::string &name) const
 }
 
 
-feature_recorder *feature_recorder_set::create_name_factory(const std::string &name_){
+feature_recorder *feature_recorder_set::create_name_factory(const std::string &name_)
+{
     if (flag_set(ENABLE_SQLITE3_RECORDERS)) {
-        create_feature_table(name_);
+        db_create_table(name_);
     }
     return new feature_recorder(*this,name_);
 }

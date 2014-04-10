@@ -44,9 +44,13 @@
 #ifdef HAVE_SQLITE3_H
 #include <sqlite3.h>
 #ifndef BEAPI_SQLITE
-#  define BEAPI_SQLITE sqlite3
-#  define BEAPI_SQLITE_STMT sqlite3_stmt
+#  define BEAPI_SQLITE3 sqlite3
+#  define BEAPI_SQLITE3_STMT sqlite3_stmt
 #endif
+#endif
+
+#ifndef BEAPI_SQLITE3
+#define BEAPI_SQLITE3      void
 #endif
 
 
@@ -111,11 +115,6 @@ inline bool operator !=(const histogram_def &h1,const histogram_def &h2)  {
 typedef atomic_histogram<std::string,uint64_t> mhistogram_t;             // memory histogram
 typedef std::map<histogram_def,mhistogram_t *> mhistograms_t;
 
-
-#ifndef BEAPI_SQLITE3
-#define BEAPI_SQLITE3      void
-#define BEAPI_SQLITE3_STMT void
-#endif
 
 class feature_recorder {
     // default copy construction and assignment are meaningless
@@ -183,7 +182,7 @@ public:
 
     feature_recorder(class feature_recorder_set &fs,
                      const std::string &name);
-    virtual ~feature_recorder();
+    virtual        ~feature_recorder();
     virtual void   set_flag(uint32_t flags_);
     virtual void   unset_flag(uint32_t flags_);
     void           enable_memory_histograms();              // only called from feature_recorder_set
@@ -199,7 +198,9 @@ public:
 private:
     std::string  ignore_encoding;            // encoding to ignore for carving
     std::fstream ios;                        // where features are written 
-    BEAPI_SQLITE3_STMT *stmt;                 // prepared statement
+    
+    mutable cppmutex Mstmt;                   // protect stmt
+    class beapi_sql_stmt *stmt;               // beapi sql statement
 
 protected:;
     histogram_defs_t      histogram_defs;    // histograms that are to be created for this feature recorder
@@ -258,6 +259,8 @@ public:
     virtual void flush();
     static  int  dump_callback_test(void *user,const feature_recorder &fr,
                                     const std::string &str,const uint64_t &count); // test callback for you to use!
+    
+
     /* TK: The histogram_def should be provided at the beginning, so it can be used for in-memory histograms.
      * The callback needs to have the specific atomic set as the callback as well.
      */
@@ -300,7 +303,11 @@ public:
     // 
     // write a feature and its context; the feature may be in the context, but doesn't need to be.
     // write() calls write0() after histogram, quoting, and stoplist processing
+    // write0() calls write0_sql() if sqlwriting is enabled
     virtual void write0(const pos0_t &pos0,const std::string &feature,const std::string &context);  
+private:
+    virtual void write0_db(const pos0_t &pos0,const std::string &feature,const std::string &context);  
+public:
 
     // write a feature and its context; the feature may be in the context, but doesn't need to be.
     // entries processed by write below will be processed by histogram system

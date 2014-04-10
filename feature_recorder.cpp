@@ -446,10 +446,15 @@ void feature_recorder::write(const std::string &str)
             std::cerr << "******************************************\n";
             std::cerr << "feature recorder: " << name << "\n";
             std::cerr << "invalid UTF-8 in write: " << str << "\n";
-            std::cerr << "ABORT\n";
-            exit(1);
+            assert(0);
         }
     }
+
+    /* This is where the writing happens. Lock the output and write */
+    if (fs.flag_set(feature_recorder_set::DISABLE_FILE_RECORDERS)) {
+        return;
+    }
+
     cppmutex::lock lock(Mf);
     if(ios.is_open()){
         if(count_==0){
@@ -482,14 +487,24 @@ void feature_recorder::printf(const char *fmt, ...)
 
 /**
  * Combine the pos0, feature and context into a single line and write it to the feature file.
+ *
+ * @param feature - The feature, which is valid UTF8 (but may not be exactly the bytes on the disk)
+ * @param context - The context, which is valid UTF8 (but may not be exactly the bytes on the disk)
+ *
+ * Interlocking is done in write().
  */
 
 void feature_recorder::write0(const pos0_t &pos0,const std::string &feature,const std::string &context)
 {
-    std::stringstream ss;
-    ss << pos0.shift(feature_recorder::offset_add).str() << '\t' << feature;
-    if(flag_notset(FLAG_NO_CONTEXT) && (context.size()>0)) ss << '\t' << context;
-    this->write(ss.str());
+    if ( fs.flag_set(feature_recorder_set::ENABLE_SQLITE3_RECORDERS )) {
+        write0_db( pos0, feature, context);
+    }
+    if ( fs.flag_notset(feature_recorder_set::DISABLE_FILE_RECORDERS )) {
+        std::stringstream ss;
+        ss << pos0.shift( feature_recorder::offset_add).str() << '\t' << feature;
+        if (flag_notset( FLAG_NO_CONTEXT ) && ( context.size()>0 )) ss << '\t' << context;
+        this->write( ss.str() );
+    }
 }
 
 
@@ -522,6 +537,10 @@ void feature_recorder::quote_if_necessary(std::string &feature,std::string &cont
     }
 }
 
+/**
+ * write() is the main entry point for writing a feature at a given position with context.
+ * write() checks the stoplist and escapes non-UTF8 characters, then calls write0().
+ */
 void feature_recorder::write(const pos0_t &pos0,const std::string &feature_,const std::string &context_)
 {
     if(flags & FLAG_DISABLED) return;           // disabled
