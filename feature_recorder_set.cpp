@@ -27,9 +27,9 @@ feature_recorder_set::hash_def feature_recorder_set::null_hasher(null_hasher_nam
 feature_recorder_set::feature_recorder_set(uint32_t flags_,const feature_recorder_set::hash_def &hasher_):
     flags(flags_),seen_set(),input_fname(),
     outdir(),
-    frm(),map_lock(),
+    frm(),Mscanner_stats(),
     histogram_defs(),
-    db3(),
+    Min_transaction(),in_transaction(),db3(),
     alert_list(),stop_list(),
     scanner_stats(),hasher(hasher_)
 {
@@ -104,7 +104,7 @@ feature_recorder *feature_recorder_set::get_name(const std::string &name) const
         thename = &feature_recorder_set::ALERT_RECORDER_NAME;
     }
 
-    cppmutex::lock lock(map_lock);
+    cppmutex::lock lock(Mscanner_stats);
     feature_recorder_map::const_iterator it = frm.find(*thename);
     if(it!=frm.end()) return it->second;
     return(0);                          // feature recorder does not exist
@@ -163,7 +163,7 @@ bool feature_recorder_set::check_previously_processed(const uint8_t *buf,size_t 
 
 void feature_recorder_set::add_stats(const std::string &bucket,double seconds)
 {
-    cppmutex::lock lock(map_lock);
+    cppmutex::lock lock(Mscanner_stats);
     struct pstats &p = scanner_stats[bucket]; // get the location of the stats
     p.seconds += seconds;
     p.calls ++;
@@ -183,7 +183,7 @@ void feature_recorder_set::get_stats(void *user,stat_callback_t stat_callback) c
 
 void feature_recorder_set::dump_name_count_stats(dfxml_writer &writer) const
 {
-    cppmutex::lock lock(map_lock);
+    cppmutex::lock lock(Mscanner_stats);
     writer.push("feature_files");
     for(feature_recorder_map::const_iterator ij = frm.begin(); ij != frm.end(); ij++){
         writer.set_oneline(true);

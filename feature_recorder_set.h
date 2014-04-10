@@ -34,8 +34,10 @@ class feature_recorder_set {
     std::string           input_fname;      // input file
     std::string           outdir;           // where output goes
     feature_recorder_map  frm;              // map of feature recorders, by name; TK-replace with an atomic_set
-    mutable cppmutex      map_lock;         // locks frm and scanner_stats_map
+    mutable cppmutex      Mscanner_stats;         // locks frm and scanner_stats_map
     histogram_defs_t      histogram_defs;   // histograms that are to be created.
+    mutable cppmutex      Min_transaction;
+    bool                  in_transaction;
 public:
     BEAPI_SQLITE3         *db3;             // opened in SQLITE_OPEN_FULLMUTEX mode
     virtual void          heartbeat(){};    // called at a regular basis
@@ -126,6 +128,7 @@ public:
     void    db_send_sql(const char **stmts,const char *arg1,const char *arg2) ;
     void    db_create_table(const std::string &name) ;
     void    db_create() ;
+    void    db_transaction_begin();
     void    db_commit() ;               // commit current transaction
     void    db_close() ;             // 
 

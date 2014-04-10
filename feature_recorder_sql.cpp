@@ -114,11 +114,29 @@ void feature_recorder_set::db_close()
     }
 }
 
+void feature_recorder_set::db_transaction_begin()
+{
+    cppmutex::lock lock(Min_transaction);
+    if(!in_transaction){
+        char *errmsg = 0;
+        if(sqlite3_exec(db3,"BEGIN TRANSACTION",NULL,NULL,&errmsg)==SQLITE_OK){
+            in_transaction = true;
+        } else {
+            fprintf(stderr,"BEGIN TRANSACTION Error: %s\n",errmsg);
+        }
+    }
+}
+
 void feature_recorder_set::db_commit()
 {
-    char *errmsg = 0;
-    if(sqlite3_exec(db3,"COMMIT TRANSACTION",NULL,NULL,&errmsg)){
-        fprintf(stderr,"COMMIT TRANSACTION Error: %s\n",errmsg);
+    cppmutex::lock lock(Min_transaction);
+    if(in_transaction){
+        char *errmsg = 0;
+        if(sqlite3_exec(db3,"COMMIT TRANSACTION",NULL,NULL,&errmsg)==SQLITE_OK){
+            in_transaction = false;
+        } else {
+            fprintf(stderr,"COMMIT TRANSACTION Error: %s\n",errmsg);
+        }
     }
 }
 
@@ -137,6 +155,7 @@ void feature_recorder::write0_db(const pos0_t &pos0,const std::string &feature,c
 void feature_recorder_set::db_create_table(const std::string &name) {}
 void feature_recorder_set::db_create() {}
 void feature_recorder_set::db_close() {}
+void feature_recorder_set::db_begin_transaction(){}
 void feature_recorder_set::db_commit(){}
 void feature_recorder::write0_db(){}
 #endif
