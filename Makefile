@@ -5,4 +5,4 @@ all:
 
 stand: feature_sql
 feature_sql: feature_recorder_sql.cpp beregex.cpp
-	g++ -o stand feature_recorder_sql.cpp beregex.cpp -DSTAND -lsqlite3 $(CPPFLAGS) -lssl -ltre -lcrypto
+	g++ -o stand feature_recorder_sql.cpp beregex.cpp histogram.cpp unicode_escape.cpp -DSTAND -lsqlite3 $(CPPFLAGS) -lssl -ltre -lcrypto

@@ -13,6 +13,7 @@
 #include <sbuf.h>
 
 #include "bulk_extractor_i.h"
+#include "histogram.h"
 
 #ifdef HAVE_LIBSQLITE3
 
@@ -29,13 +30,14 @@ static const char *schema_db[] = {
     0};
 
 static const char *schema_tbl[] = {
-    "CREATE TABLE f_%s (offset INTEGER(12), path VARCHAR, feature_eutf8 TEXT, context_eutf8 TEXT)",
+    "CREATE TABLE f_%s (offset INTEGER(12), path VARCHAR, feature_eutf8 TEXT, feature_utf8 TEXT, context_eutf8 TEXT)",
     "CREATE INDEX f_%s_idx ON f_%s(offset);",
-    "CREATE INDEX f_%s_vdx ON f_%s(feature_eutf8);",
+    "CREATE INDEX f_%s_vdx1 ON f_%s(feature_eutf8);",
+    "CREATE INDEX f_%s_vdx2 ON f_%s(feature_utf8);",
     "INSERT INTO be_features (tablename,comment) VALUES ('f_%s','')",
     0};
 
-static const char *insert_stmt = "INSERT INTO f_%s VALUES (?1, ?2, ?3, ?4)";
+static const char *insert_stmt = "INSERT INTO f_%s VALUES (?1, ?2, ?3, ?4, ?5)";
 
 class beapi_sql_stmt {
     BEAPI_SQLITE3_STMT *stmt;                 // prepared statement
@@ -56,16 +58,18 @@ public:
         }
 #endif
     }
-    void insert_feature(const pos0_t &pos,const std::string &feature,const std::string &context)
+    void insert_feature(const pos0_t &pos,const std::string &feature,const std::string &feature8, const std::string &context)
     {
 #ifdef HAVE_SQLITE3_H
         const char *ps = pos.str().c_str();
         const char *fs = feature.c_str();
+        const char *f8 = feature8.c_str();
         const char *cs = context.c_str();
-        sqlite3_bind_int(stmt, 1, pos.offset);
+        sqlite3_bind_int(stmt,  1, pos.offset);
         sqlite3_bind_text(stmt, 2, ps, strlen(ps), SQLITE_STATIC);
         sqlite3_bind_text(stmt, 3, fs, strlen(fs), SQLITE_STATIC);
-        sqlite3_bind_text(stmt, 4, cs, strlen(cs), SQLITE_STATIC);
+        sqlite3_bind_text(stmt, 4, f8, strlen(f8), SQLITE_STATIC);
+        sqlite3_bind_text(stmt, 5, cs, strlen(cs), SQLITE_STATIC);
         if (sqlite3_step(stmt) != SQLITE_DONE) {
             fprintf(stderr,"sqlite3_step failed\n");
         }
@@ -97,8 +101,10 @@ void feature_recorder_set::db_create()
     assert(db3==0);
     std::string dbfname  = outdir + "/report.sqlite3";
     std::cerr << "create_feature_database " << dbfname << "\n";
-    if (sqlite3_open(dbfname.c_str(), &db3)!=SQLITE_OK) {
-    //if (sqlite3_open_v2(dbfname.c_str(), &db3, SQLITE_OPEN_FULLMUTEX, "")!=SQLITE_OK) {
+    //if (sqlite3_open(dbfname.c_str(), &db3)!=SQLITE_OK) {
+    if (sqlite3_open_v2(dbfname.c_str(), &db3,
+                        SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE|SQLITE_OPEN_FULLMUTEX,
+                        0)!=SQLITE_OK) {
         std::cerr << "Cannot create database '" << dbfname << "': " << sqlite3_errmsg(db3) << "\n";
         sqlite3_close(db3);
         exit(1);
@@ -142,11 +148,17 @@ void feature_recorder_set::db_commit()
 
 void feature_recorder::write0_db(const pos0_t &pos0,const std::string &feature,const std::string &context)
 {
+    /**
+     * Note: this is not very efficient, passing through a quoted feature and then unquoting it.
+     * We could make this more efficient.
+     */
+    std::string *feature8 = HistogramMaker::convert_utf16_to_utf8(feature_recorder::unquote_string(feature));
     cppmutex::lock lock(Mstmt);
     if(stmt==0){
         stmt = new beapi_sql_stmt(fs.db3,name);
     }
-    stmt->insert_feature(pos0,feature,context);
+    stmt->insert_feature(pos0,feature,feature8 ? *feature8 : feature,context);
+    if (feature8) delete feature8;
 }
 
 
@@ -182,7 +194,7 @@ static feature_recorder_set::hash_def my_hasher(hash_name,hash_func);
 feature_recorder_set::feature_recorder_set(uint32_t flags_,const feature_recorder_set::hash_def &hasher_):
     flags(flags_),seen_set(),input_fname(),
     outdir(),
-    frm(),map_lock(),
+    frm(),
     histogram_defs(),
     db3(),
     alert_list(),stop_list(),
