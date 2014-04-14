@@ -295,21 +295,24 @@ public:
     }
 };
 
-void feature_recorder::dump_histogram(const histogram_def &def,void *user,feature_recorder::dump_callback_t cb) const
+/****************************************************************
+ *** PHASE HISTOGRAM (formerly phase 3): Create the histograms
+ ****************************************************************/
+
+/**
+ * We now have three kinds of histograms:
+ * 1 - Traditional post-processing histograms specified by the histogram library
+ *   1a - feature-file based traditional ones
+ *   1b - SQL-based traditional ones.
+ * 2 - In-memory histograms (used primarily by beapi)
+ */
+
+
+/** Dump a specific histogram */
+void feature_recorder::dump_histogram_file(const histogram_def &def,void *user,feature_recorder::dump_callback_t cb) const
 {
-    /* Inform that we are dumping this histogram */
-    if(cb) cb(user,*this,def,"",0); 
-
-    mhistograms_t::const_iterator it = mhistograms.find(def);
-    if(it!=mhistograms.end()){
-        assert(cb!=0);
-        mhistogram_callback mcbo(user,cb,def,*this,mhistogram_limit);
-        it->second->dump_sorted(static_cast<void *>(&mcbo),mhistogram_callback::callback);
-        return;
-    }
-
+    /* This is a file based histogram. We will be reading from one file and writing to another */
     std::string ifname = fname_counter("");  // source of features
-
     std::ifstream f(ifname.c_str());
     if(!f.is_open()){
         std::cerr << "Cannot open histogram input file: " << ifname << "\n";
@@ -394,23 +397,43 @@ void feature_recorder::dump_histogram(const histogram_def &def,void *user,featur
 }
 
 
-void feature_recorder::add_histogram(const histogram_def &def)
+void feature_recorder::dump_histogram(const histogram_def &def,void *user,feature_recorder::dump_callback_t cb) const
 {
-    histogram_defs.insert(def);
+    /* Inform that we are dumping this histogram */
+    if(cb) cb(user,*this,def,"",0); 
+
+    /* If this is a memory histogram, dump it and return */
+    mhistograms_t::const_iterator it = mhistograms.find(def);
+    if(it!=mhistograms.end()){
+        assert(cb!=0);
+        mhistogram_callback mcbo(user,cb,def,*this,mhistogram_limit);
+        it->second->dump_sorted(static_cast<void *>(&mcbo),mhistogram_callback::callback);
+        return;
+    }
+
+    if (fs.flag_set(feature_recorder_set::ENABLE_SQLITE3_RECORDERS)) {
+        dump_histogram_db(def,user,cb);
+    }
+    
+
+    if (fs.flag_notset(feature_recorder_set::DISABLE_FILE_RECORDERS)) {
+        dump_histogram_file(def,user,cb);
+    }
 }
 
-/* Dump all of our histograms */
+
+/* Dump all of this feature recorders histograms */
 
 
 void feature_recorder::dump_histograms(void *user,feature_recorder::dump_callback_t cb,
                                            feature_recorder_set::xml_notifier_t xml_error_notifier) const
 {
-    /* See if we have an in-memory histograms */
-    //if(flag_set(feature_recorder::FLAG_MEM_HISTOGRAM)){
-    //histogram_def d("","","",0);            // empty
-    //dump_histogram(d,user,cb);
-    //}
-       
+    /* If we are recording features to SQL and we have a histogram defintion
+     * for this feature recorder, we need to create a base histogram first,
+     * then we can create the extracted histograms if they are presented.
+     */
+
+
     /* Loop through all the histograms and dump each one.
      * This now works for both memory histograms and non-memory histograms.
      */
@@ -427,6 +450,12 @@ void feature_recorder::dump_histograms(void *user,feature_recorder::dump_callbac
             }
         }
     }
+}
+
+
+void feature_recorder::add_histogram(const histogram_def &def)
+{
+    histogram_defs.insert(def);
 }
 
 

@@ -31,10 +31,22 @@ static const char *schema_db[] = {
 
 static const char *schema_tbl[] = {
     "CREATE TABLE f_%s (offset INTEGER(12), path VARCHAR, feature_eutf8 TEXT, feature_utf8 TEXT, context_eutf8 TEXT)",
-    "CREATE INDEX f_%s_idx ON f_%s(offset);",
-    "CREATE INDEX f_%s_vdx1 ON f_%s(feature_eutf8);",
-    "CREATE INDEX f_%s_vdx2 ON f_%s(feature_utf8);",
+    "CREATE INDEX f_%s_idx1 ON f_%s(offset)",
+    "CREATE INDEX f_%s_idx2 ON f_%s(feature_eutf8)",
+    "CREATE INDEX f_%s_idx3 ON f_%s(feature_utf8)",
     "INSERT INTO be_features (tablename,comment) VALUES ('f_%s','')",
+    0};
+
+/* This creates the base histogram */
+static const char *schema_hist[] = {
+    "CREATE TABLE h_%s (count INTEGER(12), feature_utf8 TEXT)",
+    "CREATE INDEX h_%s_idx1 ON h_%s(count)",
+    "CREATE INDEX h_%s_idx2 ON h_%s(feature_utf8)",
+    0};
+
+/* This performs the histogram operation */
+static const char *schema_hist1[] = {
+    "INSERT INTO h_%s select count(*),feature_utf8 from f_%s group by feature_utf8",
     0};
 
 static const char *insert_stmt = "INSERT INTO f_%s VALUES (?1, ?2, ?3, ?4, ?5)";
@@ -78,12 +90,12 @@ public:
     }
 };
 
-void feature_recorder_set::db_send_sql(const char **stmts,const char *arg1,const char *arg2)
+void feature_recorder_set::db_send_sql(const char **stmts,const std::string &arg1,const std::string &arg2)
 {
     for(int i=0;stmts[i];i++){
         char *errmsg = 0;
         char buf[65536];
-        snprintf(buf,sizeof(buf),stmts[i],arg1,arg2);
+        snprintf(buf,sizeof(buf),stmts[i],arg1.c_str(),arg2.c_str());
         if(sqlite3_exec(db3,buf,NULL,NULL,&errmsg) != SQLITE_OK ) {
             fprintf(stderr,"Error executing '%s' : %s\n",buf,errmsg);
             exit(1);
@@ -93,7 +105,7 @@ void feature_recorder_set::db_send_sql(const char **stmts,const char *arg1,const
 
 void feature_recorder_set::db_create_table(const std::string &name)
 {
-    db_send_sql(schema_tbl,name.c_str(),name.c_str());
+    db_send_sql(schema_tbl,name,name);
 }
 
 void feature_recorder_set::db_create()
@@ -101,7 +113,6 @@ void feature_recorder_set::db_create()
     assert(db3==0);
     std::string dbfname  = outdir + "/report.sqlite3";
     std::cerr << "create_feature_database " << dbfname << "\n";
-    //if (sqlite3_open(dbfname.c_str(), &db3)!=SQLITE_OK) {
     if (sqlite3_open_v2(dbfname.c_str(), &db3,
                         SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE|SQLITE_OPEN_FULLMUTEX,
                         0)!=SQLITE_OK) {
@@ -146,6 +157,7 @@ void feature_recorder_set::db_commit()
     }
 }
 
+/* Hook for writing feature to SQLite3 database */
 void feature_recorder::write0_db(const pos0_t &pos0,const std::string &feature,const std::string &context)
 {
     /**
@@ -160,6 +172,38 @@ void feature_recorder::write0_db(const pos0_t &pos0,const std::string &feature,c
     stmt->insert_feature(pos0,feature,feature8 ? *feature8 : feature,context);
     if (feature8) delete feature8;
 }
+
+/* Hook for writing histogram
+ */
+int callback_counter(void *param, int argc, char **argv, char **azColName)
+{
+    printf("CALLBACK\n");
+    int *counter = reinterpret_cast<int *>(param);
+    (*counter)++;
+    return 0;
+}
+
+void feature_recorder::dump_histogram_db(const histogram_def &def,void *user,feature_recorder::dump_callback_t cb) const
+{
+    /* First check to see if there exists a feature histogram summary. If not, make it */
+    std::string query = "SELECT name FROM sqlite_master WHERE type='table' AND name='h_" + def.feature +"'";
+    char *errmsg=0;
+    int rowcount=0;
+    std::cerr << "QUERY: " << query << "\n";
+    if (sqlite3_exec(fs.db3,query.c_str(),callback_counter,&rowcount,&errmsg)){
+        std::cerr << "sqlite3: " << errmsg << "\n";
+        return;
+    }
+    if (rowcount==0){
+        fs.db_send_sql(schema_hist, def.feature, def.feature); // creates the histogram
+        fs.db_send_sql(schema_hist1, def.feature, def.feature); // creates the histogram
+    }
+    /* Now create the summarized histogram for the regex, if it is not existing. */
+    if (def.pattern.size()>0){
+        /* go through all of the features and build a new table */
+    }
+}
+
 
 
 #else

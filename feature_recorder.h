@@ -265,6 +265,8 @@ public:
      * The callback needs to have the specific atomic set as the callback as well.
      */
     virtual void add_histogram(const histogram_def &def); // adds a histogram to process
+    virtual void dump_histogram_file(const histogram_def &def,void *user,feature_recorder::dump_callback_t cb) const;
+    virtual void dump_histogram_db(const histogram_def &def,void *user,feature_recorder::dump_callback_t cb) const;
     virtual void dump_histogram(const histogram_def &def,void *user,feature_recorder::dump_callback_t cb) const;
     typedef void (*xml_notifier_t)(const std::string &xmlstring);
     virtual void dump_histograms(void *user,feature_recorder::dump_callback_t cb, xml_notifier_t xml_error_notifier) const;

@@ -158,7 +158,7 @@ void be13::plugin::set_scanner_enabled_all(bool enable)
  * As part of scanner loading:
  * - pass configuration to the scanner
  * - feature files that the scanner requires
- * - Histograms that the scanner makes
+ * - Histograms that the scanner makes (see feature_recorder_set)
  * This is called before scanners are enabled or disabled, so the pcap handlers
  * need to be set afterwards
  */
@@ -420,18 +420,12 @@ void be13::plugin::phase_shutdown(feature_recorder_set &fs,std::stringstream *sx
     }
 }
 
-/****************************************************************
- *** PHASE HISTOGRAM (formerly phase 3): Create the histograms
- ****************************************************************/
+/************************************
+ *** HELP and  option processing  ***
+ ************************************/
 
-/**
- * Note currently we have two kinds of histograms:
- * post-processing histograms specified by the histogram library, and in-memory histograms.
- * that are really only used by scan_bulk.
- */
-
-/* option processing */
 /* Get the config and build the help strings at the same time! */
+
 std::stringstream scanner_info::helpstream;
 void scanner_info::get_config(const scanner_info::config_t &c,
                               const std::string &n,std::string *val,const std::string &help)

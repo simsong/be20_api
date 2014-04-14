@@ -221,9 +221,19 @@ void    feature_recorder_set::unset_flag(uint32_t f)
     flags|=f;
 }
 
+/****************************************************************
+ *** PHASE HISTOGRAM (formerly phase 3): Create the histograms
+ ****************************************************************/
+
+/**
+ * We now have three kinds of histograms:
+ * 1 - Traditional post-processing histograms specified by the histogram library
+     1a - feature-file based traditional ones
+     1b - SQL-based traditional ones.
+ * 2 - In-memory histograms (used primarily by beapi)
+ */
 
 
-//static const int LINE_LEN = 80;         // keep track of where we are on the line
 void feature_recorder_set::add_histogram(const histogram_def &def)
 {
     feature_recorder *fr = get_name(def.feature);
