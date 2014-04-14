@@ -46,15 +46,24 @@ static const char *schema_hist[] = {
 
 /* This performs the histogram operation */
 static const char *schema_hist1[] = {
-    "INSERT INTO h_%s select count(*),feature_utf8 from f_%s group by feature_utf8",
+    "INSERT INTO h_%s select COUNT(*),feature_utf8 from f_%s GROUP BY feature_utf8",
+    0};
+
+static const char *schema_hist2[] = {
+    "INSERT INTO h_%s select sum(count),BEHIST(feature_utf8) from h_%s GROUP BY BEHIST(feature_utf8)",
     0};
 
 static const char *insert_stmt = "INSERT INTO f_%s VALUES (?1, ?2, ?3, ?4, ?5)";
 
 class beapi_sql_stmt {
     BEAPI_SQLITE3_STMT *stmt;                 // prepared statement
+    /******************************************************
+     *** neither copying nor assignment is implemented. ***
+     ******************************************************/
+    beapi_sql_stmt(const beapi_sql_stmt &);
+    beapi_sql_stmt &operator=(const beapi_sql_stmt &);
 public:
-    beapi_sql_stmt(sqlite3 *db3,const std::string &featurename){
+    beapi_sql_stmt(sqlite3 *db3,const std::string &featurename):stmt(){
 #ifdef HAVE_SQLITE3_H
         /* prepare the statement */
         char buf[1024];
@@ -70,8 +79,8 @@ public:
         }
 #endif
     }
-    void insert_feature(const pos0_t &pos,const std::string &feature,const std::string &feature8, const std::string &context)
-    {
+    void insert_feature(const pos0_t &pos,
+                        const std::string &feature,const std::string &feature8, const std::string &context) {
 #ifdef HAVE_SQLITE3_H
         const char *ps = pos.str().c_str();
         const char *fs = feature.c_str();
@@ -112,7 +121,7 @@ void feature_recorder_set::db_create()
 {
     assert(db3==0);
     std::string dbfname  = outdir + "/report.sqlite3";
-    std::cerr << "create_feature_database " << dbfname << "\n";
+    //std::cerr << "create_feature_database " << dbfname << "\n";
     if (sqlite3_open_v2(dbfname.c_str(), &db3,
                         SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE|SQLITE_OPEN_FULLMUTEX,
                         0)!=SQLITE_OK) {
@@ -175,12 +184,21 @@ void feature_recorder::write0_db(const pos0_t &pos0,const std::string &feature,c
 
 /* Hook for writing histogram
  */
-int callback_counter(void *param, int argc, char **argv, char **azColName)
+static int callback_counter(void *param, int argc, char **argv, char **azColName)
 {
-    printf("CALLBACK\n");
     int *counter = reinterpret_cast<int *>(param);
     (*counter)++;
     return 0;
+}
+
+static void behist(sqlite3_context*ctx,int argc,sqlite3_value**argv)
+{
+    const histogram_def *def = reinterpret_cast<const histogram_def *>(sqlite3_user_data(ctx));
+    //std::cerr << "behist feature=" << def->feature << "  suffix=" << def->suffix << "  argc=" << argc << "value = " << sqlite3_value_text(argv[0]) << "\n";
+    std::string new_feature(reinterpret_cast<const char *>(sqlite3_value_text(argv[0])));
+    if (def->reg.search(new_feature,&new_feature,0,0)) {
+        sqlite3_result_text(ctx,new_feature.c_str(),new_feature.size(),0);
+    }
 }
 
 void feature_recorder::dump_histogram_db(const histogram_def &def,void *user,feature_recorder::dump_callback_t cb) const
@@ -189,7 +207,6 @@ void feature_recorder::dump_histogram_db(const histogram_def &def,void *user,fea
     std::string query = "SELECT name FROM sqlite_master WHERE type='table' AND name='h_" + def.feature +"'";
     char *errmsg=0;
     int rowcount=0;
-    std::cerr << "QUERY: " << query << "\n";
     if (sqlite3_exec(fs.db3,query.c_str(),callback_counter,&rowcount,&errmsg)){
         std::cerr << "sqlite3: " << errmsg << "\n";
         return;
@@ -200,18 +217,38 @@ void feature_recorder::dump_histogram_db(const histogram_def &def,void *user,fea
     }
     /* Now create the summarized histogram for the regex, if it is not existing. */
     if (def.pattern.size()>0){
-        /* go through all of the features and build a new table */
+        /* Create the database where we will add the histogram */
+        std::string hname = def.feature + "_" + def.suffix;
+
+        /* Remove any "-" characters if present */
+        for(size_t i=0;i<hname.size();i++){
+            if (hname[i]=='-') hname[i]='_';
+        }
+
+        //std::cerr << "CREATING TABLE = " << hname << "\n";
+
+        if (sqlite3_create_function_v2(fs.db3,"BEHIST",1,SQLITE_UTF8|SQLITE_DETERMINISTIC,
+                                       (void *)&def,behist,0,0,0)) {
+            std::cerr << "could not register function BEHIST\n";
+            return;
+        }
+        fs.db_send_sql(schema_hist, hname , hname); // create the table
+        fs.db_send_sql(schema_hist2, hname , def.feature); // select into it from a function of the old histogram table
+
+        /* erase the user defined function */
+        if (sqlite3_create_function_v2(fs.db3,"BEHIST",1,SQLITE_UTF8|SQLITE_DETERMINISTIC,
+                                       (void *)&def,0,0,0,0)) {
+            std::cerr << "could not remove function BEHIST\n";
+            return;
+        }
     }
 }
-
-
 
 #else
 /* sqlite3 is typedef'ed to void if the .h is not available */
 void feature_recorder_set::db_create_table(const std::string &name) {}
 void feature_recorder_set::db_create() {}
 void feature_recorder_set::db_close() {}
-//void feature_recorder_set::db_begin_transaction(){}
 void feature_recorder_set::db_commit(){}
 void feature_recorder::write0_db(const pos0_t &pos0,const std::string &feature,const std::string &context){}
 void feature_recorder::dump_histogram_db(const histogram_def &def,void *user,feature_recorder::dump_callback_t cb) const {}
