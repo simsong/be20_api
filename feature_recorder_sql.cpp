@@ -211,9 +211,10 @@ void feature_recorder::dump_histogram_db(const histogram_def &def,void *user,fea
 void feature_recorder_set::db_create_table(const std::string &name) {}
 void feature_recorder_set::db_create() {}
 void feature_recorder_set::db_close() {}
-void feature_recorder_set::db_begin_transaction(){}
+//void feature_recorder_set::db_begin_transaction(){}
 void feature_recorder_set::db_commit(){}
-void feature_recorder::write0_db(){}
+void feature_recorder::write0_db(const pos0_t &pos0,const std::string &feature,const std::string &context){}
+void feature_recorder::dump_histogram_db(const histogram_def &def,void *user,feature_recorder::dump_callback_t cb) const {}
 #endif
 
 #ifdef STAND
