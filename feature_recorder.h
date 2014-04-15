@@ -145,27 +145,28 @@ public:
      * These flags control scanners.  Set them with set_flag().
      */
     /** Disable this recorder. */
-    static const int FLAG_DISABLED=0x01;         // Disabled
-    static const int FLAG_NO_CONTEXT=0x02;       // Do not write context.
-    static const int FLAG_NO_STOPLIST=0x04;      // Do not honor the stoplist/alertlist.
-    static const int FLAG_NO_ALERTLIST=0x04;     // Do not honor the stoplist/alertlist.
+    static const int FLAG_DISABLED         = 0x01;      // feature recorder is Disabled
+    static const int FLAG_NO_CONTEXT       = 0x02;      // Do not write context.
+    static const int FLAG_NO_STOPLIST      = 0x04;      // Do not honor the stoplist/alertlist.
+    static const int FLAG_NO_ALERTLIST     = 0x08;      // Do not honor the stoplist/alertlist.
     /**
      * Normally feature recorders automatically quote non-UTF8 characters
      * with \x00 notation and quote "\" as \x5C. Specify FLAG_NO_QUOTE to
      * disable this behavior.
      */
-    static const int FLAG_NO_QUOTE=0x08;         // do not escape UTF8 codes
+    static const int FLAG_NO_QUOTE         = 0x10;         // do not escape UTF8 codes
 
     /**
      * Use this flag the feature recorder is sending UTF-8 XML.
      * non-UTF8 will be quoted but "\" will not be escaped.
      */
-    static const int FLAG_XML    = 0x10;         // will be sending XML
+    static const int FLAG_XML              = 0x20;         // will be sending XML
 
     /**
      * histogram support.
      */
-    static const uint32_t FLAG_NO_FEATURES   = 0x40;  // do not record features (just histogram)
+    static const uint32_t FLAG_NO_FEATURES = 0x40;  // do not record features (just memory histogram)
+    static const uint32_t FLAG_NO_FEATURES_SQL = 0x80;  // do not write features to SQL
 
     /** @} */
     static const int max_histogram_files = 10;  // don't make more than 10 files in low-memory conditions

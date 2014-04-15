@@ -525,7 +525,8 @@ void feature_recorder::printf(const char *fmt, ...)
 
 void feature_recorder::write0(const pos0_t &pos0,const std::string &feature,const std::string &context)
 {
-    if ( fs.flag_set(feature_recorder_set::ENABLE_SQLITE3_RECORDERS )) {
+    if ( fs.flag_set(feature_recorder_set::ENABLE_SQLITE3_RECORDERS ) &&
+         this->flag_notset(feature_recorder::FLAG_NO_FEATURES_SQL) ) {
         write0_db( pos0, feature, context);
     }
     if ( fs.flag_notset(feature_recorder_set::DISABLE_FILE_RECORDERS )) {

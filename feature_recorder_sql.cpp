@@ -178,7 +178,9 @@ void feature_recorder::write0_db(const pos0_t &pos0,const std::string &feature,c
     if(stmt==0){
         stmt = new beapi_sql_stmt(fs.db3,name);
     }
-    stmt->insert_feature(pos0,feature,feature8 ? *feature8 : feature,context);
+    stmt->insert_feature(pos0,feature,
+                         feature8 ? *feature8 : feature,
+                         flag_set(feature_recorder::FLAG_NO_CONTEXT) ? "" : context);
     if (feature8) delete feature8;
 }
 

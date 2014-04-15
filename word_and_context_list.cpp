@@ -1,7 +1,11 @@
+/**
+ * class word_and_context_list reads from disk and maintains in memory
+ * a data structure that is used for the stop list and alert list.
+ */
+
 #include "config.h"
 #include "word_and_context_list.h"
 #include "beregex.h"
-//#include "feature_recorder.h"
 
 void word_and_context_list::add_regex(const std::string &pat)
 {
@@ -36,12 +40,6 @@ int word_and_context_list::readfile(const std::string &filename)
     while(getline(i,line)){
 	line_counter++;
 	if(line.size()==0) continue;
-//	if(line_counter==1 && line.size()>3
-//	   && line[0]==feature_recorder::UTF8_BOM[0]
-//	   && line[1]==feature_recorder::UTF8_BOM[1]
-//	   && line[2]==feature_recorder::UTF8_BOM[2]){
-//	    line = line.substr(3);	// remove the UTF8 BOM
-//	}
 	if(line[0]=='#') continue; // it's a comment
 	if((*line.end())=='\r'){
 	    line.erase(line.end());	/* remove the last character if it is a \r */
