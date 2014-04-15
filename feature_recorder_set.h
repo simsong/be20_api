@@ -125,9 +125,8 @@ public:
      ****************************************************************/
     
 
-    void    db_send_sql(const char **stmts,const std::string &arg1,const std::string &arg2) ;
     void    db_create_table(const std::string &name) ;
-    void    db_create() ;
+    void    db_create();
     void    db_transaction_begin();
     void    db_commit() ;               // commit current transaction
     void    db_close() ;             // 

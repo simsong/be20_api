@@ -15,12 +15,19 @@
 #include "bulk_extractor_i.h"
 #include "histogram.h"
 
+/*
+ * Time results with ubnist1 on R4:
+ * no SQL - 79 seconds
+ * no pragmas - 651 seconds
+ * "PRAGMA synchronous =  OFF", - 146 second
+ * "PRAGMA synchronous =  OFF", "PRAGMA journal_mode=MEMORY", - 79 seconds
+ */
+
 #ifdef HAVE_LIBSQLITE3
 
 static const char *schema_db[] = {
-    /* These optimizations are unsafe and don't seem to improve performance significantly */
-    //"PRAGMA synchronous =  OFF",
-    //"PRAGMA journal_mode=MEMORY",
+    "PRAGMA synchronous =  OFF",       // don't wait for disk writes to complete
+    "PRAGMA journal_mode=MEMORY",
     //"PRAGMA temp_store=MEMORY",
     "PRAGMA cache_size = 200000",        // 10x normal cache
     "CREATE TABLE db_info (schema_ver INTEGER, bulk_extractor_ver INTEGER)",
@@ -50,7 +57,7 @@ static const char *schema_hist1[] = {
     0};
 
 static const char *schema_hist2[] = {
-    "INSERT INTO h_%s select sum(count),BEHIST(feature_utf8) from h_%s GROUP BY BEHIST(feature_utf8)",
+    "INSERT INTO h_%s select sum(count),BEHIST(feature_utf8) from h_%s where BEHIST(feature_utf8)!='' GROUP BY BEHIST(feature_utf8)",
     0};
 
 static const char *insert_stmt = "INSERT INTO f_%s VALUES (?1, ?2, ?3, ?4, ?5)";
@@ -99,12 +106,12 @@ public:
     }
 };
 
-void feature_recorder_set::db_send_sql(const char **stmts,const std::string &arg1,const std::string &arg2)
+void db_send_sql(BEAPI_SQLITE3 *db3,const char **stmts,const std::string &arg1,const std::string &arg2,const std::string &arg3)
 {
     for(int i=0;stmts[i];i++){
         char *errmsg = 0;
         char buf[65536];
-        snprintf(buf,sizeof(buf),stmts[i],arg1.c_str(),arg2.c_str());
+        snprintf(buf,sizeof(buf),stmts[i],arg1.c_str(),arg2.c_str(),arg3.c_str());
         if(sqlite3_exec(db3,buf,NULL,NULL,&errmsg) != SQLITE_OK ) {
             fprintf(stderr,"Error executing '%s' : %s\n",buf,errmsg);
             exit(1);
@@ -114,7 +121,7 @@ void feature_recorder_set::db_send_sql(const char **stmts,const std::string &arg
 
 void feature_recorder_set::db_create_table(const std::string &name)
 {
-    db_send_sql(schema_tbl,name,name);
+    db_send_sql(db3,schema_tbl,name,name,"");
 }
 
 void feature_recorder_set::db_create()
@@ -129,7 +136,7 @@ void feature_recorder_set::db_create()
         sqlite3_close(db3);
         exit(1);
     }
-    db_send_sql(schema_db,"","");
+    db_send_sql(db3,schema_db,"","","");
 }
 
 void feature_recorder_set::db_close()
@@ -214,8 +221,8 @@ void feature_recorder::dump_histogram_db(const histogram_def &def,void *user,fea
         return;
     }
     if (rowcount==0){
-        fs.db_send_sql(schema_hist, def.feature, def.feature); // creates the histogram
-        fs.db_send_sql(schema_hist1, def.feature, def.feature); // creates the histogram
+        db_send_sql(fs.db3,schema_hist, def.feature, def.feature,""); // creates the histogram
+        db_send_sql(fs.db3,schema_hist1, def.feature, def.feature,""); // creates the histogram
     }
     /* Now create the summarized histogram for the regex, if it is not existing. */
     if (def.pattern.size()>0){
@@ -234,8 +241,8 @@ void feature_recorder::dump_histogram_db(const histogram_def &def,void *user,fea
             std::cerr << "could not register function BEHIST\n";
             return;
         }
-        fs.db_send_sql(schema_hist, hname , hname); // create the table
-        fs.db_send_sql(schema_hist2, hname , def.feature); // select into it from a function of the old histogram table
+        db_send_sql(fs.db3,schema_hist, hname , hname,""); // create the table
+        db_send_sql(fs.db3,schema_hist2, hname , def.feature, ""); // select into it from a function of the old histogram table
 
         /* erase the user defined function */
         if (sqlite3_create_function_v2(fs.db3,"BEHIST",1,SQLITE_UTF8|SQLITE_DETERMINISTIC,
@@ -248,8 +255,13 @@ void feature_recorder::dump_histogram_db(const histogram_def &def,void *user,fea
 
 #else
 /* sqlite3 is typedef'ed to void if the .h is not available */
+void feature_recorder_set::db_create()
+{
+    std::cerr << "*** CANNOT CREATE SQLITE3 DATABASE ***\n";
+    std::cerr << "*** Compiled without libsqlite     ***\n";
+    assert(0);
+}
 void feature_recorder_set::db_create_table(const std::string &name) {}
-void feature_recorder_set::db_create() {}
 void feature_recorder_set::db_close() {}
 void feature_recorder_set::db_commit(){}
 void feature_recorder::write0_db(const pos0_t &pos0,const std::string &feature,const std::string &context){}
