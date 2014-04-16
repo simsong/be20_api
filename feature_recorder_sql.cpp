@@ -60,7 +60,7 @@ static const char *schema_hist2[] = {
     "INSERT INTO h_%s select sum(count),BEHIST(feature_utf8) from h_%s where BEHIST(feature_utf8)!='' GROUP BY BEHIST(feature_utf8)",
     0};
 
-static const char *insert_stmt = "INSERT INTO f_%s VALUES (?1, ?2, ?3, ?4, ?5)";
+static const char *insert_stmt = "INSERT INTO f_%s (offset,path,feature_eutf8,feature_utf8,context_eutf8) VALUES (?1, ?2, ?3, ?4, ?5)";
 
 class beapi_sql_stmt {
     BEAPI_SQLITE3_STMT *stmt;                 // prepared statement
@@ -89,15 +89,12 @@ public:
     void insert_feature(const pos0_t &pos,
                         const std::string &feature,const std::string &feature8, const std::string &context) {
 #ifdef HAVE_SQLITE3_H
-        const char *ps = pos.str().c_str();
-        const char *fs = feature.c_str();
-        const char *f8 = feature8.c_str();
-        const char *cs = context.c_str();
-        sqlite3_bind_int(stmt,  1, pos.offset);
-        sqlite3_bind_text(stmt, 2, ps, strlen(ps), SQLITE_STATIC);
-        sqlite3_bind_text(stmt, 3, fs, strlen(fs), SQLITE_STATIC);
-        sqlite3_bind_text(stmt, 4, f8, strlen(f8), SQLITE_STATIC);
-        sqlite3_bind_text(stmt, 5, cs, strlen(cs), SQLITE_STATIC);
+        const std::string &path = pos.str();
+        sqlite3_bind_int64(stmt, 1, pos.offset); // offset
+        sqlite3_bind_text(stmt, 2, path.data(), path.size(), SQLITE_STATIC); // path
+        sqlite3_bind_text(stmt, 3, feature.data(), feature.size(), SQLITE_STATIC);
+        sqlite3_bind_text(stmt, 4, feature8.data(), feature8.size(), SQLITE_STATIC);
+        sqlite3_bind_text(stmt, 5, context.data(), context.size(), SQLITE_STATIC);
         if (sqlite3_step(stmt) != SQLITE_DONE) {
             fprintf(stderr,"sqlite3_step failed\n");
         }
