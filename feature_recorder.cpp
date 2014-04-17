@@ -84,7 +84,7 @@ void feature_recorder::banner_stamp(std::ostream &os,const std::string &header) 
 feature_recorder::feature_recorder(class feature_recorder_set &fs_,
                                    const std::string &name_):
     flags(0),
-    name(name_),ignore_encoding(),ios(),stmt(),
+    name(name_),ignore_encoding(),ios(),Mstmt(),stmt(),
     histogram_defs(),
     fs(fs_),
     count_(0),context_window_before(context_window_default),context_window_after(context_window_default),

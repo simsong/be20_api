@@ -1,6 +1,6 @@
 CPPFLAGS=-I.. -I../.. -I. -I/usr/local/include -I/opt/local/include -L/usr/local/lib  -L/opt/local/lib
 all:
-	(cd ..; make)
+	(cd ..; $(MAKE))
 
 
 stand: feature_sql

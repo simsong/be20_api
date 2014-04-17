@@ -80,6 +80,7 @@ public:
         for(feature_recorder_map::iterator i = frm.begin();i!=frm.end();i++){
             delete i->second;
         }
+        db_close();
     }
 
     std::string get_input_fname()           const {return input_fname;}
@@ -125,9 +126,11 @@ public:
      ****************************************************************/
     
 
+    virtual void db_send_sql(BEAPI_SQLITE3 *db3,const char **stmts, ...) ;
+    virtual BEAPI_SQLITE3 *db_create_empty(const std::string &name) ;
     void    db_create_table(const std::string &name) ;
-    void    db_create();
-    void    db_transaction_begin();
+    void    db_create() ;
+    void    db_transaction_begin() ;
     void    db_commit() ;               // commit current transaction
     void    db_close() ;             // 
 

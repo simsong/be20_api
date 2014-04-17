@@ -129,6 +129,17 @@ class feature_recorder {
     /****************************************************************/
 
 public:
+    class besql_stmt {
+        besql_stmt(const besql_stmt &);
+        besql_stmt &operator=(const besql_stmt &);
+public:
+        BEAPI_SQLITE3_STMT *stmt;
+        besql_stmt(sqlite3 *db3,const char *sql);
+        virtual ~besql_stmt();
+        void insert_feature(const pos0_t &pos,
+                            const std::string &feature,const std::string &feature8, const std::string &context);
+    };
+
     typedef int (dump_callback_t)(void *user,const feature_recorder &fr,const histogram_def &def,
                                   const std::string &feature,const uint64_t &count);
     static void set_main_threadid(){
@@ -200,8 +211,8 @@ private:
     std::string  ignore_encoding;            // encoding to ignore for carving
     std::fstream ios;                        // where features are written 
     
-    mutable cppmutex Mstmt;                   // protect stmt
-    class beapi_sql_stmt *stmt;               // beapi sql statement
+    mutable cppmutex Mstmt;                  // protect stmt
+    class besql_stmt *stmt;                  // beapi sql statement
 
 protected:;
     histogram_defs_t      histogram_defs;    // histograms that are to be created for this feature recorder

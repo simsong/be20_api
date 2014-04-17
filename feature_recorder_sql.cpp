@@ -21,15 +21,21 @@
  * no pragmas - 651 seconds
  * "PRAGMA synchronous =  OFF", - 146 second
  * "PRAGMA synchronous =  OFF", "PRAGMA journal_mode=MEMORY", - 79 seconds
+ *
+ * Time with domexusers:
+ * no SQL - 
  */
 
 #ifdef HAVE_LIBSQLITE3
+#define SQLITE_EXTENSION ".sqlite"
+
+static int debug  = 0;
 
 static const char *schema_db[] = {
-    "PRAGMA synchronous =  OFF",       // don't wait for disk writes to complete
+    "PRAGMA synchronous =  OFF", 
     "PRAGMA journal_mode=MEMORY",
-    //"PRAGMA temp_store=MEMORY",
-    "PRAGMA cache_size = 200000",        // 10x normal cache
+    //"PRAGMA temp_store=MEMORY",  // did not improve performance
+    "PRAGMA cache_size = 400000", 
     "CREATE TABLE db_info (schema_ver INTEGER, bulk_extractor_ver INTEGER)",
     "INSERT INTO  db_info (schema_ver, bulk_extractor_ver) VALUES (1,1)",
     "CREATE TABLE be_features (tablename VARCHAR,comment TEXT)",
@@ -62,54 +68,56 @@ static const char *schema_hist2[] = {
 
 static const char *insert_stmt = "INSERT INTO f_%s (offset,path,feature_eutf8,feature_utf8,context_eutf8) VALUES (?1, ?2, ?3, ?4, ?5)";
 
-class beapi_sql_stmt {
-    BEAPI_SQLITE3_STMT *stmt;                 // prepared statement
-    /******************************************************
-     *** neither copying nor assignment is implemented. ***
-     ******************************************************/
-    beapi_sql_stmt(const beapi_sql_stmt &);
-    beapi_sql_stmt &operator=(const beapi_sql_stmt &);
-public:
-    beapi_sql_stmt(sqlite3 *db3,const std::string &featurename):stmt(){
+static const char *begin_transaction[] = {"BEGIN TRANSACTION",0};
+static const char *commit_transaction[] = {"BEGIN TRANSACTION",0};
+
+void feature_recorder::besql_stmt::insert_feature(const pos0_t &pos,
+                                                        const std::string &feature,
+                                                        const std::string &feature8, const std::string &context)
+{
 #ifdef HAVE_SQLITE3_H
-        /* prepare the statement */
-        char buf[1024];
-        snprintf(buf,sizeof(buf),insert_stmt,featurename.c_str());
-        sqlite3_prepare_v2(db3,buf, strlen(buf), &stmt, NULL);
-#endif
+    const std::string &path = pos.str();
+    sqlite3_bind_int64(stmt, 1, pos.offset); // offset
+    sqlite3_bind_text(stmt, 2, path.data(), path.size(), SQLITE_STATIC); // path
+    sqlite3_bind_text(stmt, 3, feature.data(), feature.size(), SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 4, feature8.data(), feature8.size(), SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 5, context.data(), context.size(), SQLITE_STATIC);
+    if (sqlite3_step(stmt) != SQLITE_DONE) {
+        fprintf(stderr,"sqlite3_step failed\n");
     }
-    ~beapi_sql_stmt(){
-#ifdef HAVE_SQLITE3_H
-        if(stmt){
-            sqlite3_finalize(stmt);
-            stmt = 0;
-        }
+    sqlite3_reset(stmt);
 #endif
-    }
-    void insert_feature(const pos0_t &pos,
-                        const std::string &feature,const std::string &feature8, const std::string &context) {
-#ifdef HAVE_SQLITE3_H
-        const std::string &path = pos.str();
-        sqlite3_bind_int64(stmt, 1, pos.offset); // offset
-        sqlite3_bind_text(stmt, 2, path.data(), path.size(), SQLITE_STATIC); // path
-        sqlite3_bind_text(stmt, 3, feature.data(), feature.size(), SQLITE_STATIC);
-        sqlite3_bind_text(stmt, 4, feature8.data(), feature8.size(), SQLITE_STATIC);
-        sqlite3_bind_text(stmt, 5, context.data(), context.size(), SQLITE_STATIC);
-        if (sqlite3_step(stmt) != SQLITE_DONE) {
-            fprintf(stderr,"sqlite3_step failed\n");
-        }
-        sqlite3_reset(stmt);
-#endif
-    }
 };
 
-void db_send_sql(BEAPI_SQLITE3 *db3,const char **stmts,const std::string &arg1,const std::string &arg2,const std::string &arg3)
+feature_recorder::besql_stmt::besql_stmt(sqlite3 *db3,const char *sql):stmt()
+{
+#ifdef HAVE_SQLITE3_H
+    sqlite3_prepare_v2(db3,sql, strlen(sql), &stmt, NULL);
+#endif
+}
+
+feature_recorder::besql_stmt::~besql_stmt()
+{
+#ifdef HAVE_SQLITE3_H
+    if(stmt){
+        sqlite3_finalize(stmt);
+        stmt = 0;
+    }
+#endif
+}
+
+void feature_recorder_set::db_send_sql(BEAPI_SQLITE3 *db,const char **stmts, ...)
 {
     for(int i=0;stmts[i];i++){
         char *errmsg = 0;
         char buf[65536];
-        snprintf(buf,sizeof(buf),stmts[i],arg1.c_str(),arg2.c_str(),arg3.c_str());
-        if(sqlite3_exec(db3,buf,NULL,NULL,&errmsg) != SQLITE_OK ) {
+
+        va_list ap;
+        va_start(ap,stmts);
+        vsnprintf(buf,sizeof(buf),stmts[i],ap);
+        va_end(ap);
+        if(debug) std::cerr << "SQL: " << buf << "\n";
+        if(sqlite3_exec(db,buf,NULL,NULL,&errmsg) != SQLITE_OK ) {
             fprintf(stderr,"Error executing '%s' : %s\n",buf,errmsg);
             exit(1);
         }
@@ -118,27 +126,35 @@ void db_send_sql(BEAPI_SQLITE3 *db3,const char **stmts,const std::string &arg1,c
 
 void feature_recorder_set::db_create_table(const std::string &name)
 {
-    db_send_sql(db3,schema_tbl,name,name,"");
+    db_send_sql(db3,schema_tbl,name.c_str(),name.c_str());
+}
+
+BEAPI_SQLITE3 *feature_recorder_set::db_create_empty(const std::string &name)
+{
+    std::string dbfname  = outdir + "/" + name +  SQLITE_EXTENSION;
+    if(debug) std::cerr << "create_feature_database " << dbfname << "\n";
+    BEAPI_SQLITE3 *db=0;
+    if (sqlite3_open_v2(dbfname.c_str(), &db,
+                        SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE|SQLITE_OPEN_FULLMUTEX,
+                        0)!=SQLITE_OK) {
+        std::cerr << "Cannot create database '" << dbfname << "': " << sqlite3_errmsg(db) << "\n";
+        sqlite3_close(db);
+        exit(1);
+    }
+    return db;
 }
 
 void feature_recorder_set::db_create()
 {
     assert(db3==0);
-    std::string dbfname  = outdir + "/report.sqlite3";
-    //std::cerr << "create_feature_database " << dbfname << "\n";
-    if (sqlite3_open_v2(dbfname.c_str(), &db3,
-                        SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE|SQLITE_OPEN_FULLMUTEX,
-                        0)!=SQLITE_OK) {
-        std::cerr << "Cannot create database '" << dbfname << "': " << sqlite3_errmsg(db3) << "\n";
-        sqlite3_close(db3);
-        exit(1);
-    }
-    db_send_sql(db3,schema_db,"","","");
+    db3 = db_create_empty("report");
+    db_send_sql(db3,schema_db);
 }
 
 void feature_recorder_set::db_close()
 {
     if(db3){
+        if(debug) std::cerr << "db_close()\n";
         sqlite3_close(db3);
         db3 = 0;
     }
@@ -148,12 +164,8 @@ void feature_recorder_set::db_transaction_begin()
 {
     cppmutex::lock lock(Min_transaction);
     if(!in_transaction){
-        char *errmsg = 0;
-        if(sqlite3_exec(db3,"BEGIN TRANSACTION",NULL,NULL,&errmsg)==SQLITE_OK){
-            in_transaction = true;
-        } else {
-            fprintf(stderr,"BEGIN TRANSACTION Error: %s\n",errmsg);
-        }
+        db_send_sql(db3,begin_transaction);
+        in_transaction = true;
     }
 }
 
@@ -161,12 +173,8 @@ void feature_recorder_set::db_commit()
 {
     cppmutex::lock lock(Min_transaction);
     if(in_transaction){
-        char *errmsg = 0;
-        if(sqlite3_exec(db3,"COMMIT TRANSACTION",NULL,NULL,&errmsg)==SQLITE_OK){
-            in_transaction = false;
-        } else {
-            fprintf(stderr,"COMMIT TRANSACTION Error: %s\n",errmsg);
-        }
+        db_send_sql(db3,commit_transaction);
+        in_transaction = false;
     }
 }
 
@@ -179,8 +187,10 @@ void feature_recorder::write0_db(const pos0_t &pos0,const std::string &feature,c
      */
     std::string *feature8 = HistogramMaker::convert_utf16_to_utf8(feature_recorder::unquote_string(feature));
     cppmutex::lock lock(Mstmt);
-    if(stmt==0){
-        stmt = new beapi_sql_stmt(fs.db3,name);
+    if(stmt==0){                        // create the compiled statement if we have never used it before
+        char buf[1024];
+        snprintf(buf,sizeof(buf),insert_stmt,name.c_str());
+        stmt = new besql_stmt(fs.db3,buf);
     }
     stmt->insert_feature(pos0,feature,
                          feature8 ? *feature8 : feature,
@@ -200,7 +210,8 @@ static int callback_counter(void *param, int argc, char **argv, char **azColName
 static void behist(sqlite3_context*ctx,int argc,sqlite3_value**argv)
 {
     const histogram_def *def = reinterpret_cast<const histogram_def *>(sqlite3_user_data(ctx));
-    //std::cerr << "behist feature=" << def->feature << "  suffix=" << def->suffix << "  argc=" << argc << "value = " << sqlite3_value_text(argv[0]) << "\n";
+    if(debug) std::cerr << "behist feature=" << def->feature << "  suffix="
+                        << def->suffix << "  argc=" << argc << "value = " << sqlite3_value_text(argv[0]) << "\n";
     std::string new_feature(reinterpret_cast<const char *>(sqlite3_value_text(argv[0])));
     if (def->reg.search(new_feature,&new_feature,0,0)) {
         sqlite3_result_text(ctx,new_feature.c_str(),new_feature.size(),0);
@@ -218,8 +229,9 @@ void feature_recorder::dump_histogram_db(const histogram_def &def,void *user,fea
         return;
     }
     if (rowcount==0){
-        db_send_sql(fs.db3,schema_hist, def.feature, def.feature,""); // creates the histogram
-        db_send_sql(fs.db3,schema_hist1, def.feature, def.feature,""); // creates the histogram
+        const char *feature = def.feature.c_str();
+        fs.db_send_sql(fs.db3,schema_hist, feature, feature); // creates the histogram
+        fs.db_send_sql(fs.db3,schema_hist1, feature, feature); // creates the histogram
     }
     /* Now create the summarized histogram for the regex, if it is not existing. */
     if (def.pattern.size()>0){
@@ -231,15 +243,16 @@ void feature_recorder::dump_histogram_db(const histogram_def &def,void *user,fea
             if (hname[i]=='-') hname[i]='_';
         }
 
-        //std::cerr << "CREATING TABLE = " << hname << "\n";
-
+        if(debug) std::cerr << "CREATING TABLE = " << hname << "\n";
         if (sqlite3_create_function_v2(fs.db3,"BEHIST",1,SQLITE_UTF8|SQLITE_DETERMINISTIC,
                                        (void *)&def,behist,0,0,0)) {
             std::cerr << "could not register function BEHIST\n";
             return;
         }
-        db_send_sql(fs.db3,schema_hist, hname , hname,""); // create the table
-        db_send_sql(fs.db3,schema_hist2, hname , def.feature, ""); // select into it from a function of the old histogram table
+        const char *fn = def.feature.c_str();
+        const char *hn = hname.c_str();
+        fs.db_send_sql(fs.db3,schema_hist, hn , hn); // create the table
+        fs.db_send_sql(fs.db3,schema_hist2, hn , fn); // select into it from a function of the old histogram table
 
         /* erase the user defined function */
         if (sqlite3_create_function_v2(fs.db3,"BEHIST",1,SQLITE_UTF8|SQLITE_DETERMINISTIC,
