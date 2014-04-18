@@ -133,7 +133,8 @@ public:
         besql_stmt(const besql_stmt &);
         besql_stmt &operator=(const besql_stmt &);
 public:
-        BEAPI_SQLITE3_STMT *stmt;
+        cppmutex           Mstmt;       // mutex
+        BEAPI_SQLITE3_STMT *stmt;       // these should be private so you can only get by asking for Mstmt
         besql_stmt(sqlite3 *db3,const char *sql);
         virtual ~besql_stmt();
         void insert_feature(const pos0_t &pos,
@@ -211,8 +212,7 @@ private:
     std::string  ignore_encoding;            // encoding to ignore for carving
     std::fstream ios;                        // where features are written 
     
-    mutable cppmutex Mstmt;                  // protect stmt
-    class besql_stmt *stmt;                  // beapi sql statement
+    class besql_stmt *stmt;                  // beapi sql statement (internal Mutex)
 
 protected:;
     histogram_defs_t      histogram_defs;    // histograms that are to be created for this feature recorder

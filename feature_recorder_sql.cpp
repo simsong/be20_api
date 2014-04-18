@@ -89,7 +89,7 @@ void feature_recorder::besql_stmt::insert_feature(const pos0_t &pos,
 #endif
 };
 
-feature_recorder::besql_stmt::besql_stmt(sqlite3 *db3,const char *sql):stmt()
+feature_recorder::besql_stmt::besql_stmt(sqlite3 *db3,const char *sql):Mstmt(),stmt()
 {
 #ifdef HAVE_SQLITE3_H
     sqlite3_prepare_v2(db3,sql, strlen(sql), &stmt, NULL);
@@ -188,7 +188,7 @@ void feature_recorder::write0_db(const pos0_t &pos0,const std::string &feature,c
      * We could make this more efficient.
      */
     std::string *feature8 = HistogramMaker::convert_utf16_to_utf8(feature_recorder::unquote_string(feature));
-    cppmutex::lock lock(Mstmt);
+    cppmutex::lock lock(stmt->Mstmt);
     if(stmt==0){                        // create the compiled statement if we have never used it before
         char buf[1024];
         snprintf(buf,sizeof(buf),insert_stmt,name.c_str());
