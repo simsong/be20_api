@@ -181,7 +181,7 @@ static inline int hexval(char ch)
 {
     if(ch>='0' && ch<='9') return ch-'0';
     if(ch>='a' && ch<='f') return ch-'a'+10;
-    if(ch>='A' && ch<='F') return ch-'a'+10;
+    if(ch>='A' && ch<='F') return ch-'A'+10;
     return 0;
 }
 
@@ -204,7 +204,7 @@ std::string feature_recorder::unquote_string(const std::string &s)
         }
         /* Look for hex coding */
         if(i+3<len && s[i]=='\\' && s[i+1]=='x' && isxdigit(s[i+2]) && isxdigit(s[i+3])){
-            uint8_t code = (hexval(s[i+2])<<4) | hexval(s[i+3]);
+            uint8_t code = (hexval(s[i+2])*16) | hexval(s[i+3]);
             out.push_back(code);
             i += 3;                     // skip over the digits
             continue;

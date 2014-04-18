@@ -131,7 +131,7 @@ public:
     void    db_create_table(const std::string &name) ;
     void    db_create() ;
     void    db_transaction_begin() ;
-    void    db_commit() ;               // commit current transaction
+    void    db_transaction_commit() ;               // commit current transaction
     void    db_close() ;             // 
 
     /****************************************************************

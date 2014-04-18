@@ -72,9 +72,6 @@ void feature_recorder_set::flush_all()
     for(feature_recorder_map::iterator i = frm.begin();i!=frm.end();i++){
         i->second->flush();
     } 
-    if ( flag_set(feature_recorder_set::ENABLE_SQLITE3_RECORDERS )) {
-        db_commit();
-    }
 }
 
 void feature_recorder_set::close_all()
@@ -82,6 +79,9 @@ void feature_recorder_set::close_all()
     for(feature_recorder_map::iterator i = frm.begin();i!=frm.end();i++){
         i->second->close();
     } 
+    if ( flag_set(feature_recorder_set::ENABLE_SQLITE3_RECORDERS )) {
+        db_transaction_commit();
+    }
 }
 
 

@@ -35,7 +35,7 @@ static const char *schema_db[] = {
     "PRAGMA synchronous =  OFF", 
     "PRAGMA journal_mode=MEMORY",
     //"PRAGMA temp_store=MEMORY",  // did not improve performance
-    "PRAGMA cache_size = 400000", 
+    "PRAGMA cache_size = 200000", 
     "CREATE TABLE db_info (schema_ver INTEGER, bulk_extractor_ver INTEGER)",
     "INSERT INTO  db_info (schema_ver, bulk_extractor_ver) VALUES (1,1)",
     "CREATE TABLE be_features (tablename VARCHAR,comment TEXT)",
@@ -69,7 +69,7 @@ static const char *schema_hist2[] = {
 static const char *insert_stmt = "INSERT INTO f_%s (offset,path,feature_eutf8,feature_utf8,context_eutf8) VALUES (?1, ?2, ?3, ?4, ?5)";
 
 static const char *begin_transaction[] = {"BEGIN TRANSACTION",0};
-static const char *commit_transaction[] = {"BEGIN TRANSACTION",0};
+static const char *commit_transaction[] = {"COMMIT TRANSACTION",0};
 
 void feature_recorder::besql_stmt::insert_feature(const pos0_t &pos,
                                                         const std::string &feature,
@@ -169,12 +169,14 @@ void feature_recorder_set::db_transaction_begin()
     }
 }
 
-void feature_recorder_set::db_commit()
+void feature_recorder_set::db_transaction_commit()
 {
     cppmutex::lock lock(Min_transaction);
     if(in_transaction){
         db_send_sql(db3,commit_transaction);
         in_transaction = false;
+    } else {
+        std::cerr << "No transaction to commit\n";
     }
 }
 
