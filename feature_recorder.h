@@ -133,11 +133,11 @@ public:
         besql_stmt(const besql_stmt &);
         besql_stmt &operator=(const besql_stmt &);
 public:
-        cppmutex           Mstmt;       // mutex
-        BEAPI_SQLITE3_STMT *stmt;       // these should be private so you can only get by asking for Mstmt
+        cppmutex           Mstmt;      // a mutext to protect it
+        BEAPI_SQLITE3_STMT *stmt;      // the prepared statement
         besql_stmt(sqlite3 *db3,const char *sql);
         virtual ~besql_stmt();
-        void insert_feature(const pos0_t &pos,
+        void insert_feature(const pos0_t &pos, // insert it into this table!
                             const std::string &feature,const std::string &feature8, const std::string &context);
     };
 
@@ -212,7 +212,7 @@ private:
     std::string  ignore_encoding;            // encoding to ignore for carving
     std::fstream ios;                        // where features are written 
     
-    class besql_stmt *stmt;                  // beapi sql statement (internal Mutex)
+    class besql_stmt *bs;                    // prepared beapi sql statement
 
 protected:;
     histogram_defs_t      histogram_defs;    // histograms that are to be created for this feature recorder
@@ -320,7 +320,8 @@ public:
     // write0() calls write0_sql() if sqlwriting is enabled
     virtual void write0(const pos0_t &pos0,const std::string &feature,const std::string &context);  
 private:
-    virtual void write0_db(const pos0_t &pos0,const std::string &feature,const std::string &context);  
+    virtual void db_write0(const pos0_t &pos0,const std::string &feature,const std::string &context);  
+    static const char *db_insert_stmt;
 public:
 
     // write a feature and its context; the feature may be in the context, but doesn't need to be.

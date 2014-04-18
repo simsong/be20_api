@@ -36,6 +36,44 @@ uint32_t feature_recorder::opt_max_feature_size=1024*1024;
 uint32_t feature_recorder::debug=0;
 
 
+/**
+ * Create a feature recorder object. Each recorder records a certain
+ * kind of feature.  Features are stored in a file. The filename is
+ * permutated based on the total number of threads and the current
+ * thread that's recording. Each thread records to a different file,
+ * and thus a different feature recorder, to avoid locking
+ * problems. 
+ *
+ * @param feature_recorder_set &fs - common information for all of the feature recorders
+ * @param name         - the name of the feature being recorded.
+ */
+
+feature_recorder::feature_recorder(class feature_recorder_set &fs_,
+                                   const std::string &name_):
+    flags(0),
+    name(name_),ignore_encoding(),ios(),bs(),
+    histogram_defs(),
+    fs(fs_),
+    count_(0),context_window_before(context_window_default),context_window_after(context_window_default),
+    Mf(),Mr(),mhistograms(),mhistogram_limit(),
+    stop_list_recorder(0),
+    file_number_(0),carve_mode(CARVE_ENCODED)
+{
+    //std::cerr << "feature_recorder(" << name << ") created\n";
+    open();                         // open if we are created
+    
+}
+
+/* Don't have to delete the stop_list_recorder because it is in the
+ * feature_recorder_set and will be separately deleted.
+ */
+feature_recorder::~feature_recorder()
+{
+    if(ios.is_open()){
+        ios.close();
+    }
+}
+
 void feature_recorder::banner_stamp(std::ostream &os,const std::string &header) const
 {
     int banner_lines = 0;
@@ -69,41 +107,6 @@ void feature_recorder::banner_stamp(std::ostream &os,const std::string &header) 
 }
 
 
-/**
- * Create a feature recorder object. Each recorder records a certain
- * kind of feature.  Features are stored in a file. The filename is
- * permutated based on the total number of threads and the current
- * thread that's recording. Each thread records to a different file,
- * and thus a different feature recorder, to avoid locking
- * problems. 
- *
- * @param feature_recorder_set &fs - common information for all of the feature recorders
- * @param name         - the name of the feature being recorded.
- */
-
-feature_recorder::feature_recorder(class feature_recorder_set &fs_,
-                                   const std::string &name_):
-    flags(0),
-    name(name_),ignore_encoding(),ios(),stmt(),
-    histogram_defs(),
-    fs(fs_),
-    count_(0),context_window_before(context_window_default),context_window_after(context_window_default),
-    Mf(),Mr(),mhistograms(),mhistogram_limit(),
-    stop_list_recorder(0),
-    file_number_(0),carve_mode(CARVE_ENCODED)
-{
-}
-
-/* Don't have to delete the stop_list_recorder because it is in the
- * feature_recorder_set and will be separately deleted.
- */
-feature_recorder::~feature_recorder()
-{
-    if(ios.is_open()){
-        ios.close();
-    }
-}
-
 
 /**
  * Return the filename with a counter
@@ -121,35 +124,50 @@ const std::string &feature_recorder::get_outdir() const
 
 /**
  * open a feature recorder file in the specified output directory.
+ * Called by create_name(). Not clear why it isn't called when created.
  */
 
 void feature_recorder::open()
 { 
-    std::string fname = fname_counter("");
-    ios.open(fname.c_str(),std::ios_base::in|std::ios_base::out|std::ios_base::ate);
-    if(ios.is_open()){                  // opened existing stream
-        ios.seekg(0L,std::ios_base::end);
-        while(ios.is_open()){
-            /* Get current position */
-            if(int(ios.tellg())==0){            // at beginning of file; stamp and return
-                ios.seekp(0L,std::ios_base::beg);    // be sure we are at the beginning of the file
-                return;
-            }
-            ios.seekg(-1,std::ios_base::cur); // backup to once less than the end of the file
-            if (ios.peek()=='\n'){           // we are finally on the \n
-                ios.seekg(1L,std::ios_base::cur); // move the getting one forward
-                ios.seekp(ios.tellg(),std::ios_base::beg); // put the putter at the getter location
-                count_ = 1;                            // greater than zero
-                return;
+    if (fs.flag_set(feature_recorder_set::SET_DISABLED)) return;        // feature recorder set is disabled
+
+    /* write to a database? Create tables if necessary and create a prepared statement */
+    if (fs.flag_set(feature_recorder_set::ENABLE_SQLITE3_RECORDERS)) {  
+        char buf[1024];
+        fs.db_create_table(name);
+        snprintf(buf,sizeof(buf),db_insert_stmt,name.c_str());
+        bs = new besql_stmt(fs.db3,buf);
+    }
+
+    /* Write to a file? Open the file and seek to the last line if it exist, otherwise just open database */
+    if (fs.flag_notset(feature_recorder_set::DISABLE_FILE_RECORDERS)){
+        /* Open the file recorder */
+        std::string fname = fname_counter("");
+        ios.open(fname.c_str(),std::ios_base::in|std::ios_base::out|std::ios_base::ate);
+        if(ios.is_open()){                  // opened existing stream
+            ios.seekg(0L,std::ios_base::end);
+            while(ios.is_open()){
+                /* Get current position */
+                if(int(ios.tellg())==0){            // at beginning of file; stamp and return
+                    ios.seekp(0L,std::ios_base::beg);    // be sure we are at the beginning of the file
+                    return;
+                }
+                ios.seekg(-1,std::ios_base::cur); // backup to once less than the end of the file
+                if (ios.peek()=='\n'){           // we are finally on the \n
+                    ios.seekg(1L,std::ios_base::cur); // move the getting one forward
+                    ios.seekp(ios.tellg(),std::ios_base::beg); // put the putter at the getter location
+                    count_ = 1;                            // greater than zero
+                    return;
+                }
             }
         }
-    }
-    // Just open the stream for output
-    ios.open(fname.c_str(),std::ios_base::out);
-    if(!ios.is_open()){
-        std::cerr << "*** feature_recorder::open CANNOT OPEN FEATURE FILE FOR WRITING "
-             << fname << ":" << strerror(errno) << "\n";
-        exit(1);
+        // Just open the stream for output
+        ios.open(fname.c_str(),std::ios_base::out);
+        if(!ios.is_open()){
+            std::cerr << "*** feature_recorder::open CANNOT OPEN FEATURE FILE FOR WRITING "
+                      << fname << ":" << strerror(errno) << "\n";
+            exit(1);
+        }
     }
 }
 
@@ -381,14 +399,14 @@ void feature_recorder::dump_histogram_file(const histogram_def &def,void *user,f
                       << name << "\n";
         }
             
-        /* Output what we have */
+        /* Output what we have to a new file ofname */
         std::stringstream real_suffix;
 
         real_suffix << def.suffix;
         if(histogram_counter>0) real_suffix << histogram_counter;
         std::string ofname = fname_counter(real_suffix.str()); // histogram name
         std::ofstream o;
-        o.open(ofname.c_str());
+        o.open(ofname.c_str());         // open the file
         if(!o.is_open()){
             std::cerr << "Cannot open histogram output file: " << ofname << "\n";
             return;
@@ -542,7 +560,7 @@ void feature_recorder::write0(const pos0_t &pos0,const std::string &feature,cons
 {
     if ( fs.flag_set(feature_recorder_set::ENABLE_SQLITE3_RECORDERS ) &&
          this->flag_notset(feature_recorder::FLAG_NO_FEATURES_SQL) ) {
-        write0_db( pos0, feature, context);
+        db_write0( pos0, feature, context);
     }
     if ( fs.flag_notset(feature_recorder_set::DISABLE_FILE_RECORDERS )) {
         std::stringstream ss;

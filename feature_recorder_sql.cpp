@@ -36,21 +36,22 @@ static const char *schema_db[] = {
     "PRAGMA journal_mode=MEMORY",
     //"PRAGMA temp_store=MEMORY",  // did not improve performance
     "PRAGMA cache_size = 200000", 
-    "CREATE TABLE db_info (schema_ver INTEGER, bulk_extractor_ver INTEGER)",
+    "CREATE TABLE IF NOT EXISTS db_info (schema_ver INTEGER, bulk_extractor_ver INTEGER)",
     "INSERT INTO  db_info (schema_ver, bulk_extractor_ver) VALUES (1,1)",
-    "CREATE TABLE be_features (tablename VARCHAR,comment TEXT)",
-    "CREATE TABLE be_config (name VARCHAR,value VARCHAR)",
+    "CREATE TABLE IF NOT EXISTS be_features (tablename VARCHAR,comment TEXT)",
+    "CREATE TABLE IF NOT EXISTS be_config (name VARCHAR,value VARCHAR)",
     0};
 
+/* Create a feature table and note that it has been created in be_features */
 static const char *schema_tbl[] = {
-    "CREATE TABLE f_%s (offset INTEGER(12), path VARCHAR, feature_eutf8 TEXT, feature_utf8 TEXT, context_eutf8 TEXT)",
-    "CREATE INDEX f_%s_idx1 ON f_%s(offset)",
-    "CREATE INDEX f_%s_idx2 ON f_%s(feature_eutf8)",
-    "CREATE INDEX f_%s_idx3 ON f_%s(feature_utf8)",
+    "CREATE TABLE IF NOT EXISTS f_%s (offset INTEGER(12), path VARCHAR, feature_eutf8 TEXT, feature_utf8 TEXT, context_eutf8 TEXT)",
+    "CREATE INDEX IF NOT EXISTS f_%s_idx1 ON f_%s(offset)",
+    "CREATE INDEX IF NOT EXISTS f_%s_idx2 ON f_%s(feature_eutf8)",
+    "CREATE INDEX IF NOT EXISTS f_%s_idx3 ON f_%s(feature_utf8)",
     "INSERT INTO be_features (tablename,comment) VALUES ('f_%s','')",
     0};
 
-/* This creates the base histogram */
+/* This creates the base histogram. Note that the SQL fails if the histogram exists */
 static const char *schema_hist[] = {
     "CREATE TABLE h_%s (count INTEGER(12), feature_utf8 TEXT)",
     "CREATE INDEX h_%s_idx1 ON h_%s(count)",
@@ -66,7 +67,7 @@ static const char *schema_hist2[] = {
     "INSERT INTO h_%s select sum(count),BEHIST(feature_utf8) from h_%s where BEHIST(feature_utf8)!='' GROUP BY BEHIST(feature_utf8)",
     0};
 
-static const char *insert_stmt = "INSERT INTO f_%s (offset,path,feature_eutf8,feature_utf8,context_eutf8) VALUES (?1, ?2, ?3, ?4, ?5)";
+const char *feature_recorder::db_insert_stmt = "INSERT INTO f_%s (offset,path,feature_eutf8,feature_utf8,context_eutf8) VALUES (?1, ?2, ?3, ?4, ?5)";
 
 static const char *begin_transaction[] = {"BEGIN TRANSACTION",0};
 static const char *commit_transaction[] = {"COMMIT TRANSACTION",0};
@@ -76,6 +77,8 @@ void feature_recorder::besql_stmt::insert_feature(const pos0_t &pos,
                                                         const std::string &feature8, const std::string &context)
 {
 #ifdef HAVE_SQLITE3_H
+    assert(stmt!=0);
+    cppmutex::lock lock(Mstmt);           // grab a lock
     const std::string &path = pos.str();
     sqlite3_bind_int64(stmt, 1, pos.offset); // offset
     sqlite3_bind_text(stmt, 2, path.data(), path.size(), SQLITE_STATIC); // path
@@ -92,22 +95,25 @@ void feature_recorder::besql_stmt::insert_feature(const pos0_t &pos,
 feature_recorder::besql_stmt::besql_stmt(sqlite3 *db3,const char *sql):Mstmt(),stmt()
 {
 #ifdef HAVE_SQLITE3_H
+    assert(db3!=0);
+    assert(sql!=0);
     sqlite3_prepare_v2(db3,sql, strlen(sql), &stmt, NULL);
+    assert(stmt!=0);
 #endif
 }
 
 feature_recorder::besql_stmt::~besql_stmt()
 {
 #ifdef HAVE_SQLITE3_H
-    if(stmt){
-        sqlite3_finalize(stmt);
-        stmt = 0;
-    }
+    assert(stmt!=0);
+    sqlite3_finalize(stmt);
+    stmt = 0;
 #endif
 }
 
 void feature_recorder_set::db_send_sql(BEAPI_SQLITE3 *db,const char **stmts, ...)
 {
+    assert(db!=0);
     for(int i=0;stmts[i];i++){
         char *errmsg = 0;
         char buf[65536];
@@ -126,11 +132,13 @@ void feature_recorder_set::db_send_sql(BEAPI_SQLITE3 *db,const char **stmts, ...
 
 void feature_recorder_set::db_create_table(const std::string &name)
 {
+    assert(name.size()>0);
     db_send_sql(db3,schema_tbl,name.c_str(),name.c_str());
 }
 
 BEAPI_SQLITE3 *feature_recorder_set::db_create_empty(const std::string &name)
 {
+    assert(name.size()>0);
     std::string dbfname  = outdir + "/" + name +  SQLITE_EXTENSION;
     if(debug) std::cerr << "create_feature_database " << dbfname << "\n";
     BEAPI_SQLITE3 *db=0;
@@ -181,20 +189,15 @@ void feature_recorder_set::db_transaction_commit()
 }
 
 /* Hook for writing feature to SQLite3 database */
-void feature_recorder::write0_db(const pos0_t &pos0,const std::string &feature,const std::string &context)
+void feature_recorder::db_write0(const pos0_t &pos0,const std::string &feature,const std::string &context)
 {
     /**
      * Note: this is not very efficient, passing through a quoted feature and then unquoting it.
      * We could make this more efficient.
      */
     std::string *feature8 = HistogramMaker::convert_utf16_to_utf8(feature_recorder::unquote_string(feature));
-    cppmutex::lock lock(stmt->Mstmt);
-    if(stmt==0){                        // create the compiled statement if we have never used it before
-        char buf[1024];
-        snprintf(buf,sizeof(buf),insert_stmt,name.c_str());
-        stmt = new besql_stmt(fs.db3,buf);
-    }
-    stmt->insert_feature(pos0,feature,
+    assert(bs!=0);
+    bs->insert_feature(pos0,feature,
                          feature8 ? *feature8 : feature,
                          flag_set(feature_recorder::FLAG_NO_CONTEXT) ? "" : context);
     if (feature8) delete feature8;

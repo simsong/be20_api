@@ -113,14 +113,14 @@ feature_recorder *feature_recorder_set::get_name(const std::string &name) const
 
 feature_recorder *feature_recorder_set::create_name_factory(const std::string &name_)
 {
-    if (flag_set(ENABLE_SQLITE3_RECORDERS)) {
-        db_create_table(name_);
-    }
     return new feature_recorder(*this,name_);
 }
 
 
-void feature_recorder_set::create_name(const std::string &name,bool create_stop_file) 
+/*
+ * Create a named feature recorder, any associated stoplist recorders, and open the files
+ */
+void feature_recorder_set::create_name(const std::string &name,bool create_stop_recorder) 
 {
     if(frm.find(name)!=frm.end()){
         std::cerr << "create_name: feature recorder '" << name << "' already exists\n";
@@ -128,22 +128,15 @@ void feature_recorder_set::create_name(const std::string &name,bool create_stop_
     }
 
     feature_recorder *fr = create_name_factory(name);
-    feature_recorder *fr_stopped = 0;
 
     frm[name] = fr;
-    if(create_stop_file){
+    if (create_stop_recorder){
         std::string name_stopped = name+"_stopped";
         
-        fr_stopped = create_name_factory(name_stopped);
+        feature_recorder *fr_stopped = create_name_factory(name_stopped);
         fr->set_stop_list_recorder(fr_stopped);
         frm[name_stopped] = fr_stopped;
     }
-    
-    if(flags & SET_DISABLED) return;        // don't open if we are disabled
-    
-    /* Open the output!*/
-    fr->open();
-    if(fr_stopped) fr_stopped->open();
 }
 
 feature_recorder *feature_recorder_set::get_alert_recorder() const
