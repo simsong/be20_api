@@ -51,6 +51,7 @@
 
 #ifndef BEAPI_SQLITE3
 #define BEAPI_SQLITE3      void
+#define BEAPI_SQLITE3_STMT void
 #endif
 
 
@@ -135,7 +136,7 @@ public:
 public:
         cppmutex           Mstmt;      // a mutext to protect it
         BEAPI_SQLITE3_STMT *stmt;      // the prepared statement
-        besql_stmt(sqlite3 *db3,const char *sql);
+        besql_stmt(BEAPI_SQLITE3 *db3,const char *sql);
         virtual ~besql_stmt();
         void insert_feature(const pos0_t &pos, // insert it into this table!
                             const std::string &feature,const std::string &feature8, const std::string &context);
