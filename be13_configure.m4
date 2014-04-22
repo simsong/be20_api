@@ -23,7 +23,10 @@ AC_TRY_LINK([#include <inttypes.h>],
 # Figure out which version of unordered_map we are going to use
 #
 AC_LANG_PUSH(C++)
+  AC_MSG_NOTICE([checking for unordered_map])
+  AC_MSG_NOTICE([  CXXFLAGS:           $CXXFLAGS])
   AC_CHECK_HEADERS([unordered_map unordered_set],[],[
     AC_CHECK_HEADERS([tr1/unordered_map tr1/unordered_set])])
+  AC_MSG_NOTICE([done])
 AC_LANG_POP()    
 

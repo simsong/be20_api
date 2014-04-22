@@ -28,6 +28,12 @@
 
 #include <assert.h>
 
+#if defined(MINGW) || defined(__MINGW__) || defined(__MINGW32__) || defined(__MINGW64__)
+#ifndef WIN32
+#define WIN32
+#endif
+#endif
+
 #ifdef WIN32
 #  include <winsock2.h>
 #  include <windows.h>
@@ -899,10 +905,6 @@ inline int isxdigit(int c)
  * http://arstechnica.com/civis/viewtopic.php?f=20&t=111992
  * gmtime_r() is Linux-specific. You'll find a copy in util.cpp for Windows.
  */
-
-#ifndef HAVE_GMTIME_R
-void gmtime_r(time_t *t,struct tm *tm);
-#endif
 
 inline std::string microsoftDateToISODate(const uint64_t &time)
 {

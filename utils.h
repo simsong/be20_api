@@ -48,7 +48,17 @@ void warnx(const char *fmt,...) __attribute__((format(printf, 1, 0)));
 #endif
 
 #ifndef HAVE_LOCALTIME_R
+#ifdef __MINGW32__
+#undef localtime_r
 void localtime_r(time_t *t,struct tm *tm);
+#endif
+#endif
+
+#ifndef HAVE_GMTIME_R
+#ifdef __MINGW32__
+#undef gmtime_r
+#endif
+void gmtime_r(time_t *t,struct tm *tm);
 #endif
 
 
