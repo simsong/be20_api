@@ -769,6 +769,7 @@ std::string replace(const std::string &src,char f,char t)
  ****************************************************************
  *
  * Carving support.
+ * 2014-04-24 - $ is no longer valid either
  * 2013-08-29 - replace invalid characters in filenames
  * 2013-07-30 - automatically bin directories
  * 2013-06-08 - filenames are the forensic path.
@@ -783,7 +784,7 @@ std::string valid_dosname(std::string in)
            || ch=='"' || ch=='*' || ch=='+' || ch==','
            || ch=='/' || ch==':' || ch==';' || ch=='<'
            || ch=='=' || ch=='>' || ch=='?' || ch=='\\'
-           || ch=='[' || ch==']' || ch=='|'){
+           || ch=='[' || ch==']' || ch=='|' || ch=='$' ){
             out.push_back('_');
         } else {
             out.push_back(ch);
@@ -816,11 +817,7 @@ std::string feature_recorder::carve(const sbuf_t &sbuf,size_t pos,size_t len,
     if(pos >= sbuf.pagesize && pos < sbuf.bufsize){
         return std::string();
     }
-
-    if(pos >= sbuf.bufsize){    /* Sanity checks */
-        std::cerr << "*** carve: WRITE OUTSIDE BUFFER.  pos=" << pos << " sbuf=" << sbuf << "\n";
-        return std::string();
-    }
+    assert(pos < sbuf.bufsize);
 
     /* Carve to a file depending on the carving mode.  The purpose
      * of CARVE_ENCODED is to allow us to carve JPEGs when they are
