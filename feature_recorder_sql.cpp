@@ -32,6 +32,10 @@
 #endif
 #define SQLITE_EXTENSION ".sqlite"
 
+#ifndef SQLITE_DETERMINISTIC
+#define SQLITE_DETERMINISTIC 0
+#endif
+
 static int debug  = 0;
 
 #ifdef USE_SQLITE3
