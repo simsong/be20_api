@@ -33,6 +33,7 @@ feature_recorder_set::feature_recorder_set(uint32_t flags_,const feature_recorde
     alert_list(),stop_list(),
     scanner_stats(),hasher(hasher_)
 {
+    set_flag(DISABLE_FILE_RECORDERS);  // without an outdir, file recorders make no sense
     if(flags & SET_DISABLED){
         create_name(DISABLED_RECORDER_NAME,false);
         frm[DISABLED_RECORDER_NAME]->set_flag(feature_recorder::FLAG_DISABLED);
