@@ -61,7 +61,6 @@ feature_recorder::feature_recorder(class feature_recorder_set &fs_,
 {
     //std::cerr << "feature_recorder(" << name << ") created\n";
     open();                         // open if we are created
-    
 }
 
 /* Don't have to delete the stop_list_recorder because it is in the

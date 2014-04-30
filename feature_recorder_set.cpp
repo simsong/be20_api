@@ -25,7 +25,7 @@ feature_recorder_set::hash_def feature_recorder_set::null_hasher(null_hasher_nam
 
 /* Create an empty recorder with no outdir. */
 feature_recorder_set::feature_recorder_set(uint32_t flags_,const feature_recorder_set::hash_def &hasher_):
-    flags(flags_),seen_set(),input_fname(),
+    flags(flags_ | DISABLE_FILE_RECORDERS),seen_set(),input_fname(),
     outdir(),
     frm(),Mscanner_stats(),
     histogram_defs(),
@@ -33,7 +33,6 @@ feature_recorder_set::feature_recorder_set(uint32_t flags_,const feature_recorde
     alert_list(),stop_list(),
     scanner_stats(),hasher(hasher_)
 {
-    set_flag(DISABLE_FILE_RECORDERS);  // without an outdir, file recorders make no sense
     if(flags & SET_DISABLED){
         create_name(DISABLED_RECORDER_NAME,false);
         frm[DISABLED_RECORDER_NAME]->set_flag(feature_recorder::FLAG_DISABLED);
@@ -51,6 +50,8 @@ void feature_recorder_set::init(const feature_file_names_t &feature_files,
     input_fname    = input_fname_;
     outdir         = outdir_;           // must exist
     
+    unset_flag(DISABLE_FILE_RECORDERS);  // now that we have an outdir, enable the recorder
+    assert (flag_notset(DISABLE_FILE_RECORDERS));
     assert (outdir == NO_OUTDIR || access(outdir.c_str(),W_OK)==0); // we must be able to write
 
     if (flag_set(ENABLE_SQLITE3_RECORDERS)) {
@@ -203,7 +204,7 @@ void    feature_recorder_set::set_flag(uint32_t f)
             fr->enable_memory_histograms();
         }
     }
-    flags|=f;
+    flags |= f;
 }         
 
 void    feature_recorder_set::unset_flag(uint32_t f)
@@ -212,7 +213,7 @@ void    feature_recorder_set::unset_flag(uint32_t f)
         std::cerr << "MEM_HISTOGRAM flag cannot be cleared\n";
         assert(0);
     }
-    flags|=f;
+    flags &= ~f;
 }
 
 /****************************************************************
