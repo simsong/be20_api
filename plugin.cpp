@@ -215,7 +215,7 @@ void be13::plugin::load_scanner_file(std::string fn,const scanner_info::scanner_
     slashloc = func_name.rfind('\\');
     if(slashloc!=std::string::npos) func_name = func_name.substr(slashloc+1);
 
-    std::cout << "Loading: " << fn << " (" << func_name << ")\n";
+    if(debug) std::cout << "Loading: " << fn << " (" << func_name << ")\n";
     scanner_t *scanner = 0;
 #if defined(HAVE_DLOPEN)
     void *lib=dlopen(fn.c_str(), RTLD_LAZY);
