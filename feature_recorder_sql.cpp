@@ -244,7 +244,7 @@ static void behist(sqlite3_context *ctx,int argc,sqlite3_value**argv)
                         << def->suffix << "  argc=" << argc << "value = " << sqlite3_value_text(argv[0]) << "\n";
     std::string new_feature(reinterpret_cast<const char *>(sqlite3_value_text(argv[0])));
     if (def->reg.search(new_feature,&new_feature,0,0)) {
-        sqlite3_result_text(ctx,new_feature.c_str(),new_feature.size(),0);
+        sqlite3_result_text(ctx,new_feature.c_str(),new_feature.size(),SQLITE_TRANSIENT);
     }
 }
 #endif

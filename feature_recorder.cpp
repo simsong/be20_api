@@ -417,6 +417,9 @@ void feature_recorder::dump_histogram_file(const histogram_def &def,void *user,f
             o << *fr;                   // sends the entire histogram
         }
 
+        for(size_t i = 0;i<fr->size();i++){
+            delete fr->at(i);
+        }
         delete fr;
         o.close();
 

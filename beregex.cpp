@@ -94,9 +94,9 @@ int beregex::search(const std::string &line,std::string *found,size_t *offset,si
     if(r!=0) return 0;                  /* some kind of failure */
                                         /* Make copies of the first group */
     if(pmatch[1].rm_so != pmatch[1].rm_eo){
-        if(found)  *found = line.substr(pmatch[1].rm_so,pmatch[1].rm_eo-pmatch[1].rm_so);
+        if(found)  *found  = line.substr(pmatch[1].rm_so,pmatch[1].rm_eo-pmatch[1].rm_so);
         if(offset) *offset = pmatch[1].rm_so;
-        if(len)    *len = pmatch[1].rm_eo-pmatch[1].rm_so;
+        if(len)    *len    = pmatch[1].rm_eo-pmatch[1].rm_so;
     }
     return 1;                           /* success */
 }
@@ -110,7 +110,7 @@ int beregex::search(const std::string &line,std::string *matches,int REGMAX) con
         for(int i=0;i<REGMAX;i++){
             size_t start = pmatch[i+1].rm_so;
             size_t len   = pmatch[i+1].rm_eo-pmatch[i+1].rm_so;
-            matches[i] = line.substr(start,len);
+            matches[i]   = line.substr(start,len);
         }
     }
     free(pmatch);

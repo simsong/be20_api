@@ -81,12 +81,17 @@ public:
      */
     struct ReportElement {
 	ReportElement(std::string aValue,histogramTally aTally):value(aValue),tally(aTally){ }
-	std::string	value;		// UTF-8
-	histogramTally  tally;
-	static bool compare(const ReportElement &e1,const ReportElement &e2) {
-	    if (e1.tally.count > e2.tally.count) return true;
-	    if (e1.tally.count < e2.tally.count) return false;
-	    return e1.value < e2.value;
+	const std::string   value;		// UTF-8
+	histogramTally      tally;
+//	static bool compare(const ReportElement &e1,const ReportElement &e2) {
+//	    if (e1.tally.count > e2.tally.count) return true;
+//	    if (e1.tally.count < e2.tally.count) return false;
+//	    return e1.value < e2.value;
+//	}
+	static bool compare(const ReportElement *e1,const ReportElement *e2) {
+	    if (e1->tally.count > e2->tally.count) return true;
+	    if (e1->tally.count < e2->tally.count) return false;
+	    return e1->value < e2->value;
 	}
 	virtual ~ReportElement(){};
     };
@@ -114,15 +119,15 @@ public:
     void clear(){h.clear();}
     void add(const std::string &key);	// adds a string to the histogram count
 
-    /** A FrequencyReportVector is a vector of report elements when the report is generatedn.
+    /** A FrequencyReportVector is a vector of report elements when the report is generated.
      */
-    typedef std::vector<ReportElement> FrequencyReportVector;
+    typedef std::vector<ReportElement *> FrequencyReportVector;
     /** makeReport() makes a report and returns a
      * FrequencyReportVector.
      */
     FrequencyReportVector *makeReport() const;	// return a report with all of them
     FrequencyReportVector *makeReport(int topN) const; // returns just the topN
-    virtual ~HistogramMaker(){}
+    virtual ~HistogramMaker(){};
 };
 
 std::ostream & operator <<(std::ostream &os,const HistogramMaker::FrequencyReportVector &rep);

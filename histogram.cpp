@@ -17,8 +17,9 @@ using namespace std;
 
 ostream & operator << (ostream &os, const HistogramMaker::FrequencyReportVector &rep){
     for(HistogramMaker::FrequencyReportVector::const_iterator i = rep.begin(); i!=rep.end();i++){
-	os << "n=" << i->tally.count << "\t" << validateOrEscapeUTF8(i->value, true, true);
-	if(i->tally.count16>0) os << "\t(utf16=" << i->tally.count16<<")";
+        const HistogramMaker::ReportElement &r = *(*i);
+	os << "n=" << r.tally.count << "\t" << validateOrEscapeUTF8(r.value, true, true);
+	if(r.tally.count16>0) os << "\t(utf16=" << r.tally.count16<<")";
 	os << "\n";
     }
     return os;
@@ -28,19 +29,25 @@ HistogramMaker::FrequencyReportVector *HistogramMaker::makeReport()  const
 {
     FrequencyReportVector *rep = new FrequencyReportVector();
     for(HistogramMap::const_iterator it = h.begin(); it != h.end(); it++){
-	rep->push_back(ReportElement(it->first,it->second));
+	rep->push_back(new ReportElement(it->first,it->second));
     }
     sort(rep->begin(),rep->end(),ReportElement::compare);
     return rep;
 }
 
+/* This would be better done with a priority queue */
 HistogramMaker::FrequencyReportVector *HistogramMaker::makeReport(int topN) const
 {
-    HistogramMaker::FrequencyReportVector   *r2 = makeReport();	// gets a new report
+    HistogramMaker::FrequencyReportVector         *r2 = makeReport();	// gets a new report
     HistogramMaker::FrequencyReportVector::iterator i = r2->begin();
     while(topN>0 && i!=r2->end()){	// iterate through the first set
 	i++;
 	topN--;
+    }
+
+    /* Delete the elements we won't use */
+    for(HistogramMaker::FrequencyReportVector::iterator j=i;j!=r2->end();j++){
+        delete (*j);
     }
     r2->erase(i,r2->end());
     return r2;
