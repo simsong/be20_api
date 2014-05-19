@@ -119,22 +119,15 @@ public:
      */
     pos0_t shift(int64_t s) const {
         if(s==0) return *this;
-        //pos0_t ret;
         size_t p = path.find('-');
         if(p==std::string::npos){            // no path
             return pos0_t("",offset+s);
-            //ret.path="";
-            //ret.offset = offset + s;
-            //return ret;
         }
         /* Figure out the value of the shift */
         int64_t baseOffset = stoi64(path.substr(0,p-1));
         std::stringstream ss;
         ss << (baseOffset+s) << path.substr(p);
         return pos0_t(ss.str(),offset);
-        //ret.path = ss.str();
-        //ret.offset = offset;
-        //return ret;
     }
 };
 
