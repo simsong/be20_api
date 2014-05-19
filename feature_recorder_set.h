@@ -75,6 +75,7 @@ public:
     static const uint32_t MEM_HISTOGRAM             = 0x20;  // enable the in-memory histogram
     static const uint32_t ENABLE_SQLITE3_RECORDERS  = 0x40;  // save features to an SQLITE3 databse
     static const uint32_t DISABLE_FILE_RECORDERS    = 0x80;  // do not save features to file-based recorders
+    static const uint32_t NO_ALERT                  = 0x100; // no alert recorder
 
     virtual ~feature_recorder_set() {
         for(feature_recorder_map::iterator i = frm.begin();i!=frm.end();i++){
