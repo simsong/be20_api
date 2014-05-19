@@ -59,7 +59,9 @@ void feature_recorder_set::init(const feature_file_names_t &feature_files,
         db_create();
     }
 
-    create_name(feature_recorder_set::ALERT_RECORDER_NAME,false); // make the alert recorder
+    if (flag_notset(NO_ALERT)) {
+        create_name(feature_recorder_set::ALERT_RECORDER_NAME,false); // make the alert recorder
+    }
 
     /* Create the requested feature files */
     for(std::set<std::string>::const_iterator it=feature_files.begin();it!=feature_files.end();it++){
@@ -144,6 +146,8 @@ void feature_recorder_set::create_name(const std::string &name,bool create_stop_
 
 feature_recorder *feature_recorder_set::get_alert_recorder() const
 {
+    if (flag_set(NO_ALERT)) return 0;
+
     return get_name(feature_recorder_set::ALERT_RECORDER_NAME);
 }
 
