@@ -174,6 +174,7 @@ void be13::plugin::load_scanner(scanner_t scanner,const scanner_info::scanner_co
      */
     static const sbuf_t sbuf;
     static feature_recorder_set fs(feature_recorder_set::SET_DISABLED,feature_recorder_set::null_hasher,
+                                   feature_recorder_set::NO_INPUT,
                                    feature_recorder_set::NO_OUTDIR); // dummy
 
     //

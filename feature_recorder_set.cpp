@@ -25,8 +25,8 @@ feature_recorder_set::hash_def feature_recorder_set::null_hasher(null_hasher_nam
 
 /* Create an empty recorder with no outdir. */
 feature_recorder_set::feature_recorder_set(uint32_t flags_,const feature_recorder_set::hash_def &hasher_,
-                                           const std::string &outdir_):
-    flags(flags_),seen_set(),input_fname(),
+                                           const std::string &input_fname_,const std::string &outdir_):
+    flags(flags_),seen_set(),input_fname(input_fname_),
     outdir(outdir_),
     frm(),Mscanner_stats(),
     histogram_defs(),
@@ -44,11 +44,8 @@ feature_recorder_set::feature_recorder_set(uint32_t flags_,const feature_recorde
  * Initialize a properly functioning feature recorder set.
  * If disabled, create a disabled feature_recorder that can respond to functions as requested.
  */
-void feature_recorder_set::init(const feature_file_names_t &feature_files,
-                                const std::string &input_fname_)
+void feature_recorder_set::init(const feature_file_names_t &feature_files)
 {
-    input_fname    = input_fname_;
-    
     /* Make sure we can write to the outdir if one is provided */
     if ((outdir != NO_OUTDIR) && (access(outdir.c_str(),W_OK)!=0)) {
         throw new std::invalid_argument("output directory not writable");
