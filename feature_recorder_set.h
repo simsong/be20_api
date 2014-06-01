@@ -32,7 +32,7 @@ class feature_recorder_set {
     uint32_t flags;
     atomic_set<std::string> seen_set;       // hex hash values of pages that have been seen
     std::string           input_fname;      // input file
-    std::string           outdir;           // where output goes
+    const std::string     outdir;           // where output goes
     feature_recorder_map  frm;              // map of feature recorders, by name; TK-replace with an atomic_set
     mutable cppmutex      Mscanner_stats;         // locks frm and scanner_stats_map
     histogram_defs_t      histogram_defs;   // histograms that are to be created.
@@ -51,7 +51,7 @@ public:
         uint64_t calls;
     };
     /** create an emptry feature recorder set. If disabled, create a disabled recorder. */
-    feature_recorder_set(uint32_t flags_,const hash_def &hasher_);
+    feature_recorder_set(uint32_t flags_,const hash_def &hasher_,const std::string &outdir_);
 
     typedef std::map<std::string,struct pstats> scanner_stats_map;
 
@@ -97,8 +97,7 @@ public:
      * tells each feature file about its histograms (among other
      * things)
      */
-    void    init(const feature_file_names_t &feature_files,
-                 const std::string &input_fname,const std::string &outdir);
+    void    init(const feature_file_names_t &feature_files, const std::string &input_fname);
 
     void    flush_all();
     void    close_all();

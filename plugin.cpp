@@ -173,7 +173,8 @@ void be13::plugin::load_scanner(scanner_t scanner,const scanner_info::scanner_co
      * we use static values so that the sbuf is not constantly being created and destroyed.
      */
     static const sbuf_t sbuf;
-    static feature_recorder_set fs(feature_recorder_set::SET_DISABLED,feature_recorder_set::null_hasher); // dummy
+    static feature_recorder_set fs(feature_recorder_set::SET_DISABLED,feature_recorder_set::null_hasher,
+                                   feature_recorder_set::NO_OUTDIR); // dummy
 
     //
     // Each scanner's params are stored in a scanner_def object that
