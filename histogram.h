@@ -83,11 +83,11 @@ public:
 	ReportElement(std::string aValue,histogramTally aTally):value(aValue),tally(aTally){ }
 	const std::string   value;		// UTF-8
 	histogramTally      tally;
-//	static bool compare(const ReportElement &e1,const ReportElement &e2) {
-//	    if (e1.tally.count > e2.tally.count) return true;
-//	    if (e1.tally.count < e2.tally.count) return false;
-//	    return e1.value < e2.value;
-//	}
+	static bool compare_ref(const ReportElement &e1,const ReportElement &e2) {
+	    if (e1.tally.count > e2.tally.count) return true;
+	    if (e1.tally.count < e2.tally.count) return false;
+	    return e1.value < e2.value;
+	}
 	static bool compare(const ReportElement *e1,const ReportElement *e2) {
 	    if (e1->tally.count > e2->tally.count) return true;
 	    if (e1->tally.count < e2->tally.count) return false;
