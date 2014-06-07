@@ -82,7 +82,7 @@ void warnx(const char *fmt,...)
  * @param pos0 - the byte position of buf[0]
  */
 
-#ifndef HAVE_LOCALTIME_R
+#if !(defined(HAVE_LOCALTIME_R) || defined(__MINGW32__))
 /* locking localtime_r implementation */
 cppmutex localtime_mutex;
 void localtime_r(time_t *t,struct tm *tm)
@@ -92,7 +92,7 @@ void localtime_r(time_t *t,struct tm *tm)
 }
 #endif
 
-#ifndef HAVE_GMTIME_R
+#if !(defined(HAVE_GMTIME_R) || defined(__MINGW32__))
 /* locking gmtime_r implementation */
 cppmutex gmtime_mutex;
 void gmtime_r(time_t *t,struct tm *tm)

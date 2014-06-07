@@ -39,7 +39,7 @@ public:
  * http://social.msdn.microsoft.com/Forums/en/vcgeneral/thread/430449b3-f6dd-4e18-84de-eebd26a8d668
  */
 
-#ifdef WIN32
+#if defined(WIN32) || defined(__MINGW32__)
 #  include <winsock2.h>
 #  include <windows.h>			
 #  ifndef DELTA_EPOCH_IN_MICROSECS
