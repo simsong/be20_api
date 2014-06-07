@@ -113,6 +113,11 @@ public:
         }
         return desc;
     }
+    uint64_t imageOffset() const {      // return the offset from start of disk
+        if(path.size()>0) return stoi64(path);
+        return offset;
+    }
+
 
     /**
      * Return a new position that's been shifted by an offset

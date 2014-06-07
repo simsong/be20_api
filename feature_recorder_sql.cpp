@@ -87,7 +87,7 @@ void feature_recorder::besql_stmt::insert_feature(const pos0_t &pos,
     assert(stmt!=0);
     cppmutex::lock lock(Mstmt);           // grab a lock
     const std::string &path = pos.str();
-    sqlite3_bind_int64(stmt, 1, pos.offset); // offset
+    sqlite3_bind_int64(stmt, 1, pos.imageOffset()); // offset
     sqlite3_bind_text(stmt, 2, path.data(), path.size(), SQLITE_STATIC); // path
     sqlite3_bind_text(stmt, 3, feature.data(), feature.size(), SQLITE_STATIC);
     sqlite3_bind_text(stmt, 4, feature8.data(), feature8.size(), SQLITE_STATIC);
