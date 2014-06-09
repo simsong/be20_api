@@ -917,6 +917,16 @@ inline std::string microsoftDateToISODate(const uint64_t &time)
     return std::string(buf);
 }
 
+/* Convert Unix timestamp to ISO format */
+inline std::string unixTimeToISODate(const uint64_t &time)
+{
+    struct tm time_tm;
+    gmtime_r((time_t*) &time, &time_tm);
+    char buf[256];
+    strftime(buf, sizeof(buf), "%Y-%m-%dT%H:%M:%SZ", &time_tm); // Zulu time
+    return std::string(buf);
+}
+
 /* Many internal windows and Linux structures require a valid printable name in ASCII */
 inline bool validASCIIName(const std::string &name)
 {
