@@ -46,35 +46,6 @@ bool scanner_commands_processed = false;
  *** misc support
  ****************************************************************/
 
-#ifndef HAVE_ERR
-#include <stdarg.h>
-// noreturn attribute to avoid warning with GCC on Linux
-static void err(int eval,const char *fmt,...) __attribute__ ((noreturn));
-static void err(int eval,const char *fmt,...)
-{
-    va_list ap;
-    va_start(ap,fmt);
-    vfprintf(stderr,fmt,ap);
-    va_end(ap);
-    fprintf(stderr,": %s\n",strerror(errno));
-    exit(eval);
-}
-#endif
-
-#ifndef HAVE_ERRX
-#include <stdarg.h>
-// noreturn attribute to avoid warning with GCC on Linux
-static void errx(int eval,const char *fmt,...) __attribute__ ((noreturn));
-static void errx(int eval,const char *fmt,...)
-{
-    va_list ap;
-    va_start(ap,fmt);
-    vfprintf(stderr,fmt,ap);
-    fprintf(stderr,"%s\n",strerror(errno));
-    va_end(ap);
-    exit(eval);
-}
-#endif
 
 /****************************************************************
  *** SCANNER PLUG-IN SYSTEM
@@ -209,7 +180,8 @@ void be13::plugin::load_scanner_file(std::string fn,const scanner_info::scanner_
     /* Figure out the function name */
     size_t extloc = fn.rfind('.');
     if(extloc==std::string::npos){
-        errx(1,"Cannot find '.' in %s",fn.c_str());
+        fprintf(stderr,"Cannot find '.' in %s",fn.c_str());
+        exit(1);
     }
     std::string func_name = fn.substr(0,extloc);
     size_t slashloc = func_name.rfind('/');
@@ -223,20 +195,30 @@ void be13::plugin::load_scanner_file(std::string fn,const scanner_info::scanner_
     void *lib=dlopen(fn.c_str(), RTLD_LAZY);
 
     if(lib==0){
-        errx(1,"dlopen: %s\n",dlerror());
+        fprintf(stderr,"dlopen: %s\n",dlerror());
+        exit(1);
     }
 
     /* Resolve the symbol */
     scanner = (scanner_t *)dlsym(lib, func_name.c_str());
 
-    if(scanner==0) errx(1,"dlsym: %s\n",dlerror());
+    if(scanner==0){
+        fprintf(stderr,"dlsym: %s\n",dlerror());
+        exit(1);
+    }
 #elif defined(HAVE_LOADLIBRARY)
     /* Use Win32 LoadLibrary function */
     /* See http://msdn.microsoft.com/en-us/library/ms686944(v=vs.85).aspx */
     HINSTANCE hinstLib = LoadLibrary(TEXT(fn.c_str()));
-    if(hinstLib==0) errx(1,"LoadLibrary(%s) failed",fn.c_str());
+    if(hinstLib==0){
+        fprintf(stderr,"LoadLibrary(%s) failed",fn.c_str());
+        exit(1);
+    }
     scanner = (scanner_t *)GetProcAddress(hinstLib,func_name.c_str());
-    if(scanner==0) errx(1,"GetProcAddress(%s) failed",func_name.c_str());
+    if(scanner==0){
+        fprintf(stderr,"GetProcAddress(%s) failed",func_name.c_str());
+        exit(1);
+    }
 #else
     std::cout << "  ERROR: Support for loadable libraries not enabled\n";
     return;
@@ -255,7 +237,8 @@ void be13::plugin::load_scanner_directory(const std::string &dirname,const scann
 {
     DIR *dirp = opendir(dirname.c_str());
     if(dirp==0){
-        err(1,"Cannot open directory %s:",dirname.c_str());
+        fprintf(stderr,"Cannot open directory %s:",dirname.c_str());
+        exit(1);
     }
     struct dirent *dp;
     while ((dp = readdir(dirp)) != NULL){

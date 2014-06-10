@@ -82,6 +82,7 @@
 
 #include "sbuf.h"
 #include "utf8.h"
+#include "utils.h"                      // for gmtime_r
 
 #include <vector>
 #include <set>
@@ -918,10 +919,11 @@ inline std::string microsoftDateToISODate(const uint64_t &time)
 }
 
 /* Convert Unix timestamp to ISO format */
-inline std::string unixTimeToISODate(const uint64_t &time)
+inline std::string unixTimeToISODate(const uint64_t &t)
 {
     struct tm time_tm;
-    gmtime_r((time_t*) &time, &time_tm);
+    time_t tmp=t;
+    gmtime_r(&tmp, &time_tm);
     char buf[256];
     strftime(buf, sizeof(buf), "%Y-%m-%dT%H:%M:%SZ", &time_tm); // Zulu time
     return std::string(buf);

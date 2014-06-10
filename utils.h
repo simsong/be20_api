@@ -61,12 +61,6 @@ void localtime_r(time_t *t,struct tm *tm);
 void gmtime_r(time_t *t,struct tm *tm);
 #endif
 
-
-// gmtime.h definition moved to bulk_extractor_i.h
-//#ifndef HAVE_GMTIME_R
-//void gmtime_r(time_t *t,struct tm *tm);
-//#endif
-
 int64_t get_filesize(int fd);
 
 #ifndef HAVE_ISHEXNUMBER
