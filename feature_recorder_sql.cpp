@@ -265,7 +265,10 @@ void feature_recorder::dump_histogram_db(const histogram_def &def,void *user,fea
         fs.db_send_sql(fs.db3,schema_hist, feature, feature); // creates the histogram
         fs.db_send_sql(fs.db3,schema_hist1, feature, feature); // creates the histogram
     }
-    /* Now create the summarized histogram for the regex, if it is not existing. */
+#ifdef HAVE_SQLITE3_CREATE_FUNCTION_V2
+    /* Now create the summarized histogram for the regex, if it is not existing, but only if we have
+     * sqlite3_create_function_v2
+     */
     if (def.pattern.size()>0){
         /* Create the database where we will add the histogram */
         std::string hname = def.feature + "_" + def.suffix;
@@ -293,6 +296,7 @@ void feature_recorder::dump_histogram_db(const histogram_def &def,void *user,fea
             return;
         }
     }
+#endif
 #endif
 }
 
