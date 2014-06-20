@@ -71,9 +71,11 @@ static const char *schema_hist1[] = {
     "INSERT INTO h_%s select COUNT(*),feature_utf8 from f_%s GROUP BY feature_utf8",
     0};
 
+#ifdef HAVE_SQLITE3_CREATE_FUNCTION_V2
 static const char *schema_hist2[] = {
     "INSERT INTO h_%s select sum(count),BEHIST(feature_utf8) from h_%s where BEHIST(feature_utf8)!='' GROUP BY BEHIST(feature_utf8)",
     0};
+#endif
 
 #endif
 const char *feature_recorder::db_insert_stmt = "INSERT INTO f_%s (offset,path,feature_eutf8,feature_utf8,context_eutf8) VALUES (?1, ?2, ?3, ?4, ?5)";
@@ -237,6 +239,7 @@ static int callback_counter(void *param, int argc, char **argv, char **azColName
     return 0;
 }
 
+#ifdef HAVE_SQLITE3_CREATE_FUNCTION_V2
 static void behist(sqlite3_context *ctx,int argc,sqlite3_value**argv)
 {
     const histogram_def *def = reinterpret_cast<const histogram_def *>(sqlite3_user_data(ctx));
@@ -247,6 +250,7 @@ static void behist(sqlite3_context *ctx,int argc,sqlite3_value**argv)
         sqlite3_result_text(ctx,new_feature.c_str(),new_feature.size(),SQLITE_TRANSIENT);
     }
 }
+#endif
 #endif
 
 void feature_recorder::dump_histogram_db(const histogram_def &def,void *user,feature_recorder::dump_callback_t cb) const
