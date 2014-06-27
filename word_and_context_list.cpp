@@ -4,6 +4,8 @@
  */
 
 #include "config.h"
+#include <sys/types.h>
+#include <inttypes.h>
 #include "word_and_context_list.h"
 #include "beregex.h"
 
