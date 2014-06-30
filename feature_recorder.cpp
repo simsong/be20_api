@@ -627,7 +627,7 @@ void feature_recorder::write(const pos0_t &pos0,const std::string &feature_,cons
     quote_if_necessary(feature,context);
 
     if(feature.size()==0){
-        std::cerr << "zero length feature at " << pos0 << "\n";
+        std::cerr << name << ": zero length feature at " << pos0 << "\n";
         if(debug & DEBUG_PEDANTIC) assert(0);
         return;
     }
