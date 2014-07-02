@@ -35,15 +35,14 @@ static const char *regex_version = "system";
 
 const char *beregex::version(){return regex_version;}
 
+/* Only certain characters are assumed to be a regular expression. These characters are
+ * coincidently never in email addresses.
+ */
 bool beregex::is_regex(const std::string &str)
 {
-    return true;                        // SLG TEST
     for(std::string::const_iterator it = str.begin();it!=str.end();it++){
         switch(*it){
-        case '?':
         case '*':
-        case '.':
-        case '+':
         case '[':
         case '(':
             return true;
