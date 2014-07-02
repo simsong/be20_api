@@ -112,6 +112,9 @@ inline bool operator !=(const histogram_def &h1,const histogram_def &h2)  {
 };
 
 
+/* carve object cache */
+typedef atomic_set<std::string> carve_cache_t;
+
 /* in-memory histograms */
 typedef atomic_histogram<std::string,uint64_t> mhistogram_t;             // memory histogram
 typedef std::map<histogram_def,mhistogram_t *> mhistograms_t;
@@ -224,13 +227,15 @@ protected:
     size_t       context_window_before;      // context window
     size_t       context_window_after;       // context window
 
-    mutable cppmutex Mf;                     // protects the file 
+    mutable cppmutex Mf;                     // protects the file  & file_number_
     mutable cppmutex Mr;                     // protects the redlist 
     mhistograms_t mhistograms;               // the memory histograms, if we are using them
     uint64_t      mhistogram_limit;          // how many we want (per feature recorder limit, rather than per histogram)
 
+    
     class feature_recorder *stop_list_recorder; // where stopped features get written
-    int64_t                file_number_;            /* starts at 0; gets incremented by carve(); for binning */
+    int64_t                file_number_;            /* starts at 0; gets incremented by carve(); */
+    carve_cache_t          carve_cache;
 public:
     /* these are not threadsafe and should only be called in startup */
     void set_stop_list_recorder(class feature_recorder *fr){

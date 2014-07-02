@@ -57,7 +57,7 @@ feature_recorder::feature_recorder(class feature_recorder_set &fs_,
     count_(0),context_window_before(context_window_default),context_window_after(context_window_default),
     Mf(),Mr(),mhistograms(),mhistogram_limit(),
     stop_list_recorder(0),
-    file_number_(0),carve_mode(CARVE_ENCODED)
+    file_number_(0),carve_cache(),carve_mode(CARVE_ENCODED)
 {
     //std::cerr << "feature_recorder(" << name << ") created\n";
     open();                         // open if we are created
@@ -820,6 +820,8 @@ std::string feature_recorder::carve(const sbuf_t &sbuf,size_t pos,size_t len,
         return std::string();
     }
     assert(pos < sbuf.bufsize);
+    
+
 
     /* Carve to a file depending on the carving mode.  The purpose
      * of CARVE_ENCODED is to allow us to carve JPEGs when they are
@@ -853,24 +855,40 @@ std::string feature_recorder::carve(const sbuf_t &sbuf,size_t pos,size_t len,
      * that's okay, because the second one will fail.
      */
 
-    uint64_t this_file_number = file_number_add(1);
-    std::string dirname1 = fs.get_outdir() + "/" + name;
-    std::stringstream ss;
+    sbuf_t cbuf(sbuf,pos,len);          // the buf we are going to carve
+    std::string carved_hash_hexvalue = (*fs.hasher.func)(cbuf.buf,cbuf.bufsize);
 
+    /* See if this is in the cache */
+    bool in_cache = carve_cache.check_for_presence_and_insert(carved_hash_hexvalue);
+
+
+    uint64_t this_file_number = file_number_add(in_cache ? 0 : 1); // increment if we are not in the cache
+    std::string dirname1 = fs.get_outdir() + "/" + name;
+
+    std::stringstream ss;
     ss << dirname1 << "/" << std::setw(3) << std::setfill('0') << (this_file_number / 1000);
 
     std::string dirname2 = ss.str(); 
-    std::string fname         = dirname2 + std::string("/") + valid_dosname(sbuf.pos0.str() + ext);
+    std::string fname         = dirname2 + std::string("/") + valid_dosname(cbuf.pos0.str() + ext);
     std::string fname_feature = fname.substr(fs.get_outdir().size()+1); 
-    std::string carved_hash_hexvalue = (*fs.hasher.func)(sbuf.buf,sbuf.bufsize);
 
     /* Record what was found in the feature file.
      */
+    if (in_cache){
+        fname="";             // no filename
+        fname_feature="<CACHED>";
+    }
+
+    // write to the feature file
     ss.str(std::string()); // clear the stringstream
-    ss << "<fileobject><filename>" << fname << "</filename><filesize>" << len << "</filesize>"
-       << "<hashdigest type='" << fs.hasher.name << "'>" << carved_hash_hexvalue << "</hashdigest></fileobject>";
-    this->write(sbuf.pos0+len,fname_feature,ss.str());
+    ss << "<fileobject>";
+    if (!in_cache) ss << "<filename>" << fname << "</filename>";
+    ss << "<filesize>" << len << "</filesize>";
+    ss << "<hashdigest type='" << fs.hasher.name << "'>" << carved_hash_hexvalue << "</hashdigest></fileobject>";
+    this->write(cbuf.pos0,fname_feature,ss.str());
     
+    if (in_cache) return fname;               // do not make directories or write out if we are cached
+
     /* Make the directory if it doesn't exist.  */
     if (access(dirname2.c_str(),R_OK)!=0){
 #ifdef WIN32
@@ -899,7 +917,7 @@ std::string feature_recorder::carve(const sbuf_t &sbuf,size_t pos,size_t len,
         return std::string();
     }
 
-    ssize_t ret = sbuf.write(fd,pos,len);
+    ssize_t ret = cbuf.write(fd,0,len);
     if(ret<0){
         std::cerr << "*** carve: Cannot write(pos=" << fd << "," << pos << " len=" << len << "): "<< strerror(errno) << "\n";
     }
