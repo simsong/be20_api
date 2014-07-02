@@ -525,11 +525,13 @@ void be13::plugin::info_scanners(bool detailed_info,
     sort(disabled_wordlist.begin(),disabled_wordlist.end());
     sort(enabled_wordlist.begin(),enabled_wordlist.end());
     std::cout << "\n";
+    std::cout << "These scanners disabled by default; enable with -" << enable_opt << ":\n";
     for(std::vector<std::string>::const_iterator it = disabled_wordlist.begin();
         it!=disabled_wordlist.end();it++){
         std::cout << "   -" << enable_opt << " " <<  *it << " - enable scanner " << *it << "\n";
     }
     std::cout << "\n";
+    std::cout << "These scanners enabled by default; disable with -" << disable_opt << ":\n";
     for(std::vector<std::string>::const_iterator it = enabled_wordlist.begin();it!=enabled_wordlist.end();it++){
         std::cout << "   -" << disable_opt << " " <<  *it << " - disable scanner " << *it << "\n";
     }
