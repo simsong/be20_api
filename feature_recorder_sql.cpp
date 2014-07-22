@@ -133,7 +133,8 @@ void feature_recorder_set::db_send_sql(BEAPI_SQLITE3 *db,const char **stmts, ...
         vsnprintf(buf,sizeof(buf),stmts[i],ap);
         va_end(ap);
         if(debug) std::cerr << "SQL: " << buf << "\n";
-        if(sqlite3_exec(db,buf,NULL,NULL,&errmsg) != SQLITE_OK ) {
+        // Don't error on a PRAGMA
+        if((sqlite3_exec(db,buf,NULL,NULL,&errmsg) != SQLITE_OK)  && (strncmp(buf,"PRAGMA",6)!=0)) {
             fprintf(stderr,"Error executing '%s' : %s\n",buf,errmsg);
             exit(1);
         }
