@@ -618,6 +618,10 @@ void be13::plugin::process_sbuf(const class scanner_params &sp)
      *** CALL EACH OF THE SCANNERS ON THE SBUF
      ****************************************************************/
 
+    if(debug & DEBUG_DUMP_DATA){
+        sp.sbuf.hex_dump(std::cerr);
+    }
+
     for(scanner_vector::iterator it = current_scanners.begin();it!=current_scanners.end();it++){
         // Look for reasons not to run a scanner
         if((*it)->enabled==false) continue; // not enabled
