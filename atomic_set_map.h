@@ -11,6 +11,7 @@
 
 #include "cppmutex.h"
 #include <algorithm>
+#include <set>
 #include <map>
 
 #if defined(HAVE_UNORDERED_MAP)
@@ -19,8 +20,6 @@
 #else
 # if defined(HAVE_TR1_UNORDERED_MAP)
 #  include <tr1/unordered_map>
-# else
-#  error Requires <unordered_map> or <tr1/unordered_map>
 # endif
 #endif
 
@@ -30,17 +29,18 @@
 #else
 #if defined(HAVE_TR1_UNORDERED_SET)
 #include <tr1/unordered_set>
-#else
-#error Requires <unordered_set> or <tr1/unordered_set>
 #endif
 #endif
 
 template <class TYPE,class CTYPE> class atomic_histogram {
 #ifdef HAVE_UNORDERED_MAP
     typedef std::unordered_map<TYPE,CTYPE> hmap_t;
-#endif
+#else
 #ifdef HAVE_TR1_UNORDERED_MAP
     typedef std::tr1::unordered_map<TYPE,CTYPE> hmap_t;
+#else
+    typedef std::map<TYPE,CTYPE> hmap_t;
+#endif
 #endif
     hmap_t amap; // the locked atomic map
     mutable cppmutex M;                         // my lock
@@ -108,9 +108,12 @@ template <class TYPE > class atomic_set {
     cppmutex M;
 #ifdef HAVE_UNORDERED_SET
     std::unordered_set<TYPE>myset;
-#endif
+#else
 #ifdef HAVE_TR1_UNORDERED_SET
     std::tr1::unordered_set<TYPE>myset;
+#else
+    std::set<TYPE>myset;
+#endif
 #endif
 public:
     atomic_set():M(),myset(){}

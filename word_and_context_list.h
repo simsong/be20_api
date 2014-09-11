@@ -32,16 +32,22 @@
 #if defined(HAVE_UNORDERED_SET)
 #include <unordered_set>
 #else
+#if defined(HAVE_TR1_UNORDERED_SET)
 #include <tr1/unordered_set>
+#endif
 #endif
 
 /* <unordered_map> includes both unordered_map and unordered_multimap */
 #if defined(HAVE_UNORDERED_MAP)
 #include <unordered_map>
 #else
+#if defined(HAVE_TR1_UNORDERED_MAP)
 #include <tr1/unordered_map>
 #endif
+#endif
 
+#include <algorithm>
+#include <set>
 #include <map>                          // brings in map and multimap
 
 class context {
@@ -92,14 +98,22 @@ private:
 #if defined(HAVE_UNORDERED_MAP)
     typedef std::unordered_multimap<std::string,context> stopmap_t;
 #else
+#if defined(HAVE_TR1_UNORDERED_MAP)
     typedef std::tr1::unordered_multimap<std::string,context> stopmap_t;
+#else
+    typedef std::multimap<std::string,context> stopmap_t;
+#endif
 #endif
     stopmap_t fcmap;			// maps features to contexts; for finding them
 
 #if defined(HAVE_UNORDERED_SET)
     typedef std::unordered_set< std::string > stopset_t;
 #else
+#if defined(HAVE_TR1_UNORDERED_SET)
     typedef std::tr1::unordered_set< std::string > stopset_t;
+#else
+    typedef std::set< std::string > stopset_t;
+#endif
 #endif
     stopset_t context_set;			// presence of a pair in fcmap
 
