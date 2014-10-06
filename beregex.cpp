@@ -9,7 +9,7 @@
 #include <unistd.h>
 
 
-#if defined(HAVE_LIBTRE) && defined(HAVE_TRE_REGCOMP)
+#if defined(HAVE_LIBTRE) && defined(HAVE_TRE_REGCOMP) && defined(HAVE_TRE_TRE_H)
 #define REGCOMP tre_regcomp
 #define REGFREE tre_regfree
 #define REGEXEC tre_regexec
