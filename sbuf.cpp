@@ -318,7 +318,7 @@ void sbuf_t::getUTF16(size_t i, size_t num_code_units_requested, std::wstring &u
 
     // get code units individually
     for (size_t j = 0; j < num_code_units_requested; j++) {
-        utf16_string.push_back(get16u(i + j));
+        utf16_string.push_back(get16u(i + j*2));
     }
 }
 
