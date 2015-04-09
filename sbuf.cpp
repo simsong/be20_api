@@ -254,7 +254,7 @@ std::ostream & operator <<(std::ostream &os,const sbuf_t &t){
 /**
  * Read the requested number of UTF-8 format string octets including any \0.
  */
-void sbuf_t::getUTF8WithQuoting(size_t i, size_t num_octets_requested, std::string &utf8_string) const {
+void sbuf_t::getUTF8(size_t i, size_t num_octets_requested, std::string &utf8_string) const {
     // clear any residual value
     utf8_string = "";
 
@@ -267,15 +267,12 @@ void sbuf_t::getUTF8WithQuoting(size_t i, size_t num_octets_requested, std::stri
         num_octets_requested = bufsize - i;
     }
     utf8_string = std::string((const char *)buf+i,num_octets_requested);
-
-    // validate or escape utf8_string
-    utf8_string = validateOrEscapeUTF8(utf8_string, true, true);
 }
 
 /**
  * Read UTF-8 format code octets into string up to but not including \0.
  */
-void sbuf_t::getUTF8WithQuoting(size_t i, std::string &utf8_string) const {
+void sbuf_t::getUTF8(size_t i, std::string &utf8_string) const {
     // clear any residual value
     utf8_string = "";
 
@@ -292,9 +289,6 @@ void sbuf_t::getUTF8WithQuoting(size_t i, std::string &utf8_string) const {
         // accept the octet
         utf8_string.push_back(octet);
     }
-
-    // validate or escape utf8_string
-    utf8_string = validateOrEscapeUTF8(utf8_string, true, true);
 }
 
 /**

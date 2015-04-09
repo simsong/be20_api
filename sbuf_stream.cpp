@@ -167,13 +167,13 @@ int64_t sbuf_stream::get64i(sbuf_t::byte_order_t bo) {
 /*
  * string readers
  */
-void sbuf_stream::getUTF8WithQuoting(size_t num_octets_requested, string &utf8_string) {
-    sbuf.getUTF8WithQuoting(num_octets_requested, utf8_string);
+void sbuf_stream::getUTF8(size_t num_octets_requested, string &utf8_string) {
+    sbuf.getUTF8(num_octets_requested, utf8_string);
     offset += utf8_string.length();
     return;
 }
-void sbuf_stream::getUTF8WithQuoting(string &utf8_string) {
-    sbuf.getUTF8WithQuoting(offset, utf8_string);
+void sbuf_stream::getUTF8(string &utf8_string) {
+    sbuf.getUTF8(offset, utf8_string);
     size_t num_bytes = utf8_string.length();
     if (num_bytes > 0) {
         // if anything was read then also skip \0
