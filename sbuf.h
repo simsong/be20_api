@@ -510,8 +510,8 @@ public:
      * @{
      * These get functions safely read string
      */
-    void getUTF8WithQuoting(size_t i, size_t num_octets_requested, std::string &utf8_string) const;
-    void getUTF8WithQuoting(size_t i, std::string &utf8_string) const;
+    void getUTF8(size_t i, size_t num_octets_requested, std::string &utf8_string) const;
+    void getUTF8(size_t i, std::string &utf8_string) const;
     /** @} */
 
     /**

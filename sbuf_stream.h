@@ -71,8 +71,8 @@ public:
     /**
      * \name string and wstring stream readers
      * @{ */
-    void getUTF8WithQuoting(string &utf8_string);
-    void getUTF8WithQuoting(size_t num_octets_requested, string &utf8_string);
+    void getUTF8(string &utf8_string);
+    void getUTF8(size_t num_octets_requested, string &utf8_string);
     void getUTF16(wstring &utf16_string);
     void getUTF16(size_t num_code_units_requested, wstring &utf16_string);
     /** @} */
