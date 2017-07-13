@@ -232,11 +232,11 @@ static const char *hexbuf(char *dst,int dst_len,const unsigned char *bin,int byt
         bytes--;
         charcount++;                    // how many characters
         
-        if((flag & NSRL_HEXBUF_SPACE2) ||
-           ((flag & NSRL_HEXBUF_SPACE4) && charcount%2==0))
+        if((flag & NSRL_HEXBUF_SPACE2) || ((flag & NSRL_HEXBUF_SPACE4) && charcount%2==0)){
             *dst++ = ' ';
             *dst   = '\000';
             dst_len -= 1;
+        }
     }
     return start;                       // return the start
 }
