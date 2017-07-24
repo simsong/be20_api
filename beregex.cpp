@@ -102,8 +102,8 @@ int beregex::search(const std::string &line,std::string *found,size_t *offset,si
 /** Perform a search with an array of strings. Return 0 if success, return code if fail.*/
 
 int beregex::search(const std::string &line,std::string *matches,int REGMAX) const {
-    regmatch_t *pmatch = (regmatch_t *)calloc(sizeof(regmatch_t),REGMAX+1);
     if(!nreg) return 0;
+    regmatch_t *pmatch = (regmatch_t *)calloc(sizeof(regmatch_t),REGMAX+1);
     int r = REGEXEC(nreg,line.c_str(),REGMAX+1,pmatch,0);
     if(r==0){
         for(int i=0;i<REGMAX;i++){
@@ -118,6 +118,7 @@ int beregex::search(const std::string &line,std::string *matches,int REGMAX) con
 
 std::string beregex::search(const std::string &line) const
 {
+    if(!nreg) return std::string();
     regmatch_t pmatch[2];
     memset(pmatch,0,sizeof(pmatch));
     if(REGEXEC(nreg,line.c_str(),2,pmatch,0)==0){
