@@ -126,6 +126,7 @@ pcap_t *pcap_fopen_offline(FILE *fp, char *errbuf)
     ret->pktbuf  = (uint8_t *)malloc(header.snaplen);
     if(ret->pktbuf==0) { // did we get the snaplen?
         std::cerr << "Couldn't get header snaplen";
+        free(ret);                      
         return 0;
     }
     //DEBUG(100) ("pcap_fake.cpp DEBUG: header.magic = %x", header.magic);

@@ -38,7 +38,10 @@ private:
 
     std::string  pat;              /* our pattern */
     int     flags;
-    void   *nreg_;              // would be regex_t *, but that's in regex.h which is included in beregex.c
+    // Note: nreg_ is void* because the compiler will not allow us to define it as "struct regex_t *"
+    // We could get around this by including regex.h, but that introduces dependencies for programs that include
+    // beregex.h.
+    void   *nreg_;
     beregex(const beregex &that);
     beregex(std::string pat_,int flags_);
     ~beregex();

@@ -41,8 +41,8 @@ __BEGIN_DECLS
 #ifdef HAVE_ERR_H
 #include <err.h>
 #else
-void err(int eval,const char *fmt,...) __attribute__((format(printf, 2, 0))) __attribute__ ((__noreturn__));
-void errx(int eval,const char *fmt,...) __attribute__((format(printf, 2, 0))) __attribute__ ((__noreturn__));
+[[noreturn]] void err(int eval,const char *fmt,...) __attribute__((format(printf, 2, 0)));
+[[noreturn]] void errx(int eval,const char *fmt,...) __attribute__((format(printf, 2, 0)));
 void warn(const char *fmt, ...) __attribute__((format(printf, 1, 0)));
 void warnx(const char *fmt,...) __attribute__((format(printf, 1, 0)));
 #endif
