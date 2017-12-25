@@ -28,6 +28,7 @@ If you get this error:
     $ 
 
 Do this:
+
     $ git checkout -b tmp  ; git checkout master ; git merge tmp ; git branch -d tmp ; git push git@github.com:simsong/be13_api.git master
 
 Extended:
