@@ -6,7 +6,7 @@ API version 1.3 for bulk_extractor
 
 Set remote origin:
   
-  git remote add origin git@github.com:simsong/be13_api.git
+    git remote add origin git@github.com:simsong/be13_api.git
 
 References:
   * http://stackoverflow.com/questions/7259535/git-setting-up-a-remote-origin
