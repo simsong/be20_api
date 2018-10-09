@@ -356,8 +356,11 @@ public:
     virtual std::string carve(const sbuf_t &sbuf,size_t pos,size_t len, 
                               const std::string &ext); // appended to forensic path
     // Carve a record; returns filename of records file or empty string if nothing carved
-    virtual std::string carve_records(const sbuf_t &sbuf,size_t pos,size_t len, 
-                              const std::string &name); // appended to forensic path
+    virtual std::string carve_records(const sbuf_t &sbuf, size_t pos, size_t len, 
+                                      const std::string &name); 
+    // Write a data;
+    virtual std::string write_data(unsigned char *data, size_t len, const std::string &filename);
+    
     // Set the time of the carved file to iso8601 file
     virtual void set_carve_mtime(const std::string &fname, const std::string &mtime_iso8601);
 };
