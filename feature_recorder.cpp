@@ -928,8 +928,8 @@ std::string feature_recorder::carve(const sbuf_t &sbuf,size_t pos,size_t len,
 /* 
  This is based on feature_recorder::carve and append carving record to specified filename
  */
-std::string feature_recorder::carve_records(const sbuf_t &sbuf,size_t pos,size_t len,
-                                    const std::string &filename)
+std::string feature_recorder::carve_records(const sbuf_t &sbuf, size_t pos, size_t len,
+                                            const std::string &filename)
 {
     if(flags & FLAG_DISABLED) return std::string();           // disabled
 
@@ -943,8 +943,7 @@ std::string feature_recorder::carve_records(const sbuf_t &sbuf,size_t pos,size_t
 
     /* See if this is in the cache */
     bool in_cache = carve_cache.check_for_presence_and_insert(carved_hash_hexvalue);
-
-    std::string dirname1 = fs.get_outdir();
+    std::string dirname1 = fs.get_outdir()  + "/" + name;
 
     std::stringstream ss;
     ss << dirname1;
@@ -952,7 +951,10 @@ std::string feature_recorder::carve_records(const sbuf_t &sbuf,size_t pos,size_t
     std::string dirname2 = ss.str(); 
     std::string fname = dirname2 + std::string("/") + valid_dosname(filename);
     std::string fname_feature = fname.substr(fs.get_outdir().size()+1); 
-    
+
+    //    std::string fname = dirname2 + std::string("/") + valid_dosname(cbuf.pos0.str() + ext);
+    //std::string fname_feature = fname.substr(fs.get_outdir().size()+1);
+
     /* Record what was found in the feature file.
      */
     if (in_cache){
@@ -997,6 +999,52 @@ std::string feature_recorder::carve_records(const sbuf_t &sbuf,size_t pos,size_t
     ssize_t ret = cbuf.write(fd,0,len);
     if(ret<0){
         std::cerr << "*** carve: Cannot write(pos=" << fd << "," << pos << " len=" << len << "): "<< strerror(errno) << "\n";
+    }
+    ::close(fd);
+    return fname;
+}
+
+/* 
+ write buffer to specified dirname/filename for writing data
+ */
+std::string feature_recorder::write_data(unsigned char *data, size_t len, const std::string &filename)
+{
+    std::string dirname1 = fs.get_outdir()  + "/" + name;
+    std::stringstream ss;
+    ss << dirname1;
+    std::string dirname2 = ss.str(); 
+    std::string fname = dirname2 + std::string("/") + valid_dosname(filename);
+
+    /* Make the directory if it doesn't exist.  */
+    if (access(dirname2.c_str(),R_OK)!=0){
+#ifdef WIN32
+        mkdir(dirname1.c_str());
+        mkdir(dirname2.c_str());
+#else   
+        mkdir(dirname1.c_str(),0777);
+        mkdir(dirname2.c_str(),0777);
+#endif
+    }
+
+    int oerrno = errno;                 // remember error number
+    if (access(dirname2.c_str(),R_OK)!=0){
+        std::cerr << "Could not make directory " << dirname2 << ": " << strerror(oerrno) << "\n";
+        return std::string();
+    }
+
+    // To control multiple thread writing
+    cppmutex::lock lock(Mf);
+
+    /* Write the file into the directory */
+    int fd = ::open(fname.c_str(),O_CREAT|O_BINARY|O_RDWR,0666);
+    if(fd<0){
+        std::cerr << "*** carve: Cannot create " << fname << ": " << strerror(errno) << "\n";
+        return std::string();
+    }
+
+    ssize_t ret = ::write(fd,data,len);
+    if(ret<0){
+        std::cerr << "*** carve: Cannot write geneated header "<< fname << ": " << strerror(errno) << "\n";
     }
     ::close(fd);
     return fname;
