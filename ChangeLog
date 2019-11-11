@@ -1,0 +1,4 @@
+2019-11-10  Simson Garfinkel  <simsong@nimi.local>
+
+	* sbuf.h (class sbuf_t): Really want to make *buf private, but it's still used too many places.
+
