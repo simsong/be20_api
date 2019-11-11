@@ -1,3 +1,7 @@
+2019-11-11  Simson Garfinkel  <simsong@nimi.local>
+
+	* Tagged v1.6.0
+
 2019-11-10  user  <user@localhost.localdomain>
 
 	* bulk_extractor_i.h (safe_utf16to8): fixed catching of polymorphic type value value. Exceptions need to be caught by reference.
