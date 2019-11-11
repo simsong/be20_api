@@ -244,7 +244,7 @@ static const char *hexbuf(char *dst,int dst_len,const unsigned char *bin,int byt
 
 std::ostream & operator <<(std::ostream &os,const sbuf_t &t){
         char hex[17];
-        hexbuf(hex,sizeof(hex),t.buf,8,0);
+        hexbuf(hex,sizeof(hex),t.buf, 8, 0);
         os << "sbuf[page_number="   << t.page_number
            << " pos0=" << t.pos0 << " " << "buf[0..8]=0x" << hex
            << " bufsize=" << t.bufsize << " pagesize=" << t.pagesize << "]";
