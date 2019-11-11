@@ -1,3 +1,8 @@
+2019-11-10  user  <user@localhost.localdomain>
+
+	* bulk_extractor_i.h (safe_utf16to8): fixed catching of polymorphic type value value. Exceptions need to be caught by reference.
+	(safe_utf8to16): fixed catching of polymorphic type value value. Exceptions need to be caught by reference.
+
 2019-11-10  Simson Garfinkel  <simsong@nimi.local>
 
 	* sbuf.h (class sbuf_t): Really want to make *buf private, but it's still used too many places.
