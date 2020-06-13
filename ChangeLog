@@ -1,4 +1,7 @@
-2019-11-11  Simson Garfinkel  <simsong@nimi.local>
+2020-06-13  Simson Garfinkel <simsong@acm.org>
+	* updated license to MIT License, copyright Simson L. Garfinkel, consistent with the fact that this is no longer an official US Government work product.
+
+2019-11-11  Simson Garfinkel  <simsong@acm.org>
 
 	* Tagged v1.6.0
 
