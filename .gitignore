@@ -22,3 +22,9 @@ _deps
 a.out
 *.sql3
 stand
+config.h
+config.h.in
+config.log
+config.status
+stamp-h1
+tests/Makefile
