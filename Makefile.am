@@ -1,5 +1,20 @@
+# be13_api Makefile.am
+# This file is compiled with automake to create Makefile.in. 
+# Makefile.in is transformed by "configure" to create Makefile
+#
 # (C) 2020 Simson L. Garfinkel
 # https://www.gnu.org/licenses/lgpl-3.0.en.html
+
+# don't include bootstrap. People run it, and they shoudln't
+# It's only for people who check out the git repo
+
+EXTRA_DIST = \
+	ax_cxx_compile_stdcxx.m4 \
+	ax_cxx_compile_stdcxx_14.m4 \
+	cester_configure.m4 \
+	slg_gcc_all_warnings.m4
+
+ACLOCAL_AMFLAGS = -I m4
 
 # Use the current directory
 BE13_API_DIR=
