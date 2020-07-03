@@ -4,7 +4,7 @@
 # 2020-06-27 - slg - expanded to G++ for MacOS
 # 2020-07-03 - slg - ported to be13_api; removed python (be13_api doesn't use python)
 
-name: CI (pytest and c++)
+name: BE13_API CI (c++14)
 on: [push]
 
 jobs:
@@ -30,7 +30,6 @@ jobs:
 
       - name: c/c++ test
         run: |
-          cd src
           bash bootstrap.sh
           ./configure && make && make check 
 
