@@ -38,6 +38,8 @@ AC_LANG_POP()
 # Turn on all warnings
 m4_include([m4/slg_gcc_all_warnings.m4])
 
+# Check for warnings that cester should disable
+m4_include([m4/cester_configure.m4])
 
 
 ################################################################

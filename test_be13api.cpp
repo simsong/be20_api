@@ -30,11 +30,11 @@
 #endif
 
 // get cester!
-#include "cester.h"
+#include "tests/cester.h"
 
-CESTER_TEST(test_regex_1, inst, cester_assert_true(  regex_list::is_regex("this[1234]foo"));    )
-CESTER_TEST(test_regex_1, inst, cester_assert_true(  regex_list::is_regex("this(1234)foo"));    )
-CESTER_TEST(test_regex_1, inst, cester_assert_true(  regex_list::is_regex("this[1234].*foo"));    )
-CESTER_TEST(test_regex_1, inst, cester_assert_false( regex_list::is_regex("this1234foo"));    )
+//CESTER_TEST(test_regex_1, inst, cester_assert_true(  regex_list::is_regex("this[1234]foo"));    )
+//CESTER_TEST(test_regex_1, inst, cester_assert_true(  regex_list::is_regex("this(1234)foo"));    )
+//CESTER_TEST(test_regex_1, inst, cester_assert_true(  regex_list::is_regex("this[1234].*foo"));    )
+//CESTER_TEST(test_regex_1, inst, cester_assert_false( regex_list::is_regex("this1234foo"));    )
 
 
