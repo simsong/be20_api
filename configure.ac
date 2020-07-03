@@ -11,6 +11,12 @@
 AC_PREREQ(2.57)
 AC_INIT(BE13_API, 1.0.0, bugs@digitalcorpora.org)
 AC_CONFIG_MACRO_DIR(m4)
+
+# Load in additional macros
+m4_include([ax_cxx_compile_stdcxx.m4])
+m4_include([ax_cxx_compile_stdcxx_14.m4])
+
+
 AC_CONFIG_FILES([Makefile ])
 AC_CONFIG_HEADER([config.h])
 AM_INIT_AUTOMAKE
@@ -33,10 +39,8 @@ AC_MSG_NOTICE([point 5])
 
 # Must use C++14 mode. (mandatory)
 # Don't use the GNU C++11 extensions for portability (noext).
-m4_include([m4/ax_cxx_compile_stdcxx.m4])
 AC_MSG_NOTICE([point 6])
 
-m4_include([m4/ax_cxx_compile_stdcxx_14.m4])
 AC_MSG_NOTICE([point 6])
 
 AC_LANG_PUSH(C++)
