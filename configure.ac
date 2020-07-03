@@ -26,6 +26,7 @@ AC_PROG_INSTALL
 
 # Must use C++14 mode. (mandatory)
 # Don't use the GNU C++11 extensions for portability (noext).
+m4_include([m4/ax_cxx_compile_stdcxx.m4])
 m4_include([m4/ax_cxx_compile_stdcxx_14.m4])
 AC_LANG_PUSH(C++)
 AX_CXX_COMPILE_STDCXX_14(noext, mandatory)
