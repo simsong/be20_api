@@ -9,39 +9,20 @@
 #include <unistd.h>
 
 
-#if defined(HAVE_LIBTRE) && defined(HAVE_TRE_REGCOMP) && defined(HAVE_TRE_TRE_H)
-#define REGCOMP tre_regcomp
-#define REGFREE tre_regfree
-#define REGEXEC tre_regexec
-#define nreg (regex_t *)nreg_
-#define HAVE_REGULAR_EXPRESSIONS
-static const char *regex_version = "tre";
-#endif
 
-/* use regcomp() if tre_regcomp() is not available */
-#if defined(HAVE_REGCOMP) && !defined(HAVE_REGULAR_EXPRESSIONS)
-#define REGCOMP regcomp
-#define REGFREE regfree
-#define REGEXEC regexec
-#define nreg (regex_t *)nreg_
-#define HAVE_REGULAR_EXPRESSIONS
-static const char *regex_version = "system";
-#endif
+/* rewritten to use C++11's regex */
 
-#ifndef HAVE_REGULAR_EXPRESSIONS
-#error bulk_extractor requires tre_regcomp or regcomp to run
-#error download tre from "http://laurikari.net/tre/download/"
-#endif
-
-const char *beregex::version(){return regex_version;}
+const char *regex_list::regex_engine(){
+    return "std-c++11";
+}
 
 /* Only certain characters are assumed to be a regular expression. These characters are
  * coincidently never in email addresses.
  */
-bool beregex::is_regex(const std::string &str)
+bool regex_list::is_regex(const std::string &str)
 {
-    for(std::string::const_iterator it = str.begin();it!=str.end();it++){
-        switch(*it){
+    for( auto &it : str ) {
+        switch(it){
         case '*':
         case '[':
         case '(':

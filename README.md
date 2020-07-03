@@ -1,12 +1,37 @@
-be13_api
-========
+# be13_api
 
-API version 1.3 for bulk_extractor
+This is the framework for the [bulk_extractor](https://github.com/simsong/bulk_extractor)  plug-in API.
+It is called *be13_api* because the API was developed for Bulk_Extractor version 1.3. The API has been
+used without change in Bulk_Extractor versions 1.4 and 1.5, and will be used without change in Bulk_Extractor version 2.0
 
+The Bulk_Extractor API is a plug-in API for bulk_extractor "scanners." Scanners are implemented
+as `extern "C"` functions which are called from the bulk_extractor C++ framework. All bulk_extractor
+scanners are implemented using the API. Scanners can either be compiled into the bulk_extractor executable, or they can be loaded at run-time from the plug-ins directory. The directory contains zero or more shared libraries (on Unix/Linux/MacOS) or DLLs (on Windows).
 
-Set remote origin:
-  
-    git remote add origin git@github.com:simsong/be13_api.git
+There is no differnece in functionality between scanners that are compiled into bulk_extractor and those that are loaded at runtime.
+
+The API defines functions for:
+
+1. Initializing the scanner.
+2. Scanning an `sbuf`.
+3. Recording features that are discovered in `sbuf`s.
+4. Creating new `sbuf`s with data from the current `sbuf`.
+5. Requesting scans of the newly created `sbuf`s.
+6. Shutting down.
+
+## Working with this repo
+This repo can used in two ways:
+
+1. As a stand-alone repo for developing and testing scanners.
+2. As a submodule repo to bulk_extractor.
+
+The autotools implementation is this repo is designed to either be included in the parent's `configure.ac` file or to use its own `configure.ac` file. It makes a library called `be13_api.a` which can then be linked into the bulk_extractor program or the testing program.
+
+### Help on git submodules
+
+Git submodules are complicated. Basically, the parent module is linked to a paritcular commit point, and not to a particular branch. This isolates parent modules from changes in the submodule until the parent module wants to accept the change.
+
+Here are some things to help you understand this:
 
 References:
   * http://stackoverflow.com/questions/7259535/git-setting-up-a-remote-origin
@@ -31,43 +56,5 @@ If you get this error:
 
 Do this:
 
-    $ git checkout -b tmp  ; git checkout master ; git merge tmp ; git branch -d tmp ; git push git@github.com:simsong/be13_api.git master
+    $ git checkout -b tmp  ; git fetch ; git checkout -b $USER-dev ; git merge master ; git merge tmp ; git push origin $USER-dev
 
-Extended:
-
-    $ git checkout -b tmp 
-    Switched to a new branch 'tmp'
-    $ git checkout master
-    Switched to branch 'master'
-    Your branch is behind 'origin/master' by 8 commits, and can be fast-forwarded.
-    $ git merge tmp
-    Updating 0dbc904..74aca46
-    Fast-forward
-     CODING_STANDARDS.txt |    4 ++++
-     README.md            |   12 +++++++++++-
-     bulk_extractor_i.h   |   14 ++++++++++++--
-     pcap_fake.cpp        |   13 ++++++++++++-
-     pcap_fake.h          |    5 +++++
-     sbuf.cpp             |   36 +++++++++++++++++++++---------------
-     sbuf.h               |   41 ++++++++++++++++++++++++-----------------
-     7 files changed, 89 insertions(+), 36 deletions(-)
-    $ git branch -d tmp
-    Deleted branch tmp (was 74aca46).
-    $ git push git@github.com:simsong/be13_api.git master
-    Counting objects: 7, done.
-    Delta compression using up to 4 threads.
-    Compressing objects: 100% (4/4), done.
-    Writing objects: 100% (4/4), 562 bytes, done.
-    Total 4 (delta 2), reused 0 (delta 0)
-    To git@github.com:simsong/be13_api.git
-       2d14a08..74aca46  master -> master
-    $ 
-
-
-Summary:
-
-    $ git checkout -b tmp; git checkout master; git merge tmp; git branch -d tmp
-
-Followed by:
-
-    $ git push git@github.com:simsong/be13_api.git master

@@ -28,3 +28,5 @@ config.log
 config.status
 stamp-h1
 tests/Makefile
+Makefile
+test-program.cpp

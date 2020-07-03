@@ -3,6 +3,19 @@
 #
 
 AC_MSG_NOTICE([Including be13_configure.m4 from be13_api])
+
+AC_CHECK_HEADERS([ \
+        dlfcn.h \
+        err.h \
+        net/ethernet.h \
+        netinet/in.h \
+        netinit/if_ether.h \
+        sqlite3.h \
+        stdarg.h \
+        stdint.h \
+        unistd.h \
+        ])
+
 AC_CHECK_HEADERS([err.h pwd.h sys/cdefs.h sys/mman.h sys/resource.h sys/utsname.h unistd.h sqlite3.h ])
 AC_CHECK_FUNCS([gmtime_r ishexnumber isxdigit localtime_r unistd.h mmap err errx warn warnx pread64 pread strptime _lseeki64 utimes ])
 
@@ -23,11 +36,11 @@ AC_TRY_LINK([#include <inttypes.h>],
 #
 # Figure out which version of unordered_map we are going to use
 #
-AC_LANG_PUSH(C++)
-  AC_MSG_NOTICE([checking for unordered_map])
-  AC_MSG_NOTICE([  CXXFLAGS:           $CXXFLAGS])
-  AC_CHECK_HEADERS([unordered_map unordered_set],[],[
-    AC_CHECK_HEADERS([tr1/unordered_map tr1/unordered_set])])
-  AC_MSG_NOTICE([done])
-AC_LANG_POP()    
+#AC_LANG_PUSH(C++)
+#  AC_MSG_NOTICE([checking for unordered_map])
+#  AC_MSG_NOTICE([  CXXFLAGS:           $CXXFLAGS])
+#  AC_CHECK_HEADERS([unordered_map unordered_set],[],[
+#    AC_CHECK_HEADERS([tr1/unordered_map tr1/unordered_set])])
+#  AC_MSG_NOTICE([done])
+#AC_LANG_POP()    
 

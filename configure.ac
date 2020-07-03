@@ -9,13 +9,14 @@
 #
 
 AC_PREREQ(2.57)
-AC_INIT(BE13_API, 1.0.0, info@digitalcorpora.org)
+AC_INIT(BE13_API, 1.0.0, bugs@digitalcorpora.org)
 AC_CONFIG_MACRO_DIR(m4)
-AC_CONFIG_FILES([Makefile tests/Makefile ])
+AC_CONFIG_FILES([Makefile ])
 AC_CONFIG_HEADER([config.h])
 AM_INIT_AUTOMAKE
 AM_MAINTAINER_MODE
-
+AC_PROG_RANLIB
+AM_PROG_AR
 
 # Programs we will be using
 AC_PROG_CC
@@ -23,125 +24,33 @@ AC_PROG_CXX
 AM_PROG_CC_C_O                    dnl allow per-produce flags
 AC_PROG_INSTALL
 
-# use C++11 mode if available; HAVE_CXX11 is defined in config.h if so.  Don't
-# use the GNU C++11 extensions for portability's sake (noext).
+# Must use C++14 mode. (mandatory)
+# Don't use the GNU C++11 extensions for portability (noext).
+m4_include([m4/ax_cxx_compile_stdcxx_14.m4])
 AC_LANG_PUSH(C++)
-AX_CXX_COMPILE_STDCXX_11(noext, optional)
+AX_CXX_COMPILE_STDCXX_14(noext, mandatory)
 AC_LANG_POP()
 
-#m4_include([dfxml_configure.m4])
+# We must use C14 and C++14
+#CFLAGS="$CFLAGS -std=c14"
+#CXXFLAGS="$CXXFLAGS -std=c++14"
 
-################################################################
-#
-# Enable all the compiler debugging we can find
-#
-# This is originally from PhotoRec, but modified substantially by Simson
-# Figure out which flags we can use with the compiler. 
-#
-# These I don't like:
-# -Wdeclaration-after-statement -Wconversion
-# doesn't work: -Wunreachable-code 
-# causes configure to crash on gcc-4.2.1: -Wsign-compare-Winline 
-# causes warnings with unistd.h:  -Wnested-externs 
-# Just causes too much annoyance: -Wmissing-format-attribute 
+# Turn on all warnings
+m4_include([m4/slg_gcc_all_warnings.m4])
 
-# Check GCC
-GCC_WARNINGS_TO_TEST="-MD -Wpointer-arith -Wmissing-declarations -Wmissing-prototypes \
-    -Wshadow -Wwrite-strings -Wcast-align -Waggregate-return \
-    -Wbad-function-cast -Wcast-qual -Wundef -Wredundant-decls -Wdisabled-optimization \
-    -Wfloat-equal -Wmultichar -Wc++-compat -Wmissing-noreturn -Wno-deprecated-declarations -Wno-unknown-warning-option"
-
-if test x"${mingw}" != "xyes" ; then
-  # add the warnings we do not want to do on mingw
-  GCC_WARNINGS_TO_TEST="$GCC_WARNINGS_TO_TEST -Wall -Wstrict-prototypes"
-fi
-
-echo "Warnings to test: $GCC_WARNINGS_TO_TEST"
-
-for option in $GCC_WARNINGS_TO_TEST
-do
-  SAVE_CFLAGS="$CFLAGS"
-  CFLAGS="$CFLAGS $option"
-  AC_MSG_CHECKING([whether gcc understands $option])
-  AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[]], [[]])],
-      [has_option=yes],
-      [has_option=no; CFLAGS="$SAVE_CFLAGS"])
-  AC_MSG_RESULT($has_option)
-  unset has_option
-  unset SAVE_CFLAGS
-  if test $option = "-Wmissing-format-attribute" ; then
-    AC_DEFINE(HAVE_MISSING_FORMAT_ATTRIBUTE_WARNING,1,
-		[Indicates that we have the -Wmissing-format-attribute G++ warning])
-  fi
-done
-unset option
-
-
-# Check G++
-# We don't use these warnings:
-# -Waggregate-return -- aggregate returns are GOOD; they simplify code design
-# We can use these warnings after ZLIB gets upgraded:
-# -Wundef  --- causes problems with zlib
-# -Wcast-qual 
-# -Wmissing-format-attribute  --- Just too annoying
-AC_LANG_PUSH(C++)
-
-
-CXX_WARNINGS_TO_TEST="-Wall -MD -Wpointer-arith \
-    -Wshadow -Wwrite-strings -Wcast-align  \
-    -Wredundant-decls -Wdisabled-optimization \
-    -Wfloat-equal -Wmultichar -Wmissing-noreturn \
-    -Wstrict-null-sentinel -Woverloaded-virtual -Wsign-promo -Wno-deprecated-declarations -Wno-unknown-warning-option\
-    -funit-at-a-time"
-
-if test x"${mingw}" != "xyes" ; then
-  # add the warnings we don't want to do on mingw
-  CXX_WARNINGS_TO_TEST="$CXX_WARNINGS_TO_TEST  -Weffc++"
-fi
-
-echo "Warnings to test: $CXX_WARNINGS_TO_TEST"
-
-for option in $CXX_WARNINGS_TO_TEST
-do
-  SAVE_CXXFLAGS="$CXXFLAGS"
-  CXXFLAGS="$CXXFLAGS $option"
-  AC_MSG_CHECKING([whether g++ understands $option])
-  AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[]], [[]])],
-      [has_option=yes],
-      [has_option=no; CXXFLAGS="$SAVE_CXXFLAGS"])
-  AC_MSG_RESULT($has_option)
-  unset has_option
-  unset SAVE_CXXFLAGS
-done
-unset option
-
-AC_LANG_POP()    
 
 
 ################################################################
-# Specify our other headers
+# Specify our headers
 
 AC_HEADER_STDC
-AC_CHECK_HEADERS([regex.h \
-        netinet/in.h netinit/if_ether.h net/ethernet.h \
-        sqlite3.h \
-        err.h \
-        stdarg.h \
-        dlfcn.h \
-        stdint.h \
-        unistd.h ])
+## Check for headers used by bulk Extractor
+## do not put pthread here
+AC_CHECK_HEADERS([alloca.h dirent.h dlfcn.h err.h errno.h fcntl.h inttypes.h libgen.h limits.h malloc.h mmap.h pwd.h signal.h stdarg.h stdint.h stdio.h strings.h string.h stdlib.h sys/cdefs.h sys/disk.h sys/fcntl.h sys/ioctl.h sys/mman.h sys/mmap.h sys/mount.h sys/param.h sys/socket.h sys/stat.h sys/types.h sys/time.h sys/resource.h time.h unistd.h windows.h CoreServices/CoreServices.h])
 
-                                              
+## Check dfxml and be13_api headers
+m4_include([dfxml/src/dfxml_configure.m4])
+m4_include([be13_configure.m4])
 
-############## drop optimization flags if requested ################
-AC_ARG_WITH(noopt, AC_HELP_STRING([--with-noopt], [Drop -O C flags]))
-if test x"${AFF_NOOPT}" != "x" ; then
-   with_noopt="yes";
-fi
-
-if test "${with_noopt}" = "yes" ; then
-  CFLAGS=`echo "$CFLAGS" | sed s/-O[[0-9]]//`             # note the double quoting! 
-  CXXFLAGS=`echo "$CXXFLAGS" | sed s/-O[[0-9]]//`
-fi
 
 AC_OUTPUT
