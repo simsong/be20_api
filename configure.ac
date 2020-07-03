@@ -13,8 +13,8 @@ AC_INIT(BE13_API, 1.0.0, bugs@digitalcorpora.org)
 AC_CONFIG_MACRO_DIR(m4)
 
 # Load in additional macros
-m4_include([m4/ax_cxx_compile_stdcxx.m4])
-m4_include([m4/ax_cxx_compile_stdcxx_14.m4])
+#m4_include([m4/ax_cxx_compile_stdcxx.m4])
+#m4_include([m4/ax_cxx_compile_stdcxx_14.m4])
 
 AC_CONFIG_FILES([Makefile ])
 AC_CONFIG_HEADER([config.h])
@@ -41,7 +41,9 @@ AC_MSG_NOTICE([point 5])
 AC_MSG_NOTICE([point 6])
 
 AC_LANG_PUSH(C++)
-AX_CXX_COMPILE_STDCXX_14(noext, mandatory)
+# "this macro exists in the native autoconf even without autoconf-archive"
+# ---https://github.com/libpinyin/libpinyin/issues/72
+AX_CXX_COMPILE_STDCXX([14], [noext], [mandatory]) 
 AC_LANG_POP()
 AC_MSG_NOTICE([point 7])
 
