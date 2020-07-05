@@ -28,13 +28,10 @@ AC_PROG_INSTALL
 # Must use C++14 mode. (mandatory)
 # Don't use the GNU C++14 extensions for portability (noext).
 
+m4_include([m4/ax_cxx_compile_stdcxx.m4])
 AC_LANG_PUSH(C++)
 AX_CXX_COMPILE_STDCXX([14], [noext], [mandatory]) 
 AC_LANG_POP()
-
-# We must use C14 and C++14
-#CFLAGS="$CFLAGS -std=c14"
-#CXXFLAGS="$CXXFLAGS -std=c++14"
 
 # Turn on all warnings
 m4_include([m4/slg_gcc_all_warnings.m4])
