@@ -595,7 +595,7 @@ void be13::plugin::process_sbuf(const class scanner_params &sp)
     }
 
     /* Determine if we have seen this buffer before */
-    bool seen_before = fs.check_previously_processed(sp.sbuf.buf,sp.sbuf.bufsize);
+    bool seen_before = fs.check_previously_processed(sp.sbuf.buf, sp.sbuf.bufsize);
     if(seen_before){
         md5_t md5 = md5_generator::hash_buf(sp.sbuf.buf,sp.sbuf.bufsize);
         feature_recorder *alert_recorder = fs.get_alert_recorder();

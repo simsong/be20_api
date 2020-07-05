@@ -12,6 +12,7 @@
  * Created and maintained by Simson Garfinkel, 2007--2012.
  * 2019 - after six years of warning, this is now being tightened up such that there are no
  *        public variables.
+ * Created and maintained by Simson Garfinkel, 2007--2012, 2019.
  *
  * sbuf_stream is a stream-oriented interface for reading sbuf data. 
  */
@@ -19,6 +20,25 @@
 
 #ifndef SBUF_H
 #define SBUF_H
+
+/*
+ * NOTE: The crash identified in November 2019 was because access to
+ * *sbuf.buf went beyond buflen. The way around this is to make
+ * *sbuf.buf private. Most (but not all) of the accesses to *sbuf.buf
+ * appear to be for generating a hash value, so simply providing a
+ * hash update function would be a useful addition to the sbuf
+ * class. Unfortunately, the crash was not a result of hashing, but
+ * result of character-by-character access in scan_wordlist. The bug
+ * had been there for more than 7 years without being identified, but
+ * was discovered when a compiler was changed...
+ *
+ * Making *sbuf.buf private would largely fix this problem, but it
+ * would require substantial rewriting of several scanners that (at
+ * the current time) do not appear to have bugs.
+ */
+
+//Make *sbuf.buf private
+//#define PRIVATE_SBUF_BUF
 
 #ifdef HAVE_STRING_H
 #include <string.h>
@@ -243,8 +263,11 @@ private:
     const sbuf_t  *parent;              // parent sbuf references data in another.
 public:
     mutable int   children;             // number of child sbufs; can get increment in copy
+#ifdef PRIVATE_SBUF_BUF
+private:               // one day
+#else
 public:
-    //private:               // one day
+#endif
     /**
      * \deprecated
      * This field will be private in a future release of \b bulk_extractor.
@@ -437,6 +460,8 @@ public:
      * @{
      * these get functions safely return an unsigned integer value for the offset of i,
      * in Intel (little-endian) byte order or else throw sbuf_range_exception if out of range.
+     *
+     * These should be used instead of buf[i]
      */
     uint8_t  get8u(size_t i) const;
     uint16_t get16u(size_t i) const;

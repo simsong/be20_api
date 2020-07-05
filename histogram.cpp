@@ -107,7 +107,7 @@ std::string *HistogramMaker::convert_utf16_to_utf8(const std::string &key,bool l
             if(nullpos==string::npos) break;
             tempKey->erase(nullpos,1);
         }
-    } catch(utf8::invalid_utf16){
+    } catch(const utf8::invalid_utf16 &){
         /* Exception; bad UTF16 encoding */
         delete tempKey;
         tempKey = 0;		// give up on temp key; otherwise its invalidated below
@@ -187,7 +187,7 @@ void HistogramMaker::add(const std::string &key)
 	    /* erase tempKey and copy the utf16 back into tempKey as utf8 */
 	    tempKey->clear();		// erase the characters
 	    utf8::utf16to8(utf16key.begin(),utf16key.end(),std::back_inserter(*tempKey));
-	} catch(utf8::exception){
+	} catch(const utf8::exception &){
 	    /* Exception thrown during utf8 or 16 conversions.
 	     * So the string we thought was valid utf8 wasn't valid utf8 afterall.
 	     * tempKey will remain unchanged.
@@ -209,7 +209,7 @@ void HistogramMaker::add(const std::string &key)
 	    /* convert it back */
 	    tempKey->clear();		// erase the characters
 	    utf8::utf16to8(utf16digits.begin(),utf16digits.end(),std::back_inserter(*tempKey));
-	} catch(utf8::exception){
+	} catch(const utf8::exception &){
 	    /* Exception during utf8 or 16 conversions*.
 	     * So the string wasn't utf8.  Fall back to just extracting the digits
 	     */

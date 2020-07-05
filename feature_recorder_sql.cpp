@@ -337,7 +337,7 @@ feature_recorder_set::feature_recorder_set(uint32_t flags_,const feature_recorde
 
 feature_recorder *feature_recorder_set::create_name_factory(const std::string &name_){return 0;}
 void feature_recorder_set::create_name(const std::string &name,bool create_stop_also){}
-bool feature_recorder_set::check_previously_processed(const uint8_t *buf,size_t bufsize){return 0;}
+bool feature_recorder_set::check_previously_processed(const uint8_t *buf, size_t bufsize){return 0;}
 feature_recorder *feature_recorder_set::get_name(const std::string &name) const{return 0;}
 feature_recorder *feature_recorder_set::get_alert_recorder() const{return 0;}
 void feature_recorder_set::get_feature_file_list(std::vector<std::string> &ret){}
