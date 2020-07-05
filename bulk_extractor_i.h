@@ -877,7 +877,7 @@ inline std::string safe_utf16to8(std::wstring s){ // needs to be cleaned up
     std::string utf8_line;
     try {
         utf8::utf16to8(s.begin(),s.end(),back_inserter(utf8_line));
-    } catch(utf8::invalid_utf16){
+    } catch(const utf8::invalid_utf16 &){
         /* Exception thrown: bad UTF16 encoding */
         utf8_line = "";
     }
@@ -888,7 +888,7 @@ inline std::wstring safe_utf8to16(std::string s){ // needs to be cleaned up
     std::wstring utf16_line;
     try {
         utf8::utf8to16(s.begin(),s.end(),back_inserter(utf16_line));
-    } catch(utf8::invalid_utf8){
+    } catch(const utf8::invalid_utf8 &){
         /* Exception thrown: bad UTF16 encoding */
         utf16_line = L"";
     }
