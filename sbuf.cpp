@@ -23,10 +23,7 @@ sbuf_t *sbuf_t::map_file(const std::string &fname)
 {
     int fd = open(fname.c_str(),O_RDONLY|O_BINARY,0);
     if(fd<0) return 0;          /* cannot open file */
-    sbuf_t *sbuf = sbuf_t::map_file(fname,fd);
-    if(sbuf) {
-        sbuf->should_close = true;          // be sure to close the file
-    }
+    sbuf_t *sbuf = sbuf_t::map_file(fname, fd, true);
     return sbuf;
 }
 
@@ -35,7 +32,7 @@ sbuf_t *sbuf_t::map_file(const std::string &fname)
  * If there is no mmap, just allocate space and read the file
  */
 
-sbuf_t *sbuf_t::map_file(const std::string &fname,int fd)
+sbuf_t *sbuf_t::map_file(const std::string &fname, int fd, bool should_close)
 {
     struct stat st;
     if(fstat(fd,&st)){
@@ -65,12 +62,12 @@ sbuf_t *sbuf_t::map_file(const std::string &fname,int fd)
 #endif
     sbuf_t *sbuf = new sbuf_t(pos0_t(fname+sbuf_t::map_file_delimiter),
                               buf,
-                              st.st_size,
-                              st.st_size,
-                              fd,
-                              should_unmap,
+                              st.st_size, // bufsize
+                              st.st_size, // pagesize
+                              fd,         // fd
+                              should_unmap, 
                               should_free,
-                              false);   // the caller's job is to close
+                              should_close);
     return sbuf;
 }
 

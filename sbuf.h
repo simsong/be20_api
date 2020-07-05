@@ -9,6 +9,9 @@
  * byte[0]). The buffer may come from a disk, a disk image, or be the
  * result of decompressing or otherwise decoding other data.
  *
+ * Created and maintained by Simson Garfinkel, 2007--2012.
+ * 2019 - after six years of warning, this is now being tightened up such that there are no
+ *        public variables.
  * Created and maintained by Simson Garfinkel, 2007--2012, 2019.
  *
  * sbuf_stream is a stream-oriented interface for reading sbuf data. 
@@ -49,12 +52,16 @@
 #define __STDC_FORMAT_MACROS
 #endif
 
+#include <unistd.h>
 #include <stdlib.h>
 #include <inttypes.h>
 #include <string>
 #include <sstream>
 #include <iostream>
 
+#ifdef HAVE_SYS_MMAN_H
+#include <sys/mman.h>
+#endif
 
 /****************************************************************
  *** pos0_t
@@ -242,16 +249,16 @@ private:
     /* The private structures keep track of memory management */
     int    fd;                          /* file this came from if mmapped file */
 public:;
-    bool   should_unmap;                /* munmap buffer when done */
-    bool   should_free;                 /* should buf be freed when this sbuf is deleted? */
-    bool   should_close;                /* close(fd) when done. */
+    const bool should_unmap;                /* munmap buffer when done */
+    const bool should_free;                 /* should buf be freed when this sbuf is deleted? */
+    const bool should_close;                /* close(fd) when done. */
     static size_t min(size_t a,size_t b){
         return a<b ? a : b;
     }
 
 public:
-    int     page_number;                /* used for debugging */
-    pos0_t  pos0;                       /* the path of buf[0] */
+    const uint64_t page_number;        /* from iterator when sbuf is created */
+    const pos0_t  pos0;                 /* the path of buf[0] */
 private:
     const sbuf_t  *parent;              // parent sbuf references data in another.
 public:
@@ -267,8 +274,8 @@ public:
      */
     const uint8_t *buf;         /* start of the buffer */
 public:
-     size_t  bufsize;           /* size of the buffer. The scanner should analyze 0..(bufsize-1) */
-     size_t  pagesize;          /* page data; the rest is the 'margin'. pagesize <= bufsize */
+    const size_t  bufsize;           /* size of the buffer */
+    const size_t  pagesize;          /* page data; the rest is the 'margin'. pagesize <= bufsize */
     
 private:
     void release();                     // release allocated storage
@@ -355,11 +362,17 @@ public:
         pagesize(min(pagesize_,bufsize_)){
     };
 
-    /* Similar to above, but with no fd */
-    explicit sbuf_t(const pos0_t &pos0_,const uint8_t *buf_,
-                    size_t bufsize_,size_t pagesize_,bool should_free_):
+    /* Similar to above, but with no fd.
+     * used for by iterators for sbuf creation.
+     */
+    explicit sbuf_t(const pos0_t &pos0_,
+                    const uint8_t *buf_,
+                    size_t bufsize_,
+                    size_t pagesize_,
+                    uint64_t page_number_,
+                    bool should_free_):
         fd(0), should_unmap(false), should_free(should_free_), should_close(false),
-        page_number(0),pos0(pos0_),parent(0),children(0),buf(buf_),bufsize(bufsize_),
+        page_number(page_number_),pos0(pos0_),parent(0),children(0),buf(buf_),bufsize(bufsize_),
         pagesize(min(pagesize_,bufsize_)){
     };
 
@@ -379,17 +392,9 @@ public:
         return sbuf_t(*this,off);
     }
 
-    virtual ~sbuf_t(){
-#if defined(SBUF_TRACK) && defined(HAVE___SYNC_ADD_AND_FETCH)
-        assert(__sync_fetch_and_add(&children,0)==0);
-#endif
-        if(parent) parent->del_child(*this);
-        release();
-    }
-
     /* Allocate a sbuf from a file mapped into memory */
     static sbuf_t *map_file(const std::string &fname); 
-    static sbuf_t *map_file(const std::string &fname,int fd); // if file is already opened
+    static sbuf_t *map_file(const std::string &fname, int fd, bool should_close); // if file is already opened
     static const std::string U10001C;         // default delimeter character in bulk_extractor
     static std::string map_file_delimiter; // character placed
     static void set_map_file_delimiter(const std::string &new_delim){
@@ -617,6 +622,25 @@ public:
     void hex_dump(std::ostream &os) const; /* dump all */
     ssize_t  write(int fd,size_t loc,size_t len) const; /* write to a file descriptor, returns # bytes written */
     ssize_t  write(FILE *f,size_t loc,size_t len) const; /* write to a file descriptor, returns # bytes written */
+
+    virtual ~sbuf_t() {
+#if defined(SBUF_TRACK) && defined(HAVE___SYNC_ADD_AND_FETCH)
+        assert(__sync_fetch_and_add(&children,0)==0);
+#endif
+        if(parent) parent->del_child(*this);
+        
+#ifdef HAVE_MMAP
+        if(should_unmap && buf){
+            munmap((void *)buf,bufsize);
+        }
+#endif
+        if(should_close && fd>0){
+            ::close(fd);
+        }
+        if(should_free && buf){
+            free((void *)buf);
+        }
+    }
 };
 
 std::ostream & operator <<(std::ostream &os,const sbuf_t &sbuf);

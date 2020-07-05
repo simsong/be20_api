@@ -130,28 +130,5 @@ inline int64_t sbuf_t::get64i(size_t i,sbuf_t::byte_order_t bo) const {
     return bo==BO_LITTLE_ENDIAN ? get64u(i) : get64uBE(i);
 }
 
-inline void sbuf_t::release()
-{
-#ifdef HAVE_MMAP
-    if(should_unmap && buf){
-        munmap((void *)buf,bufsize);
-        should_unmap = false;
-        buf = 0;
-    }
-#endif
-    if(should_close && fd>0){
-        ::close(fd);
-        should_close = false;
-        fd=0;
-    }
-    if(should_free && buf){
-        free((void *)buf);
-        should_free = false;
-        buf = 0;
-    }
-    page_number = 0;
-    bufsize = 0;
-    pagesize = 0;
-}
 
 #endif
