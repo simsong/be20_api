@@ -25,16 +25,16 @@
 #endif
 
 // define stuff I need in the global environment. Only read it once.
-//#include "../bulk_extractor_i.h"
+#include "regex_vector.h"
 #define GUARD_BLOCK
 #endif
 
 // get cester!
 #include "tests/cester.h"
 
-//CESTER_TEST(test_regex_1, inst, cester_assert_true(  regex_list::is_regex("this[1234]foo"));    )
-//CESTER_TEST(test_regex_1, inst, cester_assert_true(  regex_list::is_regex("this(1234)foo"));    )
-//CESTER_TEST(test_regex_1, inst, cester_assert_true(  regex_list::is_regex("this[1234].*foo"));    )
-//CESTER_TEST(test_regex_1, inst, cester_assert_false( regex_list::is_regex("this1234foo"));    )
+CESTER_TEST(test_regex_vector_1, inst, cester_assert_true(  regex_vector::has_metachars("this[1234]foo"));    )
+CESTER_TEST(test_regex_vector_2, inst, cester_assert_true(  regex_vector::has_metachars("this(1234)foo"));    )
+CESTER_TEST(test_regex_vector_3, inst, cester_assert_true(  regex_vector::has_metachars("this[1234].*foo"));    )
+CESTER_TEST(test_regex_vector_4, inst, cester_assert_false( regex_vector::has_metachars("this1234foo"));    )
 
 

@@ -9,8 +9,6 @@
 # It's only for people who check out the git repo
 
 EXTRA_DIST = \
-	ax_cxx_compile_stdcxx.m4 \
-	ax_cxx_compile_stdcxx_14.m4 \
 	cester_configure.m4 \
 	slg_gcc_all_warnings.m4
 
@@ -26,8 +24,8 @@ include Makefile.defs
 check_PROGRAMS = test_be13api
 TESTS = $(check_PROGRAMS)
 
-#test_be13api_SOURCES = test_be13api.cpp tests/cester.h $(BE13_API_SRC)
+test_be13api_SOURCES = test_be13api.cpp tests/cester.h regex_vector.cpp regex_vector.h
 
 # add each test as it is working!
 # Right now we have no working tests
-test_be13api_SOURCES = test_be13api.cpp tests/cester.h 
+#test_be13api_SOURCES = test_be13api.cpp tests/cester.h 
