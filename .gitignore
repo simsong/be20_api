@@ -34,3 +34,4 @@ tests/Makefile
 *.gcda
 *.gcno
 out/
+codecov.yml
