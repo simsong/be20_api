@@ -38,3 +38,5 @@ codecov.yml
 test_be13api_catch2
 ar-lib
 test-driver
+config.guess
+config.sub
