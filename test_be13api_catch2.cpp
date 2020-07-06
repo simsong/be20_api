@@ -5,14 +5,23 @@
 
 // define stuff I need in the global environment. Only read it once.
 #include "regex_vector.h"
+#include "atomic_set_map.h"
 
 #include "tests/catch.hpp"
 
+
 TEST_CASE( "test regex_vector", "[vector]" ) {
     REQUIRE( regex_vector::has_metachars("this[1234]foo") == true );
+    REQUIRE( regex_vector::has_metachars("this(1234)foo") == true );
+    REQUIRE( regex_vector::has_metachars("this[1234].*foo") == true);
+    REQUIRE( regex_vector::has_metachars("this1234foo") == false);
 }
-//CESTER_TEST(test_regex_vector_2, inst, cester_assert_true(  regex_vector::has_metachars("this(1234)foo"));    )
-//CESTER_TEST(test_regex_vector_3, inst, cester_assert_true(  regex_vector::has_metachars("this[1234].*foo"));    )
-//CESTER_TEST(test_regex_vector_4, inst, cester_assert_false( regex_vector::has_metachars("this1234foo"));    )
 
-
+TEST_CASE( "test atomic_set_map", "[vector]" ){
+    atomic_set<std::string> as;
+    as.insert("one");
+    as.insert("two");
+    as.insert("three");
+    REQUIRE( as.contains("one") == true );
+    REQUIRE( as.contains("four") == false );
+}
