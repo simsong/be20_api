@@ -21,10 +21,10 @@ include Makefile.defs
 #noinst_LIBRARIES = libbe13api.a
 #libbe13api_a_SOURCES = $(BE13_API_SRC)
 
-check_PROGRAMS = test_be13api
+check_PROGRAMS = test_be13api_catch2
 TESTS = $(check_PROGRAMS)
 
-test_be13api_SOURCES = test_be13api.cpp tests/cester.h regex_vector.cpp regex_vector.h
+test_be13api_catch2_SOURCES = test_be13api_catch2.cpp tests/catch2.h regex_vector.cpp regex_vector.h
 
 # add each test as it is working!
 # Right now we have no working tests

@@ -35,3 +35,4 @@ tests/Makefile
 *.gcno
 out/
 codecov.yml
+test_be13api_catch2
