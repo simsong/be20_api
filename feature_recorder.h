@@ -54,8 +54,6 @@
 #define BEAPI_SQLITE3_STMT void
 #endif
 
-
-#include "cppmutex.h"
 #include "dfxml/src/dfxml_writer.h"
 #include "dfxml/src/hash_t.h"
 #include "atomic_set_map.h"
@@ -137,7 +135,7 @@ public:
         besql_stmt(const besql_stmt &);
         besql_stmt &operator=(const besql_stmt &);
 public:
-        cppmutex           Mstmt;      // a mutext to protect it
+        std::mutex         Mstmt;
         BEAPI_SQLITE3_STMT *stmt;      // the prepared statement
         besql_stmt(BEAPI_SQLITE3 *db3,const char *sql);
         virtual ~besql_stmt();
@@ -227,8 +225,8 @@ protected:
     size_t       context_window_before;      // context window
     size_t       context_window_after;       // context window
 
-    mutable cppmutex Mf;                     // protects the file  & file_number_
-    mutable cppmutex Mr;                     // protects the redlist 
+    mutable std::mutex Mf;      // protects the file  & file_number_
+    mutable std::mutex Mr;                     // protects the redlist 
     mhistograms_t mhistograms;               // the memory histograms, if we are using them
     uint64_t      mhistogram_limit;          // how many we want (per feature recorder limit, rather than per histogram)
 

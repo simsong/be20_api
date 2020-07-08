@@ -6,6 +6,7 @@
 // define stuff I need in the global environment. Only read it once.
 #include "regex_vector.h"
 #include "atomic_set_map.h"
+#include "sbuf.h"
 
 #include "tests/catch.hpp"
 
@@ -57,3 +58,31 @@ TEST_CASE( "test atomic_histogram", "[vector]" ){
     ahist.dump_sorted( &called, dump_cb );
     REQUIRE( called == 2);
 }
+
+TEST_CASE( "sbuf", "[vector]" ){
+    REQUIRE( stoi64("12345") == 12345);
+
+    pos0_t p0("10000-hello-200-bar",300);
+    pos0_t p1("10000-hello-200-bar",310);
+    pos0_t p2("10000-hello-200-bar",310);
+    REQUIRE( p0.path == "10000-hello-200-bar" );
+    REQUIRE( p0.offset == 300);
+    REQUIRE( p0.isRecursive() == true);
+    REQUIRE( p0.firstPart() == "10000" );
+    REQUIRE( p0.lastAddedPart() == "bar" );
+    REQUIRE( p0.alphaPart() == "hello/bar" );
+    REQUIRE( p0.imageOffset() == 10000 );
+    REQUIRE( p0 + 10 == p1);
+    REQUIRE( p0 < p1 );
+    REQUIRE( p1 > p0 );
+    REQUIRE( p0 != p1 );
+    REQUIRE( p1 == p2 );
+}
+
+
+
+
+
+
+
+    

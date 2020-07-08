@@ -87,7 +87,7 @@ void feature_recorder::besql_stmt::insert_feature(const pos0_t &pos,
 {
 #ifdef USE_SQLITE3
     assert(stmt!=0);
-    cppmutex::lock lock(Mstmt);           // grab a lock
+    std::lock_guard<std::mutex> lock(Mstmt);           // grab a lock
     const std::string &path = pos.str();
     sqlite3_bind_int64(stmt, 1, pos.imageOffset()); // offset
     sqlite3_bind_text(stmt, 2, path.data(), path.size(), SQLITE_STATIC); // path
@@ -197,7 +197,7 @@ void feature_recorder_set::db_close()
 
 void feature_recorder_set::db_transaction_begin()
 {
-    cppmutex::lock lock(Min_transaction);
+    std::lock_guard<std::mutex> lock(Min_transaction);
     if(!in_transaction){
         db_send_sql(db3,begin_transaction);
         in_transaction = true;
@@ -206,7 +206,7 @@ void feature_recorder_set::db_transaction_begin()
 
 void feature_recorder_set::db_transaction_commit()
 {
-    cppmutex::lock lock(Min_transaction);
+    std::lock_guard<std::mutex> lock(Min_transaction);
     if(in_transaction){
         db_send_sql(db3,commit_transaction);
         in_transaction = false;

@@ -11,7 +11,6 @@
 #endif
 
 #include "config.h"
-#include "cppmutex.h"
 #include "utils.h"
 
 #ifdef HAVE_UNISTD_H
@@ -27,6 +26,7 @@
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <string.h>
+#include <mutex>
 
 #ifndef HAVE_ERR
 #include <stdarg.h>

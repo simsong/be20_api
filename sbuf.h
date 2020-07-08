@@ -198,8 +198,12 @@ inline bool operator >(const class pos0_t & pos0,const class pos0_t &pos1)  {
     return pos0.path > pos1.path;
 };
 
-inline bool operator ==(const class pos0_t & pos0,const class pos0_t &pos1) {
+inline bool operator == (const class pos0_t & pos0,const class pos0_t &pos1) {
     return pos0.path==pos1.path && pos0.offset==pos1.offset;
+};
+
+inline bool operator != (const class pos0_t & pos0,const class pos0_t &pos1) {
+    return !(pos0 == pos1);
 };
 /** @} */
 

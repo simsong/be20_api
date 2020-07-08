@@ -27,7 +27,7 @@ uint32_t scanner_def::max_depth = 7;            // max recursion depth
 uint32_t scanner_def::max_ngram = 10;            // max recursion depth
 static int debug;                               // local debug variable
 static uint32_t max_depth_seen=0;
-static cppmutex max_depth_seenM;
+static std::mutex max_depth_seenM;
 bool be13::plugin::dup_data_alerts = false; // by default, is disabled
 uint64_t be13::plugin::dup_data_encountered = 0; // amount that was not processed
 
@@ -565,7 +565,7 @@ static size_t find_ngram_size(const sbuf_t &sbuf)
 
 uint32_t be13::plugin::get_max_depth_seen()
 {
-    cppmutex::lock lock(max_depth_seenM);
+    std::lock_guard<std::mutex> lock(max_depth_seenM);
     return max_depth_seen;
 }
 
@@ -583,7 +583,7 @@ void be13::plugin::process_sbuf(const class scanner_params &sp)
 
     {
         /* note the maximum depth that we've seen */
-        cppmutex::lock lock(max_depth_seenM);
+        std::lock_guard<std::mutex> lock(max_depth_seenM);
         if(sp.depth > max_depth_seen) max_depth_seen = sp.depth;
     }
 

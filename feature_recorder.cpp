@@ -179,7 +179,7 @@ void feature_recorder::close()
 
 void feature_recorder::flush()
 {
-    cppmutex::lock lock(Mf);            // get the lock; released when object is deallocated.
+    std::lock_guard<std::mutex> lock(Mf);            // get the lock; released when object is deallocated.
     ios.flush();
 }
 
@@ -519,7 +519,7 @@ void feature_recorder::write(const std::string &str)
         return;
     }
 
-    cppmutex::lock lock(Mf);
+    std::lock_guard<std::mutex> lock(Mf);
     if(ios.is_open()){
         if(count_==0){
             banner_stamp(ios,feature_file_header);
@@ -665,7 +665,7 @@ void feature_recorder::write(const pos0_t &pos0,const std::string &feature_,cons
        && fs.alert_list
        && fs.alert_list->check_feature_context(*feature_utf8,context)){
         std::string alert_fn = fs.get_outdir() + "/ALERTS_found.txt";
-        cppmutex::lock lock(Mr);                // notice we are locking the alert list
+        std::lock_guard<std::mutex> lock(Mr);                // notice we are locking the alert list
         std::ofstream rf(alert_fn.c_str(),std::ios_base::app);
         if(rf.is_open()){
             rf << pos0.shift(feature_recorder::offset_add).str() << '\t' << feature << '\t' << "\n";
@@ -987,7 +987,7 @@ std::string feature_recorder::carve_records(const sbuf_t &sbuf, size_t pos, size
     }
 
     // To control multiple thread writing
-    cppmutex::lock lock(Mf);
+    std::lock_guard<std::mutex> lock(Mf);
 
     /* Write the file into the directory */
     int fd = ::open(fname.c_str(),O_APPEND|O_CREAT|O_BINARY|O_RDWR,0666);
@@ -1033,7 +1033,7 @@ std::string feature_recorder::write_data(unsigned char *data, size_t len, const 
     }
 
     // To control multiple thread writing
-    cppmutex::lock lock(Mf);
+    std::lock_guard<std::mutex> lock(Mf);
 
     /* Write the file into the directory */
     int fd = ::open(fname.c_str(),O_CREAT|O_BINARY|O_RDWR,0666);

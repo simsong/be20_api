@@ -4,7 +4,6 @@ BE13_API_SRC= \
         $(BE13_API_DIR)regex_vector.cpp \
         $(BE13_API_DIR)regex_vector.h \
         $(BE13_API_DIR)bulk_extractor_i.h \
-        $(BE13_API_DIR)cppmutex.h \
         $(BE13_API_DIR)feature_recorder.cpp \
         $(BE13_API_DIR)feature_recorder.h \
         $(BE13_API_DIR)feature_recorder_set.cpp \

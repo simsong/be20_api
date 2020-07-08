@@ -3,12 +3,12 @@
 #define FEATURE_RECORDER_SET_H
 
 #include "feature_recorder.h"
-#include "cppmutex.h"
 #include "dfxml/src/dfxml_writer.h"
 #include "dfxml/src/hash_t.h"
 #include "word_and_context_list.h"
 #include <map>
 #include <set>
+#include <mutex>
 
 /** \addtogroup internal_interfaces
  * @{
@@ -34,9 +34,9 @@ class feature_recorder_set {
     const std::string     input_fname;      // input file
     const std::string     outdir;           // where output goes
     feature_recorder_map  frm;              // map of feature recorders, by name; TK-replace with an atomic_set
-    mutable cppmutex      Mscanner_stats;         // locks frm and scanner_stats_map
+    mutable std::mutex    Mscanner_stats;         // locks frm and scanner_stats_map
     histogram_defs_t      histogram_defs;   // histograms that are to be created.
-    mutable cppmutex      Min_transaction;
+    mutable std::mutex    Min_transaction;
     bool                  in_transaction;
 public:
     BEAPI_SQLITE3         *db3;             // opened in SQLITE_OPEN_FULLMUTEX mode

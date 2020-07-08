@@ -3,11 +3,15 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <stdio.h>
+
 #include "bulk_extractor_i.h"
 #include "unicode_escape.h"
 
 /****************************************************************
  *** SBUF_T
+ *** Implement the sbuf abstraction, which is the primary buffer management
+ *** tool of bulk_extractor. sbufs maintain memory management.
+ *** Could this be done with a smart pointer?
  ****************************************************************/
 
 #ifndef O_BINARY
@@ -22,7 +26,7 @@ std::string sbuf_t::map_file_delimiter(sbuf_t::U10001C);
 sbuf_t *sbuf_t::map_file(const std::string &fname)
 {
     int fd = open(fname.c_str(),O_RDONLY|O_BINARY,0);
-    if(fd<0) return 0;          /* cannot open file */
+    if (fd<0) return 0;          /* cannot open file */
     sbuf_t *sbuf = sbuf_t::map_file(fname, fd, true);
     return sbuf;
 }
