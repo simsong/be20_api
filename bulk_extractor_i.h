@@ -944,10 +944,10 @@ inline std::string unixTimeToISODate(const uint64_t &t)
 /* Many internal windows and Linux structures require a valid printable name in ASCII */
 inline bool validASCIIName(const std::string &name)
 {
-    for(size_t i = 0; i< name.size(); i++){
-        if(((u_char)name[i]) & 0x80) return false; // high bit should not be set
-        if(((u_char)name[i]) < ' ') return false;  // should not be control character
-        if(((u_char)name[i]) == 0x7f) return false; // DEL is not printable
+    for ( auto ch:name){
+        if (ch & 0x80)  return false; // high bit should not be set
+        if (ch < ' ')   return false;  // should not be control character
+        if (ch == 0x7f) return false; // DEL is not printable
     }
     return true;
 }

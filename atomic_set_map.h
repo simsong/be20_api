@@ -41,9 +41,9 @@ public:
     // Dump the database to a user-provided callback.
     void dump(void *user,dump_callback_t dump_cb) const {
         const std::lock_guard<std::mutex> lock(M);
-        for(typename hmap_t::const_iterator it = amap.begin();it!=amap.end();it++){
-            int ret = (*dump_cb)(user,(*it).first,(*it).second);
-            if(ret<0) return;
+        for (auto const &it:amap){
+            int ret = (*dump_cb)(user,it.first,it.second);
+            if (ret<0) return;
         }
     }
     struct ReportElement {
@@ -68,12 +68,12 @@ public:
         element_vector_t  evect;
         {
             const std::lock_guard<std::mutex> lock(M);
-            for(const auto &it: amap){
+            for (const auto &it: amap){
                 evect.push_back( new ReportElement(it.first, it.second));
             }
         }
         std::sort(evect.begin(), evect.end(), ReportElement::compare);
-        for(const auto &it:evect){
+        for (const auto &it:evect){
             int ret = (*dump_cb)(user,it->value,it->tally);
             if(ret<0) break;
         }

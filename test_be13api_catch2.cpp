@@ -16,6 +16,21 @@ TEST_CASE( "test regex_vector", "[vector]" ) {
     REQUIRE( regex_vector::has_metachars("this(1234)foo") == true );
     REQUIRE( regex_vector::has_metachars("this[1234].*foo") == true);
     REQUIRE( regex_vector::has_metachars("this1234foo") == false);
+
+    regex_vector rv;
+    rv.push_back("this.*");
+    rv.push_back("check[1-9]");
+    rv.push_back("thing");
+    std::cout << rv;
+    REQUIRE( rv.size() == 3);
+
+    std::string found;
+    REQUIRE(rv.search_all("hello1", &found) == false);
+    REQUIRE(rv.search_all("check1", &found) == true);
+    REQUIRE(found == "check1");
+
+    REQUIRE(rv.search_all("before check2 after", &found) == true);
+    REQUIRE(found == "check2");
 }
 
 TEST_CASE( "test atomic_set_map", "[vector]" ){
@@ -59,7 +74,7 @@ TEST_CASE( "test atomic_histogram", "[vector]" ){
     REQUIRE( called == 2);
 }
 
-TEST_CASE( "sbuf", "[vector]" ){
+TEST_CASE( "pos0_t", "[vector]" ){
     REQUIRE( stoi64("12345") == 12345);
 
     pos0_t p0("10000-hello-200-bar",300);

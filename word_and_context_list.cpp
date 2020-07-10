@@ -4,14 +4,14 @@
  */
 
 #include "config.h"
-#include <sys/types.h>
-#include <inttypes.h>
+#include <cinttypes>
+#include <iostream>
+
 #include "word_and_context_list.h"
-#include "beregex.h"
 
 void word_and_context_list::add_regex(const std::string &pat)
 {
-    patterns.push_back(new beregex(pat,0));
+    patterns.push_back(pat);
 }
 
 /**
@@ -70,8 +70,8 @@ int word_and_context_list::readfile(const std::string &filename)
 
 	// If there is no tab, then this must be a simple item to ignore.
 	// If it is a regular expression, add it to the list of REs
-	if(beregex::is_regex(line)){
-	    patterns.push_back(new beregex(line,REG_ICASE));
+	if (regex_vector::has_metachars(line)){
+	    patterns.push_back( line );
 	} else {
 	    // Otherwise, add it as a feature with no context
 	    fcmap.insert(std::pair<std::string,context>(line,context(line)));
@@ -97,13 +97,8 @@ bool word_and_context_list::check(const std::string &probe,const std::string &be
 	}
     }
 
-    /* Now check the patterns; do this second */
-    for(beregex_vector::const_iterator it=patterns.begin(); it != patterns.end(); it++){
-	if((*it)->search(probe,0,0,0)){
-	    return true;		// yep
-	}
-    }
-    return false;
+    /* Now check the patterns; do this second because it is more expensive */
+    return patterns.search_all(probe, NULL);
 };
 
 bool word_and_context_list::check_feature_context(const std::string &probe,const std::string &context) const 
@@ -117,13 +112,11 @@ bool word_and_context_list::check_feature_context(const std::string &probe,const
 void word_and_context_list::dump()
 {
     std::cout << "dump context list:\n";
-    for(stopmap_t::const_iterator it =fcmap.begin();it!=fcmap.end();it++){
-	std::cout << (*it).first << " = " << (*it).second << "\n";
+    for( auto const &it: fcmap ){
+	std::cout << it.first << " = " << it.second << "\n";
     }
     std::cout << "dump RE list:\n";
-    for(beregex_vector::const_iterator it=patterns.begin(); it != patterns.end(); it++){
-	std::cout << (*it)->pat << "\n";
-    }
+    patterns.dump(std::cout);
 }
 
 #ifdef STAND

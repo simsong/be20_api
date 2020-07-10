@@ -79,8 +79,8 @@ public:
     static const uint32_t NO_ALERT                  = 0x100; // no alert recorder
 
     virtual ~feature_recorder_set() {
-        for(feature_recorder_map::iterator i = frm.begin();i!=frm.end();i++){
-            delete i->second;
+        for ( auto it:frm){
+            delete it.second;
         }
         db_close();
     }

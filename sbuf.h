@@ -283,14 +283,12 @@ public:
     
 private:
     void release();                     // release allocated storage
-    // default assignment not implemented
-    sbuf_t &operator=(const sbuf_t &that);
+    sbuf_t &operator=(const sbuf_t &that) = delete; // default assignment not implemented
 public:
     /** Make an empty sbuf.
         It's used for situations where an sbuf is needed but not referenced */
     explicit sbuf_t():fd(0),should_unmap(false),should_free(false),should_close(false),
-             page_number(0),pos0(),
-             parent(0),
+             page_number(0),pos0(),parent(0),
              children(0),buf(0),bufsize(0),pagesize(0){
     }
 

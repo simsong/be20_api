@@ -37,7 +37,7 @@ public:
 	if(ch>='0' && ch<='9') range_0_9++;
     }
     void add(uint8_t *buf,size_t len){
-	for(size_t i=0;i<len;i++){
+	for (size_t i=0;i<len;i++){
 	    add(buf[i]);
 	}
     }

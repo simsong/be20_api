@@ -226,7 +226,7 @@ std::string feature_recorder::unquote_string(const std::string &s)
     if(len<4) return s;                 // too small for a quote
 
     std::string out;
-    for(size_t i=0;i<len;i++){
+    for (size_t i=0;i<len;i++){
         /* Look for octal coding */
         if(i+3<len && s[i]=='\\' && isodigit(s[i+1]) && isodigit(s[i+2]) && isodigit(s[i+3])){
             uint8_t code = (s[i+1]-'0') * 64 + (s[i+2]-'0') * 8 + (s[i+3]-'0');

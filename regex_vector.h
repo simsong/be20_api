@@ -1,21 +1,12 @@
 /* -*- mode: C++; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- * beregex.h:
+ * regex_vector.h:
  * 
  * simple cover for regular expression class.
- * The class allocates and frees the strings 
  */
 
-#ifndef BEREGEX_H
-#define BEREGEX_H
-
-#ifdef HAVE_TRE_TRE_H
-# include <tre/tre.h>
-#else
-# ifdef HAVE_REGEX_H
-#  include <regex.h>
-# endif
-#endif
+#ifndef REGEX_VECTOR_H
+#define REGEX_VECTOR_H
 
 #include <string>
 #include <iostream>
@@ -31,15 +22,22 @@
  * We might want to change this to handle ASCII, UTF-16 and UTF-8 characters simultaneously.
  */
 class regex_vector {
-    std::vector<std::regex> regex_chars;
+    std::vector<std::string> regex_strings; // the original regex strings
+    std::vector<std::regex>  regex_chars;
     regex_vector(const regex_vector &) = delete;
     regex_vector &operator=(const regex_vector &) = delete;
+
  public:
-    static bool has_metachars(const std::string &str);       // is this a regular expression with meta characters?
+    regex_vector():regex_chars(){};
+    // is this a regular expression with meta characters?
+    static bool has_metachars(const std::string &str);       
     const std::string regex_engine();                // which engine is in use
 
-    void push_back( const std::regex &val) {
-        regex_chars.push_back(val);
+    /* Add a string */
+    void push_back( const std::string &val) {
+        regex_strings.push_back(val);
+        regex_chars.push_back(std::regex(val, std::regex_constants::icase));
+        assert( regex_strings.size() == regex_chars.size() );
     }
 
     auto size() {
@@ -52,15 +50,16 @@ class regex_vector {
      */
     int  readfile(const std::string &fname); // read a file of regexes, one per line
 
-
     /** Run Return true if any of the regexes match.
-     * check() is threadsafe. 
+     * search_all() is threadsafe. 
      * @param probe  - the string we are searching.
-     * returns a match structure
+     * *found - set to the found string if something is found.
      */
 
-    const std::smatch search_all(const std::string &probe) const;
+    bool search_all(const std::string &probe, std::string *found) const;
+    void dump(std::ostream &os) const;
 };
 
+std::ostream & operator << (std::ostream &os, const class regex_vector &rv);
 
 #endif

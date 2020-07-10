@@ -24,9 +24,10 @@ include Makefile.defs
 check_PROGRAMS = test_be13api_catch2
 TESTS = $(check_PROGRAMS)
 
-test_be13api_catch2_SOURCES = test_be13api_catch2.cpp tests/catch2.h regex_vector.cpp regex_vector.h
+# Slowly add modules as tests are written for them.
+test_be13api_catch2_SOURCES = test_be13api_catch2.cpp tests/catch2.h \
+	sbuf.h sbuf.cpp \
+	regex_vector.h regex_vector.cpp \
+	word_and_context_list.h word_and_context_list.cpp
 
-# add each test as it is working!
-# Right now we have no working tests
-#test_be13api_SOURCES = test_be13api.cpp tests/cester.h 
 

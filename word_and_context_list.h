@@ -1,8 +1,6 @@
 #ifndef WORD_AND_CONTEXT_LIST_H
 #define WORD_AND_CONTEXT_LIST_H
 
-#include "beregex.h"
-
 /**
  * \addtogroup internal_interfaces
  * @{
@@ -29,26 +27,15 @@
  * Typically this is used for stop lists and alert lists. 
  */
 
-#if defined(HAVE_UNORDERED_SET)
 #include <unordered_set>
-#else
-#if defined(HAVE_TR1_UNORDERED_SET)
-#include <tr1/unordered_set>
-#endif
-#endif
-
-/* <unordered_map> includes both unordered_map and unordered_multimap */
-#if defined(HAVE_UNORDERED_MAP)
 #include <unordered_map>
-#else
-#if defined(HAVE_TR1_UNORDERED_MAP)
-#include <tr1/unordered_map>
-#endif
-#endif
-
 #include <algorithm>
 #include <set>
 #include <map>                          // brings in map and multimap
+#include <string>
+#include <iostream>
+
+#include "regex_vector.h"
 
 class context {
 public:
@@ -95,29 +82,13 @@ inline bool operator ==(const class context &a,const class context &b)
  */
 class word_and_context_list {
 private:
-#if defined(HAVE_UNORDERED_MAP)
     typedef std::unordered_multimap<std::string,context> stopmap_t;
-#else
-#if defined(HAVE_TR1_UNORDERED_MAP)
-    typedef std::tr1::unordered_multimap<std::string,context> stopmap_t;
-#else
-    typedef std::multimap<std::string,context> stopmap_t;
-#endif
-#endif
     stopmap_t fcmap;			// maps features to contexts; for finding them
 
-#if defined(HAVE_UNORDERED_SET)
     typedef std::unordered_set< std::string > stopset_t;
-#else
-#if defined(HAVE_TR1_UNORDERED_SET)
-    typedef std::tr1::unordered_set< std::string > stopset_t;
-#else
-    typedef std::set< std::string > stopset_t;
-#endif
-#endif
     stopset_t context_set;			// presence of a pair in fcmap
 
-    beregex_vector patterns;
+    regex_vector patterns;
 public:
     /**
      * rstrcmp is like strcmp, except it compares std::strings right-aligned
@@ -126,11 +97,6 @@ public:
     static int rstrcmp(const std::string &a,const std::string &b);
 
     word_and_context_list():fcmap(),context_set(),patterns(){ }
-    ~word_and_context_list(){
-	for(beregex_vector::iterator it=patterns.begin(); it != patterns.end(); it++){
-	    delete *it;
-	}
-    }
     size_t size(){ return fcmap.size() + patterns.size();}
     void add_regex(const std::string &pat);	// not threadsafe
     bool add_fc(const std::string &f,const std::string &c); // not threadsafe

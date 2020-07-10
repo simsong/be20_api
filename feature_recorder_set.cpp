@@ -153,7 +153,7 @@ feature_recorder *feature_recorder_set::get_alert_recorder() const
  */
 bool feature_recorder_set::check_previously_processed(const uint8_t *buf,size_t bufsize)
 {
-    std::string md5 = md5_generator::hash_buf(buf,bufsize).hexdigest();
+    std::string md5 = dfxml::md5_generator::hash_buf(buf,bufsize).hexdigest();
     return seen_set.check_for_presence_and_insert(md5);
 }
 
