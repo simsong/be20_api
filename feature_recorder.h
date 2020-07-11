@@ -33,13 +33,15 @@
  * The file assumes that bulk_extractor.h is being included.
  */
  
-#include <string>
-#include <cstdarg>
-#include <fstream>
-#include <set>
-#include <map>
 #include <cassert>
-#include <pthread.h>
+#include <cstdarg>
+
+#include <atomic>
+#include <fstream>
+#include <map>
+#include <set>
+#include <string>
+#include <thread>
 
 #ifdef HAVE_SQLITE3_H
 #include <sqlite3.h>
@@ -96,12 +98,12 @@ typedef  std::set<histogram_def> histogram_defs_t; // a set of histogram definit
 
 
 inline bool operator <(const histogram_def &h1,const histogram_def &h2)  {
-    if (h1.feature<h2.feature) return true;
-    if (h1.feature>h2.feature) return false;
-    if (h1.pattern<h2.pattern) return true;
-    if (h1.pattern>h2.pattern) return false;
-    if (h1.suffix<h2.suffix) return true;
-    if (h1.suffix>h2.suffix) return false;
+    if ( h1.feature<h2.feature ) return true;
+    if ( h1.feature>h2.feature ) return false;
+    if ( h1.pattern<h2.pattern ) return true;
+    if ( h1.pattern>h2.pattern ) return false;
+    if ( h1.suffix<h2.suffix ) return true;
+    if ( h1.suffix>h2.suffix ) return false;
     return false;                       /* equal */
 };
 
@@ -117,16 +119,12 @@ typedef atomic_set<std::string> carve_cache_t;
 typedef atomic_histogram<std::string,uint64_t> mhistogram_t;             // memory histogram
 typedef std::map<histogram_def,mhistogram_t *> mhistograms_t;
 
-
 class feature_recorder {
-    // default copy construction and assignment are meaningless
-    // and not implemented
-    feature_recorder(const feature_recorder &);
-    feature_recorder &operator=(const feature_recorder &);
+    // default copy construction and assignment are meaningless and not implemented
+    feature_recorder(const feature_recorder &)=delete;
+    feature_recorder &operator=(const feature_recorder &)=delete;
 
     static uint32_t debug;              // are we debugging?
-    static pthread_t main_threadid;     // main threads ID
-    static void MAINTHREAD();           // called if can only be run in the main thread
     uint32_t flags;                     // flags for this feature recorder
     /****************************************************************/
 
@@ -145,11 +143,6 @@ public:
 
     typedef int (dump_callback_t)(void *user,const feature_recorder &fr,const histogram_def &def,
                                   const std::string &feature,const uint64_t &count);
-    static void set_main_threadid(){
-#ifndef WIN32
-        main_threadid=pthread_self();
-#endif
-    };             // set the main 
     static void set_debug(uint32_t ndebug){debug=ndebug;}
     typedef std::string offset_t;
 
@@ -362,14 +355,6 @@ public:
     // Set the time of the carved file to iso8601 file
     virtual void set_carve_mtime(const std::string &fname, const std::string &mtime_iso8601);
 };
-
-// function that can only be called from main thread
-inline void feature_recorder::MAINTHREAD()
-{
-#ifndef WIN32
-        assert(main_threadid==pthread_self());
-#endif
-};                
 
 
 /** @} */

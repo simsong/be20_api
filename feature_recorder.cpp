@@ -25,9 +25,6 @@
 #define DEBUG_PEDANTIC    0x0001// check values more rigorously
 #endif
 
-#ifndef WIN32
-pthread_t feature_recorder::main_threadid = 0;
-#endif
 size_t  feature_recorder::context_window_default=16;                    /* number of bytes of context */
 int64_t feature_recorder::offset_add   = 0;
 std::string  feature_recorder::banner_file;
