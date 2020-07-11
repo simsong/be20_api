@@ -9,38 +9,11 @@
 #include "sbuf.h"
 
 #include "tests/catch.hpp"
+#include "word_and_context_list.h"
 
 
-TEST_CASE( "test regex_vector", "[vector]" ) {
-    REQUIRE( regex_vector::has_metachars("this[1234]foo") == true );
-    REQUIRE( regex_vector::has_metachars("this(1234)foo") == true );
-    REQUIRE( regex_vector::has_metachars("this[1234].*foo") == true);
-    REQUIRE( regex_vector::has_metachars("this1234foo") == false);
+/* atomic_set_map.h */
 
-    regex_vector rv;
-    rv.push_back("this.*");
-    rv.push_back("check[1-9]");
-    rv.push_back("thing");
-    std::cout << rv;
-    REQUIRE( rv.size() == 3);
-
-    std::string found;
-    REQUIRE(rv.search_all("hello1", &found) == false);
-    REQUIRE(rv.search_all("check1", &found) == true);
-    REQUIRE(found == "check1");
-
-    REQUIRE(rv.search_all("before check2 after", &found) == true);
-    REQUIRE(found == "check2");
-}
-
-TEST_CASE( "test atomic_set_map", "[vector]" ){
-    atomic_set<std::string> as;
-    as.insert("one");
-    as.insert("two");
-    as.insert("three");
-    REQUIRE( as.contains("one") == true );
-    REQUIRE( as.contains("four") == false );
-}
 
 int dump_cb(void *user, const std::string &val, const int &count){
     int *called = (int *)user;
@@ -74,6 +47,44 @@ TEST_CASE( "test atomic_histogram", "[vector]" ){
     REQUIRE( called == 2);
 }
 
+/* feature_recorder.h */
+
+
+/* regex_vector.h & regex_vector.cpp */
+
+TEST_CASE( "test regex_vector", "[vector]" ) {
+    REQUIRE( regex_vector::has_metachars("this[1234]foo") == true );
+    REQUIRE( regex_vector::has_metachars("this(1234)foo") == true );
+    REQUIRE( regex_vector::has_metachars("this[1234].*foo") == true);
+    REQUIRE( regex_vector::has_metachars("this1234foo") == false);
+
+    regex_vector rv;
+    rv.push_back("this.*");
+    rv.push_back("check[1-9]");
+    rv.push_back("thing");
+    std::cout << rv;
+    REQUIRE( rv.size() == 3);
+
+    std::string found;
+    REQUIRE(rv.search_all("hello1", &found) == false);
+    REQUIRE(rv.search_all("check1", &found) == true);
+    REQUIRE(found == "check1");
+
+    REQUIRE(rv.search_all("before check2 after", &found) == true);
+    REQUIRE(found == "check2");
+}
+
+TEST_CASE( "test atomic_set_map", "[vector]" ){
+    atomic_set<std::string> as;
+    as.insert("one");
+    as.insert("two");
+    as.insert("three");
+    REQUIRE( as.contains("one") == true );
+    REQUIRE( as.contains("four") == false );
+}
+
+/* sbuf.h */
+
 TEST_CASE( "pos0_t", "[vector]" ){
     REQUIRE( stoi64("12345") == 12345);
 
@@ -95,8 +106,13 @@ TEST_CASE( "pos0_t", "[vector]" ){
 }
 
 
+/* word_and_context_list.h */
 
-
+TEST_CASE("word_and_context_list", "[vector]") {
+    REQUIRE( word_and_context_list::rstrcmp("aaaa1", "bbbb0") < 0 );
+    REQUIRE( word_and_context_list::rstrcmp("aaaa1", "aaaa1") == 0 );
+    REQUIRE( word_and_context_list::rstrcmp("bbbb0", "aaaa1") > 0 );
+}
 
 
 

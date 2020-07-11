@@ -45,6 +45,8 @@ uint32_t feature_recorder::debug=0;
  * @param name         - the name of the feature being recorded.
  */
 
+feature_recorder::main_thread_id = std::this_thread::get_id();
+
 feature_recorder::feature_recorder(class feature_recorder_set &fs_,
                                    const std::string &name_):
     flags(0),

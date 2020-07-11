@@ -121,17 +121,18 @@ typedef std::map<histogram_def,mhistogram_t *> mhistograms_t;
 
 class feature_recorder {
     // default copy construction and assignment are meaningless and not implemented
+    static std::thread::id main_thread_id;
     feature_recorder(const feature_recorder &)=delete;
     feature_recorder &operator=(const feature_recorder &)=delete;
 
     static uint32_t debug;              // are we debugging?
-    uint32_t flags;                     // flags for this feature recorder
+    uint32_t        flags;              // flags for this feature recorder
     /****************************************************************/
 
 public:
     class besql_stmt {
-        besql_stmt(const besql_stmt &);
-        besql_stmt &operator=(const besql_stmt &);
+        besql_stmt(const besql_stmt &)=delete;
+        besql_stmt &operator=(const besql_stmt &)=delete;
 public:
         std::mutex         Mstmt;
         BEAPI_SQLITE3_STMT *stmt;      // the prepared statement
@@ -143,7 +144,7 @@ public:
 
     typedef int (dump_callback_t)(void *user,const feature_recorder &fr,const histogram_def &def,
                                   const std::string &feature,const uint64_t &count);
-    static void set_debug(uint32_t ndebug){debug=ndebug;}
+    static  void set_debug( uint32_t ndebug ){ debug=ndebug; }
     typedef std::string offset_t;
 
     /**
@@ -181,7 +182,7 @@ public:
     static const std::string feature_file_header;
     static const std::string bulk_extractor_version_header;
 
-    // These must only be changed in the main thread:
+    // These must only be changed in the main thread at the start of program execution:
     static uint32_t    opt_max_context_size;
     static uint32_t    opt_max_feature_size;
     static int64_t     offset_add;          // added to every reported offset, for use with hadoop
@@ -214,7 +215,7 @@ protected:;
 public:
     class        feature_recorder_set &fs;   // the set in which this feature_recorder resides
 protected:
-    int64_t      count_;                     /* number of records written */
+    std::atomic<int64_t>      count_;                     /* number of records written */
     size_t       context_window_before;      // context window
     size_t       context_window_after;       // context window
 
@@ -225,10 +226,12 @@ protected:
 
     
     class feature_recorder *stop_list_recorder; // where stopped features get written
-    int64_t                file_number_;            /* starts at 0; gets incremented by carve(); */
+    std::atomic<int64_t>   file_number_;            /* starts at 0; gets incremented by carve(); */
     carve_cache_t          carve_cache;
 public:
     /* these are not threadsafe and should only be called in startup */
+    void MAINTHREAD() {        assert( main_thread_id == std::this_thread::get_id() ); }
+
     void set_stop_list_recorder(class feature_recorder *fr){
         MAINTHREAD();
         stop_list_recorder = fr;
@@ -236,21 +239,17 @@ public:
     void set_context_window(size_t win){
         MAINTHREAD();
         context_window_before = win;
-        context_window_after = win;
+        context_window_after  = win;
     }
-    void set_context_window_before(size_t win){ MAINTHREAD(); context_window_before = win;}
-    void set_context_window_after(size_t win){ MAINTHREAD(); context_window_after = win; }
-    void set_carve_ignore_encoding(const std::string &encoding){ MAINTHREAD();ignore_encoding = encoding;}
+    void set_context_window_before( size_t win )                 { MAINTHREAD(); context_window_before = win;}
+    void set_context_window_after( size_t win )                  { MAINTHREAD(); context_window_after = win; }
+    void set_carve_ignore_encoding( const std::string &encoding ){ MAINTHREAD();ignore_encoding = encoding;}
     /* End non-threadsafe */
 
-    uint64_t file_number_add(uint64_t i){
-#ifdef HAVE___SYNC_ADD_AND_FETCH
-        return __sync_add_and_fetch(&file_number_,i);
-#else
-        cppmutex::lock lock(Mf);
-        file_number_ += i;
-        return file_number_;
-#endif
+    // add i to file_number and return the result
+    // fetch_add() returns the original number
+    uint64_t file_number_add(uint64_t i){ 
+        return file_number_.fetch_add(i) + i;
     }
 
     void   banner_stamp(std::ostream &os,const std::string &header) const; // stamp banner, and header
@@ -281,7 +280,7 @@ public:
     virtual void dump_histograms(void *user,feature_recorder::dump_callback_t cb, xml_notifier_t xml_error_notifier) const;
     
     /* Methods to get info */
-    uint64_t count() const {return count_;}
+    uint64_t count() const { return count_; }
 
     /* Methods to write.
      * write() is the basic write - you say where, and it does it.
@@ -340,8 +339,8 @@ public:
         CARVE_ALL=2};
 #define CARVE_MODE_DESCRIPTION "0=carve none; 1=carve encoded; 2=carve all"
     carve_mode_t carve_mode;
-    typedef      std::string (*hashing_function_t)(const sbuf_t &sbuf); // returns a hex value
-    void         set_carve_mode(carve_mode_t aMode){MAINTHREAD();carve_mode=aMode;}
+    typedef      std::string (*hashing_function_t)( const sbuf_t &sbuf); // returns a hex value
+    void         set_carve_mode(carve_mode_t aMode){ MAINTHREAD();carve_mode=aMode;}
 
     // Carve a file; returns filename of carved file or empty string if nothing carved
     virtual std::string carve(const sbuf_t &sbuf,size_t pos,size_t len, 

@@ -25,7 +25,6 @@ bool word_and_context_list::add_fc(const std::string &f,const std::string &c)
     if(c.size()>0 && context_set.find(c) != context_set.end()) return false; // already present
     context_set.insert(c);		// now we've seen it.
     fcmap.insert(std::pair<std::string,context>(f,ctx));
-    //if(fcmap.size()%100==0) std::cerr << "fcmap size=" << fcmap.size()  << "\n";
     return true;
 }
 

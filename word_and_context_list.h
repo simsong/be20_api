@@ -97,24 +97,25 @@ public:
     static int rstrcmp(const std::string &a,const std::string &b);
 
     word_and_context_list():fcmap(),context_set(),patterns(){ }
-    size_t size(){ return fcmap.size() + patterns.size();}
-    void add_regex(const std::string &pat);	// not threadsafe
-    bool add_fc(const std::string &f,const std::string &c); // not threadsafe
-    int readfile(const std::string &fname);	// not threadsafe
+    size_t size(){ return fcmap.size() + patterns.size(); }
+    void   add_regex( const std::string &pat );	// not threadsafe
+    bool   add_fc( const std::string &f,const std::string &c ); // not threadsafe
+    int    readfile( const std::string &fname );	// not threadsafe
 
     // return true if the probe with context is in the list or in the stopmap
-    bool check(const std::string &probe,const std::string &before, const std::string &after) const; // threadsafe
-    bool check_feature_context(const std::string &probe,const std::string &context) const; // threadsafe
-    void dump();
+    bool   check( const std::string &probe,const std::string &before, const std::string &after ) const; // threadsafe
+    bool   check_feature_context( const std::string &probe,const std::string &context ) const; // threadsafe
+    void   dump();
 };
 
 
+/* like strcmp, but runs in reverse */
 inline int word_and_context_list::rstrcmp(const std::string &a,const std::string &b)
 {
     size_t alen = a.size();
     size_t blen = b.size();
     size_t len = alen < blen ? alen : blen;
-    for(size_t i=0;i<len;i++){
+    for( size_t i=0;i<len;i++){
 	size_t apos = alen - len + i;
 	size_t bpos = blen - len + i;
 	if(a[apos] < b[bpos]) return -1;
