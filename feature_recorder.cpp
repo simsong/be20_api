@@ -9,9 +9,8 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 
-#ifdef HAVE_STDARG_H
-#include <stdarg.h>
-#endif
+#include <cstdarg>
+#include <regex>
 
 #ifndef MAXPATHLEN
 #define MAXPATHLEN 65536
@@ -45,7 +44,7 @@ uint32_t feature_recorder::debug=0;
  * @param name         - the name of the feature being recorded.
  */
 
-feature_recorder::main_thread_id = std::this_thread::get_id();
+std::thread::id feature_recorder::main_thread_id = std::this_thread::get_id();
 
 feature_recorder::feature_recorder(class feature_recorder_set &fs_,
                                    const std::string &name_):
@@ -340,7 +339,9 @@ public:
 
 
 /** Dump a specific histogram */
-void feature_recorder::dump_histogram_file(const histogram_def &def,void *user,feature_recorder::dump_callback_t cb) const
+void feature_recorder::dump_histogram_file(const histogram_def &def,
+                                           void *user,
+                                           feature_recorder::dump_callback_t cb) const
 {
     /* This is a file based histogram. We will be reading from one file and writing to another */
     std::string ifname = fname_counter("");  // source of features
@@ -377,12 +378,11 @@ void feature_recorder::dump_histogram_file(const histogram_def &def,void *user,f
                 }
                 /** If there is a pattern to use to prune down the feature, use it */
                 if(def.pattern.size()){
-                    std::string new_feature = feature;
-                    if(!def.reg.search(feature,&new_feature,0,0)){
-                        // no search match; avoid this feature
-                        continue;               
+                    std::smatch sm;
+                    std::regex_search( feature, sm, def.reg);
+                    if (sm.size()>0) {
+                        feature = sm.str();
                     }
-                    feature = new_feature;
                 }
         
                 /* Remove what follows after \t if this is a context file */
@@ -677,11 +677,16 @@ void feature_recorder::write(const pos0_t &pos0,const std::string &feature_,cons
         mhistogram_t *m = it->second;
         std::string new_feature = *feature_utf8;
         if(def.require.size()==0 || new_feature.find_first_of(def.require)!=std::string::npos){
-            /* If there is a pattern to use, use it */
+            /* If there is a pattern to use, use it to simplify the feature */
             if(def.pattern.size()){
-                if(!def.reg.search(new_feature,&new_feature,0,0)){
+                std::smatch sm;
+                std::regex_search( new_feature, sm, def.reg);
+                if (sm.size() == 0){
                     // no search match; avoid this feature
                     new_feature = "";
+                }
+                else {
+                    new_feature = sm.str();
                 }
             }
             if(new_feature.size()) m->add(new_feature,1);

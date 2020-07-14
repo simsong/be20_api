@@ -96,7 +96,6 @@ struct histogram_def {
 
 typedef  std::set<histogram_def> histogram_defs_t; // a set of histogram definitions
 
-
 inline bool operator <(const histogram_def &h1,const histogram_def &h2)  {
     if ( h1.feature<h2.feature ) return true;
     if ( h1.feature>h2.feature ) return false;
@@ -173,7 +172,7 @@ public:
     /**
      * histogram support.
      */
-    static const uint32_t FLAG_NO_FEATURES = 0x40;  // do not record features (just memory histogram)
+    static const uint32_t FLAG_NO_FEATURES     = 0x40;  // do not record features (just memory histogram)
     static const uint32_t FLAG_NO_FEATURES_SQL = 0x80;  // do not write features to SQL
 
     /** @} */
@@ -288,7 +287,6 @@ public:
      *             It won't write a feature that starts in the margin.
      * pos0 gives the location and prefix for the beginning of the buffer
      */ 
-
 
     /****************************************************************
      *** External entry points.

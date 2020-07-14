@@ -2,13 +2,14 @@
 #ifndef FEATURE_RECORDER_SET_H
 #define FEATURE_RECORDER_SET_H
 
+#include <map>
+#include <set>
+#include <mutex>
+
 #include "feature_recorder.h"
 #include "dfxml/src/dfxml_writer.h"
 #include "dfxml/src/hash_t.h"
 #include "word_and_context_list.h"
-#include <map>
-#include <set>
-#include <mutex>
 
 /** \addtogroup internal_interfaces
  * @{
@@ -27,8 +28,8 @@ typedef std::map<std::string,class feature_recorder *> feature_recorder_map;
 typedef std::set<std::string>feature_file_names_t;
 class feature_recorder_set {
     // neither copying nor assignment is implemented 
-    feature_recorder_set(const feature_recorder_set &fs);
-    feature_recorder_set &operator=(const feature_recorder_set &fs);
+    feature_recorder_set(const feature_recorder_set &fs)=delete;
+    feature_recorder_set &operator=(const feature_recorder_set &fs)=delete;
     uint32_t flags;
     atomic_set<std::string> seen_set;       // hex hash values of pages that have been seen
     const std::string     input_fname;      // input file
@@ -38,6 +39,7 @@ class feature_recorder_set {
     histogram_defs_t      histogram_defs;   // histograms that are to be created.
     mutable std::mutex    Min_transaction;
     bool                  in_transaction;
+
 public:
     BEAPI_SQLITE3         *db3;             // opened in SQLITE_OPEN_FULLMUTEX mode
     virtual void          heartbeat(){};    // called at a regular basis
@@ -51,8 +53,8 @@ public:
         uint64_t calls;
     };
     /** create an emptry feature recorder set. If disabled, create a disabled recorder. */
-    feature_recorder_set(uint32_t flags_,const hash_def &hasher_,
-                         const std::string &input_fname_,const std::string &outdir_);
+    feature_recorder_set( uint32_t flags_, const hash_def &hasher_,
+                         const std::string &input_fname_, const std::string &outdir_);
     
     typedef std::map<std::string,struct pstats> scanner_stats_map;
 
@@ -62,7 +64,6 @@ public:
 
     const hash_def  &hasher;         // function for hashing; specified at creation
     static hash_def null_hasher;     // a default hasher available for all to use (it doesn't hash)
-
 
     static const std::string   ALERT_RECORDER_NAME;  // the name of the alert recorder
     static const std::string   DISABLED_RECORDER_NAME; // the fake disabled feature recorder
@@ -85,11 +86,10 @@ public:
         db_close();
     }
 
-    std::string get_input_fname()           const {return input_fname;}
+    std::string get_input_fname()           const { return input_fname;}
     virtual const std::string &get_outdir() const { return outdir;}
     void set_stop_list(const word_and_context_list *alist){stop_list=alist;}
     void set_alert_list(const word_and_context_list *alist){alert_list=alist;}
-
 
     /** Initialize a feature_recorder_set. Previously this was a constructor, but it turns out that
      * virtual functions for the create_name_factory aren't honored in constructors.
@@ -107,9 +107,9 @@ public:
     /* flags */
     void    set_flag(uint32_t f);
     void    unset_flag(uint32_t f);
-    bool    flag_set(uint32_t f)    const {return flags & f;}
-    bool    flag_notset(uint32_t f) const {return !(flags & f);}
-    uint32_t get_flags()             const {return flags;}
+    bool    flag_set(uint32_t f)     const { return flags & f; }
+    bool    flag_notset(uint32_t f)  const { return !(flags & f); }
+    uint32_t get_flags()             const { return flags; }
 
     typedef void (*xml_notifier_t)(const std::string &xmlstring);
     void    add_histogram(const histogram_def &def); // adds it to a local set or to the specific feature recorder
@@ -125,7 +125,6 @@ public:
     /****************************************************************
      *** SQLite3 interface
      ****************************************************************/
-    
 
     virtual void db_send_sql(BEAPI_SQLITE3 *db3,const char **stmts, ...) ;
     virtual BEAPI_SQLITE3 *db_create_empty(const std::string &name) ;
@@ -139,7 +138,6 @@ public:
      *** External Functions
      ****************************************************************/
     
-
     // Management of previously seen data
     virtual bool check_previously_processed(const uint8_t *buf,size_t bufsize);
 

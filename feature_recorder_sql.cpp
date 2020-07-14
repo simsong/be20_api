@@ -247,7 +247,10 @@ static void behist(sqlite3_context *ctx,int argc,sqlite3_value**argv)
     if(debug) std::cerr << "behist feature=" << def->feature << "  suffix="
                         << def->suffix << "  argc=" << argc << "value = " << sqlite3_value_text(argv[0]) << "\n";
     std::string new_feature(reinterpret_cast<const char *>(sqlite3_value_text(argv[0])));
-    if (def->reg.search(new_feature,&new_feature,0,0)) {
+    std::smatch sm;
+    std::regex_search( new_feature, sm, def->reg);
+    if (sm.size() > 0){
+        new_feature = sm.str();
         sqlite3_result_text(ctx,new_feature.c_str(),new_feature.size(),SQLITE_TRANSIENT);
     }
 }
@@ -304,76 +307,4 @@ void feature_recorder::dump_histogram_db(const histogram_def &def,void *user,fea
 #endif
 #endif
 }
-
-#ifdef STAND
-static std::string hash_name("md5");
-static std::string hash_func(const uint8_t *buf,size_t bufsize)
-{
-    if(hash_name=="md5" || hash_name=="MD5"){
-        return md5_generator::hash_buf(buf,bufsize).hexdigest();
-    }
-    if(hash_name=="sha1" || hash_name=="SHA1" || hash_name=="sha-1" || hash_name=="SHA-1"){
-        return sha1_generator::hash_buf(buf,bufsize).hexdigest();
-    }
-    if(hash_name=="sha256" || hash_name=="SHA256" || hash_name=="sha-256" || hash_name=="SHA-256"){
-        return sha256_generator::hash_buf(buf,bufsize).hexdigest();
-    }
-    std::cerr << "Invalid hash name: " << hash_name << "\n";
-    std::cerr << "This version of bulk_extractor only supports MD5, SHA1, and SHA256\n";
-    exit(1);
-}
-static feature_recorder_set::hash_def my_hasher(hash_name,hash_func);
-
-feature_recorder_set::feature_recorder_set(uint32_t flags_,const feature_recorder_set::hash_def &hasher_):
-    flags(flags_),seen_set(),input_fname(),
-    outdir(),
-    frm(),
-    histogram_defs(),
-    db3(),
-    alert_list(),stop_list(),
-    scanner_stats(),hasher(hasher_)
-{
-}
-
-feature_recorder *feature_recorder_set::create_name_factory(const std::string &name_){return 0;}
-void feature_recorder_set::create_name(const std::string &name,bool create_stop_also){}
-bool feature_recorder_set::check_previously_processed(const uint8_t *buf, size_t bufsize){return 0;}
-feature_recorder *feature_recorder_set::get_name(const std::string &name) const{return 0;}
-feature_recorder *feature_recorder_set::get_alert_recorder() const{return 0;}
-void feature_recorder_set::get_feature_file_list(std::vector<std::string> &ret){}
-
-int main(int argc,char **argv)
-{
-    const char *dbfile = "test.sql3";
-    char *errmsg = 0;
-    sqlite3 *db=0;
-
-    feature_recorder_set fs(0,my_hasher);
-
-    unlink(dbfile);
-    fs.db_create();
-    if(1){
-        /* Create an email table */
-        fs.db_create_table("email");
-        
-        /* Lets throw a million features into the table as a test */
-        //sqlite3_exec(db,"BEGIN TRANSACTION",NULL,NULL,&errmsg);
-        beapi_sql_stmt s(db,"email");
-        for(int i=0;i<1000000;i++){
-            pos0_t p;
-            pos0_t p1 = p+i;
-            
-            if(i%10000==0) printf("i=%d\n",i);
-            
-            char feature[64];
-            snprintf(feature,sizeof(feature),"user%d@company.com",i);
-            char context[64];
-            snprintf(context,sizeof(context),"this is the context user%d@company.com yes it is!",i);
-            //insert_statement(stmt,p1,feature,context);
-        }
-        //sqlite3_exec(db,"COMMIT TRANSACTION",NULL,NULL,&errmsg);
-    }
-    fs.db_close();
-}
-#endif
 

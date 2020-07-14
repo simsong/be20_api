@@ -3,12 +3,17 @@
 #define UNICODE_ESCAPE_H
 
 #include <string>
+#include <cstdint>
+
 
 /** \addtogroup bulk_extractor_APIs
  * @{
  */
 /** \file */
-extern bool validateOrEscapeUTF8_validate;
-std::string validateOrEscapeUTF8(const std::string &input, bool escape_bad_UTF8,bool escape_backslash);
+
+std::string hexesc(unsigned char ch);
+bool utf8cont(unsigned char ch);
+bool valid_utf8codepoint(uint32_t unichar);
+std::string validateOrEscapeUTF8(const std::string &input, bool escape_bad_UTF8,bool escape_backslash,bool validateOrEscapeUTF8_validate);
 
 #endif

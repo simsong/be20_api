@@ -28,6 +28,9 @@ TESTS = $(check_PROGRAMS)
 test_be13api_catch2_SOURCES = test_be13api_catch2.cpp tests/catch2.h \
 	sbuf.h sbuf.cpp \
 	regex_vector.h regex_vector.cpp \
-	word_and_context_list.h word_and_context_list.cpp
+	word_and_context_list.h word_and_context_list.cpp \
+	feature_recorder.h feature_recorder.cpp feature_recorder_sql.cpp \
+	unicode_escape.h unicode_escape.cpp
+
 
 
