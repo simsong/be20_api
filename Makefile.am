@@ -17,6 +17,7 @@ ACLOCAL_AMFLAGS = -I m4
 # Use the current directory
 BE13_API_DIR=
 include Makefile.defs
+include dfxml/src/Makefile.defs
 
 #noinst_LIBRARIES = libbe13api.a
 #libbe13api_a_SOURCES = $(BE13_API_SRC)
@@ -30,7 +31,12 @@ test_be13api_catch2_SOURCES = test_be13api_catch2.cpp tests/catch2.h \
 	regex_vector.h regex_vector.cpp \
 	word_and_context_list.h word_and_context_list.cpp \
 	feature_recorder.h feature_recorder.cpp feature_recorder_sql.cpp \
-	unicode_escape.h unicode_escape.cpp
+	feature_recorder_set.h feature_recorder_set.cpp \
+	histogram.h histogram.cpp \
+	unicode_escape.h unicode_escape.cpp \
+	dfxml/src/dfxml_writer.h dfxml/src/dfxml_writer.cpp \
+	dfxml/src/hash_t.h \
+	dfxml/src/cpuid.cpp dfxml/src/cpuid.h
 
 
 

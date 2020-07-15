@@ -15,6 +15,8 @@
 #include "bulk_extractor_i.h"
 #include "histogram.h"
 
+#ifdef BEAPI_SQLITE3
+
 /*
  * Time results with ubnist1 on R4:
  * no SQL - 79 seconds
@@ -27,9 +29,6 @@
  */
 
 
-#if defined(HAVE_LIBSQLITE3) && defined(HAVE_SQLITE3_H)
-#define USE_SQLITE3 
-#endif
 #define SQLITE_EXTENSION ".sqlite"
 
 #ifndef SQLITE_DETERMINISTIC
@@ -38,7 +37,6 @@
 
 static int debug  = 0;
 
-#ifdef USE_SQLITE3
 static const char *schema_db[] = {
     "PRAGMA synchronous =  OFF", 
     "PRAGMA journal_mode=MEMORY",
@@ -77,7 +75,6 @@ static const char *schema_hist2[] = {
     0};
 #endif
 
-#endif
 const char *feature_recorder::db_insert_stmt = "INSERT INTO f_%s (offset,path,feature_eutf8,feature_utf8,context_eutf8) VALUES (?1, ?2, ?3, ?4, ?5)";
 static const char *begin_transaction[] = {"BEGIN TRANSACTION",0};
 static const char *commit_transaction[] = {"COMMIT TRANSACTION",0};
@@ -85,7 +82,6 @@ void feature_recorder::besql_stmt::insert_feature(const pos0_t &pos,
                                                         const std::string &feature,
                                                         const std::string &feature8, const std::string &context)
 {
-#ifdef USE_SQLITE3
     assert(stmt!=0);
     std::lock_guard<std::mutex> lock(Mstmt);           // grab a lock
     const std::string &path = pos.str();
@@ -98,31 +94,25 @@ void feature_recorder::besql_stmt::insert_feature(const pos0_t &pos,
         fprintf(stderr,"sqlite3_step failed\n");
     }
     sqlite3_reset(stmt);
-#endif
 };
 
 feature_recorder::besql_stmt::besql_stmt(BEAPI_SQLITE3 *db3,const char *sql):Mstmt(),stmt()
 {
-#ifdef USE_SQLITE3
     assert(db3!=0);
     assert(sql!=0);
     sqlite3_prepare_v2(db3,sql, strlen(sql), &stmt, NULL);
     assert(stmt!=0);
-#endif
 }
 
 feature_recorder::besql_stmt::~besql_stmt()
 {
-#ifdef USE_SQLITE3
     assert(stmt!=0);
     sqlite3_finalize(stmt);
     stmt = 0;
-#endif
 }
 
 void feature_recorder_set::db_send_sql(BEAPI_SQLITE3 *db,const char **stmts, ...)
 {
-#ifdef USE_SQLITE3
     assert(db!=0);
     for(int i=0;stmts[i];i++){
         char *errmsg = 0;
@@ -139,20 +129,16 @@ void feature_recorder_set::db_send_sql(BEAPI_SQLITE3 *db,const char **stmts, ...
             exit(1);
         }
     }
-#endif
 }
 
 void feature_recorder_set::db_create_table(const std::string &name)
 {
-#ifdef USE_SQLITE3
     assert(name.size()>0);
     db_send_sql(db3,schema_tbl,name.c_str(),name.c_str());
-#endif
 }
 
 BEAPI_SQLITE3 *feature_recorder_set::db_create_empty(const std::string &name)
 {
-#ifdef USE_SQLITE3
     assert(name.size()>0);
     std::string dbfname  = outdir + "/" + name +  SQLITE_EXTENSION;
     if(debug) std::cerr << "create_feature_database " << dbfname << "\n";
@@ -165,34 +151,22 @@ BEAPI_SQLITE3 *feature_recorder_set::db_create_empty(const std::string &name)
         exit(1);
     }
     return db;
-#else
-    return 0;
-#endif
 }
 
-#pragma GCC diagnostic ignored "-Wmissing-noreturn"
 void feature_recorder_set::db_create()
 {
-#ifdef USE_SQLITE3
     assert(db3==0);
     db3 = db_create_empty("report");
     db_send_sql(db3,schema_db);
-#else
-    std::cerr << "*** CANNOT CREATE SQLITE3 DATABASE ***\n";
-    std::cerr << "*** Compiled without libsqlite     ***\n";
-    assert(0 && debug);                 // prevent debug from being not used
-#endif
 }
 
 void feature_recorder_set::db_close()
 {
-#ifdef USE_SQLITE3
     if(db3){
         if(debug) std::cerr << "db_close()\n";
         sqlite3_close(db3);
         db3 = 0;
     }
-#endif
 }
 
 void feature_recorder_set::db_transaction_begin()
@@ -224,15 +198,16 @@ void feature_recorder::db_write0(const pos0_t &pos0,const std::string &feature,c
      */
     std::string *feature8 = HistogramMaker::convert_utf16_to_utf8(feature_recorder::unquote_string(feature));
     assert(bs!=0);
+#ifdef BEAPI_SQLITE
     bs->insert_feature(pos0,feature,
                          feature8 ? *feature8 : feature,
                          flag_set(feature_recorder::FLAG_NO_CONTEXT) ? "" : context);
+#endif
     if (feature8) delete feature8;
 }
 
 /* Hook for writing histogram
  */
-#ifdef USE_SQLITE3
 static int callback_counter(void *param, int argc, char **argv, char **azColName)
 {
     int *counter = reinterpret_cast<int *>(param);
@@ -255,11 +230,9 @@ static void behist(sqlite3_context *ctx,int argc,sqlite3_value**argv)
     }
 }
 #endif
-#endif
 
 void feature_recorder::dump_histogram_db(const histogram_def &def,void *user,feature_recorder::dump_callback_t cb) const
 {
-#ifdef USE_SQLITE3
     /* First check to see if there exists a feature histogram summary. If not, make it */
     std::string query = "SELECT name FROM sqlite_master WHERE type='table' AND name='h_" + def.feature +"'";
     char *errmsg=0;
@@ -305,6 +278,6 @@ void feature_recorder::dump_histogram_db(const histogram_def &def,void *user,fea
         }
     }
 #endif
-#endif
 }
 
+#endif

@@ -49,7 +49,9 @@ std::thread::id feature_recorder::main_thread_id = std::this_thread::get_id();
 feature_recorder::feature_recorder(class feature_recorder_set &fs_,
                                    const std::string &name_):
     flags(0),
-    name(name_),ignore_encoding(),ios(),bs(),
+    name(name_),
+    validateOrEscapeUTF8_validate(true),
+    ignore_encoding(),ios(),bs(),
     histogram_defs(),
     fs(fs_),
     count_(0),context_window_before(context_window_default),context_window_after(context_window_default),
@@ -593,10 +595,10 @@ void feature_recorder::quote_if_necessary(std::string &feature,std::string &cont
         escape_backslash = false;
     }
 
-    feature = validateOrEscapeUTF8(feature, escape_bad_utf8,escape_backslash);
+    feature = validateOrEscapeUTF8(feature, escape_bad_utf8,escape_backslash,validateOrEscapeUTF8_validate);
     if(feature.size() > opt_max_feature_size) feature.resize(opt_max_feature_size);
     if(flag_notset(FLAG_NO_CONTEXT)){
-        context = validateOrEscapeUTF8(context,escape_bad_utf8,escape_backslash);
+        context = validateOrEscapeUTF8(context,escape_bad_utf8,escape_backslash,validateOrEscapeUTF8_validate);
         if(context.size() > opt_max_context_size) context.resize(opt_max_context_size);
     }
 }

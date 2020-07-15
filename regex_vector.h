@@ -8,11 +8,12 @@
 #ifndef REGEX_VECTOR_H
 #define REGEX_VECTOR_H
 
+#include <cassert>
+#include <cstring>
+
 #include <string>
 #include <iostream>
 #include <fstream>
-#include <assert.h>
-#include <string.h>
 #include <vector>
 #include <set>
 #include <regex>

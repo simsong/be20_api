@@ -161,7 +161,7 @@ TEST_CASE("feature_recorder_sql", "[sql]") {
     char *errmsg = 0;
     sqlite3 *db=0;
 
-    feature_recorder_set fs(0,my_hasher,"","");
+    feature_recorder_set fs(0,my_hasher,"","/tmp");
 
     unlink(dbfile);
     fs.db_create();
@@ -197,7 +197,7 @@ TEST_CASE("featrure_recorder_set", "[frs]") {
 
 TEST_CASE("unicode_escape", "[unicode]") {
     const char *U1F601 = "\xF0\x9F\x98\x81";        // UTF8 for Grinning face with smiling eyes
-    REQUIRE( hexesc('a') == "\x61");
+    REQUIRE( hexesc('a') == "\\x61");               // escape the escape!
     REQUIRE( utf8cont('a') == false );
     REQUIRE( utf8cont( U1F601[0] ) == false); // the first character is not a continuation character
     REQUIRE( utf8cont( U1F601[1] ) == true);  // the second is

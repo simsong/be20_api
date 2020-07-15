@@ -45,15 +45,8 @@
 
 #ifdef HAVE_SQLITE3_H
 #include <sqlite3.h>
-#ifndef BEAPI_SQLITE
-#  define BEAPI_SQLITE3 sqlite3
-#  define BEAPI_SQLITE3_STMT sqlite3_stmt
-#endif
-#endif
-
-#ifndef BEAPI_SQLITE3
-#define BEAPI_SQLITE3      void
-#define BEAPI_SQLITE3_STMT void
+#define BEAPI_SQLITE3 sqlite3
+#define BEAPI_SQLITE3_STMT sqlite3_stmt
 #endif
 
 #include "dfxml/src/dfxml_writer.h"
@@ -129,6 +122,7 @@ class feature_recorder {
     /****************************************************************/
 
 public:
+#ifdef BEAPI_SQLITE3
     class besql_stmt {
         besql_stmt(const besql_stmt &)=delete;
         besql_stmt &operator=(const besql_stmt &)=delete;
@@ -140,6 +134,7 @@ public:
         void insert_feature(const pos0_t &pos, // insert it into this table!
                             const std::string &feature,const std::string &feature8, const std::string &context);
     };
+#endif
 
     typedef int (dump_callback_t)(void *user,const feature_recorder &fr,const histogram_def &def,
                                   const std::string &feature,const uint64_t &count);
@@ -188,8 +183,7 @@ public:
     static std::string banner_file;         // banner for top of every file
     static std::string extract_feature(const std::string &line);
 
-    feature_recorder(class feature_recorder_set &fs,
-                     const std::string &name);
+    feature_recorder(class feature_recorder_set &fs, const std::string &name);
     virtual        ~feature_recorder();
     virtual void   set_flag(uint32_t flags_);
     virtual void   unset_flag(uint32_t flags_);
@@ -202,12 +196,17 @@ public:
 
     static size_t context_window_default; // global option
     const  std::string name;                  // name of this feature recorder 
+    bool   validateOrEscapeUTF8_validate;     // should we validate or escape the HTML?
 
 private:
     std::string  ignore_encoding;            // encoding to ignore for carving
     std::fstream ios;                        // where features are written 
     
+#ifdef BEAPI_SQLITE
     class besql_stmt *bs;                    // prepared beapi sql statement
+#else
+    void             *bs;                    // or place-hodler pointer
+#endif
 
 protected:;
     histogram_defs_t      histogram_defs;    // histograms that are to be created for this feature recorder

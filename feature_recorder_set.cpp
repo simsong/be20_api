@@ -34,6 +34,7 @@ feature_recorder_set::feature_recorder_set(uint32_t flags_,const feature_recorde
     alert_list(),stop_list(),
     scanner_stats(),hasher(hasher_)
 {
+    assert(outdir.size() > 0);
     if(flags & SET_DISABLED){
         create_name(DISABLED_RECORDER_NAME,false);
         frm[DISABLED_RECORDER_NAME]->set_flag(feature_recorder::FLAG_DISABLED);
@@ -181,11 +182,11 @@ void feature_recorder_set::dump_name_count_stats(dfxml_writer &writer) const
 {
     std::lock_guard<std::mutex> lock(Mscanner_stats);
     writer.push("feature_files");
-    for(feature_recorder_map::const_iterator ij = frm.begin(); ij != frm.end(); ij++){
+    for (auto ij: frm) {
         writer.set_oneline(true);
         writer.push("feature_file");
-        writer.xmlout("name",ij->second->name);
-        writer.xmlout("count",ij->second->count());
+        writer.xmlout("name",ij.second->name);
+        writer.xmlout("count",ij.second->count());
         writer.pop();
         writer.set_oneline(false);
     }

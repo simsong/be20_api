@@ -34,9 +34,6 @@
 #include "unicode_escape.h"
 #include "utf8.h"
 
-//#define IS_IN_RANGE(c, f, l)    (((c) >= (f)) && ((c) <= (l)))
-
-
 std::string hexesc(unsigned char ch)
 {
     char buf[10];

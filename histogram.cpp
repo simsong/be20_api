@@ -18,7 +18,7 @@ using namespace std;
 ostream & operator << (ostream &os, const HistogramMaker::FrequencyReportVector &rep){
     for(HistogramMaker::FrequencyReportVector::const_iterator i = rep.begin(); i!=rep.end();i++){
         const HistogramMaker::ReportElement &r = *(*i);
-	os << "n=" << r.tally.count << "\t" << validateOrEscapeUTF8(r.value, true, true);
+	os << "n=" << r.tally.count << "\t" << validateOrEscapeUTF8(r.value, true, true, true);
 	if(r.tally.count16>0) os << "\t(utf16=" << r.tally.count16<<")";
 	os << "\n";
     }

@@ -6,12 +6,6 @@ AC_MSG_NOTICE([Including be13_configure.m4 from be13_api])
 
 AC_CHECK_HEADERS([assert.h ctype.h dirent.h dlfcn.h err.h errno.h fcntl.h inttypes.h linux/if_ether.h net/ethernet.h netinet/if_ether.h netinet/in.h pcap.h pcap/pcap.h pthread.h sbuf.h sqlite3.h stdarg.h stdint.h stdio.h stdlib.h string.h sys/cdefs.h sys/mman.h sys/stat.h sys/time.h sys/types.h unistd.h windows.h windows.h windowsx.h winsock2.h wpcap/pcap.h])
 
-# I don't need to check for headers in the C++14 standard.
-#AC_LANG_PUSH(C++)
-#AC_CHECK_HEADERS([algorithm cassert cstdarg exception fstream iomanip iostream map regex set sstream string unordered_map unordered_set vector])
-#AC_LANG_POP()    
-
-
 AC_CHECK_FUNCS([gmtime_r ishexnumber isxdigit localtime_r unistd.h mmap err errx warn warnx pread64 pread strptime _lseeki64 utimes ])
 
 AC_CHECK_LIB([sqlite3],[sqlite3_libversion])

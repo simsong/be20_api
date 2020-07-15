@@ -53,8 +53,8 @@ public:
         uint64_t calls;
     };
     /** create an emptry feature recorder set. If disabled, create a disabled recorder. */
-    feature_recorder_set( uint32_t flags_, const hash_def &hasher_,
-                         const std::string &input_fname_, const std::string &outdir_);
+    feature_recorder_set( uint32_t flags_, const hash_def &hasher_, 
+                          const std::string &input_fname_, const std::string &outdir_);
     
     typedef std::map<std::string,struct pstats> scanner_stats_map;
 

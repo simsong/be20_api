@@ -40,9 +40,16 @@
 //Make *sbuf.buf private
 //#define PRIVATE_SBUF_BUF
 
-#ifdef HAVE_STRING_H
-#include <string.h>
+#include <unistd.h>
+
+#include <cstring>
+#include <cstdlib>
+#include <cinttypes>
+
+#ifdef HAVE_SYS_MMAN_H
+#include <sys/mman.h>
 #endif
+
 
 //Don't turn this on; it currently makes scan_net crash.
 //#define SBUF_TRACK
@@ -52,16 +59,10 @@
 #define __STDC_FORMAT_MACROS
 #endif
 
-#include <unistd.h>
-#include <stdlib.h>
-#include <inttypes.h>
+
 #include <string>
 #include <sstream>
 #include <iostream>
-
-#ifdef HAVE_SYS_MMAN_H
-#include <sys/mman.h>
-#endif
 
 /****************************************************************
  *** pos0_t

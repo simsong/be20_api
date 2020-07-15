@@ -9,6 +9,10 @@
 #error bulk_extractor_i.h included before config.h
 #endif
 
+#ifndef __cplusplus
+#error bulk_extractor_i.h requires C++
+#endif
+
 #ifndef BULK_EXTRACTOR_I_H
 #define BULK_EXTRACTOR_I_H
 
@@ -76,10 +80,6 @@
  * \li \c phase_scan - each scanner is called to analyze 1 or more sbufs.
  * \li \c phase_shutdown - scanners are given a chance to shutdown
  */
-
-#ifndef __cplusplus
-# error bulk_extractor_i.h requires C++
-#endif
 
 #include "sbuf.h"
 #include "utf8.h"
@@ -689,7 +689,7 @@ private:
     virtual void get_config(const std::string &name,bool *val,const std::string &help);
     virtual ~scanner_info(){};
 };
-#include <map>
+
 /**
  * The scanner_params class is a way for sending the scanner parameters
  * for this particular sbuf to be scanned.

@@ -1,16 +1,9 @@
 /* -*- mode: C++; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 
 #include "config.h"
-
-#include <sys/types.h>
-#include <inttypes.h>
-#include <stdlib.h>
-#include <unistd.h>
-
 #include "regex_vector.h"
 
 /* rewritten to use C++11's regex */
-
 const std::string regex_vector::regex_engine(){
     return std::string("std-c++11");
 }

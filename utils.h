@@ -11,8 +11,9 @@
 #ifndef UTILS_H
 #define UTILS_H
 
+#include <cstdint>
+
 #include <sys/types.h>
-#include <stdint.h>
 #include <sys/time.h>
 
 #if defined(__cplusplus)
