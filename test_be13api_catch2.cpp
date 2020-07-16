@@ -5,17 +5,9 @@
 #include "tests/catch.hpp"
 
 // define stuff I need in the global environment. Only read it once.
-#include "regex_vector.h"
-#include "atomic_set_map.h"
-#include "sbuf.h"
-
-#include "word_and_context_list.h"
-#include "feature_recorder_set.h"
-#include "unicode_escape.h"
 
 /* atomic_set_map.h */
-
-
+#include "atomic_set_map.h"
 int dump_cb(void *user, const std::string &val, const int &count){
     int *called = (int *)user;
     switch (*called) {
@@ -48,73 +40,8 @@ TEST_CASE( "test atomic_histogram", "[vector]" ){
     REQUIRE( called == 2);
 }
 
-/* feature_recorder.h */
-
-
-/* regex_vector.h & regex_vector.cpp */
-
-TEST_CASE( "test regex_vector", "[vector]" ) {
-    REQUIRE( regex_vector::has_metachars("this[1234]foo") == true );
-    REQUIRE( regex_vector::has_metachars("this(1234)foo") == true );
-    REQUIRE( regex_vector::has_metachars("this[1234].*foo") == true);
-    REQUIRE( regex_vector::has_metachars("this1234foo") == false);
-
-    regex_vector rv;
-    rv.push_back("this.*");
-    rv.push_back("check[1-9]");
-    rv.push_back("thing");
-    std::cout << rv;
-    REQUIRE( rv.size() == 3);
-
-    std::string found;
-    REQUIRE(rv.search_all("hello1", &found) == false);
-    REQUIRE(rv.search_all("check1", &found) == true);
-    REQUIRE(found == "check1");
-
-    REQUIRE(rv.search_all("before check2 after", &found) == true);
-    REQUIRE(found == "check2");
-}
-
-TEST_CASE( "test atomic_set_map", "[vector]" ){
-    atomic_set<std::string> as;
-    as.insert("one");
-    as.insert("two");
-    as.insert("three");
-    REQUIRE( as.contains("one") == true );
-    REQUIRE( as.contains("four") == false );
-}
-
-/* sbuf.h */
-
-TEST_CASE( "pos0_t", "[vector]" ){
-    REQUIRE( stoi64("12345") == 12345);
-
-    pos0_t p0("10000-hello-200-bar",300);
-    pos0_t p1("10000-hello-200-bar",310);
-    pos0_t p2("10000-hello-200-bar",310);
-    REQUIRE( p0.path == "10000-hello-200-bar" );
-    REQUIRE( p0.offset == 300);
-    REQUIRE( p0.isRecursive() == true);
-    REQUIRE( p0.firstPart() == "10000" );
-    REQUIRE( p0.lastAddedPart() == "bar" );
-    REQUIRE( p0.alphaPart() == "hello/bar" );
-    REQUIRE( p0.imageOffset() == 10000 );
-    REQUIRE( p0 + 10 == p1);
-    REQUIRE( p0 < p1 );
-    REQUIRE( p1 > p0 );
-    REQUIRE( p0 != p1 );
-    REQUIRE( p1 == p2 );
-}
-
-
-/* word_and_context_list.h */
-TEST_CASE("word_and_context_list", "[vector]") {
-    REQUIRE( word_and_context_list::rstrcmp("aaaa1", "bbbb0") < 0 );
-    REQUIRE( word_and_context_list::rstrcmp("aaaa1", "aaaa1") == 0 );
-    REQUIRE( word_and_context_list::rstrcmp("bbbb0", "aaaa1") > 0 );
-
-}
-
+/* feature_recorder_set.h */
+#include "feature_recorder_set.h"
 static std::string hash_name("md5");
 static std::string hash_func(const uint8_t *buf,size_t bufsize)
 {
@@ -131,31 +58,7 @@ static std::string hash_func(const uint8_t *buf,size_t bufsize)
     std::cerr << "This version of bulk_extractor only supports MD5, SHA1, and SHA256\n";
     exit(1);
 }
-
 static feature_recorder_set::hash_def my_hasher(hash_name,hash_func);
-
-#if 0
-feature_recorder_set::feature_recorder_set(uint32_t flags_,const feature_recorder_set::hash_def &hasher_,
-                                           const std::string &input_fname_, const std::string &outdir_):
-    flags(flags_),seen_set(),input_fname(input_fname_),
-    outdir(outdir_),
-    frm(),
-    histogram_defs(),
-    db3(),
-    alert_list(),stop_list(),
-    scanner_stats(),hasher(hasher_)
-{
-}
-
-feature_recorder *feature_recorder_set::create_name_factory(const std::string &name_){return 0;}
-void feature_recorder_set::create_name(const std::string &name,bool create_stop_also){}
-bool feature_recorder_set::check_previously_processed(const uint8_t *buf, size_t bufsize){return 0;}
-feature_recorder *feature_recorder_set::get_name(const std::string &name) const{return 0;}
-feature_recorder *feature_recorder_set::get_alert_recorder() const{return 0;}
-void feature_recorder_set::get_feature_file_list(std::vector<std::string> &ret){}
-#endif
-
-
 TEST_CASE("feature_recorder_sql", "[sql]") {
     const char *dbfile = "test.sql3";
     char *errmsg = 0;
@@ -195,6 +98,74 @@ TEST_CASE("featrure_recorder_set", "[frs]") {
 }
 
 
+/* regex_vector.h & regex_vector.cpp */
+#include "regex_vector.h"
+TEST_CASE( "test regex_vector", "[vector]" ) {
+    REQUIRE( regex_vector::has_metachars("this[1234]foo") == true );
+    REQUIRE( regex_vector::has_metachars("this(1234)foo") == true );
+    REQUIRE( regex_vector::has_metachars("this[1234].*foo") == true);
+    REQUIRE( regex_vector::has_metachars("this1234foo") == false);
+
+    regex_vector rv;
+    rv.push_back("this.*");
+    rv.push_back("check[1-9]");
+    rv.push_back("thing");
+    std::cout << rv;
+    REQUIRE( rv.size() == 3);
+
+    std::string found;
+    REQUIRE(rv.search_all("hello1", &found) == false);
+    REQUIRE(rv.search_all("check1", &found) == true);
+    REQUIRE(found == "check1");
+
+    REQUIRE(rv.search_all("before check2 after", &found) == true);
+    REQUIRE(found == "check2");
+}
+
+TEST_CASE( "test atomic_set_map", "[vector]" ){
+    atomic_set<std::string> as;
+    as.insert("one");
+    as.insert("two");
+    as.insert("three");
+    REQUIRE( as.contains("one") == true );
+    REQUIRE( as.contains("four") == false );
+}
+
+/* sbuf.h */
+#include "sbuf.h"
+TEST_CASE( "pos0_t", "[vector]" ){
+    REQUIRE( stoi64("12345") == 12345);
+
+    pos0_t p0("10000-hello-200-bar",300);
+    pos0_t p1("10000-hello-200-bar",310);
+    pos0_t p2("10000-hello-200-bar",310);
+    REQUIRE( p0.path == "10000-hello-200-bar" );
+    REQUIRE( p0.offset == 300);
+    REQUIRE( p0.isRecursive() == true);
+    REQUIRE( p0.firstPart() == "10000" );
+    REQUIRE( p0.lastAddedPart() == "bar" );
+    REQUIRE( p0.alphaPart() == "hello/bar" );
+    REQUIRE( p0.imageOffset() == 10000 );
+    REQUIRE( p0 + 10 == p1);
+    REQUIRE( p0 < p1 );
+    REQUIRE( p1 > p0 );
+    REQUIRE( p0 != p1 );
+    REQUIRE( p1 == p2 );
+}
+
+
+/* word_and_context_list.h */
+#include "word_and_context_list.h"
+TEST_CASE("word_and_context_list", "[vector]") {
+    REQUIRE( word_and_context_list::rstrcmp("aaaa1", "bbbb0") < 0 );
+    REQUIRE( word_and_context_list::rstrcmp("aaaa1", "aaaa1") == 0 );
+    REQUIRE( word_and_context_list::rstrcmp("bbbb0", "aaaa1") > 0 );
+
+}
+
+
+
+#include "unicode_escape.h"
 TEST_CASE("unicode_escape", "[unicode]") {
     const char *U1F601 = "\xF0\x9F\x98\x81";        // UTF8 for Grinning face with smiling eyes
     REQUIRE( hexesc('a') == "\\x61");               // escape the escape!

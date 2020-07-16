@@ -29,7 +29,7 @@ class regex_vector {
     regex_vector &operator=(const regex_vector &) = delete;
 
  public:
-    regex_vector():regex_chars(){};
+    regex_vector():regex_strings(),regex_chars(){};
     // is this a regular expression with meta characters?
     static bool has_metachars(const std::string &str);       
     const std::string regex_engine();                // which engine is in use

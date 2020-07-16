@@ -53,6 +53,7 @@
 #include "dfxml/src/hash_t.h"
 #include "atomic_set_map.h"
 #include "regex_vector.h"
+#include "sbuf.h"
 
 /**
  * histogram_def defines the histograms that will be made by a feature recorder.
