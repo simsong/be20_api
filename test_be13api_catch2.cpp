@@ -59,6 +59,7 @@ static std::string hash_func(const uint8_t *buf,size_t bufsize)
 }
 static feature_recorder_set::hash_def my_hasher(hash_name,hash_func);
 TEST_CASE("feature_recorder_sql", "[frs]") {
+    be13::plugin::scanners_process_enable_disable_commands();
     feature_file_names_t feature_file_names;
     be13::plugin::get_scanner_feature_file_names(feature_file_names);
 
@@ -70,10 +71,11 @@ TEST_CASE("feature_recorder_sql", "[frs]") {
     std::cerr << "test_AAA\n";
     feature_recorder_set fs(feature_recorder_set::ENABLE_SQLITE3_RECORDERS, "sha-1", input_fname, outdir); 
     std::cerr << "test_BBB\n";
+    fs.init( feature_file_names );
+
     feature_recorder fr(fs, "mail_test");
     std::cerr << "test_CCC\n";
 
-    fs.init( feature_file_names );
     be13::plugin::scanners_init(fs);
 
     fs.db_transaction_begin();

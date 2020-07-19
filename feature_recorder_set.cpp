@@ -358,7 +358,7 @@ void feature_recorder_set::db_send_sql(BEAPI_SQLITE3 *db,const char **stmts, ...
 
 void feature_recorder_set::db_create_table(const std::string &name)
 {
-    std::cerr << "db_create_called\n";
+    std::cerr << "db_create_table\n";
     assert(name.size()>0);
     assert(db3!=NULL);
     db_send_sql(db3,schema_tbl,name.c_str(),name.c_str());
