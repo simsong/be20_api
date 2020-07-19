@@ -17,6 +17,8 @@ ACLOCAL_AMFLAGS = -I m4
 # Use the current directory
 BE13_API_DIR=
 include Makefile.defs
+
+DFXML_SRC_DIR=dfxml/src/
 include dfxml/src/Makefile.defs
 
 AUTOMAKE_OPTIONS = subdir-objects

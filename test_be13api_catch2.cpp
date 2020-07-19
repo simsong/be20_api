@@ -67,11 +67,11 @@ TEST_CASE("feature_recorder_sql", "[frs]") {
     std::string input_fname = "";
     std::string outdir = std::string("/tmp/work") + itos(getpid());
     mkdir(outdir.c_str(),0777);
-    std::cerr << "AAA\n";
+    std::cerr << "test_AAA\n";
     feature_recorder_set fs(feature_recorder_set::ENABLE_SQLITE3_RECORDERS, "sha-1", input_fname, outdir); 
-    std::cerr << "BBB\n";
+    std::cerr << "test_BBB\n";
     feature_recorder fr(fs, "mail_test");
-    std::cerr << "CCC\n";
+    std::cerr << "test_CCC\n";
 
     fs.init( feature_file_names );
     be13::plugin::scanners_init(fs);

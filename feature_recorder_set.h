@@ -63,8 +63,10 @@ public:
     const word_and_context_list *stop_list;		/* should be ignored */
     scanner_stats_map      scanner_stats;
 
-    const hash_def  &hasher;         // function for hashing; specified at creation
-    static hash_def null_hasher;     // a default hasher available for all to use (it doesn't hash)
+    const hash_def     &hasher;         // function for hashing; specified at creation
+    static hash_def    null_hasher;     // a default hasher available for all to use (it doesn't hash)
+    static std::string null_hasher_name; // the name of the null hasher
+    static std::string null_hasher_func(const uint8_t *buf,size_t bufsize);
 
     static const std::string   ALERT_RECORDER_NAME;  // the name of the alert recorder
     static const std::string   DISABLED_RECORDER_NAME; // the fake disabled feature recorder

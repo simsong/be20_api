@@ -15,8 +15,8 @@ const std::string feature_recorder_set::DISABLED_RECORDER_NAME = "disabled";
 const std::string feature_recorder_set::NO_INPUT = "<NO-INPUT>";
 const std::string feature_recorder_set::NO_OUTDIR = "<NO-OUTDIR>";
 
-static std::string null_hasher_name("null");
-static std::string null_hasher_func(const uint8_t *buf,size_t bufsize)
+std::string feature_recorder_set::null_hasher_name("null");
+std::string feature_recorder_set::null_hasher_func(const uint8_t *buf,size_t bufsize)
 {
     return std::string("0000000000000000");
 }
@@ -64,19 +64,32 @@ feature_recorder_set::feature_recorder_set(uint32_t flags_,const std::string has
 }
 
 /**
+ * 
  * Initialize a properly functioning feature recorder set.
  * If disabled, create a disabled feature_recorder that can respond to functions as requested.
  */
+
+#if 0
+WTF? Why do I even *have* an init? Is it to create the feature files? THey could get initted as they are added, and this shoudl be done in the creator.
+
+                - CXheck in the test program.
+                - chekc in the API program
+                - Check in Phase1
+                - Delete init()
+#endif
 void feature_recorder_set::init(const feature_file_names_t &feature_files)
 {
+    std::cerr << "feature_recorder_set::init\n";
+
     /* Make sure we can write to the outdir if one is provided */
     if ((outdir != NO_OUTDIR) && (access(outdir.c_str(),W_OK)!=0)) {
         throw new std::invalid_argument("output directory not writable");
     }
         
     if (flag_set(ENABLE_SQLITE3_RECORDERS)) {
+        std::cerr << "calling db_create\n";
         db_create();
-        std::cout << "db_create called\n";
+        std::cerr << "called db_create\n";
     }
 
     if (flag_notset(NO_ALERT)) {
@@ -345,6 +358,7 @@ void feature_recorder_set::db_send_sql(BEAPI_SQLITE3 *db,const char **stmts, ...
 
 void feature_recorder_set::db_create_table(const std::string &name)
 {
+    std::cerr << "db_create_called\n";
     assert(name.size()>0);
     assert(db3!=NULL);
     db_send_sql(db3,schema_tbl,name.c_str(),name.c_str());
