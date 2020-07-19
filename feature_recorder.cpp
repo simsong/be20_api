@@ -303,8 +303,8 @@ void feature_recorder::set_memhist_limit(int64_t limit_)
 // add a memory histogram; assume the position in the mhistograms is stable
 void feature_recorder::enable_memory_histograms()
 {
-    for(histogram_defs_t::const_iterator it=histogram_defs.begin();it!=histogram_defs.end();it++){
-        mhistograms[*it] = new mhistogram_t(); 
+    for( auto it: histogram_defs){
+        mhistograms[it] = new mhistogram_t(); 
     }
 }
 
@@ -494,9 +494,9 @@ void feature_recorder::dump_histograms(void *user,feature_recorder::dump_callbac
     /* Loop through all the histograms and dump each one.
      * This now works for both memory histograms and non-memory histograms.
      */
-    for(histogram_defs_t::const_iterator it = histogram_defs.begin();it!=histogram_defs.end();it++){
+    for (auto it:histogram_defs ){
         try {
-            dump_histogram((*it),user,cb);
+            dump_histogram((it),user,cb);
         }
         catch (const std::exception &e) {
             std::cerr << "ERROR: histogram " << name << ": " << e.what() << "\n";
@@ -695,9 +695,9 @@ void feature_recorder::write(const pos0_t &pos0,const std::string &feature_,cons
     }
 
     /* Support in-memory histograms */
-    for(mhistograms_t::iterator it = mhistograms.begin(); it!=mhistograms.end();it++){
-        const histogram_def &def = it->first;
-        mhistogram_t *m = it->second;
+    for (auto it:mhistograms ){
+        const histogram_def &def = it.first;
+        mhistogram_t *m = it.second;
         std::string new_feature = *feature_utf8;
         if(def.require.size()==0 || new_feature.find_first_of(def.require)!=std::string::npos){
             /* If there is a pattern to use, use it to simplify the feature */

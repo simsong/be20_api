@@ -128,13 +128,13 @@ public:
         std::string desc;
         bool inalpha = false;
         /* Now get the std::string part of pos0 */
-        for(std::string::const_iterator it = path.begin();it!=path.end();it++){
-            if((*it)=='-'){
+        for (auto it: path ){
+            if ((it)=='-'){
                 if(desc.size()>0 && desc.at(desc.size()-1)!='/') desc += '/';
                 inalpha=false;
             }
-            if(isalpha(*it) || (inalpha && isdigit(*it))){
-                desc += *it;
+            if (isalpha(it) || (inalpha && isdigit(it))){
+                desc += it;
                 inalpha=true;
             }
         }

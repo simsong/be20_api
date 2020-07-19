@@ -97,8 +97,8 @@ void feature_recorder_set::init(const feature_file_names_t &feature_files)
     }
 
     /* Create the requested feature files */
-    for(std::set<std::string>::const_iterator it=feature_files.begin();it!=feature_files.end();it++){
-        create_name(*it,flags & CREATE_STOP_LIST_RECORDERS);
+    for( auto it:feature_files){
+        create_name(it, flags & CREATE_STOP_LIST_RECORDERS);
     }
 }
 
@@ -107,15 +107,15 @@ void feature_recorder_set::init(const feature_file_names_t &feature_files)
  */
 void feature_recorder_set::flush_all()
 {
-    for(feature_recorder_map::iterator i = frm.begin();i!=frm.end();i++){
-        i->second->flush();
+    for ( auto it:frm){
+        it.second->flush();
     } 
 }
 
 void feature_recorder_set::close_all()
 {
-    for(feature_recorder_map::iterator i = frm.begin();i!=frm.end();i++){
-        i->second->close();
+    for (auto it:frm){
+        it.second->close();
     } 
     if ( flag_set(feature_recorder_set::ENABLE_SQLITE3_RECORDERS )) {
         db_transaction_commit();
@@ -277,7 +277,7 @@ void feature_recorder_set::dump_histograms(void *user,feature_recorder::dump_cal
                                            feature_recorder_set::xml_notifier_t xml_error_notifier) const
 {
     /* Ask each feature recorder to dump its histograms */
-    for(feature_recorder_map::const_iterator it = frm.begin(); it!=frm.end(); it++){
+    for (feature_recorder_map::const_iterator it = frm.begin(); it!=frm.end(); it++){
         feature_recorder *fr = it->second;
         fr->dump_histograms(user,cb,xml_error_notifier);
     }
