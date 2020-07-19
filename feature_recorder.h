@@ -184,6 +184,7 @@ public:
     static std::string banner_file;         // banner for top of every file
     static std::string extract_feature(const std::string &line);
 
+    /* The main public interface: */
     feature_recorder(class feature_recorder_set &fs, const std::string &name);
     virtual        ~feature_recorder();
     virtual void   set_flag(uint32_t flags_);
@@ -288,10 +289,6 @@ public:
      * pos0 gives the location and prefix for the beginning of the buffer
      */ 
 
-    /****************************************************************
-     *** External entry points.
-     ****************************************************************/
-
     /**
      * write() actually does the writing to the file.
      * It uses locks and is threadsafe.
@@ -317,6 +314,10 @@ private:
     virtual void db_write0(const pos0_t &pos0,const std::string &feature,const std::string &context);  
     static const char *db_insert_stmt;
 public:
+
+    /****************************************************************
+     *** External entry points.
+     ****************************************************************/
 
     // write a feature and its context; the feature may be in the context, but doesn't need to be.
     // entries processed by write below will be processed by histogram system

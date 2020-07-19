@@ -2,8 +2,8 @@
 #define __AFTIMER_H__
 
 #include <cinttypes>
-#include <ctypes>
 #include <string>
+
 
 class aftimer {
     struct timeval t0;

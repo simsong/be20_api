@@ -13,6 +13,8 @@
 #include "config.h"
 #include "utils.h"
 
+#include <cstdarg>
+
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #endif
@@ -24,7 +26,6 @@
 #include <sstream>
 
 #ifndef HAVE_ERR
-#include <stdarg.h>
 void err(int eval,const char *fmt,...)
 {
   va_list ap;
@@ -37,7 +38,6 @@ void err(int eval,const char *fmt,...)
 #endif
 
 #ifndef HAVE_ERRX
-#include <stdarg.h>
 void errx(int eval,const char *fmt,...)
 {
   va_list ap;
@@ -50,7 +50,6 @@ void errx(int eval,const char *fmt,...)
 #endif
 
 #ifndef HAVE_WARN
-#include <stdarg.h>
 void	warn(const char *fmt, ...)
 {
     va_list args;
@@ -61,7 +60,6 @@ void	warn(const char *fmt, ...)
 #endif
 
 #ifndef HAVE_WARNX
-#include <stdarg.h>
 void warnx(const char *fmt,...)
 {
   va_list ap;

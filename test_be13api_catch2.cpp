@@ -3,11 +3,11 @@
 #define CATCH_CONFIG_MAIN
 #include "config.h"
 #include "tests/catch.hpp"
+#include "bulk_extractor_i.h"           // brings in entire header set
 
 // define stuff I need in the global environment. Only read it once.
 
 /* atomic_set_map.h */
-#include "atomic_set_map.h"
 int dump_cb(void *user, const std::string &val, const int &count){
     int *called = (int *)user;
     switch (*called) {
@@ -41,7 +41,6 @@ TEST_CASE( "test atomic_histogram", "[vector]" ){
 }
 
 /* feature_recorder_set.h */
-#include "feature_recorder_set.h"
 static std::string hash_name("md5");
 static std::string hash_func(const uint8_t *buf,size_t bufsize)
 {
@@ -59,36 +58,48 @@ static std::string hash_func(const uint8_t *buf,size_t bufsize)
     exit(1);
 }
 static feature_recorder_set::hash_def my_hasher(hash_name,hash_func);
-TEST_CASE("feature_recorder_sql", "[sql]") {
-    const char *dbfile = "test.sql3";
-    char *errmsg = 0;
-    sqlite3 *db=0;
+TEST_CASE("feature_recorder_sql", "[frs]") {
+    feature_file_names_t feature_file_names;
+    be13::plugin::get_scanner_feature_file_names(feature_file_names);
 
-    feature_recorder_set fs(0,my_hasher,"","/tmp");
+    //char *errmsg = 0;
+    //sqlite3 *db=0;
+    std::string input_fname = "";
+    std::string outdir = std::string("/tmp/work") + itos(getpid());
+    mkdir(outdir.c_str(),0777);
+    std::cerr << "AAA\n";
+    feature_recorder_set fs(feature_recorder_set::ENABLE_SQLITE3_RECORDERS, "sha-1", input_fname, outdir); 
+    std::cerr << "BBB\n";
+    feature_recorder fr(fs, "mail_test");
+    std::cerr << "CCC\n";
 
-    unlink(dbfile);
-    fs.db_create();
+    fs.init( feature_file_names );
+    be13::plugin::scanners_init(fs);
+
+    fs.db_transaction_begin();
+
+    //fs.db_create();
 
     /* Create an email table */
-    fs.db_create_table("email");
+    //fs.db_create_table("mail_test");
         
-    /* Lets throw a million features into the table as a test */
-    sqlite3_exec(db,"BEGIN TRANSACTION",NULL,NULL,&errmsg);
+    /* Lets some  features into the table as a test */
+    //sqlite3_exec(db,"BEGIN TRANSACTION",NULL,NULL,&errmsg);
     //beapi_sql_stmt s(db,"email");
-    for(int i=0;i<1000000;i++){
+    for(int i=0;i<10;i++){
         pos0_t p;
         pos0_t p1 = p+i;
-        
-        if(i%10000==0) printf("i=%d\n",i);
         
         char feature[64];
         snprintf(feature,sizeof(feature),"user%d@company.com",i);
         char context[64];
         snprintf(context,sizeof(context),"this is the context user%d@company.com yes it is!",i);
+        fr.write(p1, feature, context);
         //insert_statement(stmt,p1,feature,context);
     }
-    sqlite3_exec(db,"COMMIT TRANSACTION",NULL,NULL,&errmsg);
-    fs.db_close();
+    fs.db_transaction_commit();
+    //sqlite3_exec(db,"COMMIT TRANSACTION",NULL,NULL,&errmsg);
+    //fs.db_close();
 
     /* Now verify that they are there */
 }
@@ -99,7 +110,6 @@ TEST_CASE("featrure_recorder_set", "[frs]") {
 
 
 /* regex_vector.h & regex_vector.cpp */
-#include "regex_vector.h"
 TEST_CASE( "test regex_vector", "[vector]" ) {
     REQUIRE( regex_vector::has_metachars("this[1234]foo") == true );
     REQUIRE( regex_vector::has_metachars("this(1234)foo") == true );
@@ -132,7 +142,6 @@ TEST_CASE( "test atomic_set_map", "[vector]" ){
 }
 
 /* sbuf.h */
-#include "sbuf.h"
 TEST_CASE( "pos0_t", "[vector]" ){
     REQUIRE( stoi64("12345") == 12345);
 
@@ -155,17 +164,14 @@ TEST_CASE( "pos0_t", "[vector]" ){
 
 
 /* word_and_context_list.h */
-#include "word_and_context_list.h"
 TEST_CASE("word_and_context_list", "[vector]") {
     REQUIRE( word_and_context_list::rstrcmp("aaaa1", "bbbb0") < 0 );
     REQUIRE( word_and_context_list::rstrcmp("aaaa1", "aaaa1") == 0 );
     REQUIRE( word_and_context_list::rstrcmp("bbbb0", "aaaa1") > 0 );
-
 }
 
 
 
-#include "unicode_escape.h"
 TEST_CASE("unicode_escape", "[unicode]") {
     const char *U1F601 = "\xF0\x9F\x98\x81";        // UTF8 for Grinning face with smiling eyes
     REQUIRE( hexesc('a') == "\\x61");               // escape the escape!

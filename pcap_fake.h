@@ -4,10 +4,10 @@
  * A fake libpcap implementation that can only read files without a filter.
  */
 
-#include <sys/cdefs.h>
-#include <stdint.h>
-#include <sys/time.h>
 #include <stdio.h>
+#include <stdint.h>
+#include <sys/cdefs.h>
+#include <sys/time.h>
 
 __BEGIN_DECLS
 

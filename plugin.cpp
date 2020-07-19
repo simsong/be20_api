@@ -20,7 +20,7 @@
 
 #include "bulk_extractor_i.h"
 #include "aftimer.h"
-#include "../dfxml/src/hash_t.h"
+#include "dfxml/src/hash_t.h"
 
 
 uint32_t scanner_def::max_depth = 7;            // max recursion depth
@@ -144,7 +144,8 @@ void be13::plugin::load_scanner(scanner_t scanner,const scanner_info::scanner_co
      * we use static values so that the sbuf is not constantly being created and destroyed.
      */
     static const sbuf_t sbuf;
-    static feature_recorder_set fs(feature_recorder_set::SET_DISABLED,feature_recorder_set::null_hasher,
+    static feature_recorder_set fs(feature_recorder_set::SET_DISABLED,
+                                   feature_recorder_set::null_hasher,
                                    feature_recorder_set::NO_INPUT,
                                    feature_recorder_set::NO_OUTDIR); // dummy
 

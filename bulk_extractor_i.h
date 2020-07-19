@@ -89,8 +89,13 @@
 #include <set>
 #include <map>
 
+#include "atomic_set_map.h"
+#include "regex_vector.h"
 #include "feature_recorder.h"
 #include "feature_recorder_set.h"
+#include "sbuf.h"
+#include "word_and_context_list.h"
+#include "unicode_escape.h"
 
 /* Network includes */
 

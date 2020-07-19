@@ -23,8 +23,29 @@ static std::string null_hasher_func(const uint8_t *buf,size_t bufsize)
 
 feature_recorder_set::hash_def feature_recorder_set::null_hasher(null_hasher_name,null_hasher_func);
 
+/* be_hash. Currently this just returns the MD5 of the sbuf,
+ * but eventually it will allow the use of different hashes.
+ */
+static std::string be_hash_name("md5");
+static std::string be_hash_func(const uint8_t *buf,size_t bufsize)
+{
+    if(be_hash_name=="md5" || be_hash_name=="MD5"){
+        return dfxml::md5_generator::hash_buf(buf,bufsize).hexdigest();
+    }
+    if(be_hash_name=="sha1" || be_hash_name=="SHA1" || be_hash_name=="sha-1" || be_hash_name=="SHA-1"){
+        return dfxml::sha1_generator::hash_buf(buf,bufsize).hexdigest();
+    }
+    if(be_hash_name=="sha256" || be_hash_name=="SHA256" || be_hash_name=="sha-256" || be_hash_name=="SHA-256"){
+        return dfxml::sha256_generator::hash_buf(buf,bufsize).hexdigest();
+    }
+    std::cerr << "Invalid hash name: " << be_hash_name << "\n";
+    std::cerr << "This version of bulk_extractor only supports MD5, SHA1, and SHA256\n";
+    exit(1);
+}
+static feature_recorder_set::hash_def the_be_hasher(be_hash_name, be_hash_func);
+
 /* Create an empty recorder with no outdir. */
-feature_recorder_set::feature_recorder_set(uint32_t flags_,const feature_recorder_set::hash_def &hasher_,
+feature_recorder_set::feature_recorder_set(uint32_t flags_,const std::string hash_algorithm,
                                            const std::string &input_fname_,const std::string &outdir_):
     flags(flags_),seen_set(),input_fname(input_fname_),
     outdir(outdir_),
@@ -32,7 +53,8 @@ feature_recorder_set::feature_recorder_set(uint32_t flags_,const feature_recorde
     histogram_defs(),
     Min_transaction(),in_transaction(),db3(),
     alert_list(),stop_list(),
-    scanner_stats(),hasher(hasher_)
+    scanner_stats(),
+    hasher( the_be_hasher )
 {
     assert(outdir.size() > 0);
     if(flags & SET_DISABLED){
@@ -54,6 +76,7 @@ void feature_recorder_set::init(const feature_file_names_t &feature_files)
         
     if (flag_set(ENABLE_SQLITE3_RECORDERS)) {
         db_create();
+        std::cout << "db_create called\n";
     }
 
     if (flag_notset(NO_ALERT)) {
@@ -253,3 +276,131 @@ void feature_recorder_set::get_feature_file_list(std::vector<std::string> &ret)
         ret.push_back(it->first);
     }
 }
+
+
+/*** SQL Support ***/
+#ifdef BEAPI_SQLITE3
+
+/*
+ * Time results with ubnist1 on R4:
+ * no SQL - 79 seconds
+ * no pragmas - 651 seconds
+ * "PRAGMA synchronous =  OFF", - 146 second
+ * "PRAGMA synchronous =  OFF", "PRAGMA journal_mode=MEMORY", - 79 seconds
+ *
+ * Time with domexusers:
+ * no SQL - 
+ */
+
+
+#define SQLITE_EXTENSION ".sqlite"
+
+#ifndef SQLITE_DETERMINISTIC
+#define SQLITE_DETERMINISTIC 0
+#endif
+
+static int debug  = 0;
+
+static const char *schema_db[] = {
+    "PRAGMA synchronous =  OFF", 
+    "PRAGMA journal_mode=MEMORY",
+    //"PRAGMA temp_store=MEMORY",  // did not improve performance
+    "PRAGMA cache_size = 200000", 
+    "CREATE TABLE IF NOT EXISTS db_info (schema_ver INTEGER, bulk_extractor_ver INTEGER)",
+    "INSERT INTO  db_info (schema_ver, bulk_extractor_ver) VALUES (1,1)",
+    "CREATE TABLE IF NOT EXISTS be_features (tablename VARCHAR,comment TEXT)",
+    "CREATE TABLE IF NOT EXISTS be_config (name VARCHAR,value VARCHAR)",
+    0};
+
+/* Create a feature table and note that it has been created in be_features */
+static const char *schema_tbl[] = {
+    "CREATE TABLE IF NOT EXISTS f_%s (offset INTEGER(12), path VARCHAR, feature_eutf8 TEXT, feature_utf8 TEXT, context_eutf8 TEXT)",
+    "CREATE INDEX IF NOT EXISTS f_%s_idx1 ON f_%s(offset)",
+    "CREATE INDEX IF NOT EXISTS f_%s_idx2 ON f_%s(feature_eutf8)",
+    "CREATE INDEX IF NOT EXISTS f_%s_idx3 ON f_%s(feature_utf8)",
+    "INSERT INTO be_features (tablename,comment) VALUES ('f_%s','')",
+    0};
+
+static const char *begin_transaction[] = {"BEGIN TRANSACTION",0};
+static const char *commit_transaction[] = {"COMMIT TRANSACTION",0};
+void feature_recorder_set::db_send_sql(BEAPI_SQLITE3 *db,const char **stmts, ...)
+{
+    assert(db!=0);
+    for(int i=0;stmts[i];i++){
+        char *errmsg = 0;
+        char buf[65536];
+
+        va_list ap;
+        va_start(ap,stmts);
+        vsnprintf(buf,sizeof(buf),stmts[i],ap);
+        va_end(ap);
+        if(debug) std::cerr << "SQL: " << buf << "\n";
+        // Don't error on a PRAGMA
+        if((sqlite3_exec(db,buf,NULL,NULL,&errmsg) != SQLITE_OK)  && (strncmp(buf,"PRAGMA",6)!=0)) {
+            fprintf(stderr,"Error executing '%s' : %s\n",buf,errmsg);
+            exit(1);
+        }
+    }
+}
+
+void feature_recorder_set::db_create_table(const std::string &name)
+{
+    assert(name.size()>0);
+    assert(db3!=NULL);
+    db_send_sql(db3,schema_tbl,name.c_str(),name.c_str());
+}
+
+BEAPI_SQLITE3 *feature_recorder_set::db_create_empty(const std::string &name)
+{
+    assert(name.size()>0);
+    std::string dbfname  = outdir + "/" + name +  SQLITE_EXTENSION;
+    if(debug) std::cerr << "create_feature_database " << dbfname << "\n";
+    BEAPI_SQLITE3 *db=0;
+    if (sqlite3_open_v2(dbfname.c_str(), &db,
+                        SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE|SQLITE_OPEN_FULLMUTEX,
+                        0)!=SQLITE_OK) {
+        std::cerr << "Cannot create database '" << dbfname << "': " << sqlite3_errmsg(db) << "\n";
+        sqlite3_close(db);
+        exit(1);
+    }
+    return db;
+}
+
+void feature_recorder_set::db_create()
+{
+    assert(db3==0);
+    db3 = db_create_empty("report");
+    db_send_sql(db3,schema_db);
+    std::cout << "in db_create called\n";
+}
+
+void feature_recorder_set::db_close()
+{
+    if(db3){
+        if(debug) std::cerr << "db_close()\n";
+        sqlite3_close(db3);
+        db3 = 0;
+    }
+}
+
+void feature_recorder_set::db_transaction_begin()
+{
+    std::lock_guard<std::mutex> lock(Min_transaction);
+    if(!in_transaction){
+        db_send_sql(db3,begin_transaction);
+        in_transaction = true;
+    }
+}
+
+void feature_recorder_set::db_transaction_commit()
+{
+    std::lock_guard<std::mutex> lock(Min_transaction);
+    if(in_transaction){
+        db_send_sql(db3,commit_transaction);
+        in_transaction = false;
+    } else {
+        std::cerr << "No transaction to commit\n";
+    }
+}
+
+#endif

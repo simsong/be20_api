@@ -73,10 +73,10 @@ public:
     /**
      * \name string and wstring stream readers
      * @{ */
-    void getUTF8(string &utf8_string);
-    void getUTF8(size_t num_octets_requested, string &utf8_string);
-    void getUTF16(wstring &utf16_string);
-    void getUTF16(size_t num_code_units_requested, wstring &utf16_string);
+    void getUTF8(std::string &utf8_string);
+    void getUTF8(size_t num_octets_requested, std::string &utf8_string);
+    void getUTF16(std::wstring &utf16_string);
+    void getUTF16(size_t num_code_units_requested, std::wstring &utf16_string);
     /** @} */
 };
 

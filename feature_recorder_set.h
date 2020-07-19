@@ -41,6 +41,11 @@ class feature_recorder_set {
     bool                  in_transaction;
 
 public:
+    /** create an emptry feature recorder set. If disabled, create a disabled recorder. */
+    feature_recorder_set( uint32_t flags_, const std::string hash_algorithm, 
+                          const std::string &input_fname_, const std::string &outdir_);
+    
+    /* instance variables */
     BEAPI_SQLITE3         *db3;             // opened in SQLITE_OPEN_FULLMUTEX mode
     virtual void          heartbeat(){};    // called at a regular basis
     struct hash_def {
@@ -52,10 +57,6 @@ public:
         double seconds;
         uint64_t calls;
     };
-    /** create an emptry feature recorder set. If disabled, create a disabled recorder. */
-    feature_recorder_set( uint32_t flags_, const hash_def &hasher_, 
-                          const std::string &input_fname_, const std::string &outdir_);
-    
     typedef std::map<std::string,struct pstats> scanner_stats_map;
 
     const word_and_context_list *alert_list;		/* shold be flagged */
@@ -86,10 +87,10 @@ public:
         db_close();
     }
 
-    std::string get_input_fname()           const { return input_fname;}
+    std::string   get_input_fname()           const { return input_fname;}
     virtual const std::string &get_outdir() const { return outdir;}
-    void set_stop_list(const word_and_context_list *alist){stop_list=alist;}
-    void set_alert_list(const word_and_context_list *alist){alert_list=alist;}
+    void          set_stop_list(const word_and_context_list *alist){stop_list=alist;}
+    void          set_alert_list(const word_and_context_list *alist){alert_list=alist;}
 
     /** Initialize a feature_recorder_set. Previously this was a constructor, but it turns out that
      * virtual functions for the create_name_factory aren't honored in constructors.
@@ -105,15 +106,15 @@ public:
     bool    has_name(std::string name) const;           /* does the named feature exist? */
 
     /* flags */
-    void    set_flag(uint32_t f);
-    void    unset_flag(uint32_t f);
-    bool    flag_set(uint32_t f)     const { return flags & f; }
-    bool    flag_notset(uint32_t f)  const { return !(flags & f); }
+    void     set_flag(uint32_t f);
+    void     unset_flag(uint32_t f);
+    bool     flag_set(uint32_t f)     const { return flags & f; }
+    bool     flag_notset(uint32_t f)  const { return !(flags & f); }
     uint32_t get_flags()             const { return flags; }
 
-    typedef void (*xml_notifier_t)(const std::string &xmlstring);
-    void    add_histogram(const histogram_def &def); // adds it to a local set or to the specific feature recorder
-    void    dump_histograms(void *user,feature_recorder::dump_callback_t cb, xml_notifier_t xml_error_notifier) const;
+    typedef  void (*xml_notifier_t)(const std::string &xmlstring);
+    void     add_histogram(const histogram_def &def); // adds it to a local set or to the specific feature recorder
+    void     dump_histograms(void *user,feature_recorder::dump_callback_t cb, xml_notifier_t xml_error_notifier) const;
     virtual feature_recorder *create_name_factory(const std::string &name_);
     virtual void create_name(const std::string &name,bool create_stop_also);
 
@@ -128,11 +129,11 @@ public:
 
     virtual void db_send_sql(BEAPI_SQLITE3 *db3,const char **stmts, ...) ;
     virtual BEAPI_SQLITE3 *db_create_empty(const std::string &name) ;
-    void    db_create_table(const std::string &name) ;
-    void    db_create() ;
-    void    db_transaction_begin() ;
-    void    db_transaction_commit() ;               // commit current transaction
-    void    db_close() ;             // 
+    void     db_create_table(const std::string &name) ;
+    void     db_create() ;
+    void     db_transaction_begin() ;
+    void     db_transaction_commit() ;               // commit current transaction
+    void     db_close() ;             // 
 
     /****************************************************************
      *** External Functions
