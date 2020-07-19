@@ -62,25 +62,6 @@
  * @{
  */
 
-/**
- * \file
- * bulk_extractor scanner plug_in architecture.
- *
- * Scanners are called with two parameters:
- * A reference to a scanner_params (SP) object.
- * A reference to a recursion_control_block (RCB) object.
- * 
- * On startup, each scanner is called with a special SP and RCB.
- * The scanners respond by setting fields in the SP and returning.
- * 
- * When executing, once again each scanner is called with the SP and RCB.
- * This is the only file that needs to be included for a scanner.
- *
- * \li \c phase_startup - scanners are loaded and register the names of the feature files they want.
- * \li \c phase_scan - each scanner is called to analyze 1 or more sbufs.
- * \li \c phase_shutdown - scanners are given a chance to shutdown
- */
-
 #include "sbuf.h"
 #include "utf8.h"
 #include "utils.h"                      // for gmtime_r
@@ -90,45 +71,6 @@
 #include <map>
 
 
-
-/* Network includes */
-
-/****************************************************************
- *** pcap.h --- If we don't have it, fake it. ---
- ***/
-#ifdef HAVE_NETINET_IF_ETHER_H
-# include <netinet/if_ether.h>
-#endif
-#ifdef HAVE_NETINET_IN_H
-# include <netinet/in.h>
-#endif
-#ifdef HAVE_NET_ETHERNET_H
-# include <net/ethernet.h>              // for freebsd
-#endif
-
-
-#if defined(HAVE_LIBPCAP)
-#  ifdef HAVE_DIAGNOSTIC_REDUNDANT_DECLS
-#    pragma GCC diagnostic ignored "-Wredundant-decls"
-#  endif
-#  if defined(HAVE_PCAP_PCAP_H)
-#    include <pcap/pcap.h>
-#    define GOT_PCAP
-#  endif
-#  if defined(HAVE_PCAP_H) && !defined(GOT_PCAP)
-#    include <pcap.h>
-#    define GOT_PCAP
-#  endif
-#  if defined(HAVE_WPCAP_PCAP_H) && !defined(GOT_PCAP)
-#    include <wpcap/pcap.h>
-#    define GOT_PCAP
-#  endif
-#  ifdef HAVE_DIAGNOSTIC_REDUNDANT_DECLS
-#    pragma GCC diagnostic warning "-Wredundant-decls"
-#  endif
-#else
-#  include "pcap_fake.h"
-#endif
 
 /**
  * \class scanner_params

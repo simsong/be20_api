@@ -23,8 +23,8 @@
 #include "dfxml/src/hash_t.h"
 
 
-uint32_t scanner_def::max_depth = 7;            // max recursion depth
-uint32_t scanner_def::max_ngram = 10;            // max recursion depth
+uint32_t be13::scanner_def::max_depth = 7;            // max recursion depth
+uint32_t be13::scanner_def::max_ngram = 10;            // max recursion depth
 static int debug;                               // local debug variable
 static uint32_t max_depth_seen=0;
 static std::mutex max_depth_seenM;
@@ -49,7 +49,7 @@ bool scanner_commands_processed = false;
 
 /* scanner_params */
 
-scanner_params::PrintOptions scanner_params::no_options; 
+be13::scanner_params::PrintOptions be13::scanner_params::no_options; 
 
 /* object for keeping track of packet callbacks */
 class packet_plugin_info {
@@ -90,13 +90,13 @@ void be13::plugin::set_scanner_enabled(const std::string &name,bool enable)
 {
     for (auto it: current_scanners) {
         /* If the scanner name matches, set its flag and return (we can only have one of each scanner) */
-        if (it.info.name==name) {
-            it.enabled = enable;
+        if (it->info.name==name) {
+            it->enabled = enable;
             return;
         }
         /* If name is 'all' and the NO_ALL flag is not set, set the scanner's enabled flag to enable */
-        if (name=="all" && ((it.info.flags & scanner_info::SCANNER_NO_ALL)==0)){
-            (*it)->enabled = enable;
+        if (name=="all" && ((it->info.flags & scanner_info::SCANNER_NO_ALL)==0)){
+            it->enabled = enable;
         }
     }
     if (name!="all"){
@@ -108,7 +108,7 @@ void be13::plugin::set_scanner_enabled(const std::string &name,bool enable)
 void be13::plugin::set_scanner_enabled_all(bool enable)
 {
     for (auto it: current_scanners) {
-        it.enabled = enable;
+        it->enabled = enable;
     }
 }
 
@@ -134,7 +134,7 @@ void be13::plugin::load_scanner(scanner_t scanner,const scanner_info::scanner_co
 {
     /* If scanner is already loaded, return */
     for (auto it: current_scanners) {
-        if (it.scanner==scanner) return;
+        if (it->scanner==scanner) return;
     }
 
     /* Use an empty sbuf and an empty feature recorder set as the parameters for the sp below.
@@ -289,7 +289,7 @@ void be13::plugin::message_enabled_scanners(scanner_params::phase_t phase,featur
     }
 }
 
-scanner_t *be13::plugin::find_scanner(const std::string &search_name)
+be13::scanner_t *be13::plugin::find_scanner(const std::string &search_name)
 {
     for(scanner_vector::const_iterator it = current_scanners.begin();it!=current_scanners.end();it++){
 	if(search_name == (*it)->info.name){
@@ -409,8 +409,8 @@ void be13::plugin::phase_shutdown(feature_recorder_set &fs,std::stringstream *sx
 
 /* Get the config and build the help strings at the same time! */
 
-std::stringstream scanner_info::helpstream;
-void scanner_info::get_config(const scanner_info::config_t &c,
+std::stringstream be13::scanner_info::helpstream;
+void be13::scanner_info::get_config(const scanner_info::config_t &c,
                               const std::string &n,std::string *val,const std::string &help)
 {
     /* Check to see if we are being called as part of a help operation */
@@ -421,12 +421,14 @@ void scanner_info::get_config(const scanner_info::config_t &c,
     }
 }
 
-void scanner_info::get_config(const std::string &n,std::string *val,const std::string &help)
+void be13::scanner_info::get_config(const std::string &n,
+                                    std::string *val,const std::string &help)
 {
     scanner_info::get_config(config->namevals,n,val,help);
 }
 
-#define GET_CONFIG(T) void scanner_info::get_config(const std::string &n,T *val,const std::string &help) {\
+/* Should this be redone with templates? */
+#define GET_CONFIG(T) void be13::scanner_info::get_config(const std::string &n,T *val,const std::string &help) { \
         std::stringstream ss;\
         ss << *val;\
         std::string v(ss.str());\
@@ -447,7 +449,7 @@ GET_CONFIG(size_t)
 /* uint8_t needs cast to uint32_t for <<
  * Otherwise it is interpreted as a character.
  */
-void scanner_info::get_config(const std::string &n,uint8_t *val_,const std::string &help)
+void be13::scanner_info::get_config(const std::string &n,uint8_t *val_,const std::string &help)
 {
     uint32_t val = *val_;
     std::stringstream ss;
@@ -460,7 +462,7 @@ void scanner_info::get_config(const std::string &n,uint8_t *val_,const std::stri
 }
 
 /* bool needs special processing for YES/NO/TRUE/FALSE */
-void scanner_info::get_config(const std::string &n,bool *val,const std::string &help)
+void be13::scanner_info::get_config(const std::string &n,bool *val,const std::string &help)
 {
     std::stringstream ss;
     ss << ((*val) ? "YES" : "NO");
@@ -551,7 +553,7 @@ static std::string upperstr(const std::string &str)
 /* Determine if the sbuf consists of a repeating ngram */
 static size_t find_ngram_size(const sbuf_t &sbuf)
 {
-    for(size_t ngram_size = 1; ngram_size < scanner_def::max_ngram; ngram_size++){
+    for(size_t ngram_size = 1; ngram_size < be13::scanner_def::max_ngram; ngram_size++){
 	bool ngram_match = true;
 	for(size_t i=ngram_size;i<sbuf.pagesize && ngram_match;i++){
 	    if(sbuf[i%ngram_size]!=sbuf[i]) ngram_match = false;
