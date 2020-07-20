@@ -46,7 +46,9 @@ public:
                           const std::string &input_fname_, const std::string &outdir_);
     
     /* instance variables */
+#ifdef BEAPI_SQLITE3
     BEAPI_SQLITE3         *db3;             // opened in SQLITE_OPEN_FULLMUTEX mode
+#endif
     virtual void          heartbeat(){};    // called at a regular basis
     struct hash_def {
         hash_def(std::string name_,std::string (*func_)(const uint8_t *buf,const size_t bufsize)):name(name_),func(func_){};
@@ -86,7 +88,9 @@ public:
         for ( auto it:frm){
             delete it.second;
         }
+#ifdef BEAPI_SQLITE3
         db_close();
+#endif
     }
 
     std::string   get_input_fname()           const { return input_fname;}
@@ -129,6 +133,7 @@ public:
      *** SQLite3 interface
      ****************************************************************/
 
+#ifdef BEAPI_SQLITE3
     virtual void db_send_sql(BEAPI_SQLITE3 *db3,const char **stmts, ...) ;
     virtual BEAPI_SQLITE3 *db_create_empty(const std::string &name) ;
     void     db_create_table(const std::string &name) ;
@@ -136,6 +141,7 @@ public:
     void     db_transaction_begin() ;
     void     db_transaction_commit() ;               // commit current transaction
     void     db_close() ;             // 
+#endif
 
     /****************************************************************
      *** External Functions
