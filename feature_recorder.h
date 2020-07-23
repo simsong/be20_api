@@ -204,7 +204,7 @@ private:
     std::string  ignore_encoding;            // encoding to ignore for carving
     std::fstream ios;                        // where features are written 
     
-#ifdef BEAPI_SQLITE
+#ifdef BEAPI_SQLITE3
     class besql_stmt *bs;                    // prepared beapi sql statement
 #else
     void             *bs;                    // or place-hodler pointer
@@ -274,7 +274,9 @@ public:
      */
     virtual void add_histogram(const histogram_def &def); // adds a histogram to process
     virtual void dump_histogram_file(const histogram_def &def,void *user,feature_recorder::dump_callback_t cb) const;
-    virtual void dump_histogram_db(const histogram_def &def,void *user,feature_recorder::dump_callback_t cb) const;
+#ifdef BEAPI_SQLITE3
+    virtual void dump_histogram_sqlite3(const histogram_def &def,void *user,feature_recorder::dump_callback_t cb) const;
+#endif
     virtual void dump_histogram(const histogram_def &def,void *user,feature_recorder::dump_callback_t cb) const;
     typedef void (*xml_notifier_t)(const std::string &xmlstring);
     virtual void dump_histograms(void *user,feature_recorder::dump_callback_t cb, xml_notifier_t xml_error_notifier) const;
@@ -308,10 +310,12 @@ public:
     // 
     // write a feature and its context; the feature may be in the context, but doesn't need to be.
     // write() calls write0() after histogram, quoting, and stoplist processing
-    // write0() calls write0_sql() if sqlwriting is enabled
+    // write0() calls write0_sqlite3() if sqlwriting is enabled
     virtual void write0(const pos0_t &pos0,const std::string &feature,const std::string &context);  
 private:
-    virtual void db_write0(const pos0_t &pos0,const std::string &feature,const std::string &context);  
+#ifdef BEAPI_SQLITE3
+    virtual void write0_sqlite3(const pos0_t &pos0,const std::string &feature,const std::string &context);  
+#endif
     static const char *db_insert_stmt;
 public:
 

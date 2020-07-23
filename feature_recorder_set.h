@@ -45,7 +45,9 @@ class feature_recorder_set {
     histogram_defs_t      histogram_defs;   // histograms that are to be created.
     mutable std::mutex    Min_transaction;
     bool                  in_transaction;
+#ifdef BEAPI_SQLITE3
     BEAPI_SQLITE3         *db3;             // opened in SQLITE_OPEN_FULLMUTEX mode
+#endif
     bool                  init_called;
 
 public:
@@ -135,6 +137,7 @@ public:
      *** SQLite3 interface
      ****************************************************************/
 
+#ifdef BEAPI_SQLITE3
     virtual void db_send_sql(BEAPI_SQLITE3 *db3,const char **stmts, ...) ;
     virtual BEAPI_SQLITE3 *db_create_empty(const std::string &name) ;
     void     db_create_table(const std::string &name) ;
@@ -142,6 +145,7 @@ public:
     void     db_transaction_begin() ;
     void     db_transaction_commit() ;               // commit current transaction
     void     db_close() ;             // 
+#endif
 
     /****************************************************************
      *** External Functions

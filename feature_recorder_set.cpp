@@ -56,8 +56,11 @@ feature_recorder_set::feature_recorder_set(uint32_t flags_,const std::string has
     frm(),
     Mscanner_stats(),
     histogram_defs(),
-    Min_transaction(),in_transaction(),db3(),init_called(false),
-    alert_list(),stop_list(),
+    Min_transaction(),in_transaction(),
+#ifdef BEAPI_SQLITE3
+    db3(),
+#endif
+    init_called(false),alert_list(),stop_list(),
     scanner_stats(),
     hasher( hash_def(hash_algorithm, hash_def::hash_func_for_name(hash_algorithm)))
 {
@@ -73,7 +76,9 @@ feature_recorder_set::~feature_recorder_set()
     for ( auto it:frm ){
         delete it.second;
     }
+#ifdef BEAPI_SQLITE3
     db_close();
+#endif
 }
 
 
@@ -129,11 +134,14 @@ void feature_recorder_set::init(const feature_file_names_t &feature_files)
         throw new std::invalid_argument("output directory not writable");
     }
         
+
+#ifdef BEAPI_SQLITE3
     if (flag_set(ENABLE_SQLITE3_RECORDERS)) {
         std::cerr << "calling db_create\n";
         db_create();
         std::cerr << "called db_create\n";
     }
+#endif
 
     if (flag_notset(NO_ALERT)) {
         create_name(feature_recorder_set::ALERT_RECORDER_NAME,false); // make the alert recorder
@@ -163,9 +171,11 @@ void feature_recorder_set::close_all()
     for (auto it:frm){
         it.second->close();
     } 
+#ifdef BEAPI_SQLITE3
     if ( flag_set(feature_recorder_set::ENABLE_SQLITE3_RECORDERS )) {
         db_transaction_commit();
     }
+#endif
 }
 
 
@@ -337,7 +347,6 @@ void feature_recorder_set::get_feature_file_list(std::vector<std::string> &ret)
 
 
 #define SQLITE_EXTENSION ".sqlite"
-
 #ifndef SQLITE_DETERMINISTIC
 #define SQLITE_DETERMINISTIC 0
 #endif

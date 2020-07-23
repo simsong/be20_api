@@ -1,6 +1,7 @@
 /* -*- mode: C++; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 
 #include "config.h"
+#include "feature_recorder.h"
 #include "bulk_extractor_i.h"
 #include "unicode_escape.h"
 #include "histogram.h"
@@ -45,24 +46,6 @@ uint32_t feature_recorder::debug=0;
  */
 
 std::thread::id feature_recorder::main_thread_id = std::this_thread::get_id();
-
-/* This creates the base histogram. Note that the SQL fails if the histogram exists */
-static const char *schema_hist[] = {
-    "CREATE TABLE h_%s (count INTEGER(12), feature_utf8 TEXT)",
-    "CREATE INDEX h_%s_idx1 ON h_%s(count)",
-    "CREATE INDEX h_%s_idx2 ON h_%s(feature_utf8)",
-    0};
-
-/* This performs the histogram operation */
-static const char *schema_hist1[] = {
-    "INSERT INTO h_%s select COUNT(*),feature_utf8 from f_%s GROUP BY feature_utf8",
-    0};
-
-#ifdef HAVE_SQLITE3_CREATE_FUNCTION_V2
-static const char *schema_hist2[] = {
-    "INSERT INTO h_%s select sum(count),BEHIST(feature_utf8) from h_%s where BEHIST(feature_utf8)!='' GROUP BY BEHIST(feature_utf8)",
-    0};
-#endif
 
 
 
@@ -158,12 +141,14 @@ void feature_recorder::open()
 
     std::cerr << "DDD  \n";
     /* write to a database? Create tables if necessary and create a prepared statement */
+#ifdef BEAPI_SQLITE3
     if (fs.flag_set(feature_recorder_set::ENABLE_SQLITE3_RECORDERS)) {  
         char buf[1024];
         fs.db_create_table(name);
         snprintf( buf, sizeof(buf), db_insert_stmt,name.c_str() );
         bs = new besql_stmt( fs.db3, buf );
     }
+#endif
 
     /* Write to a file? Open the file and seek to the last line if it exist, otherwise just open database */
     if (fs.flag_notset(feature_recorder_set::DISABLE_FILE_RECORDERS)){
@@ -474,11 +459,11 @@ void feature_recorder::dump_histogram(const histogram_def &def,void *user,featur
         return;
     }
 
+#ifdef BEAPI_SQLITE3
     if (fs.flag_set(feature_recorder_set::ENABLE_SQLITE3_RECORDERS)) {
-        dump_histogram_db(def,user,cb);
+        dump_histogram_sqlite3(def,user,cb);
     }
-    
-
+#endif
     if (fs.flag_notset(feature_recorder_set::DISABLE_FILE_RECORDERS)) {
         dump_histogram_file(def,user,cb);
     }
@@ -588,10 +573,12 @@ void feature_recorder::printf(const char *fmt, ...)
 
 void feature_recorder::write0(const pos0_t &pos0,const std::string &feature,const std::string &context)
 {
+#ifdef BEAPI_SQLITE3
     if ( fs.flag_set(feature_recorder_set::ENABLE_SQLITE3_RECORDERS ) &&
          this->flag_notset(feature_recorder::FLAG_NO_FEATURES_SQL) ) {
-        db_write0( pos0, feature, context);
+        write0_sqlite3( pos0, feature, context);
     }
+#endif
     if ( fs.flag_notset(feature_recorder_set::DISABLE_FILE_RECORDERS )) {
         std::stringstream ss;
         ss << pos0.shift( feature_recorder::offset_add).str() << '\t' << feature;
@@ -1108,6 +1095,7 @@ void feature_recorder::set_carve_mtime(const std::string &fname, const std::stri
 #endif
 }
 
+#ifdef BEAPI_SQLITE3
 /*** SQL Routines Follow ***
  *
  * Time results with ubnist1 on R4:
@@ -1120,12 +1108,29 @@ void feature_recorder::set_carve_mtime(const std::string &fname, const std::stri
  * no SQL - 
  */
 
-#ifdef BEAPI_SQLITE3
 #define SQLITE_EXTENSION ".sqlite"
-
 #ifndef SQLITE_DETERMINISTIC
 #define SQLITE_DETERMINISTIC 0
 #endif
+
+/* This creates the base histogram. Note that the SQL fails if the histogram exists */
+static const char *schema_hist[] = {
+    "CREATE TABLE h_%s (count INTEGER(12), feature_utf8 TEXT)",
+    "CREATE INDEX h_%s_idx1 ON h_%s(count)",
+    "CREATE INDEX h_%s_idx2 ON h_%s(feature_utf8)",
+    0};
+
+/* This performs the histogram operation */
+static const char *schema_hist1[] = {
+    "INSERT INTO h_%s select COUNT(*),feature_utf8 from f_%s GROUP BY feature_utf8",
+    0};
+
+#ifdef HAVE_SQLITE3_CREATE_FUNCTION_V2
+static const char *schema_hist2[] = {
+    "INSERT INTO h_%s select sum(count),BEHIST(feature_utf8) from h_%s where BEHIST(feature_utf8)!='' GROUP BY BEHIST(feature_utf8)",
+    0};
+#endif
+
 
 #define DB_INSERT_STMT "INSERT INTO f_%s (offset,path,feature_eutf8,feature_utf8,context_eutf8) VALUES (?1, ?2, ?3, ?4, ?5)"
 const char *feature_recorder::db_insert_stmt = DB_INSERT_STMT;
@@ -1164,7 +1169,7 @@ feature_recorder::besql_stmt::~besql_stmt()
 }
 
 /* Hook for writing feature to SQLite3 database */
-void feature_recorder::db_write0(const pos0_t &pos0,const std::string &feature,const std::string &context)
+void feature_recorder::write0_sqlite3(const pos0_t &pos0,const std::string &feature,const std::string &context)
 {
     /**
      * Note: this is not very efficient, passing through a quoted feature and then unquoting it.
@@ -1172,11 +1177,9 @@ void feature_recorder::db_write0(const pos0_t &pos0,const std::string &feature,c
      */
     std::string *feature8 = HistogramMaker::convert_utf16_to_utf8(feature_recorder::unquote_string(feature));
     assert(bs!=0);
-#ifdef BEAPI_SQLITE
     bs->insert_feature(pos0,feature,
                          feature8 ? *feature8 : feature,
                          flag_set(feature_recorder::FLAG_NO_CONTEXT) ? "" : context);
-#endif
     if (feature8) delete feature8;
 }
 
@@ -1189,7 +1192,6 @@ static int callback_counter(void *param, int argc, char **argv, char **azColName
     return 0;
 }
 
-#ifdef HAVE_SQLITE3_CREATE_FUNCTION_V2
 static void dump_hist(sqlite3_context *ctx,int argc,sqlite3_value**argv)
 {
     const histogram_def *def = reinterpret_cast<const histogram_def *>(sqlite3_user_data(ctx));
@@ -1206,9 +1208,8 @@ static void dump_hist(sqlite3_context *ctx,int argc,sqlite3_value**argv)
         sqlite3_result_text(ctx,new_feature.c_str(),new_feature.size(),SQLITE_TRANSIENT);
     }
 }
-#endif
 
-void feature_recorder::dump_histogram_db(const histogram_def &def,void *user,feature_recorder::dump_callback_t cb) const
+void feature_recorder::dump_histogram_sqlite3(const histogram_def &def,void *user,feature_recorder::dump_callback_t cb) const
 {
     /* First check to see if there exists a feature histogram summary. If not, make it */
     std::string query = "SELECT name FROM sqlite_master WHERE type='table' AND name='h_" + def.feature +"'";
@@ -1256,6 +1257,5 @@ void feature_recorder::dump_histogram_db(const histogram_def &def,void *user,fea
     }
 #endif
 }
-
-
 #endif
+

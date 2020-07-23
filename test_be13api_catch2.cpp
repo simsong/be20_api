@@ -88,7 +88,9 @@ TEST_CASE("feature_recorder_sql", "[frs]") {
 
     be13::plugin::scanners_init(fs);
 
+#ifdef BEAPI_SQLITE3
     fs.db_transaction_begin();
+#endif
 
     //fs.db_create();
 
@@ -109,7 +111,9 @@ TEST_CASE("feature_recorder_sql", "[frs]") {
         fr.write(p1, feature, context);
         //insert_statement(stmt,p1,feature,context);
     }
+#ifdef BEAPI_SQLITE3
     fs.db_transaction_commit();
+#endif
     //sqlite3_exec(db,"COMMIT TRANSACTION",NULL,NULL,&errmsg);
     //fs.db_close();
 
