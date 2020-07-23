@@ -66,6 +66,11 @@ static const char *schema_hist2[] = {
 
 
 
+/*
+ * constructor. Not it is called with the feature_recorder_set to which it belongs.
+ *
+ */
+//TODO - make it register itself with the feature recorder set. and do the stuff that's in init.
 feature_recorder::feature_recorder(class feature_recorder_set &fs_,
                                    const std::string &name_):
     flags(0),
@@ -74,7 +79,8 @@ feature_recorder::feature_recorder(class feature_recorder_set &fs_,
     ignore_encoding(),ios(),bs(),
     histogram_defs(),
     fs(fs_),
-    count_(0),context_window_before(context_window_default),context_window_after(context_window_default),
+    count_(0),
+    context_window_before(context_window_default),context_window_after(context_window_default),
     Mf(),Mr(),mhistograms(),mhistogram_limit(),
     stop_list_recorder(0),
     file_number_(0),carve_cache(),carve_mode(CARVE_ENCODED)
@@ -155,8 +161,8 @@ void feature_recorder::open()
     if (fs.flag_set(feature_recorder_set::ENABLE_SQLITE3_RECORDERS)) {  
         char buf[1024];
         fs.db_create_table(name);
-        snprintf(buf,sizeof(buf),db_insert_stmt,name.c_str());
-        bs = new besql_stmt(fs.db3,buf);
+        snprintf( buf, sizeof(buf), db_insert_stmt,name.c_str() );
+        bs = new besql_stmt( fs.db3, buf );
     }
 
     /* Write to a file? Open the file and seek to the last line if it exist, otherwise just open database */
@@ -829,6 +835,11 @@ std::string valid_dosname(std::string in)
 //}
 
 
+const std::string feature_recorder::hash(const unsigned char *buf, size_t buffsize)
+{
+    return (*fs.hasher.func)(buf,buffsize);
+}
+
 
 #include <iomanip>
 /**
@@ -883,7 +894,7 @@ std::string feature_recorder::carve(const sbuf_t &sbuf,size_t pos,size_t len,
      */
 
     sbuf_t cbuf(sbuf,pos,len);          // the buf we are going to carve
-    std::string carved_hash_hexvalue = (*fs.hasher.func)(cbuf.buf,cbuf.bufsize);
+    std::string carved_hash_hexvalue = hash(cbuf.buf, cbuf.bufsize);
 
     /* See if this is in the cache */
     bool in_cache = carve_cache.check_for_presence_and_insert(carved_hash_hexvalue);
@@ -1203,7 +1214,7 @@ void feature_recorder::dump_histogram_db(const histogram_def &def,void *user,fea
     std::string query = "SELECT name FROM sqlite_master WHERE type='table' AND name='h_" + def.feature +"'";
     char *errmsg=0;
     int rowcount=0;
-    if (sqlite3_exec(fs.db3,query.c_str(),callback_counter,&rowcount,&errmsg)){
+    if ( sqlite3_exec(fs.db3,query.c_str(),callback_counter,&rowcount,&errmsg)){
         std::cerr << "sqlite3: " << errmsg << "\n";
         return;
     }

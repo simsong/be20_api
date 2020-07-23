@@ -15,46 +15,51 @@ const std::string feature_recorder_set::DISABLED_RECORDER_NAME = "disabled";
 const std::string feature_recorder_set::NO_INPUT = "<NO-INPUT>";
 const std::string feature_recorder_set::NO_OUTDIR = "<NO-OUTDIR>";
 
-std::string feature_recorder_set::null_hasher_name("null");
-std::string feature_recorder_set::null_hasher_func(const uint8_t *buf,size_t bufsize)
-{
-    return std::string("0000000000000000");
-}
-
-feature_recorder_set::hash_def feature_recorder_set::null_hasher(null_hasher_name,null_hasher_func);
-
 /* be_hash. Currently this just returns the MD5 of the sbuf,
  * but eventually it will allow the use of different hashes.
  */
-static std::string be_hash_name("md5");
-static std::string be_hash_func(const uint8_t *buf,size_t bufsize)
+std::string feature_recorder_set::hash_def::md5_hasher(const uint8_t *buf,size_t bufsize)
 {
-    if(be_hash_name=="md5" || be_hash_name=="MD5"){
-        return dfxml::md5_generator::hash_buf(buf,bufsize).hexdigest();
-    }
-    if(be_hash_name=="sha1" || be_hash_name=="SHA1" || be_hash_name=="sha-1" || be_hash_name=="SHA-1"){
-        return dfxml::sha1_generator::hash_buf(buf,bufsize).hexdigest();
-    }
-    if(be_hash_name=="sha256" || be_hash_name=="SHA256" || be_hash_name=="sha-256" || be_hash_name=="SHA-256"){
-        return dfxml::sha256_generator::hash_buf(buf,bufsize).hexdigest();
-    }
-    std::cerr << "Invalid hash name: " << be_hash_name << "\n";
-    std::cerr << "This version of bulk_extractor only supports MD5, SHA1, and SHA256\n";
-    exit(1);
+    return dfxml::md5_generator::hash_buf(buf,bufsize).hexdigest();
 }
-static feature_recorder_set::hash_def the_be_hasher(be_hash_name, be_hash_func);
+    
+std::string feature_recorder_set::hash_def::sha1_hasher(const uint8_t *buf,size_t bufsize)
+{
+    return dfxml::sha1_generator::hash_buf(buf,bufsize).hexdigest();
+}
+    
+std::string feature_recorder_set::hash_def::sha256_hasher(const uint8_t *buf,size_t bufsize)
+{
+    return dfxml::sha256_generator::hash_buf(buf,bufsize).hexdigest();
+}
+
+feature_recorder_set::hash_func_t feature_recorder_set::hash_def::hash_func_for_name(const std::string &name)
+{
+    if(name=="md5" || name=="MD5"){
+        return md5_hasher;
+    }
+    if(name=="sha1" || name=="SHA1" || name=="sha-1" || name=="SHA-1"){
+        return sha1_hasher;
+    }
+    if(name=="sha256" || name=="SHA256" || name=="sha-256" || name=="SHA-256"){
+        return sha256_hasher;
+    }
+    throw new std::invalid_argument("invalid hasher name " + name);
+}
+
 
 /* Create an empty recorder with no outdir. */
 feature_recorder_set::feature_recorder_set(uint32_t flags_,const std::string hash_algorithm,
                                            const std::string &input_fname_,const std::string &outdir_):
     flags(flags_),seen_set(),input_fname(input_fname_),
     outdir(outdir_),
-    frm(),Mscanner_stats(),
+    frm(),
+    Mscanner_stats(),
     histogram_defs(),
-    Min_transaction(),in_transaction(),db3(),
+    Min_transaction(),in_transaction(),db3(),init_called(false),
     alert_list(),stop_list(),
     scanner_stats(),
-    hasher( the_be_hasher )
+    hasher( hash_def(hash_algorithm, hash_def::hash_func_for_name(hash_algorithm)))
 {
     assert(outdir.size() > 0);
     if(flags & SET_DISABLED){
@@ -62,6 +67,16 @@ feature_recorder_set::feature_recorder_set(uint32_t flags_,const std::string has
         frm[DISABLED_RECORDER_NAME]->set_flag(feature_recorder::FLAG_DISABLED);
     }
 }
+
+feature_recorder_set::~feature_recorder_set()
+{
+    for ( auto it:frm ){
+        delete it.second;
+    }
+    db_close();
+}
+
+
 
 /**
  * 
@@ -77,6 +92,34 @@ WTF? Why do I even *have* an init? Is it to create the feature files? THey could
                 - Check in Phase1
                 - Delete init()
 #endif
+
+void    feature_recorder_set::set_flag(uint32_t f)
+{
+    if(f & MEM_HISTOGRAM){
+        if(flags & MEM_HISTOGRAM){
+            std::cerr << "MEM_HISTOGRAM flag cannot be set twice\n";
+            assert(0);
+        }
+        /* Create the in-memory histograms for all of the feature recorders */
+        for(feature_recorder_map::const_iterator it = frm.begin(); it!=frm.end(); it++){
+            feature_recorder *fr = it->second;
+            fr->enable_memory_histograms();
+        }
+    }
+    flags |= f;
+}         
+
+void    feature_recorder_set::unset_flag(uint32_t f)
+{
+    if(f & MEM_HISTOGRAM){
+        std::cerr << "MEM_HISTOGRAM flag cannot be cleared\n";
+        assert(0);
+    }
+    flags &= ~f;
+}
+
+
+
 void feature_recorder_set::init(const feature_file_names_t &feature_files)
 {
     std::cerr << "feature_recorder_set::init\n";
@@ -100,6 +143,7 @@ void feature_recorder_set::init(const feature_file_names_t &feature_files)
     for( auto it:feature_files){
         create_name(it, flags & CREATE_STOP_LIST_RECORDERS);
     }
+    init_called = true;
 }
 
 /** Flush all of the feature recorder files.
@@ -107,6 +151,7 @@ void feature_recorder_set::init(const feature_file_names_t &feature_files)
  */
 void feature_recorder_set::flush_all()
 {
+    assert(init_called);
     for ( auto it:frm){
         it.second->flush();
     } 
@@ -114,6 +159,7 @@ void feature_recorder_set::flush_all()
 
 void feature_recorder_set::close_all()
 {
+    assert(init_called);
     for (auto it:frm){
         it.second->close();
     } 
@@ -122,6 +168,10 @@ void feature_recorder_set::close_all()
     }
 }
 
+
+/****************************************************************
+ *** adding and removing feature recorders
+ ****************************************************************/
 
 bool feature_recorder_set::has_name(std::string name) const
 {
@@ -185,6 +235,10 @@ feature_recorder *feature_recorder_set::get_alert_recorder() const
 }
 
 
+/****************************************************************
+ *** Data handling
+ ****************************************************************/
+
 /*
  * uses md5 to determine if a block was prevously seen.
  */
@@ -229,30 +283,6 @@ void feature_recorder_set::dump_name_count_stats(dfxml_writer &writer) const
 }
 
 
-void    feature_recorder_set::set_flag(uint32_t f)
-{
-    if(f & MEM_HISTOGRAM){
-        if(flags & MEM_HISTOGRAM){
-            std::cerr << "MEM_HISTOGRAM flag cannot be set twice\n";
-            assert(0);
-        }
-        /* Create the in-memory histograms for all of the feature recorders */
-        for(feature_recorder_map::const_iterator it = frm.begin(); it!=frm.end(); it++){
-            feature_recorder *fr = it->second;
-            fr->enable_memory_histograms();
-        }
-    }
-    flags |= f;
-}         
-
-void    feature_recorder_set::unset_flag(uint32_t f)
-{
-    if(f & MEM_HISTOGRAM){
-        std::cerr << "MEM_HISTOGRAM flag cannot be cleared\n";
-        assert(0);
-    }
-    flags &= ~f;
-}
 
 /****************************************************************
  *** PHASE HISTOGRAM (formerly phase 3): Create the histograms

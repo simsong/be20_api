@@ -259,7 +259,7 @@ public:
     static std::string quote_string(const std::string &feature); // turns unprintable characters to octal escape
     static std::string unquote_string(const std::string &feature); // turns octal escape back to binary characters
 
-    //virtual const feature_recorder_set::hash_def &hasher();   // returns hasher in feature_recorder_set
+    virtual const std::string hash(const unsigned char *buf, size_t bufflen); // hash a block with the hasher
 
     /* feature file management */
     virtual void open();

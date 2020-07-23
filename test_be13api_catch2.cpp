@@ -58,13 +58,23 @@ static std::string hash_func(const uint8_t *buf,size_t bufsize)
     exit(1);
 }
 static feature_recorder_set::hash_def my_hasher(hash_name,hash_func);
+
+/*
+ * test a feature recorder set. Note the order:
+ * - Create a list of the filenames that we need
+ * - create the set
+ * - Init the set
+ * - create the recorder
+ * - init the scanners
+ * - start the transaction
+ * - close the transaction
+ */
+
 TEST_CASE("feature_recorder_sql", "[frs]") {
     be13::plugin::scanners_process_enable_disable_commands();
     feature_file_names_t feature_file_names;
     be13::plugin::get_scanner_feature_file_names(feature_file_names);
 
-    //char *errmsg = 0;
-    //sqlite3 *db=0;
     std::string input_fname = "";
     std::string outdir = std::string("/tmp/work") + itos(getpid());
     mkdir(outdir.c_str(),0777);

@@ -142,7 +142,7 @@ void be13::plugin::load_scanner(scanner_t scanner,const scanner_info::scanner_co
      */
     static const sbuf_t sbuf;
     static feature_recorder_set fs(feature_recorder_set::SET_DISABLED,
-                                   feature_recorder_set::null_hasher_name,
+                                   "md5",
                                    feature_recorder_set::NO_INPUT,
                                    feature_recorder_set::NO_OUTDIR); // dummy
 
@@ -579,7 +579,7 @@ void be13::plugin::process_sbuf(const class scanner_params &sp)
     const pos0_t &pos0 = sp.sbuf.pos0;
     class feature_recorder_set &fs = sp.fs;
 
-    fs.heartbeat();                     // note that we are alive
+    //fs.heartbeat();                     // note that we are alive
 
     {
         /* note the maximum depth that we've seen */
