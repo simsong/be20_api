@@ -29,12 +29,15 @@ jobs:
       - name: Install C++ dependencies on Ubuntu
         if: startsWith(matrix.os, 'ubuntu')
         run: |
-           sudo apt install libtool autoconf automake
-           automake --help
+           sudo apt install -y libtool autoconf automake
+
+      - name: Install C++ dependencies on Ubuntu-18.04
+        if: startsWith(matrix.os, 'ubuntu-18.04')
+        run: |
+           sudo apt install -y build-essential libssl-dev 
 
       - name: c/c++ test
         run: |
-          find . -ls 
           bash bootstrap.sh
           ./configure
           make

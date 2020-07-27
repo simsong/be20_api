@@ -126,12 +126,12 @@ fi
 aclocal${amvers} ${aclocalflags}
 autoconf${acvers}
 if test "$header" = "yes"; then
-  autoheader${acvers}
+  autoheader${acvers} || exit 1
 fi
 if test "$automake" = "yes"; then
   #add --include-deps if you want to bootstrap with any other compiler than gcc
   #automake${amvers} --add-missing --copy --include-deps
-  automake${amvers} --foreign --add-missing --copy 
+  automake${amvers} --foreign --add-missing --copy  || exit 1
 fi
 
 # Remove cruft that we no longer want

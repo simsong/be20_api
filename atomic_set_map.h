@@ -9,6 +9,7 @@
 #define ATOMIC_SET_MAP_H
 
 
+#include <vector>
 #include <algorithm>
 #include <set>
 #include <mutex>
