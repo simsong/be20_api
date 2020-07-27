@@ -18,8 +18,14 @@ ACLOCAL_AMFLAGS = -I m4
 BE13_API_DIR=
 include Makefile.defs
 
-DFXML_SRC_DIR=dfxml/src/
-include dfxml/src/Makefile.defs
+#DFXML_SRC_DIR=dfxml/src/
+#include dfxml/src/Makefile.defs
+
+DFXML_WRITER = dfxml/src/dfxml_writer.cpp \
+      dfxml/src/dfxml_writer.h \
+      dfxml/src/hash_t.h \
+      dfxml/src/cpuid.h 
+
 
 AUTOMAKE_OPTIONS = subdir-objects
 
