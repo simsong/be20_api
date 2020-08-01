@@ -1,6 +1,10 @@
 /* -*- mode: C++; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 
-/*
+/**
+ * bulk_extractor_i.h:
+ *
+ * The master config file for bulk_extractor.
+ *
  * By design, this file can be read without reading config.h
  * #include "config.h" must appear as the first line of your .cpp file.
  */
@@ -23,8 +27,8 @@
 #define DEBUG_DUMP_DATA   0x0010        // dump data as it is seen
 #define DEBUG_DECODING    0x0020        // debug decoders in scanner
 #define DEBUG_INFO        0x0040        // print extra info
-#define DEBUG_EXIT_EARLY  1000          // just print the size of the volume and exis 
-#define DEBUG_ALLOCATE_512MiB 1002      // Allocate 512MiB, but don't set any flags 
+#define DEBUG_EXIT_EARLY  1000          // just print the size of the volume and exis
+#define DEBUG_ALLOCATE_512MiB 1002      // Allocate 512MiB, but don't set any flags
 
 /* We need netinet/in.h or windowsx.h */
 #ifdef HAVE_NETINET_IN_H
@@ -62,28 +66,14 @@
  * @{
  */
 
-#include "sbuf.h"
-#include "utf8.h"
-#include "utils.h"                      // for gmtime_r
-
 #include <vector>
 #include <set>
 #include <map>
 
 
 
-/**
- * \class scanner_params
- * The scanner params class is the primary way that the bulk_extractor framework
- * communicates with the scanners. 
- * @param sbuf - the buffer to be scanned
- * @param feature_names - if fs==0, add to feature_names the feature file types that this
- *                        scanner records.. The names can have a /c appended to indicate
- *                        that the feature files should have context enabled. Do not scan.
- * @param fs   - where the features should be saved. Must be provided if feature_names==0.
- **/
-
-
+#include "dfxml/src/dfxml_writer.h"
+#include "aftimer.h"
 #include "atomic_set_map.h"
 #include "regex_vector.h"
 #include "feature_recorder.h"
@@ -91,7 +81,9 @@
 #include "sbuf.h"
 #include "word_and_context_list.h"
 #include "unicode_escape.h"
+#include "utils.h"                      // for gmtime_r
 #include "plugin.h"                     // plugin system must be included last
+#include "utf8.h"
 
 inline std::string itos(int i){ std::stringstream ss; ss << i;return ss.str();}
 inline std::string dtos(double d){ std::stringstream ss; ss << d;return ss.str();}
@@ -147,7 +139,7 @@ inline int isxdigit(int c)
 inline std::string microsoftDateToISODate(const uint64_t &time)
 {
     time_t tmp = (time / ONE_HUNDRED_NANO_SEC_TO_SECONDS) - SECONDS_BETWEEN_WIN32_EPOCH_AND_UNIX_EPOCH;
-    
+
     struct tm time_tm;
     gmtime_r(&tmp, &time_tm);
     char buf[256];

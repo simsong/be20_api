@@ -14,17 +14,17 @@
  * Each entry in the stop list can be represented as:
  * - a feature that is stopped, with optional context.
  * - a regular expression
- * 
+ *
  * Context is represented as a std::string before the feature and a std::string after.
- * 
- * The stop list contains is a map of features that are stopped. 
- * For each feature, there may be no context or a list of context. 
- * If there is no context and the feature is in the list, 
+ *
+ * The stop list contains is a map of features that are stopped.
+ * For each feature, there may be no context or a list of context.
+ * If there is no context and the feature is in the list,
  */
 
 /*
  * context is a class that records the feature, the text before, and the text after.
- * Typically this is used for stop lists and alert lists. 
+ * Typically this is used for stop lists and alert lists.
  */
 
 #include <unordered_set>

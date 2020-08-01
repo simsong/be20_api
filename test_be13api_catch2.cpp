@@ -1,7 +1,7 @@
 // https://github.com/catchorg/Catch2/blob/master/docs/tutorial.md#top
 
 #define CATCH_CONFIG_MAIN
-#include "config.h"
+#include "config.h"                     // supposed to come after bulk_extractor_i.h
 #include "tests/catch.hpp"
 #include "bulk_extractor_i.h"           // brings in entire header set
 
@@ -79,7 +79,7 @@ TEST_CASE("feature_recorder_sql", "[frs]") {
     std::string outdir = std::string("/tmp/work") + itos(getpid());
     mkdir(outdir.c_str(),0777);
     std::cerr << "test_AAA\n";
-    feature_recorder_set fs(feature_recorder_set::ENABLE_SQLITE3_RECORDERS, "sha-1", input_fname, outdir); 
+    feature_recorder_set fs(feature_recorder_set::ENABLE_SQLITE3_RECORDERS, "sha-1", input_fname, outdir);
     std::cerr << "test_BBB\n";
     fs.init( feature_file_names );
 
@@ -96,14 +96,14 @@ TEST_CASE("feature_recorder_sql", "[frs]") {
 
     /* Create an email table */
     //fs.db_create_table("mail_test");
-        
+
     /* Lets some  features into the table as a test */
     //sqlite3_exec(db,"BEGIN TRANSACTION",NULL,NULL,&errmsg);
     //beapi_sql_stmt s(db,"email");
     for(int i=0;i<10;i++){
         pos0_t p;
         pos0_t p1 = p+i;
-        
+
         char feature[64];
         snprintf(feature,sizeof(feature),"user%d@company.com",i);
         char context[64];
@@ -194,8 +194,13 @@ TEST_CASE("unicode_escape", "[unicode]") {
     REQUIRE( utf8cont('a') == false );
     REQUIRE( utf8cont( U1F601[0] ) == false); // the first character is not a continuation character
     REQUIRE( utf8cont( U1F601[1] ) == true);  // the second is
-    REQUIRE( utf8cont( U1F601[2] ) == true);  // the third is 
+    REQUIRE( utf8cont( U1F601[2] ) == true);  // the third is
     REQUIRE( utf8cont( U1F601[3] ) == true);  // the fourth is
 }
 
-    
+
+TEST_CASE("aftimer", "[utils]") {
+    aftimer t;
+    REQUIRE(t.elapsed_seconds()==0.0);
+
+}

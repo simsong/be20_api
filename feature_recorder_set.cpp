@@ -22,12 +22,12 @@ std::string feature_recorder_set::hash_def::md5_hasher(const uint8_t *buf,size_t
 {
     return dfxml::md5_generator::hash_buf(buf,bufsize).hexdigest();
 }
-    
+
 std::string feature_recorder_set::hash_def::sha1_hasher(const uint8_t *buf,size_t bufsize)
 {
     return dfxml::sha1_generator::hash_buf(buf,bufsize).hexdigest();
 }
-    
+
 std::string feature_recorder_set::hash_def::sha256_hasher(const uint8_t *buf,size_t bufsize)
 {
     return dfxml::sha256_generator::hash_buf(buf,bufsize).hexdigest();
@@ -44,7 +44,7 @@ feature_recorder_set::hash_func_t feature_recorder_set::hash_def::hash_func_for_
     if(name=="sha256" || name=="SHA256" || name=="sha-256" || name=="SHA-256"){
         return sha256_hasher;
     }
-    throw new std::invalid_argument("invalid hasher name " + name);
+    throw std::invalid_argument("invalid hasher name " + name);
 }
 
 
@@ -84,7 +84,7 @@ feature_recorder_set::~feature_recorder_set()
 
 
 /**
- * 
+ *
  * Initialize a properly functioning feature recorder set.
  * If disabled, create a disabled feature_recorder that can respond to functions as requested.
  */
@@ -112,7 +112,7 @@ void    feature_recorder_set::set_flag(uint32_t f)
         }
     }
     flags |= f;
-}         
+}
 
 void    feature_recorder_set::unset_flag(uint32_t f)
 {
@@ -131,9 +131,9 @@ void feature_recorder_set::init(const feature_file_names_t &feature_files)
 
     /* Make sure we can write to the outdir if one is provided */
     if ((outdir != NO_OUTDIR) && (access(outdir.c_str(),W_OK)!=0)) {
-        throw new std::invalid_argument("output directory not writable");
+        throw std::invalid_argument("output directory not writable");
     }
-        
+
 
 #ifdef BEAPI_SQLITE3
     if (flag_set(ENABLE_SQLITE3_RECORDERS)) {
@@ -162,7 +162,7 @@ void feature_recorder_set::flush_all()
     assert(init_called);
     for ( auto it:frm){
         it.second->flush();
-    } 
+    }
 }
 
 void feature_recorder_set::close_all()
@@ -170,7 +170,7 @@ void feature_recorder_set::close_all()
     assert(init_called);
     for (auto it:frm){
         it.second->close();
-    } 
+    }
 #ifdef BEAPI_SQLITE3
     if ( flag_set(feature_recorder_set::ENABLE_SQLITE3_RECORDERS )) {
         db_transaction_commit();
@@ -218,7 +218,7 @@ feature_recorder *feature_recorder_set::create_name_factory(const std::string &n
 /*
  * Create a named feature recorder, any associated stoplist recorders, and open the files
  */
-void feature_recorder_set::create_name(const std::string &name,bool create_stop_recorder) 
+void feature_recorder_set::create_name(const std::string &name,bool create_stop_recorder)
 {
     if(frm.find(name)!=frm.end()){
         std::cerr << "create_name: feature recorder '" << name << "' already exists\n";
@@ -230,7 +230,7 @@ void feature_recorder_set::create_name(const std::string &name,bool create_stop_
     frm[name] = fr;
     if (create_stop_recorder){
         std::string name_stopped = name+"_stopped";
-        
+
         feature_recorder *fr_stopped = create_name_factory(name_stopped);
         fr->set_stop_list_recorder(fr_stopped);
         frm[name_stopped] = fr_stopped;
@@ -342,7 +342,7 @@ void feature_recorder_set::get_feature_file_list(std::vector<std::string> &ret)
  * "PRAGMA synchronous =  OFF", "PRAGMA journal_mode=MEMORY", - 79 seconds
  *
  * Time with domexusers:
- * no SQL - 
+ * no SQL -
  */
 
 
@@ -354,10 +354,10 @@ void feature_recorder_set::get_feature_file_list(std::vector<std::string> &ret)
 static int debug  = 0;
 
 static const char *schema_db[] = {
-    "PRAGMA synchronous =  OFF", 
+    "PRAGMA synchronous =  OFF",
     "PRAGMA journal_mode=MEMORY",
     //"PRAGMA temp_store=MEMORY",  // did not improve performance
-    "PRAGMA cache_size = 200000", 
+    "PRAGMA cache_size = 200000",
     "CREATE TABLE IF NOT EXISTS db_info (schema_ver INTEGER, bulk_extractor_ver INTEGER)",
     "INSERT INTO  db_info (schema_ver, bulk_extractor_ver) VALUES (1,1)",
     "CREATE TABLE IF NOT EXISTS be_features (tablename VARCHAR,comment TEXT)",

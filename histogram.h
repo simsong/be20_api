@@ -50,14 +50,14 @@ public:
  *
  * The basis of a string-based correlator and many other features.
  * Uses C++ STL for sorting and string handling.
- * 
+ *
  * Summer 2011: Now is UTF-8/UTF-16 aware. All strings are stored as UTF-8.
  * Detects UTF-16 in an add and automatically converts to UTF-8.
  * Keeps track of UTF-16 count separately from UTF-8 count.
  *
- * Oct 2011: Apparently you are not supposed to subclass the STL container classes. 
+ * Oct 2011: Apparently you are not supposed to subclass the STL container classes.
  */
-		
+
 
 class HistogramMaker  {
 public:
@@ -107,7 +107,7 @@ public:
     /**
      * Determine if a string probably has utf16.
      */
-    static bool looks_like_utf16(const std::string &str,bool &little_endian); 
+    static bool looks_like_utf16(const std::string &str,bool &little_endian);
 
     /* These all allocate a string that must be freed */
 

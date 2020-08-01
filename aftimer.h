@@ -3,14 +3,15 @@
 
 #include <cinttypes>
 #include <string>
+#include <sys/time.h>
 
 
 class aftimer {
-    struct timeval t0;
-    bool running;
-    long total_sec;
-    long total_usec;
-    double lap_time_;			// time from when we last did a "stop"
+    struct timeval t0 {};
+    bool running {};
+    long total_sec {};
+    long total_usec {};
+    double lap_time_ {};			// time from when we last did a "stop"
 public:
     aftimer():t0(),running(false),total_sec(0),total_usec(0),lap_time_(0){}
 
@@ -42,9 +43,9 @@ inline int getimeofday(struct timeval *tv, struct timezone *tz)
     tmpres |= ft.dwHighDateTime;
     tmpres <<= 32;
     tmpres |= ft.dwLowDateTime;
- 
+
     /*converting file time to unix epoch*/
-    tmpres -= DELTA_EPOCH_IN_MICROSECS; 
+    tmpres -= DELTA_EPOCH_IN_MICROSECS;
     tmpres /= 10;  /*convert into microseconds*/
     t->tv_sec = (long)(tmpres / 1000000UL);
     t->tv_usec = (long)(tmpres % 1000000UL);
@@ -59,7 +60,7 @@ inline int getimeofday(struct timeval *tv, struct timezone *tz)
     }
     return 0;
 }
-#endif    
+#endif
 
 
 inline void timestamp(struct timeval *t)
@@ -105,7 +106,7 @@ inline std::string aftimer::hms(long t) const
 {
     char   buf[64];
     int    days = t / (60*60*24);
-    
+
     t = t % (60*60*24);			/* what's left */
 
     int    h = t / 3600;
@@ -154,7 +155,7 @@ inline std::string aftimer::eta_text(double fraction_done) const
 /**
  * Returns the time when data is due.
  */
-inline std::string aftimer::eta_time(double fraction_done) const 
+inline std::string aftimer::eta_time(double fraction_done) const
 {
     time_t t = time_t(eta(fraction_done)) + time(0);
     struct tm tm;

@@ -3,7 +3,7 @@
 
 /*****************************************************************
  *** bulk_extractor has a private implementation of IPv4 and IPv6,
- *** UDP and TCP. 
+ *** UDP and TCP.
  ***
  *** We did this becuase we found slightly different versions on
  *** MacOS, Ubuntu Linux, Fedora Linux, Centos, Mingw, and Cygwin.
@@ -85,7 +85,7 @@ namespace be13 {
     typedef uint32_t ip4_addr_t;         // historical
 
     // on windows we use the definition that's in winsock
-    struct ip4_addr {   
+    struct ip4_addr {
         ip4_addr_t addr;
     };
 
@@ -184,8 +184,8 @@ namespace be13 {
  * The packet_info structure records packets after they are read from the pcap library.
  * It preserves the original pcap information and information decoded from the MAC and
  * VLAN (IEEE 802.1Q) layers, as well as information that might be present from 802.11
- * interfaces. However it does not preserve the full radiotap information. 
- * 
+ * interfaces. However it does not preserve the full radiotap information.
+ *
  * packet_info is created to make it easier to write network forensic software. It encapsulates
  * much of the common knowledge needed to operate on packet-based IP networks.
  *
@@ -193,7 +193,7 @@ namespace be13 {
  * @param pcap_data - Original data offset point from pcap
  * @param data - the actual packet data, minus the MAC layer
  * @param datalen - How much data is available at the datalen pointer
- * 
+ *
  */
     class packet_info {
     public:
@@ -273,7 +273,7 @@ namespace be13 {
         return 0;
     }
 #endif
-    
+
 #ifndef ETHERTYPE_PUP
 #define ETHERTYPE_PUP           0x0200          /* Xerox PUP */
 #endif
@@ -318,8 +318,8 @@ namespace be13 {
 #define ETHERTYPE_LOOPBACK      0x9000          /* used to test interfaces */
 #endif
 
-    
-    inline u_short packet_info::nshort(const u_char *buf,size_t pos) 
+
+    inline u_short packet_info::nshort(const u_char *buf,size_t pos)
     {
         return (buf[pos]<<8) | (buf[pos+1]);
     }
@@ -330,7 +330,7 @@ namespace be13 {
         }
         return -1;
     }
-    
+
     inline int packet_info::ip_version() const {
         /* This takes advantage of the fact that ip4 and ip6 put the version number in the same place */
         if (ip_datalen >= sizeof(struct ip4)) {
@@ -375,14 +375,14 @@ namespace be13 {
     // Get ether addresses; should this handle vlan and such?
     inline const uint8_t *packet_info::get_ether_dhost() const {
         if(pcap_hdr->caplen < sizeof(struct ether_addr)){
-            throw new frame_too_short();
+            throw frame_too_short();
         }
         return ((const struct ether_header *)pcap_data)->ether_dhost;
     }
 
     inline const uint8_t *packet_info::get_ether_shost() const {
         if(pcap_hdr->caplen < sizeof(struct ether_addr)){
-            throw new frame_too_short();
+            throw frame_too_short();
         }
         return ((const struct ether_header *)pcap_data)->ether_shost;
     }
@@ -393,13 +393,13 @@ namespace be13 {
 #  endif
     inline const struct in_addr *packet_info::get_ip4_src() const {
         if(ip_datalen < sizeof(struct ip4)) {
-            throw new frame_too_short();
+            throw frame_too_short();
         }
         return (const struct in_addr *) ip_data + ip4_src_off;
     }
     inline const struct in_addr *packet_info::get_ip4_dst() const {
         if(ip_datalen < sizeof(struct ip4)) {
-            throw new frame_too_short();
+            throw frame_too_short();
         }
         return (const struct in_addr *) ip_data + ip4_dst_off;
     }
@@ -408,20 +408,20 @@ namespace be13 {
 #  endif
     inline uint8_t packet_info::get_ip4_proto() const {
         if(ip_datalen < sizeof(struct ip4)) {
-            throw new frame_too_short();
+            throw frame_too_short();
         }
         return *((uint8_t *) (ip_data + ip4_proto_off));
     }
     // IPv6
     inline uint8_t packet_info::get_ip6_nxt_hdr() const {
         if(ip_datalen < sizeof(struct ip6_hdr)) {
-            throw new frame_too_short();
+            throw frame_too_short();
         }
         return *((uint8_t *) (ip_data + ip6_nxt_hdr_off));
     }
     inline uint16_t packet_info::get_ip6_plen() const {
         if(ip_datalen < sizeof(struct ip6_hdr)) {
-            throw new frame_too_short();
+            throw frame_too_short();
         }
         //return ntohs(*((uint16_t *) (ip_data + ip6_plen_off)));
         return nshort(ip_data,ip6_plen_off);
@@ -431,13 +431,13 @@ namespace be13 {
 #  endif
     inline const struct ip6_addr *packet_info::get_ip6_src() const {
         if(ip_datalen < sizeof(struct ip6_hdr)) {
-            throw new frame_too_short();
+            throw frame_too_short();
         }
         return (const struct ip6_addr *) ip_data + ip6_src_off;
     }
     inline const struct ip6_addr *packet_info::get_ip6_dst() const {
         if(ip_datalen < sizeof(struct ip6_hdr)) {
-            throw new frame_too_short();
+            throw frame_too_short();
         }
         return (const struct ip6_addr *) ip_data + ip6_dst_off;
     }
@@ -448,32 +448,32 @@ namespace be13 {
     // TCP
     inline uint16_t packet_info::get_ip4_tcp_sport() const {
         if(ip_datalen < sizeof(struct tcphdr) + sizeof(struct ip4)) {
-            throw new frame_too_short();
+            throw frame_too_short();
         }
         //return ntohs(*((uint16_t *) (ip_data + sizeof(struct ip4) + tcp_sport_off)));
         return nshort(ip_data,sizeof(struct ip4) + tcp_sport_off);
     }
     inline uint16_t packet_info::get_ip4_tcp_dport() const {
         if(ip_datalen < sizeof(struct tcphdr) + sizeof(struct ip4)) {
-            throw new frame_too_short();
+            throw frame_too_short();
         }
         //return ntohs(*((uint16_t *) (ip_data + sizeof(struct ip4) + tcp_dport_off)));
-        return nshort(ip_data,sizeof(struct ip4) + tcp_dport_off); // 
+        return nshort(ip_data,sizeof(struct ip4) + tcp_dport_off); //
 
     }
     inline uint16_t packet_info::get_ip6_tcp_sport() const {
         if(ip_datalen < sizeof(struct tcphdr) + sizeof(struct ip6_hdr)) {
-            throw new frame_too_short();
+            throw frame_too_short();
         }
         //return ntohs(*((uint16_t *) (ip_data + sizeof(struct ip6_hdr) + tcp_sport_off)));
-        return nshort(ip_data,sizeof(struct ip6_hdr) + tcp_sport_off); // 
+        return nshort(ip_data,sizeof(struct ip6_hdr) + tcp_sport_off); //
     }
     inline uint16_t packet_info::get_ip6_tcp_dport() const {
         if(ip_datalen < sizeof(struct tcphdr) + sizeof(struct ip6_hdr)) {
-            throw new frame_too_short();
+            throw frame_too_short();
         }
         //return ntohs(*((uint16_t *) (ip_data + sizeof(struct ip6_hdr) + tcp_dport_off)));
-        return nshort(ip_data,sizeof(struct ip6_hdr) + tcp_dport_off); // 
+        return nshort(ip_data,sizeof(struct ip6_hdr) + tcp_dport_off); //
     }
 };
 

@@ -14,9 +14,9 @@
  *        public variables.
  * Created and maintained by Simson Garfinkel, 2007--2012, 2019.
  *
- * sbuf_stream is a stream-oriented interface for reading sbuf data. 
+ * sbuf_stream is a stream-oriented interface for reading sbuf data.
  */
- 
+
 
 #ifndef SBUF_H
 #define SBUF_H
@@ -77,13 +77,13 @@
  * The pos0_t structure is used to record the forensic path of the
  * first byte of an sbuf. The forensic path can include strings associated
  * with decompressors and ordinals associated with offsets.
- * 
+ *
  * e.g., 1000-GZIP-300-BASE64-30 means go 1000 bytes into the stream,
  *       unzip, go 300 bytes into the decompressed stream, un-BASE64, and
  *       go 30 bytes into that.
- * 
+ *
  * pos0_t uses a string to hold the base path and the offset into that path
- * in a 64-bit number.  
+ * in a 64-bit number.
  */
 
 inline int64_t stoi64(std::string str)
@@ -98,7 +98,7 @@ class pos0_t {
 public:
     const std::string path;                     /* forensic path of decoders*/
     const uint64_t    offset;                   /* location of buf[0] */
-    
+
     explicit pos0_t():path(""),offset(0){}
     pos0_t(std::string s):path(s),offset(0){}
     pos0_t(std::string s,uint64_t o):path(s),offset(o){}
@@ -113,7 +113,7 @@ public:
     }
     bool isRecursive() const {          // is there a path?
         return path.size() > 0;
-    } 
+    }
     std::string firstPart() const {     // the first part of the path
         size_t p = path.find('-');
         if(p==std::string::npos) return std::string("");
@@ -215,7 +215,7 @@ inline bool operator != (const class pos0_t & pos0,const class pos0_t &pos1) {
 template < class TYPE > class managed_malloc {
     // default construction, copy construction and assignment are meaningless
     // and not implemented
-    managed_malloc& operator=(const managed_malloc&); 
+    managed_malloc& operator=(const managed_malloc&);
     managed_malloc(const managed_malloc&);
     managed_malloc();
 public:
@@ -281,7 +281,7 @@ public:
 public:
     const size_t  bufsize;           /* size of the buffer */
     const size_t  pagesize;          /* page data; the rest is the 'margin'. pagesize <= bufsize */
-    
+
 private:
     void release();                     // release allocated storage
     sbuf_t &operator=(const sbuf_t &that) = delete; // default assignment not implemented
@@ -298,7 +298,7 @@ public:
      ****************************************************************/
 
     /**
-     * Make an sbuf from a parent. 
+     * Make an sbuf from a parent.
      * note: don't add an 'explicit' --- it causes problems.
      */
     sbuf_t(const sbuf_t &that):
@@ -310,7 +310,7 @@ public:
     }
 
     /**
-     * Make an sbuf from a parent but with a different path. 
+     * Make an sbuf from a parent but with a different path.
      */
     explicit sbuf_t(const pos0_t &that_pos0, const sbuf_t &that_sbuf ):
         fd(0),should_unmap(false),should_free(false),should_close(false),
@@ -396,7 +396,7 @@ public:
     }
 
     /* Allocate a sbuf from a file mapped into memory */
-    static sbuf_t *map_file(const std::string &fname); 
+    static sbuf_t *map_file(const std::string &fname);
     static sbuf_t *map_file(const std::string &fname, int fd, bool should_close); // if file is already opened
     static const std::string U10001C;         // default delimeter character in bulk_extractor
     static std::string map_file_delimiter; // character placed
@@ -613,7 +613,7 @@ public:
         }
         return NULL;
     }
-    
+
 
     /**
      * These are largely for debugging, but they also support the BEViewer.
@@ -631,7 +631,7 @@ public:
         assert(__sync_fetch_and_add(&children,0)==0);
 #endif
         if(parent) parent->del_child(*this);
-        
+
 #ifdef HAVE_MMAP
         if(should_unmap && buf){
             munmap((void *)buf,bufsize);

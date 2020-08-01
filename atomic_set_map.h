@@ -8,7 +8,6 @@
 #ifndef ATOMIC_SET_MAP_H
 #define ATOMIC_SET_MAP_H
 
-
 #include <vector>
 #include <algorithm>
 #include <set>
@@ -17,11 +16,11 @@
 #include <unordered_set>
 
 template <class TYPE,class CTYPE> class atomic_histogram {
-    typedef std::unordered_map<TYPE,CTYPE> hmap_t;
-    hmap_t  amap;                         // the locked atomic map
-    std::mutex M;                         // my lock
+    typedef std::unordered_map<TYPE,CTYPE> hmap_t ;
+    hmap_t  amap {};                      // the locked atomic map
+    std::mutex M {};                      // my lock
 public:
-    atomic_histogram():amap(),M(){};
+    atomic_histogram(){};
 
     // The callback is used to report the histogram.
     // The callback returns '0' if no error is encountered, '-1' if the dumping should stop
@@ -80,14 +79,14 @@ public:
         }
 
     }
-    uint64_t size_estimate() const;     // Estimate the size of the database 
+    uint64_t size_estimate() const;     // Estimate the size of the database
 };
 
 template <class TYPE > class atomic_set {
-    std::mutex M;
-    std::unordered_set<TYPE>myset;
+    std::mutex M {};
+    std::unordered_set<TYPE>myset {};
 public:
-    atomic_set():M(),myset(){}
+    atomic_set(){}
     bool contains(const TYPE &s){
         const std::lock_guard<std::mutex> lock(M);
         return myset.find(s)!=myset.end();

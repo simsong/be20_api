@@ -7,15 +7,12 @@
 #define __STDC_FORMAT_MACROS
 #endif
 
-//using namespace std;
-
-#include "sbuf.h"
 #include <cstdlib>
 #include <cinttypes>
-
 #include <string>
 #include <sstream>
 
+#include "sbuf.h"
 
 /** \addtogroup bulk_extractor_APIs
  * @{

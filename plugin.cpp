@@ -49,7 +49,7 @@ bool scanner_commands_processed = false;
 
 /* scanner_params */
 
-be13::scanner_params::PrintOptions be13::scanner_params::no_options; 
+be13::scanner_params::PrintOptions be13::scanner_params::no_options;
 
 /* object for keeping track of packet callbacks */
 class packet_plugin_info {
@@ -68,7 +68,7 @@ packet_plugin_info_vector_t  packet_handlers;   // pcap callback handlers
  * the vector of current scanners
  */
 
-be13::plugin::scanner_vector be13::plugin::current_scanners;  
+be13::plugin::scanner_vector be13::plugin::current_scanners;
 
 void be13::plugin::set_scanner_debug(int debug_)
 {
@@ -101,7 +101,7 @@ void be13::plugin::set_scanner_enabled(const std::string &name,bool enable)
     }
     if (name!="all"){
         /* Scanner wasn't found */
-        throw new std::invalid_argument("Invalid scanner name" + name);
+        throw std::invalid_argument("Invalid scanner name" + name);
     }
 }
 
@@ -157,18 +157,18 @@ void be13::plugin::load_scanner(scanner_t scanner,const scanner_info::scanner_co
     // want to give different scanners different variables.
     //
 
-    scanner_params sp(scanner_params::PHASE_STARTUP,sbuf,fs); // 
-    scanner_def *sd = new scanner_def();                     
+    scanner_params sp(scanner_params::PHASE_STARTUP,sbuf,fs); //
+    scanner_def *sd = new scanner_def();
     sd->scanner = scanner;
-    sd->info.config = &sc;              
+    sd->info.config = &sc;
 
     sp.info  = &sd->info;
 
     // Make an empty recursion control block and call the scanner's
     // initialization function.
-    recursion_control_block rcb(0,""); 
+    recursion_control_block rcb(0,"");
     (*scanner)(sp,rcb);                  // phase 0
-    
+
     sd->enabled      = !(sd->info.flags & scanner_info::SCANNER_DISABLED);
     current_scanners.push_back(sd);
 }
@@ -276,11 +276,11 @@ void be13::plugin::load_scanner_packet_handlers()
 }
 
 // send every enabled scanner the phase message
-void be13::plugin::message_enabled_scanners(scanner_params::phase_t phase,feature_recorder_set &fs) 
+void be13::plugin::message_enabled_scanners(scanner_params::phase_t phase,feature_recorder_set &fs)
 {
     /* make an empty sbuf and feature recorder set */
     const sbuf_t sbuf;
-    scanner_params sp(phase,sbuf,fs); 
+    scanner_params sp(phase,sbuf,fs);
     for(scanner_vector::iterator it = current_scanners.begin(); it!=current_scanners.end(); it++){
         if((*it)->enabled){
             recursion_control_block rcb(0,""); // dummy rcb
@@ -300,7 +300,7 @@ be13::scanner_t *be13::plugin::find_scanner(const std::string &search_name)
 }
 
 // put the enabled scanners into the vector
-void be13::plugin::get_enabled_scanners(std::vector<std::string> &svector) 
+void be13::plugin::get_enabled_scanners(std::vector<std::string> &svector)
 {
     for (scanner_vector::const_iterator it=current_scanners.begin();it!=current_scanners.end();it++){
 	if((*it)->enabled){
@@ -397,7 +397,7 @@ void be13::plugin::phase_shutdown(feature_recorder_set &fs,std::stringstream *sx
         if((*it)->enabled){
             const sbuf_t sbuf; // empty sbuf
             scanner_params sp(scanner_params::PHASE_SHUTDOWN,sbuf,fs,sxml);
-            recursion_control_block rcb(0,"");        // empty rcb 
+            recursion_control_block rcb(0,"");        // empty rcb
             (*(*it)->scanner)(sp,rcb);
         }
     }
@@ -569,8 +569,8 @@ uint32_t be13::plugin::get_max_depth_seen()
     return max_depth_seen;
 }
 
-/** process_sbuf is the main workhorse. It is calls each scanner on each page. 
- * @param sp    - the scanner params, including the sbuf to process 
+/** process_sbuf is the main workhorse. It is calls each scanner on each page.
+ * @param sp    - the scanner params, including the sbuf to process
  * It is also the recursive entry point for sub-analysis.
  */
 
@@ -631,7 +631,7 @@ void be13::plugin::process_sbuf(const class scanner_params &sp)
             if(ngram_size > 0) continue;
             if(seen_before)    continue;
         }
-        
+
         if(sp.depth > 0 && ((*it)->info.flags & scanner_info::SCANNER_DEPTH_0)){
             // depth >0 and this scanner only run at depth 0
             continue;
@@ -669,11 +669,11 @@ void be13::plugin::process_sbuf(const class scanner_params &sp)
                 t.stop();
                 if(debug & DEBUG_PRINT_STEPS){
                     std::cerr << "sbuf.pos0=" << sp.sbuf.pos0 << " scanner "
-                         << name << " t=" << t.elapsed_seconds() << "\n";
+                              << name << " t=" << t.elapsed_seconds() << "\n";
                 }
                 sp.fs.add_stats(epath,t.elapsed_seconds());
             }
-                
+
         }
         catch (const std::exception &e ) {
             std::stringstream ss;
@@ -688,7 +688,7 @@ void be13::plugin::process_sbuf(const class scanner_params &sp)
         catch (...) {
             std::stringstream ss;
             ss << "std::exception Scanner: " << name
-               << " Unknown Exception " 
+               << " Unknown Exception "
                << " sbuf.pos0: " << sp.sbuf.pos0 << " bufsize=" << sp.sbuf.bufsize << "\n";
             std::cerr << ss.str();
             feature_recorder *alert_recorder = fs.get_alert_recorder();
@@ -724,4 +724,3 @@ void be13::plugin::get_scanner_feature_file_names(feature_file_names_t &feature_
         }
     }
 }
-

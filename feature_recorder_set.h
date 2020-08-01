@@ -19,7 +19,7 @@
 /**
  * \class feature_recorder_set
  * The feature_recorder_set is an object that controls output. It knows where the output goes (outdir),
- * the various feature recorders that write to that output, and provides for synchronization. 
+ * the various feature recorders that write to that output, and provides for synchronization.
  * It also has the factory method for new feature_recorders. Therefore if you want a different feature_recorder,
  * this set should be subclassed as well.
  *
@@ -32,7 +32,7 @@ typedef std::set<std::string>feature_file_names_t;
 class feature_recorder_set {
     friend class feature_recorder;
 
-    // neither copying nor assignment is implemented 
+    // neither copying nor assignment is implemented
     feature_recorder_set(const feature_recorder_set &fs)=delete;
     feature_recorder_set &operator=(const feature_recorder_set &fs)=delete;
     uint32_t flags;
@@ -52,7 +52,7 @@ class feature_recorder_set {
 
 public:
     /** create an emptry feature recorder set. If disabled, create a disabled recorder. */
-    feature_recorder_set( uint32_t flags_, const std::string hash_algorithm, 
+    feature_recorder_set( uint32_t flags_, const std::string hash_algorithm,
                           const std::string &input_fname_, const std::string &outdir_);
     virtual ~feature_recorder_set();
 
@@ -99,7 +99,7 @@ public:
      * init() is called after all of the scanners have been loaded. It
      * tells each feature file about its histograms (among other things)
      */
-    void    init(const feature_file_names_t &feature_files); 
+    void    init(const feature_file_names_t &feature_files);
     void    flush_all();
     void    close_all();
     bool    has_name(std::string name) const;           /* does the named feature exist? */
@@ -144,13 +144,13 @@ public:
     void     db_create() ;
     void     db_transaction_begin() ;
     void     db_transaction_commit() ;               // commit current transaction
-    void     db_close() ;             // 
+    void     db_close() ;             //
 #endif
 
     /****************************************************************
      *** External Functions
      ****************************************************************/
-    
+
     // Management of previously seen data
     virtual bool check_previously_processed(const uint8_t *buf,size_t bufsize);
 

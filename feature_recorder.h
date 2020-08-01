@@ -32,7 +32,7 @@
  * There is one feature_recorder_set per process.
  * The file assumes that bulk_extractor.h is being included.
  */
- 
+
 #include <cassert>
 #include <cstdarg>
 
@@ -197,13 +197,13 @@ public:
     virtual const std::string &get_outdir() const;
 
     static size_t context_window_default; // global option
-    const  std::string name;                  // name of this feature recorder 
+    const  std::string name;                  // name of this feature recorder
     bool   validateOrEscapeUTF8_validate;     // should we validate or escape the HTML?
 
 private:
     std::string  ignore_encoding;            // encoding to ignore for carving
-    std::fstream ios;                        // where features are written 
-    
+    std::fstream ios;                        // where features are written
+
 #ifdef BEAPI_SQLITE3
     class besql_stmt *bs;                    // prepared beapi sql statement
 #else
@@ -220,11 +220,11 @@ protected:
     size_t       context_window_after;       // context window
 
     mutable std::mutex Mf;      // protects the file  & file_number_
-    mutable std::mutex Mr;                     // protects the redlist 
+    mutable std::mutex Mr;                     // protects the redlist
     mhistograms_t mhistograms;               // the memory histograms, if we are using them
     uint64_t      mhistogram_limit;          // how many we want (per feature recorder limit, rather than per histogram)
 
-    
+
     class feature_recorder *stop_list_recorder; // where stopped features get written
     std::atomic<int64_t>   file_number_;            /* starts at 0; gets incremented by carve(); */
     carve_cache_t          carve_cache;
@@ -248,7 +248,7 @@ public:
 
     // add i to file_number and return the result
     // fetch_add() returns the original number
-    uint64_t file_number_add(uint64_t i){ 
+    uint64_t file_number_add(uint64_t i){
         return file_number_.fetch_add(i) + i;
     }
 
@@ -263,11 +263,11 @@ public:
 
     /* feature file management */
     virtual void open();
-    virtual void close();                       
+    virtual void close();
     virtual void flush();
     static  int  dump_callback_test(void *user,const feature_recorder &fr,
                                     const std::string &str,const uint64_t &count); // test callback for you to use!
-    
+
 
     /* TK: The histogram_def should be provided at the beginning, so it can be used for in-memory histograms.
      * The callback needs to have the specific atomic set as the callback as well.
@@ -280,7 +280,7 @@ public:
     virtual void dump_histogram(const histogram_def &def,void *user,feature_recorder::dump_callback_t cb) const;
     typedef void (*xml_notifier_t)(const std::string &xmlstring);
     virtual void dump_histograms(void *user,feature_recorder::dump_callback_t cb, xml_notifier_t xml_error_notifier) const;
-    
+
     /* Methods to get info */
     uint64_t count() const { return count_; }
 
@@ -289,7 +289,7 @@ public:
      * write_buf() writes from a position within the buffer, with context.
      *             It won't write a feature that starts in the margin.
      * pos0 gives the location and prefix for the beginning of the buffer
-     */ 
+     */
 
     /**
      * write() actually does the writing to the file.
@@ -307,14 +307,14 @@ public:
     // only virtual functions may be called by plug-ins
     // printf() prints to the feature file.
     virtual void printf(const char *fmt_,...) __attribute__((format(printf, 2, 3)));
-    // 
+    //
     // write a feature and its context; the feature may be in the context, but doesn't need to be.
     // write() calls write0() after histogram, quoting, and stoplist processing
     // write0() calls write0_sqlite3() if sqlwriting is enabled
-    virtual void write0(const pos0_t &pos0,const std::string &feature,const std::string &context);  
+    virtual void write0(const pos0_t &pos0,const std::string &feature,const std::string &context);
 private:
 #ifdef BEAPI_SQLITE3
-    virtual void write0_sqlite3(const pos0_t &pos0,const std::string &feature,const std::string &context);  
+    virtual void write0_sqlite3(const pos0_t &pos0,const std::string &feature,const std::string &context);
 #endif
     static const char *db_insert_stmt;
 public:
@@ -325,7 +325,7 @@ public:
 
     // write a feature and its context; the feature may be in the context, but doesn't need to be.
     // entries processed by write below will be processed by histogram system
-    virtual void write(const pos0_t &pos0,const std::string &feature,const std::string &context);  
+    virtual void write(const pos0_t &pos0,const std::string &feature,const std::string &context);
 
     // write a feature located at a given place within an sbuf.
     // Context is written automatically
@@ -346,14 +346,14 @@ public:
     void         set_carve_mode(carve_mode_t aMode){ MAINTHREAD();carve_mode=aMode;}
 
     // Carve a file; returns filename of carved file or empty string if nothing carved
-    virtual std::string carve(const sbuf_t &sbuf,size_t pos,size_t len, 
+    virtual std::string carve(const sbuf_t &sbuf,size_t pos,size_t len,
                               const std::string &ext); // appended to forensic path
     // Carve a record; returns filename of records file or empty string if nothing carved
-    virtual std::string carve_records(const sbuf_t &sbuf, size_t pos, size_t len, 
-                                      const std::string &name); 
+    virtual std::string carve_records(const sbuf_t &sbuf, size_t pos, size_t len,
+                                      const std::string &name);
     // Write a data;
     virtual std::string write_data(unsigned char *data, size_t len, const std::string &filename);
-    
+
     // Set the time of the carved file to iso8601 file
     virtual void set_carve_mtime(const std::string &fname, const std::string &mtime_iso8601);
 };

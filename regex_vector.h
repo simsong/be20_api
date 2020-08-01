@@ -1,7 +1,7 @@
 /* -*- mode: C++; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
  * regex_vector.h:
- * 
+ *
  * simple cover for regular expression class.
  */
 
@@ -10,7 +10,6 @@
 
 #include <cassert>
 #include <cstring>
-
 #include <string>
 #include <iostream>
 #include <fstream>
@@ -31,7 +30,7 @@ class regex_vector {
  public:
     regex_vector():regex_strings(),regex_chars(){};
     // is this a regular expression with meta characters?
-    static bool has_metachars(const std::string &str);       
+    static bool has_metachars(const std::string &str);
     const std::string regex_engine();                // which engine is in use
 
     /* Add a string */
@@ -52,7 +51,7 @@ class regex_vector {
     int  readfile(const std::string &fname); // read a file of regexes, one per line
 
     /** Run Return true if any of the regexes match.
-     * search_all() is threadsafe. 
+     * search_all() is threadsafe.
      * @param probe  - the string we are searching.
      * *found - set to the found string if something is found.
      */

@@ -1,18 +1,15 @@
 /****************************************************************
  *** utils.h
- *** 
+ ***
  *** To use utils.c/utils.h, be sure this is in your configure.ac file:
       m4_include([be13_api/be13_configure.m4])
  ***
  ****************************************************************/
 
-
-
 #ifndef UTILS_H
 #define UTILS_H
 
 #include <cstdint>
-
 #include <sys/types.h>
 #include <sys/time.h>
 
@@ -26,7 +23,6 @@ std::vector<std::string> split(const std::string &s, char delim);
 #endif
 
 
-
 #ifndef __BEGIN_DECLS
 #if defined(__cplusplus)
 #define __BEGIN_DECLS   extern "C" {
@@ -38,15 +34,6 @@ std::vector<std::string> split(const std::string &s, char delim);
 #endif
 
 __BEGIN_DECLS
-
-#ifdef HAVE_ERR_H
-#include <err.h>
-#else
-[[noreturn]] void err(int eval,const char *fmt,...) __attribute__((format(printf, 2, 0)));
-[[noreturn]] void errx(int eval,const char *fmt,...) __attribute__((format(printf, 2, 0)));
-void warn(const char *fmt, ...) __attribute__((format(printf, 1, 0)));
-void warnx(const char *fmt,...) __attribute__((format(printf, 1, 0)));
-#endif
 
 #ifndef HAVE_LOCALTIME_R
 #ifdef __MINGW32__

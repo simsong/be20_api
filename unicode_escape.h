@@ -5,7 +5,6 @@
 #include <string>
 #include <cstdint>
 
-
 /** \addtogroup bulk_extractor_APIs
  * @{
  */
