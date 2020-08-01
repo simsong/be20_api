@@ -202,11 +202,11 @@ namespace be13 {
         const uint32_t              depth{};         /*  how far down are we? / only valid in SCAN_PHASE */
         const int                   sp_version{CURRENT_SP_VERSION};     /* version number of this structure */
         void check_verson(void) {       /* Meant to be called by plugin passed a &sp */
-            if (this.sp_version != CURRENT_SP_VERSION){
+            if (sp_version != CURRENT_SP_VERSION){
                 throw std::runtime_error("passed sp_version != CURRENT_SP_VERSION");
             }
-            if (sp.phase==scanner_params::PHASE_STARTUP) {
-                if (this.info->si_version != CURRENT_SI_VERSION ){
+            if (phase==scanner_params::PHASE_STARTUP && info!=nullptr) {
+                if (info->si_version != scanner_info::CURRENT_SI_VERSION ){
                     throw std::runtime_error("passed si_version != CURRENT_SI_VERSION");
                 }
             }
