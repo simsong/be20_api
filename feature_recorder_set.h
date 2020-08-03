@@ -45,12 +45,12 @@ class feature_recorder_set {
     histogram_defs_t      histogram_defs;   // histograms that are to be created.
     mutable std::mutex    Min_transaction;
     bool                  in_transaction;
-#ifdef BEAPI_SQLITE3
-    BEAPI_SQLITE3         *db3;             // opened in SQLITE_OPEN_FULLMUTEX mode
-#endif
     bool                  init_called;
 
 public:
+#ifdef BEAPI_SQLITE3
+    BEAPI_SQLITE3         *db3;             // opened in SQLITE_OPEN_FULLMUTEX mode
+#endif
     /** create an emptry feature recorder set. If disabled, create a disabled recorder. */
     feature_recorder_set( uint32_t flags_, const std::string hash_algorithm,
                           const std::string &input_fname_, const std::string &outdir_);

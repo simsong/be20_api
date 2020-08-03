@@ -55,6 +55,7 @@
 
 
 
+/* namespace needed here because of conflicts below */
 namespace be13 {
 
 #ifndef ETH_ALEN

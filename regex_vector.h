@@ -40,9 +40,7 @@ class regex_vector {
         assert( regex_strings.size() == regex_chars.size() );
     }
 
-    auto size() {
-        return regex_chars.size();
-    }
+    auto size() { return regex_chars.size(); }
 
     /**
      * Read regular expressions from a file: returns 0 if successful, -1 if failure.
@@ -57,6 +55,7 @@ class regex_vector {
      */
 
     bool search_all(const std::string &probe, std::string *found) const;
+    bool search_all(const std::string &probe, std::string *found, size_t *offset, size_t *len) const;
     void dump(std::ostream &os) const;
 };
 

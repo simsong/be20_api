@@ -30,15 +30,15 @@ bool regex_vector::has_metachars(const std::string &str)
  * set *found to be what was found, *offset to be the starting offset, and *len to be
  * the length. Note that this only handles a single group.
  */
-bool regex_vector::search_all(const std::string &probe, std::string *found) const
+bool regex_vector::search_all(const std::string &probe, std::string *found, size_t *offset, size_t *len) const
 {
     for ( auto it : regex_chars ) {
         std::smatch sm;
         std::regex_search( probe, sm, it);
         if (sm.size()>0) {
-            if (found) {
-                (*found) = sm.str();
-            }
+            if (found)  *found  = sm.str();
+            if (offset) *offset = sm.position();
+            if (len)    *len    = sm.length();
             return true;
         }
     }
@@ -57,7 +57,7 @@ int regex_vector::readfile(const std::string &fname)
             if(line.size()>0 && (((*line.end())=='\r') || (*line.end())=='\n')){
                 line.erase(line.end());
             }
-            
+
             /* Create a regular expression and add it */
             regex_chars.push_back( std::regex(line));
         }
