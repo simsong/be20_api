@@ -54,8 +54,7 @@ class regex_vector {
      * *found - set to the found string if something is found.
      */
 
-    bool search_all(const std::string &probe, std::string *found) const;
-    bool search_all(const std::string &probe, std::string *found, size_t *offset, size_t *len) const;
+    bool search_all(const std::string &probe, std::string *found, size_t *offset=nullptr, size_t *len=nullptr) const;
     void dump(std::ostream &os) const;
 };
 

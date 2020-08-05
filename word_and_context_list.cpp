@@ -97,10 +97,10 @@ bool word_and_context_list::check(const std::string &probe,const std::string &be
     }
 
     /* Now check the patterns; do this second because it is more expensive */
-    return patterns.search_all(probe, NULL);
+    return patterns.search_all(probe, nullptr);
 };
 
-bool word_and_context_list::check_feature_context(const std::string &probe,const std::string &context) const 
+bool word_and_context_list::check_feature_context(const std::string &probe,const std::string &context) const
 {
     std::string before;
     std::string after;

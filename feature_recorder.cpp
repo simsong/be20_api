@@ -39,7 +39,7 @@ uint32_t feature_recorder::debug=0;
  * permutated based on the total number of threads and the current
  * thread that's recording. Each thread records to a different file,
  * and thus a different feature recorder, to avoid locking
- * problems. 
+ * problems.
  *
  * @param feature_recorder_set &fs - common information for all of the feature recorders
  * @param name         - the name of the feature being recorded.
@@ -102,7 +102,7 @@ void feature_recorder::banner_stamp(std::ostream &os,const std::string &header) 
     if(banner_lines==0){
         os << "# BANNER FILE NOT PROVIDED (-b option)\n";
     }
-    
+
     os << bulk_extractor_version_header;
     os << "# Feature-Recorder: " << name << "\n";
     if (fs.get_input_fname().size()) os << "# Filename: " << fs.get_input_fname() << "\n";
@@ -125,7 +125,7 @@ std::string feature_recorder::fname_counter(std::string suffix) const
 }
 
 
-const std::string &feature_recorder::get_outdir() const 
+const std::string &feature_recorder::get_outdir() const
 {
     return fs.get_outdir();
 }
@@ -136,13 +136,13 @@ const std::string &feature_recorder::get_outdir() const
  */
 
 void feature_recorder::open()
-{ 
+{
     if (fs.flag_set(feature_recorder_set::SET_DISABLED)) return;        // feature recorder set is disabled
 
     std::cerr << "DDD  \n";
     /* write to a database? Create tables if necessary and create a prepared statement */
 #ifdef BEAPI_SQLITE3
-    if (fs.flag_set(feature_recorder_set::ENABLE_SQLITE3_RECORDERS)) {  
+    if (fs.flag_set(feature_recorder_set::ENABLE_SQLITE3_RECORDERS)) {
         char buf[1024];
         fs.db_create_table(name);
         snprintf( buf, sizeof(buf), db_insert_stmt,name.c_str() );
@@ -150,6 +150,7 @@ void feature_recorder::open()
     }
 #endif
 
+    std::cerr << "EEE  \n";
     /* Write to a file? Open the file and seek to the last line if it exist, otherwise just open database */
     if (fs.flag_notset(feature_recorder_set::DISABLE_FILE_RECORDERS)){
         /* Open the file recorder */
@@ -177,9 +178,10 @@ void feature_recorder::open()
         if(!ios.is_open()){
             std::cerr << "*** feature_recorder::open CANNOT OPEN FEATURE FILE FOR WRITING "
                       << fname << ":" << strerror(errno) << "\n";
-            exit(1);
+            throw std::invalid_argument("cannot open feature file for writing");
         }
     }
+    std::cerr << "FFF  \n";
 }
 
 void feature_recorder::close()
@@ -295,7 +297,7 @@ void feature_recorder::set_memhist_limit(int64_t limit_)
 void feature_recorder::enable_memory_histograms()
 {
     for( auto it: histogram_defs){
-        mhistograms[it] = new mhistogram_t(); 
+        mhistograms[it] = new mhistogram_t();
     }
 }
 
@@ -398,7 +400,7 @@ void feature_recorder::dump_histogram_file(const histogram_def &def,
                         feature = sm.str();
                     }
                 }
-        
+
                 /* Remove what follows after \t if this is a context file */
                 size_t tab=feature.find('\t');
                 if(tab!=std::string::npos) feature.erase(tab); // erase from tab to end
@@ -410,7 +412,7 @@ void feature_recorder::dump_histogram_file(const histogram_def &def,
             std::cerr << "ERROR: " << e.what() << " generating histogram "
                       << name << "\n";
         }
-            
+
         /* Output what we have to a new file ofname */
         std::stringstream real_suffix;
 
@@ -448,7 +450,7 @@ void feature_recorder::dump_histogram_file(const histogram_def &def,
 void feature_recorder::dump_histogram(const histogram_def &def,void *user,feature_recorder::dump_callback_t cb) const
 {
     /* Inform that we are dumping this histogram */
-    if(cb) cb(user,*this,def,"",0); 
+    if(cb) cb(user,*this,def,"",0);
 
     /* If this is a memory histogram, dump it and return */
     mhistograms_t::const_iterator it = mhistograms.find(def);
@@ -551,7 +553,7 @@ void feature_recorder::printf(const char *fmt, ...)
 {
     const int maxsize = 65536;
     managed_malloc<char>p(maxsize);
-    
+
     if(p.buf==0) return;
 
     va_list ap;
@@ -659,12 +661,12 @@ void feature_recorder::write(const pos0_t &pos0,const std::string &feature_,cons
             if(context[i]=='\r') assert(0);
         }
     }
-        
+
     /* First check to see if the feature is on the stop list.
      * Only do this if we have a stop_list_recorder (the stop list recorder itself
      * does not have a stop list recorder. If it did we would infinitely recurse.
      */
-    if(flag_notset(FLAG_NO_STOPLIST) && stop_list_recorder){          
+    if(flag_notset(FLAG_NO_STOPLIST) && stop_list_recorder){
         if(fs.stop_list
            && fs.stop_list->check_feature_context(*feature_utf8,context)){
             stop_list_recorder->write(pos0,feature,context);
@@ -759,7 +761,7 @@ void feature_recorder::write_buf(const sbuf_t &sbuf,size_t pos,size_t len)
         /* Context write; create a clean context */
         size_t p0 = context_window_before < pos ? pos-context_window_before : 0;
         size_t p1 = pos+len+context_window_after;
-        
+
         if(p1>sbuf.bufsize) p1 = sbuf.bufsize;
         assert(p0<=p1);
         context = sbuf.substr(p0,p1-p0);
@@ -814,7 +816,7 @@ std::string valid_dosname(std::string in)
     }
     return out;
 }
-        
+
 
 //const feature_recorder::hash_def &feature_recorder::hasher()
 //{
@@ -845,7 +847,7 @@ std::string feature_recorder::carve(const sbuf_t &sbuf,size_t pos,size_t len,
         return std::string();
     }
     assert(pos < sbuf.bufsize);
-    
+
 
 
     /* Carve to a file depending on the carving mode.  The purpose
@@ -893,9 +895,9 @@ std::string feature_recorder::carve(const sbuf_t &sbuf,size_t pos,size_t len,
     std::stringstream ss;
     ss << dirname1 << "/" << std::setw(3) << std::setfill('0') << (this_file_number / 1000);
 
-    std::string dirname2 = ss.str(); 
+    std::string dirname2 = ss.str();
     std::string fname         = dirname2 + std::string("/") + valid_dosname(cbuf.pos0.str() + ext);
-    std::string fname_feature = fname.substr(fs.get_outdir().size()+1); 
+    std::string fname_feature = fname.substr(fs.get_outdir().size()+1);
 
     /* Record what was found in the feature file.
      */
@@ -911,7 +913,7 @@ std::string feature_recorder::carve(const sbuf_t &sbuf,size_t pos,size_t len,
     ss << "<filesize>" << len << "</filesize>";
     ss << "<hashdigest type='" << fs.hasher.name << "'>" << carved_hash_hexvalue << "</hashdigest></fileobject>";
     this->write(cbuf.pos0,fname_feature,ss.str());
-    
+
     if (in_cache) return fname;               // do not make directories or write out if we are cached
 
     /* Make the directory if it doesn't exist.  */
@@ -919,7 +921,7 @@ std::string feature_recorder::carve(const sbuf_t &sbuf,size_t pos,size_t len,
 #ifdef WIN32
         mkdir(dirname1.c_str());
         mkdir(dirname2.c_str());
-#else   
+#else
         mkdir(dirname1.c_str(),0777);
         mkdir(dirname2.c_str(),0777);
 #endif
@@ -950,7 +952,7 @@ std::string feature_recorder::carve(const sbuf_t &sbuf,size_t pos,size_t len,
     return fname;
 }
 
-/* 
+/*
  This is based on feature_recorder::carve and append carving record to specified filename
  */
 std::string feature_recorder::carve_records(const sbuf_t &sbuf, size_t pos, size_t len,
@@ -972,10 +974,10 @@ std::string feature_recorder::carve_records(const sbuf_t &sbuf, size_t pos, size
 
     std::stringstream ss;
     ss << dirname1;
-   
-    std::string dirname2 = ss.str(); 
+
+    std::string dirname2 = ss.str();
     std::string fname = dirname2 + std::string("/") + valid_dosname(filename);
-    std::string fname_feature = fname.substr(fs.get_outdir().size()+1); 
+    std::string fname_feature = fname.substr(fs.get_outdir().size()+1);
 
     //    std::string fname = dirname2 + std::string("/") + valid_dosname(cbuf.pos0.str() + ext);
     //std::string fname_feature = fname.substr(fs.get_outdir().size()+1);
@@ -991,7 +993,7 @@ std::string feature_recorder::carve_records(const sbuf_t &sbuf, size_t pos, size
     ss.str(std::string()); // clear the stringstream
     ss << len;
     this->write(cbuf.pos0,fname_feature,ss.str());
-    
+
     if (in_cache) return fname;               // do not make directories or write out if we are cached
 
     /* Make the directory if it doesn't exist.  */
@@ -999,7 +1001,7 @@ std::string feature_recorder::carve_records(const sbuf_t &sbuf, size_t pos, size
 #ifdef WIN32
         mkdir(dirname1.c_str());
         mkdir(dirname2.c_str());
-#else   
+#else
         mkdir(dirname1.c_str(),0777);
         mkdir(dirname2.c_str(),0777);
 #endif
@@ -1029,7 +1031,7 @@ std::string feature_recorder::carve_records(const sbuf_t &sbuf, size_t pos, size
     return fname;
 }
 
-/* 
+/*
  write buffer to specified dirname/filename for writing data
  */
 std::string feature_recorder::write_data(unsigned char *data, size_t len, const std::string &filename)
@@ -1037,7 +1039,7 @@ std::string feature_recorder::write_data(unsigned char *data, size_t len, const 
     std::string dirname1 = fs.get_outdir()  + "/" + name;
     std::stringstream ss;
     ss << dirname1;
-    std::string dirname2 = ss.str(); 
+    std::string dirname2 = ss.str();
     std::string fname = dirname2 + std::string("/") + valid_dosname(filename);
 
     /* Make the directory if it doesn't exist.  */
@@ -1045,7 +1047,7 @@ std::string feature_recorder::write_data(unsigned char *data, size_t len, const 
 #ifdef WIN32
         mkdir(dirname1.c_str());
         mkdir(dirname2.c_str());
-#else   
+#else
         mkdir(dirname1.c_str(),0777);
         mkdir(dirname2.c_str(),0777);
 #endif
@@ -1078,7 +1080,7 @@ std::string feature_recorder::write_data(unsigned char *data, size_t len, const 
 /**
  * Currently, we need strptime() and utimes() to set the time.
  */
-void feature_recorder::set_carve_mtime(const std::string &fname, const std::string &mtime_iso8601) 
+void feature_recorder::set_carve_mtime(const std::string &fname, const std::string &mtime_iso8601)
 {
     if(flags & FLAG_DISABLED) return;           // disabled
 #if defined(HAVE_STRPTIME) && defined(HAVE_UTIMES)
@@ -1105,7 +1107,7 @@ void feature_recorder::set_carve_mtime(const std::string &fname, const std::stri
  * "PRAGMA synchronous =  OFF", "PRAGMA journal_mode=MEMORY", - 79 seconds
  *
  * Time with domexusers:
- * no SQL - 
+ * no SQL -
  */
 
 #define SQLITE_EXTENSION ".sqlite"
@@ -1258,4 +1260,3 @@ void feature_recorder::dump_histogram_sqlite3(const histogram_def &def,void *use
 #endif
 }
 #endif
-
