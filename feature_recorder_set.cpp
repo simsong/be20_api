@@ -4,11 +4,11 @@
 #include "bulk_extractor_i.h"
 #include "histogram.h"
 
-/****************************************************************
- *** feature_recorder_set:
- *** Manage the set of feature recorders.
- *** Handles both file-based feature recorders and the SQLite3 feature recorder.
- ****************************************************************/
+/**
+ * feature_recorder_set:
+ * Manage the set of feature recorders.
+ * Handles both file-based feature recorders and the SQLite3 feature recorder.
+ */
 
 const std::string feature_recorder_set::ALERT_RECORDER_NAME = "alerts";
 const std::string feature_recorder_set::DISABLED_RECORDER_NAME = "disabled";
@@ -48,7 +48,11 @@ feature_recorder_set::hash_func_t feature_recorder_set::hash_def::hash_func_for_
 }
 
 
-/* Create an empty recorder with no outdir. */
+
+/**
+ * Constructor.
+ *  Create an empty recorder with no outdir.
+ */
 feature_recorder_set::feature_recorder_set(uint32_t flags_,const std::string hash_algorithm,
                                            const std::string &input_fname_,const std::string &outdir_):
     flags(flags_),seen_set(),input_fname(input_fname_),
@@ -57,28 +61,54 @@ feature_recorder_set::feature_recorder_set(uint32_t flags_,const std::string has
     Mscanner_stats(),
     histogram_defs(),
     Min_transaction(),in_transaction(),
-#ifdef BEAPI_SQLITE3
     db3(),
-#endif
-    init_called(false),alert_list(),stop_list(),
+    alert_list(),stop_list(),
     scanner_stats(),
     hasher( hash_def(hash_algorithm, hash_def::hash_func_for_name(hash_algorithm)))
 {
-    assert(outdir.size() > 0);
-    if(flags & SET_DISABLED){
+    if (outdir.size() == 0){
+        throw std::invalid_argument("output directory not provided");
+    }
+
+    /* Make sure we can write to the outdir if one is provided */
+    if ((outdir != NO_OUTDIR) && (access(outdir.c_str(),W_OK)!=0)) {
+        throw std::invalid_argument("output directory not writable");
+    }
+    /* Now initialize the scanners */
+
+    /* Create a disabled feature recorder if necessary */
+    if (flag_set(SET_DISABLED)){
         create_name(DISABLED_RECORDER_NAME,false);
         frm[DISABLED_RECORDER_NAME]->set_flag(feature_recorder::FLAG_DISABLED);
     }
+
+    /* Create an alert recorder if necessary */
+    if (flag_notset(NO_ALERT)) {
+        create_name(feature_recorder_set::ALERT_RECORDER_NAME,false); // make the alert recorder
+    }
+
+    message_enabled_scanners(scanner_params::PHASE_INIT); // tell all enabled scanners to init
+
+    if (flag_set(ENABLE_SQLITE3_RECORDERS)) {
+        db_create();
+    }
+
+    /* Create the requested feature files */
+    for( auto it:feature_files){
+        create_name(it, flags & CREATE_STOP_LIST_RECORDERS);
+    }
 }
 
+
+/*
+ * deallocator
+ */
 feature_recorder_set::~feature_recorder_set()
 {
     for ( auto it:frm ){
         delete it.second;
     }
-#ifdef BEAPI_SQLITE3
     db_close();
-#endif
 }
 
 
@@ -89,14 +119,6 @@ feature_recorder_set::~feature_recorder_set()
  * If disabled, create a disabled feature_recorder that can respond to functions as requested.
  */
 
-#if 0
-WTF? Why do I even *have* an init? Is it to create the feature files? THey could get initted as they are added, and this shoudl be done in the creator.
-
-                - CXheck in the test program.
-                - chekc in the API program
-                - Check in Phase1
-                - Delete init()
-#endif
 
 void    feature_recorder_set::set_flag(uint32_t f)
 {
@@ -117,49 +139,18 @@ void    feature_recorder_set::set_flag(uint32_t f)
 void    feature_recorder_set::unset_flag(uint32_t f)
 {
     if(f & MEM_HISTOGRAM){
-        std::cerr << "MEM_HISTOGRAM flag cannot be cleared\n";
-        assert(0);
+        throw std::runtime_error("MEM_HISTOGRAM flag cannot be cleared");
     }
     flags &= ~f;
 }
 
 
 
-void feature_recorder_set::init(const feature_file_names_t &feature_files)
-{
-    std::cerr << "feature_recorder_set::init\n";
-
-    /* Make sure we can write to the outdir if one is provided */
-    if ((outdir != NO_OUTDIR) && (access(outdir.c_str(),W_OK)!=0)) {
-        throw std::invalid_argument("output directory not writable");
-    }
-
-
-#ifdef BEAPI_SQLITE3
-    if (flag_set(ENABLE_SQLITE3_RECORDERS)) {
-        std::cerr << "calling db_create\n";
-        db_create();
-        std::cerr << "called db_create\n";
-    }
-#endif
-
-    if (flag_notset(NO_ALERT)) {
-        create_name(feature_recorder_set::ALERT_RECORDER_NAME,false); // make the alert recorder
-    }
-
-    /* Create the requested feature files */
-    for( auto it:feature_files){
-        create_name(it, flags & CREATE_STOP_LIST_RECORDERS);
-    }
-    init_called = true;
-}
-
 /** Flush all of the feature recorder files.
- * Typically done at the end of an sbuf.
+ *  Typically done at the end of an sbuf.
  */
 void feature_recorder_set::flush_all()
 {
-    assert(init_called);
     for ( auto it:frm){
         it.second->flush();
     }
@@ -167,15 +158,12 @@ void feature_recorder_set::flush_all()
 
 void feature_recorder_set::close_all()
 {
-    assert(init_called);
     for (auto it:frm){
         it.second->close();
     }
-#ifdef BEAPI_SQLITE3
     if ( flag_set(feature_recorder_set::ENABLE_SQLITE3_RECORDERS )) {
         db_transaction_commit();
     }
-#endif
 }
 
 
@@ -209,6 +197,9 @@ feature_recorder *feature_recorder_set::get_name(const std::string &name) const
 }
 
 
+/*
+ * This is its own function so that it can be overwritten by a subclass.
+ */
 feature_recorder *feature_recorder_set::create_name_factory(const std::string &name_)
 {
     return new feature_recorder(*this,name_);
@@ -217,6 +208,8 @@ feature_recorder *feature_recorder_set::create_name_factory(const std::string &n
 
 /*
  * Create a named feature recorder, any associated stoplist recorders, and open the files
+ * stop recorders are basically a second feature paired with every feature recorder that records
+ * things that were sent to the stop list.
  */
 void feature_recorder_set::create_name(const std::string &name,bool create_stop_recorder)
 {
@@ -237,6 +230,9 @@ void feature_recorder_set::create_name(const std::string &name,bool create_stop_
     }
 }
 
+/*
+ * The alert recorder is special.
+ */
 feature_recorder *feature_recorder_set::get_alert_recorder() const
 {
     if (flag_set(NO_ALERT)) return 0;
@@ -244,19 +240,39 @@ feature_recorder *feature_recorder_set::get_alert_recorder() const
     return get_name(feature_recorder_set::ALERT_RECORDER_NAME);
 }
 
+// send every enabled scanner the phase message
+void feature_recorder_set::message_enabled_scanners(scanner_params::phase_t phase)
+{
+    /* make an empty sbuf and feature recorder set */
+    scanner_params sp(phase,sbuf_t(), *this); // dummy sp to get phase
+    recursion_control_block rcb(0,"");    // dummy rcb
+    for(auto const &it : frm){
+        if (it.second->enabled){
+            (it.second)(sp, rcb);
+        }
+    }
+}
+
+
 
 /****************************************************************
  *** Data handling
  ****************************************************************/
 
+
 /*
  * uses md5 to determine if a block was prevously seen.
+ * Hopefully sbuf.buf() is zero-copy.
  */
-bool feature_recorder_set::check_previously_processed(const uint8_t *buf,size_t bufsize)
+bool feature_recorder_set::check_previously_processed(const sbuf_t &sbuf)
 {
-    std::string md5 = dfxml::md5_generator::hash_buf(buf,bufsize).hexdigest();
+    std::string md5 = dfxml::md5_generator::hash_buf(sbuf.buf,sbuf.bufsize).hexdigest();
     return seen_set.check_for_presence_and_insert(md5);
 }
+
+/****************************************************************
+ *** Stats
+ ****************************************************************/
 
 void feature_recorder_set::add_stats(const std::string &bucket,double seconds)
 {
@@ -332,7 +348,6 @@ void feature_recorder_set::get_feature_file_list(std::vector<std::string> &ret)
 
 
 /*** SQL Support ***/
-#ifdef BEAPI_SQLITE3
 
 /*
  * Time results with ubnist1 on R4:
@@ -455,5 +470,3 @@ void feature_recorder_set::db_transaction_commit()
         std::cerr << "No transaction to commit\n";
     }
 }
-
-#endif

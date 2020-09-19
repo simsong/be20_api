@@ -25,8 +25,20 @@
  *
  * NOTE: plugins can only call virtual functions!
  *
+ * Process to set up:
+ * 1 - plugin::scanners_process_enable_disable_commands is run to determine which scanners are enabled.
+ * 2 - plugin::get_scanner_feature_file_names(feature_file_names) gets a list of the current feature files.
+ * 3 - feature_recorder_set is created, given:
+ *       - flags
+ *       - hash algorithm to use
+ *       - input file
+ *       - output directory
+ *   It initializes the feature recorders and itself.
  */
 
+#ifndef  BEAPI_SQLITE3
+#define BEAPI_SQLITE3 void
+#endif
 typedef std::map<std::string,class feature_recorder *> feature_recorder_map;
 typedef std::set<std::string>feature_file_names_t;
 class feature_recorder_set {
@@ -40,18 +52,17 @@ class feature_recorder_set {
     const std::string     input_fname;      // input file
     const std::string     outdir;           // where output goes
     // TK-replace with an atomic_set:
-    feature_recorder_map  frm;              // map of feature recorders, name->feature recorder
+    feature_recorder_map  frm;              // map of feature recorders, name->feature recorder, by name
     mutable std::mutex    Mscanner_stats;         // locks frm and scanner_stats_map
     histogram_defs_t      histogram_defs;   // histograms that are to be created.
     mutable std::mutex    Min_transaction;
     bool                  in_transaction;
-    bool                  init_called;
+    BEAPI_SQLITE3         *db;              // databse handle opened in SQLITE_OPEN_FULLMUTEX mode
 
 public:
-#ifdef BEAPI_SQLITE3
-    BEAPI_SQLITE3         *db3;             // opened in SQLITE_OPEN_FULLMUTEX mode
-#endif
-    /** create an emptry feature recorder set. If disabled, create a disabled recorder. */
+    /** Constructor:
+     * create an emptry feature recorder set. If disabled, create a disabled recorder.
+     */
     feature_recorder_set( uint32_t flags_, const std::string hash_algorithm,
                           const std::string &input_fname_, const std::string &outdir_);
     virtual ~feature_recorder_set();
@@ -134,25 +145,23 @@ public:
     void    dump_name_count_stats(dfxml_writer &writer) const;
 
     /****************************************************************
-     *** SQLite3 interface
+     *** DB interface
      ****************************************************************/
 
-#ifdef BEAPI_SQLITE3
-    virtual void db_send_sql(BEAPI_SQLITE3 *db3,const char **stmts, ...) ;
-    virtual BEAPI_SQLITE3 *db_create_empty(const std::string &name) ;
+    virtual  void db_send_sql(BEAPI_SQLITE3 *db3,const char **stmts, ...) ;
+    virtual  BEAPI_SQLITE3 *db_create_empty(const std::string &name) ;
     void     db_create_table(const std::string &name) ;
     void     db_create() ;
     void     db_transaction_begin() ;
     void     db_transaction_commit() ;               // commit current transaction
-    void     db_close() ;             //
-#endif
+    void     db_close() ;                            //
 
     /****************************************************************
      *** External Functions
      ****************************************************************/
 
     // Management of previously seen data
-    virtual bool check_previously_processed(const uint8_t *buf,size_t bufsize);
+    virtual bool check_previously_processed(const sbuf_t &sbuf);
 
     // NOTE:
     virtual feature_recorder *get_name(const std::string &name) const;

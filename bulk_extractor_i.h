@@ -70,19 +70,19 @@
 #include <set>
 #include <map>
 
-
-
 #include "dfxml/src/dfxml_writer.h"
 #include "aftimer.h"
 #include "atomic_set_map.h"
 #include "regex_vector.h"
 #include "feature_recorder.h"
 #include "feature_recorder_set.h"
+#include "packet_info.h"
+#include "scanner_set.h"
 #include "sbuf.h"
 #include "word_and_context_list.h"
 #include "unicode_escape.h"
 #include "utils.h"                      // for gmtime_r
-#include "plugin.h"                     // plugin system must be included last
+//#include "plugin.h"                     // plugin system must be included last
 #include "utf8.h"
 
 inline std::string itos(int i){ std::stringstream ss; ss << i;return ss.str();}

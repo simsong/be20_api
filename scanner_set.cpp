@@ -5,10 +5,10 @@
  */
 
 #include "config.h"
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <dirent.h>
-#include <algorithm>
+#include "bulk_extractor_i.h"
+
+//#include <sys/stat.h>
+//#include <dirent.h>
 
 #ifdef HAVE_ERR_H
 #include <err.h>
@@ -18,38 +18,27 @@
 #include <dlfcn.h>
 #endif
 
-#include "bulk_extractor_i.h"
-#include "aftimer.h"
-#include "dfxml/src/hash_t.h"
-
-
-uint32_t scanner_def::max_depth = 7;            // max recursion depth
-uint32_t scanner_def::max_ngram = 10;            // max recursion depth
-static int debug;                               // local debug variable
-static uint32_t max_depth_seen=0;
-static std::mutex max_depth_seenM;
+//static int debug;                               // local debug variable
+//static uint32_t max_depth_seen=0;               // only for those run with plugin::process_sbuf()
+//static std::mutex max_depth_seenM;
 bool plugin::dup_data_alerts = false; // by default, is disabled
 uint64_t plugin::dup_data_encountered = 0; // amount that was not processed
 
-class scanner_command {
-public:
-    enum command_t {DISABLE_ALL=0,ENABLE_ALL,DISABLE,ENABLE};
-    scanner_command(const scanner_command &sc):command(sc.command),name(sc.name){};
-    scanner_command(scanner_command::command_t c,const std::string &n):command(c),name(n){};
-    command_t command;
-    std::string name;
-};
-static std::vector<scanner_command> scanner_commands;
-bool scanner_commands_processed = false;
+//bool scanner_commands_processed = false;
 
 
 /****************************************************************
- *** SCANNER PLUG-IN SYSTEM
+ *** SCANNER SET IMPLEMENTATION (previously the PLUG-IN SYSTEM)
  ****************************************************************/
 
-/* scanner_params */
+/* BE2 revision:
+ * In BE1, the active scanners were maintained by the plugin system.
+ * In BE2, there is no plugin system. Instead, scanners are grouped into scanner set, which
+ *         in turn has a feature_recorder_set, which in turn has multiple feature recorders.
+ *         The scanner set can then be asked to process a sbuf.
+ *         All of the global variables go away.
+ */
 
-scanner_params::PrintOptions scanner_params::no_options;
 
 /* object for keeping track of packet callbacks */
 class packet_plugin_info {
@@ -63,62 +52,29 @@ public:
 typedef std::vector<packet_plugin_info> packet_plugin_info_vector_t;
 packet_plugin_info_vector_t  packet_handlers;   // pcap callback handlers
 
+scanner_set::scanner_set(const scanner_config &sc_,
+                         feature_recorder_set &fs_):sc(sc_),fs(fs_);
+{
+}
+
 
 /**
  * the vector of current scanners
  */
 
-plugin::scanner_vector plugin::current_scanners;
+//plugin::scanner_vector plugin::current_scanners;
 
-void plugin::set_scanner_debug(int debug_)
+void scanner_set::set_debug(int debug_)
 {
     debug = debug_;
 }
 
 
-/**
- * return true a scanner is enabled
- */
-
-/* enable or disable a specific scanner.
- * enable = 0  - disable that scanner.
- * enable = 1  - enable that scanner
- * 'all' is a special scanner that enables all scanners.
- */
-
-void plugin::set_scanner_enabled(const std::string &name,bool enable)
-{
-    for (auto it: current_scanners) {
-        /* If the scanner name matches, set its flag and return (we can only have one of each scanner) */
-        if (it->info.name==name) {
-            it->enabled = enable;
-            return;
-        }
-        /* If name is 'all' and the NO_ALL flag is not set, set the scanner's enabled flag to enable */
-        if (name=="all" && ((it->info.flags & scanner_info::SCANNER_NO_ALL)==0)){
-            it->enabled = enable;
-        }
-    }
-    if (name!="all"){
-        /* Scanner wasn't found */
-        throw std::invalid_argument("Invalid scanner name" + name);
-    }
-}
-
-void plugin::set_scanner_enabled_all(bool enable)
-{
-    for (auto it: current_scanners) {
-        it->enabled = enable;
-    }
-}
-
-/** Name of feature files that should be histogramed.
- * The histogram should be done in the plug-in
- */
-
 /****************************************************************
- *** scanner plugin loading
- ****************************************************************/
+ *
+ * Loading Scanners
+ */
+
 
 /**
  * plugin system phase 0: Load a scanner.
@@ -130,21 +86,25 @@ void plugin::set_scanner_enabled_all(bool enable)
  * This is called before scanners are enabled or disabled, so the pcap handlers
  * need to be set afterwards
  */
-void plugin::load_scanner(scanner_t scanner,const scanner_info::scanner_config &sc)
+SIMSON IS HERE
+void scanner_set::add_scanner(scanner_t scanner)
 {
-    /* If scanner is already loaded, return */
+    /* If scanner is already loaded, that's an error */
     for (auto it: current_scanners) {
-        if (it->scanner==scanner) return;
+        if (it->scanner==scanner) throw std::runtime_error("scanner already added");
     }
 
-    /* Use an empty sbuf and an empty feature recorder set as the parameters for the sp below.
-     * we use static values so that the sbuf is not constantly being created and destroyed.
+    /* Initialize the scanner. Use an empty sbuf and an empty feature recorder and get the list of list of feature files that it needs.
      */
-    static const sbuf_t sbuf;
-    static feature_recorder_set fs(feature_recorder_set::SET_DISABLED,
-                                   "md5",
-                                   feature_recorder_set::NO_INPUT,
-                                   feature_recorder_set::NO_OUTDIR); // dummy
+    const sbuf_t sbuf;
+    feature_recorder_set fs(feature_recorder_set::SET_DISABLED,
+                            "md5",
+                            feature_recorder_set::NO_INPUT,
+                            feature_recorder_set::NO_OUTDIR); // dummy
+
+ TODO: Initialize the scanner here.
+
+        // Now
 
     //
     // Each scanner's params are stored in a scanner_def object that
@@ -157,7 +117,7 @@ void plugin::load_scanner(scanner_t scanner,const scanner_info::scanner_config &
     // want to give different scanners different variables.
     //
 
-    scanner_params sp(scanner_params::PHASE_STARTUP,sbuf,fs); //
+    scanner_params sp(scanner_params::PHASE_STARTUP,sbuf,fs);
     scanner_def *sd = new scanner_def();
     sd->scanner = scanner;
     sd->info.config = &sc;
@@ -165,7 +125,7 @@ void plugin::load_scanner(scanner_t scanner,const scanner_info::scanner_config &
     sp.info  = &sd->info;
 
     // Make an empty recursion control block and call the scanner's
-    // initialization function.
+    // initialization function. Scanners are disabled by default.
     recursion_control_block rcb(0,"");
     (*scanner)(sp,rcb);                  // phase 0
 
@@ -173,7 +133,7 @@ void plugin::load_scanner(scanner_t scanner,const scanner_info::scanner_config &
     current_scanners.push_back(sd);
 }
 
-void plugin::load_scanner_file(std::string fn,const scanner_info::scanner_config &sc)
+void scanner_set::load_scanner_file(std::string fn,const scanner_info::scanner_config &sc)
 {
     /* Figure out the function name */
     size_t extloc = fn.rfind('.');
@@ -224,14 +184,14 @@ void plugin::load_scanner_file(std::string fn,const scanner_info::scanner_config
     load_scanner(*scanner,sc);
 }
 
-void plugin::load_scanners(scanner_t * const *scanners,const scanner_info::scanner_config &sc)
+void scanner_set::load_scanners(scanner_t * const *scanners,const scanner_info::scanner_config &sc)
 {
     for(int i=0;scanners[i];i++){
         load_scanner(scanners[i],sc);
     }
 }
 
-void plugin::load_scanner_directory(const std::string &dirname,const scanner_info::scanner_config &sc )
+void scanner_set::load_scanner_directory(const std::string &dirname,const scanner_info::scanner_config &sc )
 {
     DIR *dirp = opendir(dirname.c_str());
     if(dirp==0){
@@ -255,7 +215,7 @@ void plugin::load_scanner_directory(const std::string &dirname,const scanner_inf
     }
 }
 
-void plugin::load_scanner_directories(const std::vector<std::string> &dirnames,
+void scanner_set::load_scanner_directories(const std::vector<std::string> &dirnames,
                                             const scanner_info::scanner_config &sc)
 {
     for(std::vector<std::string>::const_iterator it = dirnames.begin();it!=dirnames.end();it++){
@@ -263,7 +223,7 @@ void plugin::load_scanner_directories(const std::vector<std::string> &dirnames,
     }
 }
 
-void plugin::load_scanner_packet_handlers()
+void scanner_set::load_scanner_packet_handlers()
 {
     for(scanner_vector::const_iterator it = current_scanners.begin(); it!=current_scanners.end(); it++){
         if((*it)->enabled){
@@ -275,20 +235,50 @@ void plugin::load_scanner_packet_handlers()
     }
 }
 
-// send every enabled scanner the phase message
-void plugin::message_enabled_scanners(scanner_params::phase_t phase,feature_recorder_set &fs)
+
+/**
+ * return true a scanner is enabled
+ */
+
+/* enable or disable a specific scanner.
+ * enable = 0  - disable that scanner.
+ * enable = 1  - enable that scanner
+ * 'all' is a special scanner that enables all scanners.
+ */
+
+void scanner_set::set_scanner_enabled(const std::string &name,bool enable)
 {
-    /* make an empty sbuf and feature recorder set */
-    const sbuf_t sbuf;
-    scanner_params sp(phase,sbuf,fs);
-    for(scanner_vector::iterator it = current_scanners.begin(); it!=current_scanners.end(); it++){
-        if((*it)->enabled){
-            recursion_control_block rcb(0,""); // dummy rcb
-            ((*it)->scanner)(sp,rcb);
+    for (auto it: current_scanners) {
+        /* If the scanner name matches, set its flag and return (we can only have one of each scanner) */
+        if (it->info.name==name) {
+            it->enabled = enable;
+            return;
         }
+        /* If name is 'all' and the NO_ALL flag is not set, set the scanner's enabled flag to enable */
+        if (name=="all" && ((it->info.flags & scanner_info::SCANNER_NO_ALL)==0)){
+            it->enabled = enable;
+        }
+    }
+    if (name!="all"){
+        /* Scanner wasn't found */
+        throw std::invalid_argument("Invalid scanner name" + name);
     }
 }
 
+void scanner_set::set_scanner_enabled_all(bool enable)
+{
+    for (auto it: current_scanners) {
+        it->enabled = enable;
+    }
+}
+
+/** Name of feature files that should be histogramed.
+ * The histogram should be done in the plug-in
+ */
+
+/****************************************************************
+ *** scanner plugin loading
+ ****************************************************************/
 scanner_t *plugin::find_scanner(const std::string &search_name)
 {
     for(scanner_vector::const_iterator it = current_scanners.begin();it!=current_scanners.end();it++){
@@ -337,7 +327,6 @@ void plugin::add_enabled_scanner_histograms_to_feature_recorder_set(feature_reco
 void plugin::scanners_init(feature_recorder_set &fs)
 {
     assert(scanner_commands_processed==true);
-    message_enabled_scanners(scanner_params::PHASE_INIT,fs); // tell all enabled scanners to init
 }
 
 
@@ -574,12 +563,13 @@ uint32_t plugin::get_max_depth_seen()
  * It is also the recursive entry point for sub-analysis.
  */
 
-void plugin::process_sbuf(const class scanner_params &sp)
+void plugin::process_sbuf(const class scanner_params &sp, unit32_t *max_depth_seen)
 {
     const pos0_t &pos0 = sp.sbuf.pos0;
     class feature_recorder_set &fs = sp.fs;
 
     //fs.heartbeat();                     // note that we are alive
+
 
     {
         /* note the maximum depth that we've seen */
@@ -595,14 +585,15 @@ void plugin::process_sbuf(const class scanner_params &sp)
     }
 
     /* Determine if we have seen this buffer before */
-    bool seen_before = fs.check_previously_processed(sp.sbuf.buf, sp.sbuf.bufsize);
-    if(seen_before){
+    bool seen_before = fs.check_previously_processed(sp.sbuf);
+    if (seen_before) {
         dfxml::md5_t md5 = dfxml::md5_generator::hash_buf(sp.sbuf.buf,sp.sbuf.bufsize);
         feature_recorder *alert_recorder = fs.get_alert_recorder();
         std::stringstream ss;
         ss << "<buflen>" << sp.sbuf.bufsize  << "</buflen>";
         if(alert_recorder && dup_data_alerts) alert_recorder->write(sp.sbuf.pos0,"DUP SBUF "+md5.hexdigest(),ss.str());
 #ifdef HAVE__SYNC_ADD_AND_FETCH
+        // TODO - replace with std::atomic<
         __sync_add_and_fetch(&dup_data_encountered,sp.sbuf.bufsize);
 #endif
     }
