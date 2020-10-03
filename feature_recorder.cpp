@@ -1,6 +1,7 @@
 /* -*- mode: C++; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 
 #include "config.h"
+#include "feature_recorder.h"
 #include "bulk_extractor_i.h"
 #include "unicode_escape.h"
 #include "histogram.h"
@@ -9,9 +10,8 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 
-#ifdef HAVE_STDARG_H
-#include <stdarg.h>
-#endif
+#include <cstdarg>
+#include <regex>
 
 #ifndef MAXPATHLEN
 #define MAXPATHLEN 65536
@@ -25,9 +25,6 @@
 #define DEBUG_PEDANTIC    0x0001// check values more rigorously
 #endif
 
-#ifndef WIN32
-pthread_t feature_recorder::main_threadid = 0;
-#endif
 size_t  feature_recorder::context_window_default=16;                    /* number of bytes of context */
 int64_t feature_recorder::offset_add   = 0;
 std::string  feature_recorder::banner_file;
@@ -42,22 +39,24 @@ uint32_t feature_recorder::debug=0;
  * permutated based on the total number of threads and the current
  * thread that's recording. Each thread records to a different file,
  * and thus a different feature recorder, to avoid locking
- * problems. 
+ * problems.
  *
  * @param feature_recorder_set &fs - common information for all of the feature recorders
  * @param name         - the name of the feature being recorded.
  */
 
+std::thread::id feature_recorder::main_thread_id = std::this_thread::get_id();
+
+
+
+/*
+ * constructor. Not it is called with the feature_recorder_set to which it belongs.
+ *
+ */
+//TODO - make it register itself with the feature recorder set. and do the stuff that's in init.
 feature_recorder::feature_recorder(class feature_recorder_set &fs_,
                                    const std::string &name_):
-    flags(0),
-    name(name_),ignore_encoding(),ios(),bs(),
-    histogram_defs(),
-    fs(fs_),
-    count_(0),context_window_before(context_window_default),context_window_after(context_window_default),
-    Mf(),Mr(),mhistograms(),mhistogram_limit(),
-    stop_list_recorder(0),
-    file_number_(0),carve_cache(),carve_mode(CARVE_ENCODED)
+    fs(fs_),name(name_)
 {
     //std::cerr << "feature_recorder(" << name << ") created\n";
     open();                         // open if we are created
@@ -93,13 +92,13 @@ void feature_recorder::banner_stamp(std::ostream &os,const std::string &header) 
     if(banner_lines==0){
         os << "# BANNER FILE NOT PROVIDED (-b option)\n";
     }
-    
+
     os << bulk_extractor_version_header;
     os << "# Feature-Recorder: " << name << "\n";
-    if(fs.get_input_fname().size()) os << "# Filename: " << fs.get_input_fname() << "\n";
-    if(debug!=0){
+    if (fs.get_input_fname().size()) os << "# Filename: " << fs.get_input_fname() << "\n";
+    if (feature_recorder::debug!=0){
         os << "# DEBUG: " << debug << " (";
-        if(debug & DEBUG_PEDANTIC) os << " DEBUG_PEDANTIC ";
+        if (feature_recorder::debug & DEBUG_PEDANTIC) os << " DEBUG_PEDANTIC ";
         os << ")\n";
     }
     os << header;
@@ -116,7 +115,7 @@ std::string feature_recorder::fname_counter(std::string suffix) const
 }
 
 
-const std::string &feature_recorder::get_outdir() const 
+const std::string &feature_recorder::get_outdir() const
 {
     return fs.get_outdir();
 }
@@ -127,17 +126,21 @@ const std::string &feature_recorder::get_outdir() const
  */
 
 void feature_recorder::open()
-{ 
+{
     if (fs.flag_set(feature_recorder_set::SET_DISABLED)) return;        // feature recorder set is disabled
 
+    std::cerr << "DDD  \n";
     /* write to a database? Create tables if necessary and create a prepared statement */
-    if (fs.flag_set(feature_recorder_set::ENABLE_SQLITE3_RECORDERS)) {  
+#ifdef BEAPI_SQLITE3
+    if (fs.flag_set(feature_recorder_set::ENABLE_SQLITE3_RECORDERS)) {
         char buf[1024];
         fs.db_create_table(name);
-        snprintf(buf,sizeof(buf),db_insert_stmt,name.c_str());
-        bs = new besql_stmt(fs.db3,buf);
+        snprintf( buf, sizeof(buf), db_insert_stmt,name.c_str() );
+        bs = new besql_stmt( fs.db3, buf );
     }
+#endif
 
+    std::cerr << "EEE  \n";
     /* Write to a file? Open the file and seek to the last line if it exist, otherwise just open database */
     if (fs.flag_notset(feature_recorder_set::DISABLE_FILE_RECORDERS)){
         /* Open the file recorder */
@@ -165,9 +168,10 @@ void feature_recorder::open()
         if(!ios.is_open()){
             std::cerr << "*** feature_recorder::open CANNOT OPEN FEATURE FILE FOR WRITING "
                       << fname << ":" << strerror(errno) << "\n";
-            exit(1);
+            throw std::invalid_argument("cannot open feature file for writing");
         }
     }
+    std::cerr << "FFF  \n";
 }
 
 void feature_recorder::close()
@@ -179,7 +183,7 @@ void feature_recorder::close()
 
 void feature_recorder::flush()
 {
-    cppmutex::lock lock(Mf);            // get the lock; released when object is deallocated.
+    std::lock_guard<std::mutex> lock(Mf);            // get the lock; released when object is deallocated.
     ios.flush();
 }
 
@@ -226,7 +230,7 @@ std::string feature_recorder::unquote_string(const std::string &s)
     if(len<4) return s;                 // too small for a quote
 
     std::string out;
-    for(size_t i=0;i<len;i++){
+    for (size_t i=0;i<len;i++){
         /* Look for octal coding */
         if(i+3<len && s[i]=='\\' && isodigit(s[i+1]) && isodigit(s[i+2]) && isodigit(s[i+3])){
             uint8_t code = (s[i+1]-'0') * 64 + (s[i+2]-'0') * 8 + (s[i+3]-'0');
@@ -282,8 +286,8 @@ void feature_recorder::set_memhist_limit(int64_t limit_)
 // add a memory histogram; assume the position in the mhistograms is stable
 void feature_recorder::enable_memory_histograms()
 {
-    for(histogram_defs_t::const_iterator it=histogram_defs.begin();it!=histogram_defs.end();it++){
-        mhistograms[*it] = new mhistogram_t(); 
+    for( auto it: histogram_defs){
+        mhistograms[it] = new mhistogram_t();
     }
 }
 
@@ -341,7 +345,9 @@ public:
 
 
 /** Dump a specific histogram */
-void feature_recorder::dump_histogram_file(const histogram_def &def,void *user,feature_recorder::dump_callback_t cb) const
+void feature_recorder::dump_histogram_file(const histogram_def &def,
+                                           void *user,
+                                           feature_recorder::dump_callback_t cb) const
 {
     /* This is a file based histogram. We will be reading from one file and writing to another */
     std::string ifname = fname_counter("");  // source of features
@@ -378,14 +384,13 @@ void feature_recorder::dump_histogram_file(const histogram_def &def,void *user,f
                 }
                 /** If there is a pattern to use to prune down the feature, use it */
                 if(def.pattern.size()){
-                    std::string new_feature = feature;
-                    if(!def.reg.search(feature,&new_feature,0,0)){
-                        // no search match; avoid this feature
-                        continue;               
+                    std::smatch sm;
+                    std::regex_search( feature, sm, def.reg);
+                    if (sm.size()>0) {
+                        feature = sm.str();
                     }
-                    feature = new_feature;
                 }
-        
+
                 /* Remove what follows after \t if this is a context file */
                 size_t tab=feature.find('\t');
                 if(tab!=std::string::npos) feature.erase(tab); // erase from tab to end
@@ -397,7 +402,7 @@ void feature_recorder::dump_histogram_file(const histogram_def &def,void *user,f
             std::cerr << "ERROR: " << e.what() << " generating histogram "
                       << name << "\n";
         }
-            
+
         /* Output what we have to a new file ofname */
         std::stringstream real_suffix;
 
@@ -435,7 +440,7 @@ void feature_recorder::dump_histogram_file(const histogram_def &def,void *user,f
 void feature_recorder::dump_histogram(const histogram_def &def,void *user,feature_recorder::dump_callback_t cb) const
 {
     /* Inform that we are dumping this histogram */
-    if(cb) cb(user,*this,def,"",0); 
+    if(cb) cb(user,*this,def,"",0);
 
     /* If this is a memory histogram, dump it and return */
     mhistograms_t::const_iterator it = mhistograms.find(def);
@@ -446,11 +451,11 @@ void feature_recorder::dump_histogram(const histogram_def &def,void *user,featur
         return;
     }
 
+#ifdef BEAPI_SQLITE3
     if (fs.flag_set(feature_recorder_set::ENABLE_SQLITE3_RECORDERS)) {
-        dump_histogram_db(def,user,cb);
+        dump_histogram_sqlite3(def,user,cb);
     }
-    
-
+#endif
     if (fs.flag_notset(feature_recorder_set::DISABLE_FILE_RECORDERS)) {
         dump_histogram_file(def,user,cb);
     }
@@ -472,9 +477,9 @@ void feature_recorder::dump_histograms(void *user,feature_recorder::dump_callbac
     /* Loop through all the histograms and dump each one.
      * This now works for both memory histograms and non-memory histograms.
      */
-    for(histogram_defs_t::const_iterator it = histogram_defs.begin();it!=histogram_defs.end();it++){
+    for (auto it:histogram_defs ){
         try {
-            dump_histogram((*it),user,cb);
+            dump_histogram((it),user,cb);
         }
         catch (const std::exception &e) {
             std::cerr << "ERROR: histogram " << name << ": " << e.what() << "\n";
@@ -519,7 +524,7 @@ void feature_recorder::write(const std::string &str)
         return;
     }
 
-    cppmutex::lock lock(Mf);
+    std::lock_guard<std::mutex> lock(Mf);
     if(ios.is_open()){
         if(count_==0){
             banner_stamp(ios,feature_file_header);
@@ -538,7 +543,7 @@ void feature_recorder::printf(const char *fmt, ...)
 {
     const int maxsize = 65536;
     managed_malloc<char>p(maxsize);
-    
+
     if(p.buf==0) return;
 
     va_list ap;
@@ -560,10 +565,12 @@ void feature_recorder::printf(const char *fmt, ...)
 
 void feature_recorder::write0(const pos0_t &pos0,const std::string &feature,const std::string &context)
 {
+#ifdef BEAPI_SQLITE3
     if ( fs.flag_set(feature_recorder_set::ENABLE_SQLITE3_RECORDERS ) &&
          this->flag_notset(feature_recorder::FLAG_NO_FEATURES_SQL) ) {
-        db_write0( pos0, feature, context);
+        write0_sqlite3( pos0, feature, context);
     }
+#endif
     if ( fs.flag_notset(feature_recorder_set::DISABLE_FILE_RECORDERS )) {
         std::stringstream ss;
         ss << pos0.shift( feature_recorder::offset_add).str() << '\t' << feature;
@@ -594,10 +601,10 @@ void feature_recorder::quote_if_necessary(std::string &feature,std::string &cont
         escape_backslash = false;
     }
 
-    feature = validateOrEscapeUTF8(feature, escape_bad_utf8,escape_backslash);
+    feature = validateOrEscapeUTF8(feature, escape_bad_utf8,escape_backslash,validateOrEscapeUTF8_validate);
     if(feature.size() > opt_max_feature_size) feature.resize(opt_max_feature_size);
     if(flag_notset(FLAG_NO_CONTEXT)){
-        context = validateOrEscapeUTF8(context,escape_bad_utf8,escape_backslash);
+        context = validateOrEscapeUTF8(context,escape_bad_utf8,escape_backslash,validateOrEscapeUTF8_validate);
         if(context.size() > opt_max_context_size) context.resize(opt_max_context_size);
     }
 }
@@ -644,12 +651,12 @@ void feature_recorder::write(const pos0_t &pos0,const std::string &feature_,cons
             if(context[i]=='\r') assert(0);
         }
     }
-        
+
     /* First check to see if the feature is on the stop list.
      * Only do this if we have a stop_list_recorder (the stop list recorder itself
      * does not have a stop list recorder. If it did we would infinitely recurse.
      */
-    if(flag_notset(FLAG_NO_STOPLIST) && stop_list_recorder){          
+    if(flag_notset(FLAG_NO_STOPLIST) && stop_list_recorder){
         if(fs.stop_list
            && fs.stop_list->check_feature_context(*feature_utf8,context)){
             stop_list_recorder->write(pos0,feature,context);
@@ -665,7 +672,7 @@ void feature_recorder::write(const pos0_t &pos0,const std::string &feature_,cons
        && fs.alert_list
        && fs.alert_list->check_feature_context(*feature_utf8,context)){
         std::string alert_fn = fs.get_outdir() + "/ALERTS_found.txt";
-        cppmutex::lock lock(Mr);                // notice we are locking the alert list
+        std::lock_guard<std::mutex> lock(Mr);                // notice we are locking the alert list
         std::ofstream rf(alert_fn.c_str(),std::ios_base::app);
         if(rf.is_open()){
             rf << pos0.shift(feature_recorder::offset_add).str() << '\t' << feature << '\t' << "\n";
@@ -673,16 +680,21 @@ void feature_recorder::write(const pos0_t &pos0,const std::string &feature_,cons
     }
 
     /* Support in-memory histograms */
-    for(mhistograms_t::iterator it = mhistograms.begin(); it!=mhistograms.end();it++){
-        const histogram_def &def = it->first;
-        mhistogram_t *m = it->second;
+    for (auto it:mhistograms ){
+        const histogram_def &def = it.first;
+        mhistogram_t *m = it.second;
         std::string new_feature = *feature_utf8;
         if(def.require.size()==0 || new_feature.find_first_of(def.require)!=std::string::npos){
-            /* If there is a pattern to use, use it */
+            /* If there is a pattern to use, use it to simplify the feature */
             if(def.pattern.size()){
-                if(!def.reg.search(new_feature,&new_feature,0,0)){
+                std::smatch sm;
+                std::regex_search( new_feature, sm, def.reg);
+                if (sm.size() == 0){
                     // no search match; avoid this feature
                     new_feature = "";
+                }
+                else {
+                    new_feature = sm.str();
                 }
             }
             if(new_feature.size()) m->add(new_feature,1);
@@ -739,7 +751,7 @@ void feature_recorder::write_buf(const sbuf_t &sbuf,size_t pos,size_t len)
         /* Context write; create a clean context */
         size_t p0 = context_window_before < pos ? pos-context_window_before : 0;
         size_t p1 = pos+len+context_window_after;
-        
+
         if(p1>sbuf.bufsize) p1 = sbuf.bufsize;
         assert(p0<=p1);
         context = sbuf.substr(p0,p1-p0);
@@ -794,13 +806,18 @@ std::string valid_dosname(std::string in)
     }
     return out;
 }
-        
+
 
 //const feature_recorder::hash_def &feature_recorder::hasher()
 //{
 //    return fs.hasher;
 //}
 
+
+const std::string feature_recorder::hash(const unsigned char *buf, size_t buffsize)
+{
+    return (*fs.hasher.func)(buf,buffsize);
+}
 
 
 #include <iomanip>
@@ -820,7 +837,7 @@ std::string feature_recorder::carve(const sbuf_t &sbuf,size_t pos,size_t len,
         return std::string();
     }
     assert(pos < sbuf.bufsize);
-    
+
 
 
     /* Carve to a file depending on the carving mode.  The purpose
@@ -856,7 +873,7 @@ std::string feature_recorder::carve(const sbuf_t &sbuf,size_t pos,size_t len,
      */
 
     sbuf_t cbuf(sbuf,pos,len);          // the buf we are going to carve
-    std::string carved_hash_hexvalue = (*fs.hasher.func)(cbuf.buf,cbuf.bufsize);
+    std::string carved_hash_hexvalue = hash(cbuf.buf, cbuf.bufsize);
 
     /* See if this is in the cache */
     bool in_cache = carve_cache.check_for_presence_and_insert(carved_hash_hexvalue);
@@ -868,9 +885,9 @@ std::string feature_recorder::carve(const sbuf_t &sbuf,size_t pos,size_t len,
     std::stringstream ss;
     ss << dirname1 << "/" << std::setw(3) << std::setfill('0') << (this_file_number / 1000);
 
-    std::string dirname2 = ss.str(); 
+    std::string dirname2 = ss.str();
     std::string fname         = dirname2 + std::string("/") + valid_dosname(cbuf.pos0.str() + ext);
-    std::string fname_feature = fname.substr(fs.get_outdir().size()+1); 
+    std::string fname_feature = fname.substr(fs.get_outdir().size()+1);
 
     /* Record what was found in the feature file.
      */
@@ -886,7 +903,7 @@ std::string feature_recorder::carve(const sbuf_t &sbuf,size_t pos,size_t len,
     ss << "<filesize>" << len << "</filesize>";
     ss << "<hashdigest type='" << fs.hasher.name << "'>" << carved_hash_hexvalue << "</hashdigest></fileobject>";
     this->write(cbuf.pos0,fname_feature,ss.str());
-    
+
     if (in_cache) return fname;               // do not make directories or write out if we are cached
 
     /* Make the directory if it doesn't exist.  */
@@ -894,7 +911,7 @@ std::string feature_recorder::carve(const sbuf_t &sbuf,size_t pos,size_t len,
 #ifdef WIN32
         mkdir(dirname1.c_str());
         mkdir(dirname2.c_str());
-#else   
+#else
         mkdir(dirname1.c_str(),0777);
         mkdir(dirname2.c_str(),0777);
 #endif
@@ -925,7 +942,7 @@ std::string feature_recorder::carve(const sbuf_t &sbuf,size_t pos,size_t len,
     return fname;
 }
 
-/* 
+/*
  This is based on feature_recorder::carve and append carving record to specified filename
  */
 std::string feature_recorder::carve_records(const sbuf_t &sbuf, size_t pos, size_t len,
@@ -947,10 +964,10 @@ std::string feature_recorder::carve_records(const sbuf_t &sbuf, size_t pos, size
 
     std::stringstream ss;
     ss << dirname1;
-   
-    std::string dirname2 = ss.str(); 
+
+    std::string dirname2 = ss.str();
     std::string fname = dirname2 + std::string("/") + valid_dosname(filename);
-    std::string fname_feature = fname.substr(fs.get_outdir().size()+1); 
+    std::string fname_feature = fname.substr(fs.get_outdir().size()+1);
 
     //    std::string fname = dirname2 + std::string("/") + valid_dosname(cbuf.pos0.str() + ext);
     //std::string fname_feature = fname.substr(fs.get_outdir().size()+1);
@@ -966,7 +983,7 @@ std::string feature_recorder::carve_records(const sbuf_t &sbuf, size_t pos, size
     ss.str(std::string()); // clear the stringstream
     ss << len;
     this->write(cbuf.pos0,fname_feature,ss.str());
-    
+
     if (in_cache) return fname;               // do not make directories or write out if we are cached
 
     /* Make the directory if it doesn't exist.  */
@@ -974,7 +991,7 @@ std::string feature_recorder::carve_records(const sbuf_t &sbuf, size_t pos, size
 #ifdef WIN32
         mkdir(dirname1.c_str());
         mkdir(dirname2.c_str());
-#else   
+#else
         mkdir(dirname1.c_str(),0777);
         mkdir(dirname2.c_str(),0777);
 #endif
@@ -987,7 +1004,7 @@ std::string feature_recorder::carve_records(const sbuf_t &sbuf, size_t pos, size
     }
 
     // To control multiple thread writing
-    cppmutex::lock lock(Mf);
+    std::lock_guard<std::mutex> lock(Mf);
 
     /* Write the file into the directory */
     int fd = ::open(fname.c_str(),O_APPEND|O_CREAT|O_BINARY|O_RDWR,0666);
@@ -1004,7 +1021,7 @@ std::string feature_recorder::carve_records(const sbuf_t &sbuf, size_t pos, size
     return fname;
 }
 
-/* 
+/*
  write buffer to specified dirname/filename for writing data
  */
 std::string feature_recorder::write_data(unsigned char *data, size_t len, const std::string &filename)
@@ -1012,7 +1029,7 @@ std::string feature_recorder::write_data(unsigned char *data, size_t len, const 
     std::string dirname1 = fs.get_outdir()  + "/" + name;
     std::stringstream ss;
     ss << dirname1;
-    std::string dirname2 = ss.str(); 
+    std::string dirname2 = ss.str();
     std::string fname = dirname2 + std::string("/") + valid_dosname(filename);
 
     /* Make the directory if it doesn't exist.  */
@@ -1020,7 +1037,7 @@ std::string feature_recorder::write_data(unsigned char *data, size_t len, const 
 #ifdef WIN32
         mkdir(dirname1.c_str());
         mkdir(dirname2.c_str());
-#else   
+#else
         mkdir(dirname1.c_str(),0777);
         mkdir(dirname2.c_str(),0777);
 #endif
@@ -1033,7 +1050,7 @@ std::string feature_recorder::write_data(unsigned char *data, size_t len, const 
     }
 
     // To control multiple thread writing
-    cppmutex::lock lock(Mf);
+    std::lock_guard<std::mutex> lock(Mf);
 
     /* Write the file into the directory */
     int fd = ::open(fname.c_str(),O_CREAT|O_BINARY|O_RDWR,0666);
@@ -1053,7 +1070,7 @@ std::string feature_recorder::write_data(unsigned char *data, size_t len, const 
 /**
  * Currently, we need strptime() and utimes() to set the time.
  */
-void feature_recorder::set_carve_mtime(const std::string &fname, const std::string &mtime_iso8601) 
+void feature_recorder::set_carve_mtime(const std::string &fname, const std::string &mtime_iso8601)
 {
     if(flags & FLAG_DISABLED) return;           // disabled
 #if defined(HAVE_STRPTIME) && defined(HAVE_UTIMES)
@@ -1070,3 +1087,166 @@ void feature_recorder::set_carve_mtime(const std::string &fname, const std::stri
 #endif
 }
 
+#ifdef BEAPI_SQLITE3
+/*** SQL Routines Follow ***
+ *
+ * Time results with ubnist1 on R4:
+ * no SQL - 79 seconds
+ * no pragmas - 651 seconds
+ * "PRAGMA synchronous =  OFF", - 146 second
+ * "PRAGMA synchronous =  OFF", "PRAGMA journal_mode=MEMORY", - 79 seconds
+ *
+ * Time with domexusers:
+ * no SQL -
+ */
+
+#define SQLITE_EXTENSION ".sqlite"
+#ifndef SQLITE_DETERMINISTIC
+#define SQLITE_DETERMINISTIC 0
+#endif
+
+/* This creates the base histogram. Note that the SQL fails if the histogram exists */
+static const char *schema_hist[] = {
+    "CREATE TABLE h_%s (count INTEGER(12), feature_utf8 TEXT)",
+    "CREATE INDEX h_%s_idx1 ON h_%s(count)",
+    "CREATE INDEX h_%s_idx2 ON h_%s(feature_utf8)",
+    0};
+
+/* This performs the histogram operation */
+static const char *schema_hist1[] = {
+    "INSERT INTO h_%s select COUNT(*),feature_utf8 from f_%s GROUP BY feature_utf8",
+    0};
+
+#ifdef HAVE_SQLITE3_CREATE_FUNCTION_V2
+static const char *schema_hist2[] = {
+    "INSERT INTO h_%s select sum(count),BEHIST(feature_utf8) from h_%s where BEHIST(feature_utf8)!='' GROUP BY BEHIST(feature_utf8)",
+    0};
+#endif
+
+
+#define DB_INSERT_STMT "INSERT INTO f_%s (offset,path,feature_eutf8,feature_utf8,context_eutf8) VALUES (?1, ?2, ?3, ?4, ?5)"
+const char *feature_recorder::db_insert_stmt = DB_INSERT_STMT;
+
+void feature_recorder::besql_stmt::insert_feature(const pos0_t &pos,
+                                                        const std::string &feature,
+                                                        const std::string &feature8, const std::string &context)
+{
+    assert(stmt!=0);
+    std::lock_guard<std::mutex> lock(Mstmt);           // grab a lock
+    const std::string &path = pos.str();
+    sqlite3_bind_int64(stmt, 1, pos.imageOffset()); // offset
+    sqlite3_bind_text(stmt, 2, path.data(), path.size(), SQLITE_STATIC); // path
+    sqlite3_bind_text(stmt, 3, feature.data(), feature.size(), SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 4, feature8.data(), feature8.size(), SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 5, context.data(), context.size(), SQLITE_STATIC);
+    if (sqlite3_step(stmt) != SQLITE_DONE) {
+        fprintf(stderr,"sqlite3_step failed\n");
+    }
+    sqlite3_reset(stmt);
+};
+
+feature_recorder::besql_stmt::besql_stmt(BEAPI_SQLITE3 *db3,const char *sql):Mstmt(),stmt()
+{
+    assert(db3!=0);
+    assert(sql!=0);
+    sqlite3_prepare_v2(db3,sql, strlen(sql), &stmt, NULL);
+    assert(stmt!=0);
+}
+
+feature_recorder::besql_stmt::~besql_stmt()
+{
+    assert(stmt!=0);
+    sqlite3_finalize(stmt);
+    stmt = 0;
+}
+
+/* Hook for writing feature to SQLite3 database */
+void feature_recorder::write0_sqlite3(const pos0_t &pos0,const std::string &feature,const std::string &context)
+{
+    /**
+     * Note: this is not very efficient, passing through a quoted feature and then unquoting it.
+     * We could make this more efficient.
+     */
+    std::string *feature8 = HistogramMaker::convert_utf16_to_utf8(feature_recorder::unquote_string(feature));
+    assert(bs!=0);
+    bs->insert_feature(pos0,feature,
+                         feature8 ? *feature8 : feature,
+                         flag_set(feature_recorder::FLAG_NO_CONTEXT) ? "" : context);
+    if (feature8) delete feature8;
+}
+
+/* Hook for writing histogram
+ */
+static int callback_counter(void *param, int argc, char **argv, char **azColName)
+{
+    int *counter = reinterpret_cast<int *>(param);
+    (*counter)++;
+    return 0;
+}
+
+static void dump_hist(sqlite3_context *ctx,int argc,sqlite3_value**argv)
+{
+    const histogram_def *def = reinterpret_cast<const histogram_def *>(sqlite3_user_data(ctx));
+
+#ifdef DEBUG
+    std::cerr << "behist feature=" << def->feature << "  suffix="
+              << def->suffix << "  argc=" << argc << "value = " << sqlite3_value_text(argv[0]) << "\n";
+#endif
+    std::string new_feature(reinterpret_cast<const char *>(sqlite3_value_text(argv[0])));
+    std::smatch sm;
+    std::regex_search( new_feature, sm, def->reg);
+    if (sm.size() > 0){
+        new_feature = sm.str();
+        sqlite3_result_text(ctx,new_feature.c_str(),new_feature.size(),SQLITE_TRANSIENT);
+    }
+}
+
+void feature_recorder::dump_histogram_sqlite3(const histogram_def &def,void *user,feature_recorder::dump_callback_t cb) const
+{
+    /* First check to see if there exists a feature histogram summary. If not, make it */
+    std::string query = "SELECT name FROM sqlite_master WHERE type='table' AND name='h_" + def.feature +"'";
+    char *errmsg=0;
+    int rowcount=0;
+    if ( sqlite3_exec(fs.db3,query.c_str(),callback_counter,&rowcount,&errmsg)){
+        std::cerr << "sqlite3: " << errmsg << "\n";
+        return;
+    }
+    if (rowcount==0){
+        const char *feature = def.feature.c_str();
+        fs.db_send_sql( fs.db3, schema_hist, feature, feature); // creates the histogram
+        fs.db_send_sql( fs.db3, schema_hist1, feature, feature); // creates the histogram
+    }
+#ifdef HAVE_SQLITE3_CREATE_FUNCTION_V2
+    /* Now create the summarized histogram for the regex, if it is not existing, but only if we have
+     * sqlite3_create_function_v2
+     */
+    if (def.pattern.size()>0){
+        /* Create the database where we will add the histogram */
+        std::string hname = def.feature + "_" + def.suffix;
+
+        /* Remove any "-" characters if present */
+        for(size_t i=0;i<hname.size();i++){
+            if (hname[i]=='-') hname[i]='_';
+        }
+
+        if(debug) std::cerr << "CREATING TABLE = " << hname << "\n";
+        if (sqlite3_create_function_v2(fs.db3,"BEHIST",1,SQLITE_UTF8|SQLITE_DETERMINISTIC,
+                                       (void *)&def,dump_hist,0,0,0)) {
+            std::cerr << "could not register function BEHIST\n";
+            return;
+        }
+        const char *fn = def.feature.c_str();
+        const char *hn = hname.c_str();
+        fs.db_send_sql(fs.db3,schema_hist, hn , hn); // create the table
+        fs.db_send_sql(fs.db3,schema_hist2, hn , fn); // select into it from a function of the old histogram table
+
+        /* erase the user defined function */
+        if (sqlite3_create_function_v2(fs.db3,"BEHIST",1,SQLITE_UTF8|SQLITE_DETERMINISTIC,
+                                       (void *)&def,0,0,0,0)) {
+            std::cerr << "could not remove function BEHIST\n";
+            return;
+        }
+    }
+#endif
+}
+#endif

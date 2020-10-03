@@ -9,7 +9,6 @@
  *
  * @author Simson Garfinkel
  *
- *
  * The software provided here is released by the Naval Postgraduate
  * School, an agency of the U.S. Department of Navy.  The software
  * bears no warranty, either expressed or implied. NPS does not assume
@@ -25,30 +24,15 @@
  * not subject to copyright.
  */
 
-#ifndef PACKAGE_NAME
-#include "config.h"
-#endif
-
-#include "unicode_escape.h"
-
-#include <stdio.h>
-#include <assert.h>
+#include <cstdio>
+#include <cassert>
 #include <iostream>
 #include <fstream>
+#include <cstdint>
 
-#ifndef __STDC_FORMAT_MACROS
-#define __STDC_FORMAT_MACROS
-#endif
-
-#ifdef HAVE_STDINT_H
-#include <stdint.h>
-#endif
-
-#define IS_IN_RANGE(c, f, l)    (((c) >= (f)) && ((c) <= (l)))
-
+#include "config.h"
+#include "unicode_escape.h"
 #include "utf8.h"
-
-//extern int debug;
 
 std::string hexesc(unsigned char ch)
 {
@@ -113,19 +97,21 @@ bool valid_utf8codepoint(uint32_t unichar)
  *   - UTF8 string.  If do_escape is set, then corruptions are escaped in \xFF notation where FF is a hex character.
  */
 
-//int count=0;
-bool validateOrEscapeUTF8_validate=false;
-std::string validateOrEscapeUTF8(const std::string &input, bool escape_bad_utf8,bool escape_backslash)
+std::string validateOrEscapeUTF8(const std::string &input,
+                                 bool escape_bad_utf8,
+                                 bool escape_backslash,
+                                 bool validateOrEscapeUTF8_validate)
 {
-    // 
     // skip the validation if not escaping and not DEBUG_PEDANTIC
-    if (escape_bad_utf8==false && escape_backslash==false && !validateOrEscapeUTF8_validate){
+    if (escape_bad_utf8==false
+        && escape_backslash==false
+        && !validateOrEscapeUTF8_validate){
         return input;
     }
         
     // validate or escape input
     std::string output;
-    for(std::string::size_type i =0; i< input.length(); ) {
+    for(std::string::size_type i = 0; i< input.length(); ) {
         uint8_t ch = (uint8_t)input.at(i);
         
         // utf8 1 byte prefix (0xxx xxxx)
@@ -220,113 +206,3 @@ std::string validateOrEscapeUTF8(const std::string &input, bool escape_bad_utf8,
     return output;
 }
 
-#ifdef STANDALONE
-
-void show(const std::string &ugly)
-{
-    for(size_t j=0;j<ugly.size();j++){
-        printf("%02X ",(unsigned char)ugly[j]);
-    }
-}
-
-void check(const std::string &ugly,bool verbose)
-{
-    std::string res = validateOrEscapeUTF8(ugly,true);
-    std::wstring utf16;
-    /* Now check to make sure it is valid UTF8 */
-    try {
-        utf8::utf8to16(res.begin(),res.end(),std::back_inserter(utf16));
-        if(verbose){
-            show(ugly);
-            printf(" successfully encodes as ");
-            show(res);
-            printf(" (\"%s\")\n",res.c_str());
-        }
-    } catch(utf8::exception){
-        printf("utf8 error hex sequence: ");
-        show(ugly);
-        printf(" encoded as: ");
-        show(res);
-        printf("\n");
-    } catch(std::exception){
-        std::cout << "other exception \n";
-    }
-}
-
-void testfile(const char *fn)
-{
-    validateOrEscapeUTF8_validate = true;
-
-    std::cout << "testing file " << fn << "\n";
-    ifstream i(fn);
-    if(i.is_open()){
-        string line;
-        getline(i,line);
-        std::cout << "line length: " << line.size() << "\n";
-        std::cout << "calling ValidateOrEscapeUTF8 to escape...\n";
-        string l2 = validateOrEscapeUTF8(line,true);
-        std::cout << "     length l2: " << l2.size() << "\n";
-        std::cout << "calling ValidateOrEscapeUTF8 to validate...\n";
-        validateOrEscapeUTF8(l2,false);
-        std::cout << "calling check...\n";
-        check(l2,false);
-    }
-    std::cout << "done\n";
-    exit(0);
-}
-
-int main(int argc,char **argv)
-{
-    std::cout << "Unicode Escape Regression Tester\n";
-    int ch;
-    while ((ch = getopt(argc,argv,"r:h")) != -1){
-        switch(ch) {
-        case 'r':
-            testfile(optarg);
-            break;
-        }
-    }
-
-
-    const char buf[] = {0xef, 0xbe, 0xad, 0x5c};
-    check(std::string(buf,1),true);
-    check(std::string(buf,2),true);
-    check(std::string(buf,3),true);
-    check(std::string(buf,4),true);
-
-    /* Runs 16 copies simultaneously... */
-    uint32_t max=0xFFFFFFFF;            // 2^32-1
-    for(uint64_t prefix=0;prefix<max;prefix+=0x10000000){
-        pid_t child = fork();
-        if(child==0){
-            /* Try all 4-byte sequences in the prefix range...*/
-            for(uint32_t k=0;k<=0x0FFFFFFF;k++){
-                uint32_t i=prefix+k;
-                std::string ugly((char *)&i,4);
-                check(ugly,false);
-                if((i & 0x00FFFFFF)==0x00FFFFFF){
-                    printf("pid=%d prefix=%x i=%x\n",getpid(),(uint32_t)prefix,(uint32_t)i);
-                    fflush(stdout);
-                }
-            }
-            exit(0);
-        }
-        printf("Launched PID %d\n",child);
-        fflush(stdout);
-    }
-    for(int i=0;i<16;i++){
-        int s=0;
-        pid_t p = wait(&s);
-        printf("pid %d finished with exit code %d\n",p,s);
-    }
-    std::cout << "done\n";
-    exit(1);
-
-    /* Generic fuzzing. Try random attempts */
-    std::string line;
-    while(getline(std::cin,line)){
-        std::cout << validateOrEscapeUTF8(line,true) << "\n";
-    }
-        
-}
-#endif
