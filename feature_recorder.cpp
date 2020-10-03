@@ -56,17 +56,7 @@ std::thread::id feature_recorder::main_thread_id = std::this_thread::get_id();
 //TODO - make it register itself with the feature recorder set. and do the stuff that's in init.
 feature_recorder::feature_recorder(class feature_recorder_set &fs_,
                                    const std::string &name_):
-    flags(0),
-    name(name_),
-    validateOrEscapeUTF8_validate(true),
-    ignore_encoding(),ios(),bs(),
-    histogram_defs(),
-    fs(fs_),
-    count_(0),
-    context_window_before(context_window_default),context_window_after(context_window_default),
-    Mf(),Mr(),mhistograms(),mhistogram_limit(),
-    stop_list_recorder(0),
-    file_number_(0),carve_cache(),carve_mode(CARVE_ENCODED)
+    fs(fs_),name(name_)
 {
     //std::cerr << "feature_recorder(" << name << ") created\n";
     open();                         // open if we are created

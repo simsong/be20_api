@@ -55,15 +55,7 @@ feature_recorder_set::hash_func_t feature_recorder_set::hash_def::hash_func_for_
  */
 feature_recorder_set::feature_recorder_set(uint32_t flags_,const std::string hash_algorithm,
                                            const std::string &input_fname_,const std::string &outdir_):
-    flags(flags_),seen_set(),input_fname(input_fname_),
-    outdir(outdir_),
-    frm(),
-    Mscanner_stats(),
-    histogram_defs(),
-    Min_transaction(),in_transaction(),
-    db3(),
-    alert_list(),stop_list(),
-    scanner_stats(),
+    flags(flags_), input_fname(input_fname_), outdir(outdir_),
     hasher( hash_def(hash_algorithm, hash_def::hash_func_for_name(hash_algorithm)))
 {
     if (outdir.size() == 0){

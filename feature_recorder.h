@@ -119,17 +119,16 @@ class feature_recorder {
     feature_recorder &operator=(const feature_recorder &)=delete;
 
     static uint32_t debug;              // are we debugging?
-    uint32_t        flags;              // flags for this feature recorder
+    uint32_t        flags {0};              // flags for this feature recorder
     /****************************************************************/
 
 public:
 #ifdef BEAPI_SQLITE3
-    class besql_stmt {
+    struct besql_stmt {
         besql_stmt(const besql_stmt &)=delete;
         besql_stmt &operator=(const besql_stmt &)=delete;
-public:
-        std::mutex         Mstmt;
-        BEAPI_SQLITE3_STMT *stmt;      // the prepared statement
+        std::mutex         Mstmt {};
+        BEAPI_SQLITE3_STMT *stmt {};      // the prepared statement
         besql_stmt(BEAPI_SQLITE3 *db3,const char *sql);
         virtual ~besql_stmt();
         void insert_feature(const pos0_t &pos, // insert it into this table!
@@ -197,37 +196,34 @@ public:
     virtual const std::string &get_outdir() const;
 
     static size_t context_window_default; // global option
-    const  std::string name;                  // name of this feature recorder
-    bool   validateOrEscapeUTF8_validate;     // should we validate or escape the HTML?
+    class  feature_recorder_set &fs;              // the set in which this feature_recorder resides
+    const  std::string name {};                   // name of this feature recorder
+    bool   validateOrEscapeUTF8_validate { true };     // should we validate or escape the HTML?
 
 private:
-    std::string  ignore_encoding;            // encoding to ignore for carving
-    std::fstream ios;                        // where features are written
+    std::string  ignore_encoding {};            // encoding to ignore for carving
+    std::fstream ios {};                        // where features are written
 
 #ifdef BEAPI_SQLITE3
     class besql_stmt *bs;                    // prepared beapi sql statement
-#else
-    void             *bs;                    // or place-hodler pointer
 #endif
 
 protected:;
-    histogram_defs_t      histogram_defs;    // histograms that are to be created for this feature recorder
-public:
-    class        feature_recorder_set &fs;   // the set in which this feature_recorder resides
+    histogram_defs_t      histogram_defs {};    // histograms that are to be created for this feature recorder
 protected:
-    std::atomic<int64_t>      count_;                     /* number of records written */
-    size_t       context_window_before;      // context window
-    size_t       context_window_after;       // context window
+    std::atomic<int64_t>      count_ {};                     /* number of records written */
+    size_t       context_window_before {context_window_default};      // context window
+    size_t       context_window_after {context_window_default};       // context window
 
-    mutable std::mutex Mf;      // protects the file  & file_number_
-    mutable std::mutex Mr;                     // protects the redlist
-    mhistograms_t mhistograms;               // the memory histograms, if we are using them
-    uint64_t      mhistogram_limit;          // how many we want (per feature recorder limit, rather than per histogram)
+    mutable std::mutex Mf {};      // protects the file  & file_number_
+    mutable std::mutex Mr {};                     // protects the redlist
+    mhistograms_t mhistograms {};               // the memory histograms, if we are using them
+    uint64_t      mhistogram_limit {};          // how many we want (per feature recorder limit, rather than per histogram)
 
 
-    class feature_recorder *stop_list_recorder; // where stopped features get written
-    std::atomic<int64_t>   file_number_;            /* starts at 0; gets incremented by carve(); */
-    carve_cache_t          carve_cache;
+    class feature_recorder *stop_list_recorder {}; // where stopped features get written
+    std::atomic<int64_t>   file_number_ {};            /* starts at 0; gets incremented by carve(); */
+    carve_cache_t          carve_cache {};
 public:
     /* these are not threadsafe and should only be called in startup */
     void MAINTHREAD() {        assert( main_thread_id == std::this_thread::get_id() ); }
@@ -341,7 +337,7 @@ public:
         CARVE_ENCODED=1,
         CARVE_ALL=2};
 #define CARVE_MODE_DESCRIPTION "0=carve none; 1=carve encoded; 2=carve all"
-    carve_mode_t carve_mode;
+    carve_mode_t carve_mode { CARVE_ENCODED};
     typedef      std::string (*hashing_function_t)( const sbuf_t &sbuf); // returns a hex value
     void         set_carve_mode(carve_mode_t aMode){ MAINTHREAD();carve_mode=aMode;}
 
