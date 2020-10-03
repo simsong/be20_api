@@ -89,9 +89,12 @@ feature_recorder_set::feature_recorder_set(uint32_t flags_,const std::string has
 
     message_enabled_scanners(scanner_params::PHASE_INIT); // tell all enabled scanners to init
 
+#ifdef BEAPI_SQLITE3
     if (flag_set(ENABLE_SQLITE3_RECORDERS)) {
         db_create();
     }
+#endif
+
 
     /* Create the requested feature files */
     for( auto it:feature_files){
@@ -108,7 +111,9 @@ feature_recorder_set::~feature_recorder_set()
     for ( auto it:frm ){
         delete it.second;
     }
+#ifdef BEAPI_SQLITE3
     db_close();
+#endif
 }
 
 
@@ -161,9 +166,11 @@ void feature_recorder_set::close_all()
     for (auto it:frm){
         it.second->close();
     }
+#ifdef BEAPI_SQLITE3
     if ( flag_set(feature_recorder_set::ENABLE_SQLITE3_RECORDERS )) {
         db_transaction_commit();
     }
+#endif
 }
 
 
@@ -347,6 +354,8 @@ void feature_recorder_set::get_feature_file_list(std::vector<std::string> &ret)
 }
 
 
+#ifdef BEAPI_SQLITE3
+
 /*** SQL Support ***/
 
 /*
@@ -470,3 +479,5 @@ void feature_recorder_set::db_transaction_commit()
         std::cerr << "No transaction to commit\n";
     }
 }
+
+#endif
