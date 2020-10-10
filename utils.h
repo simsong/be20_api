@@ -52,7 +52,6 @@ void gmtime_r(time_t *t,struct tm *tm);
 int64_t get_filesize(int fd);
 
 #ifndef HAVE_ISHEXNUMBER
-int ishexnumber(int c);
 inline int ishexnumber(int c)
 {
     switch(c){

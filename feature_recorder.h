@@ -1,7 +1,11 @@
-/* -*- mode: C++; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 
 #ifndef FEATURE_RECORDER_H
 #define FEATURE_RECORDER_H
+
+#ifndef BULK_EXTRACTOR_I_H
+#error "Don't include this file directly; include bulk_extractor_i.h."
+#endif
+
 
 /**
  * \addtogroup bulk_extractor_APIs
@@ -33,27 +37,6 @@
  * The file assumes that bulk_extractor.h is being included.
  */
 
-#include <cassert>
-#include <cstdarg>
-
-#include <atomic>
-#include <fstream>
-#include <map>
-#include <set>
-#include <string>
-#include <thread>
-
-#ifdef HAVE_SQLITE3_H
-#include <sqlite3.h>
-#define BEAPI_SQLITE3 sqlite3
-#define BEAPI_SQLITE3_STMT sqlite3_stmt
-#endif
-
-#include "dfxml/src/dfxml_writer.h"
-#include "dfxml/src/hash_t.h"
-#include "atomic_set_map.h"
-#include "regex_vector.h"
-#include "sbuf.h"
 
 /**
  * histogram_def defines the histograms that will be made by a feature recorder.

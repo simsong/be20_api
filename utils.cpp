@@ -1,53 +1,57 @@
 /**
- * A collection of utility functions that are useful.
+ * A collection of utility functions that are typically provided,
+ * but which are missing in some implementations.
  */
 
 // Just for this module
 #define _FILE_OFFSET_BITS 64
 
 /* required per C++ standard */
-#ifndef __STDC_FORMAT_MACROS
-#define __STDC_FORMAT_MACROS
-#endif
+//#ifndef __STDC_FORMAT_MACROS
+//#define __STDC_FORMAT_MACROS
+//#endif
 
 #include "config.h"
 #include "utils.h"
 
 #include <cstdarg>
+#include <cstdio>
+#include <cerrno>
+
+#include <mutex>
+#include <sstream>
 
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #endif
 
-#include <stdio.h>
-#include <errno.h>
 
-#include <mutex>
-#include <sstream>
 
 #ifndef HAVE_ERR
 void err(int eval,const char *fmt,...)
 {
-  va_list ap;
-  va_start(ap,fmt);
-  vfprintf(stderr,fmt,ap);
-  va_end(ap);
-  fprintf(stderr,": %s\n",strerror(errno));
-  exit(eval);
+    va_list ap;
+    va_start(ap,fmt);
+    vfprintf(stderr,fmt,ap);
+    va_end(ap);
+    fprintf(stderr,": %s\n",strerror(errno));
+    exit(eval);
 }
 #endif
+
 
 #ifndef HAVE_ERRX
 void errx(int eval,const char *fmt,...)
 {
-  va_list ap;
-  va_start(ap,fmt);
-  vfprintf(stderr,fmt,ap);
-  fprintf(stderr,"%s\n",strerror(errno));
-  va_end(ap);
-  exit(eval);
+    va_list ap;
+    va_start(ap,fmt);
+    vfprintf(stderr,fmt,ap);
+    fprintf(stderr,"%s\n",strerror(errno));
+    va_end(ap);
+    exit(eval);
 }
 #endif
+
 
 #ifndef HAVE_WARN
 void	warn(const char *fmt, ...)
@@ -59,13 +63,14 @@ void	warn(const char *fmt, ...)
 }
 #endif
 
+
 #ifndef HAVE_WARNX
 void warnx(const char *fmt,...)
 {
-  va_list ap;
-  va_start(ap,fmt);
-  vfprintf(stderr,fmt,ap);
-  va_end(ap);
+    va_list ap;
+    va_start(ap,fmt);
+    vfprintf(stderr,fmt,ap);
+    va_end(ap);
 }
 #endif
 
@@ -74,6 +79,7 @@ void warnx(const char *fmt,...)
  * @param buflen - the size of the page to extract
  * @param pos0 - the byte position of buf[0]
  */
+
 
 #ifndef HAVE_LOCALTIME_R
 /* locking localtime_r implementation */
@@ -84,6 +90,7 @@ void localtime_r(time_t *t,struct tm *tm)
     *tm = *localtime(t);
 }
 #endif
+
 
 #ifndef HAVE_GMTIME_R
 /* locking gmtime_r implementation */
@@ -110,13 +117,13 @@ bool ends_with(const std::string &buf,const std::string &with)
     return buflen>withlen && buf.substr(buflen-withlen,withlen)==with;
 }
 
+
 bool ends_with(const std::wstring &buf,const std::wstring &with)
 {
     size_t buflen = buf.size();
     size_t withlen = with.size();
     return buflen > withlen && buf.substr(buflen-withlen,withlen)==with;
 }
-
 
 
 /****************************************************************/
@@ -136,7 +143,3 @@ std::vector<std::string> split(const std::string &s, char delim)
     std::vector<std::string> elems;
     return split(s, delim, elems);
 }
-
-
-
-

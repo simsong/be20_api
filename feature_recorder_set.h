@@ -2,14 +2,10 @@
 #ifndef FEATURE_RECORDER_SET_H
 #define FEATURE_RECORDER_SET_H
 
-#include <map>
-#include <set>
-#include <mutex>
+#ifndef BULK_EXTRACTOR_I_H
+#error "Don't include this file directly; include bulk_extractor_i.h."
+#endif
 
-#include "feature_recorder.h"
-#include "dfxml/src/dfxml_writer.h"
-#include "dfxml/src/hash_t.h"
-#include "word_and_context_list.h"
 
 /** \addtogroup internal_interfaces
  * @{
@@ -36,17 +32,16 @@
  *   It initializes the feature recorders and itself.
  */
 
-#ifndef  BEAPI_SQLITE3
-#define BEAPI_SQLITE3 void
-#endif
 typedef std::map<std::string,class feature_recorder *> feature_recorder_map;
 typedef std::set<std::string>feature_file_names_t;
+class word_and_context_list;
 class feature_recorder_set {
-    friend class feature_recorder;
-
     // neither copying nor assignment is implemented
     feature_recorder_set(const feature_recorder_set &fs)=delete;
     feature_recorder_set &operator=(const feature_recorder_set &fs)=delete;
+
+    friend class feature_recorder;
+
     uint32_t flags;
     atomic_set<std::string> seen_set;       // hex hash values of pages that have been seen
     const std::string     input_fname;      // input file

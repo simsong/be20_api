@@ -20,22 +20,46 @@
 #ifndef BULK_EXTRACTOR_I_H
 #define BULK_EXTRACTOR_I_H
 
-#define DEBUG_PEDANTIC    0x0001        // check values more rigorously
-#define DEBUG_PRINT_STEPS 0x0002        // prints as each scanner is started
-#define DEBUG_SCANNER     0x0004        // dump all feature writes to stderr
-#define DEBUG_NO_SCANNERS 0x0008        // do not run the scanners
-#define DEBUG_DUMP_DATA   0x0010        // dump data as it is seen
-#define DEBUG_DECODING    0x0020        // debug decoders in scanner
-#define DEBUG_INFO        0x0040        // print extra info
-#define DEBUG_EXIT_EARLY  1000          // just print the size of the volume and exis
-#define DEBUG_ALLOCATE_512MiB 1002      // Allocate 512MiB, but don't set any flags
+#define BE13_API_VERSION  2.0
+
+/* required per C++ standard */
+//#ifndef __STDC_FORMAT_MACROS
+//#define __STDC_FORMAT_MACROS
+//#endif
+
+
+
+#include <atomic>
+#include <cassert>
+#include <cinttypes>
+#include <cstdarg>
+#include <cstdlib>
+#include <cstring>
+#include <fstream>
+#include <iostream>
+#include <map>
+#include <mutex>
+#include <set>
+#include <sstream>
+#include <string>
+#include <thread>
+
+#include <unistd.h>
+
+#include <vector>
+#include <set>
+#include <map>
+
+#ifdef HAVE_SYS_MMAN_H
+#include <sys/mman.h>
+#endif
+
+
 
 /* We need netinet/in.h or windowsx.h */
 #ifdef HAVE_NETINET_IN_H
 # include <netinet/in.h>
 #endif
-
-#include <assert.h>
 
 #if defined(MINGW) || defined(__MINGW__) || defined(__MINGW32__) || defined(__MINGW64__)
 #ifndef WIN32
@@ -61,29 +85,50 @@
 #  error Invalid __BYTE_ORDER
 #endif
 
+
+const int DEBUG_PEDANTIC    = 0x0001;   // check values more rigorously
+const int DEBUG_PRINT_STEPS = 0x0002;   // prints as each scanner is started
+const int DEBUG_SCANNER     = 0x0004;   // dump all feature writes to stderr
+const int DEBUG_NO_SCANNERS = 0x0008;   // do not run the scanners
+const int DEBUG_DUMP_DATA   = 0x0010;   // dump data as it is seen
+const int DEBUG_DECODING    = 0x0020;   // debug decoders in scanner
+const int DEBUG_INFO        = 0x0040;   // print extra info
+const int DEBUG_EXIT_EARLY  = 1000;     // just print the size of the volume and exis
+const int DEBUG_ALLOCATE_512MiB = 1002;      // Allocate 512MiB, but don't set any flags
+
+#ifdef HAVE_SQLITE3_H
+#include <sqlite3.h>
+#define BEAPI_SQLITE3 sqlite3
+#define BEAPI_SQLITE3_STMT sqlite3_stmt
+#else
+#define BEAPI_SQLITE3 void
+#define BEAPI_SQLITE3_STMT void
+#endif
+
 /**
  * \addtogroup plugin_module
  * @{
  */
 
-#include <vector>
-#include <set>
-#include <map>
-
+/* Order matters! */
+#include "histogram.h"
 #include "dfxml/src/dfxml_writer.h"
+#include "dfxml/src/hash_t.h"
 #include "aftimer.h"
 #include "atomic_set_map.h"
 #include "regex_vector.h"
+#include "sbuf.h"
 #include "feature_recorder.h"
 #include "feature_recorder_set.h"
 #include "packet_info.h"
+#include "sbuf_private.h"
+#include "sbuf_stream.h"
 #include "scanner_set.h"
-#include "sbuf.h"
 #include "word_and_context_list.h"
 #include "unicode_escape.h"
 #include "utils.h"                      // for gmtime_r
-//#include "plugin.h"                     // plugin system must be included last
 #include "utf8.h"
+
 
 inline std::string itos(int i){ std::stringstream ss; ss << i;return ss.str();}
 inline std::string dtos(double d){ std::stringstream ss; ss << d;return ss.str();}

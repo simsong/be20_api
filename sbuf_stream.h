@@ -2,17 +2,10 @@
 #ifndef SBUF_STREAM_H
 #define SBUF_STREAM_H
 
-/* required per C++ standard */
-#ifndef __STDC_FORMAT_MACROS
-#define __STDC_FORMAT_MACROS
+#ifndef BULK_EXTRACTOR_I_H
+#error "Don't include this file directly; include bulk_extractor_i.h."
 #endif
 
-#include <cstdlib>
-#include <cinttypes>
-#include <string>
-#include <sstream>
-
-#include "sbuf.h"
 
 /** \addtogroup bulk_extractor_APIs
  * @{

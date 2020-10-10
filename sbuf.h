@@ -1,4 +1,13 @@
 /* -*- mode: C++; c-basic-offset: 4; indent-tabs-mode: nil -*- */
+
+#ifndef SBUF_H
+#define SBUF_H
+
+#ifndef BULK_EXTRACTOR_I_H
+#error "Don't include this file directly; include bulk_extractor_i.h."
+#endif
+
+
 /*
  * sbuf.h:
  *
@@ -18,9 +27,6 @@
  */
 
 
-#ifndef SBUF_H
-#define SBUF_H
-
 /*
  * NOTE: The crash identified in November 2019 was because access to
  * *sbuf.buf went beyond buflen. The way around this is to make
@@ -37,32 +43,14 @@
  * the current time) do not appear to have bugs.
  */
 
-//Make *sbuf.buf private
-//#define PRIVATE_SBUF_BUF
-
-#include <unistd.h>
-
-#include <cstring>
-#include <cstdlib>
-#include <cinttypes>
-
-#ifdef HAVE_SYS_MMAN_H
-#include <sys/mman.h>
-#endif
-
-
 //Don't turn this on; it currently makes scan_net crash.
 //#define SBUF_TRACK
 
 /* required per C++ standard */
-#ifndef __STDC_FORMAT_MACROS
-#define __STDC_FORMAT_MACROS
-#endif
+//#ifndef __STDC_FORMAT_MACROS
+//#define __STDC_FORMAT_MACROS
+//#endif
 
-
-#include <string>
-#include <sstream>
-#include <iostream>
 
 /****************************************************************
  *** pos0_t
