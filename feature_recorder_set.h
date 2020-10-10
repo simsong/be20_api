@@ -42,17 +42,20 @@ class feature_recorder_set {
 
     friend class feature_recorder;
 
-    uint32_t flags;
-    atomic_set<std::string> seen_set;       // hex hash values of pages that have been seen
-    const std::string     input_fname;      // input file
-    const std::string     outdir;           // where output goes
+    uint32_t flags {};
+    atomic_set<std::string> seen_set {};       // hex hash values of pages that have been seen
+    const std::string     input_fname {};      // input file
+    const std::string     outdir {};           // where output goes
+
     // TK-replace with an atomic_set:
-    feature_recorder_map  frm;              // map of feature recorders, name->feature recorder, by name
-    mutable std::mutex    Mscanner_stats;         // locks frm and scanner_stats_map
-    histogram_defs_t      histogram_defs;   // histograms that are to be created.
-    mutable std::mutex    Min_transaction;
-    bool                  in_transaction;
-    BEAPI_SQLITE3         *db;              // databse handle opened in SQLITE_OPEN_FULLMUTEX mode
+    feature_recorder_map  frm {};              // map of feature recorders, name->feature recorder, by name
+    mutable std::mutex    Mscanner_stats {};         // locks frm and scanner_stats_map
+    histogram_defs_t      histogram_defs {};   // histograms that are to be created.
+    mutable std::mutex    Min_transaction {};
+    bool                  in_transaction {};
+#ifdef BEAPI_SQLITE3
+    BEAPI_SQLITE3         *db {};              // databse handle opened in SQLITE_OPEN_FULLMUTEX mode
+#endif
 
 public:
     /** Constructor:
@@ -64,10 +67,11 @@ public:
 
     /* the feature recorder set automatically hashes all of the sbuf's that it processes. */
     typedef std::string (*hash_func_t)(const uint8_t *buf,const size_t bufsize);
-    class hash_def {
-    public:;
-        hash_def(std::string name_,hash_func_t func_):name(name_),func(func_){};
-        std::string name;                                             // name of hash
+    struct hash_def {
+        hash_def(std::string name_,hash_func_t func_):
+            name(name_),func(func_){
+        };
+        std::string name;                                           // name of hash
         hash_func_t func; // hash function
         static std::string md5_hasher(const uint8_t *buf,size_t bufsize);
         static std::string sha1_hasher(const uint8_t *buf,size_t bufsize);
@@ -77,17 +81,17 @@ public:
 
     // performance Statistics for each scanner*/
     struct pstats {
-        double seconds;
-        uint64_t calls;
+        double seconds {};
+        uint64_t calls {};
     };
     typedef std::map<std::string,struct pstats> scanner_stats_map; // maps scanner name to performance stats
 
-    const word_and_context_list *alert_list;		/* shold be flagged */
-    const word_and_context_list *stop_list;		/* should be ignored */
-    scanner_stats_map      scanner_stats;
+    const word_and_context_list *alert_list {};		/* shold be flagged */
+    const word_and_context_list *stop_list {};		/* should be ignored */
+    scanner_stats_map      scanner_stats {};
 
     /** hashing system */
-    const  hash_def       hasher;        // name and function that perform hashing.
+    const  hash_def       hasher;                    // name and function that perform hashing; set by allocator
 
     static const std::string   ALERT_RECORDER_NAME;  // the name of the alert recorder
     static const std::string   DISABLED_RECORDER_NAME; // the fake disabled feature recorder
@@ -95,7 +99,7 @@ public:
     static const std::string   NO_OUTDIR; // 'dirname' indicator that the FRS produces no file output
 
     std::string   get_input_fname()           const { return input_fname;}
-    virtual const std::string &get_outdir() const { return outdir;}
+    virtual const std::string &get_outdir()   const { return outdir;}
     void          set_stop_list(const word_and_context_list *alist){stop_list=alist;}
     void          set_alert_list(const word_and_context_list *alist){alert_list=alist;}
 
@@ -122,7 +126,7 @@ public:
     void     unset_flag(uint32_t f);
     bool     flag_set(uint32_t f)     const { return flags & f; }
     bool     flag_notset(uint32_t f)  const { return !(flags & f); }
-    uint32_t get_flags()             const { return flags; }
+    uint32_t get_flags()              const { return flags; }
 
     /* histogram support */
 
@@ -143,6 +147,7 @@ public:
      *** DB interface
      ****************************************************************/
 
+#ifdef BEAPI_SQLITE3
     virtual  void db_send_sql(BEAPI_SQLITE3 *db3,const char **stmts, ...) ;
     virtual  BEAPI_SQLITE3 *db_create_empty(const std::string &name) ;
     void     db_create_table(const std::string &name) ;
@@ -150,6 +155,7 @@ public:
     void     db_transaction_begin() ;
     void     db_transaction_commit() ;               // commit current transaction
     void     db_close() ;                            //
+#endif
 
     /****************************************************************
      *** External Functions
