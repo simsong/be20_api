@@ -2,10 +2,6 @@
 #ifndef SBUF_PRIVATE_H
 #define SBUF_PRIVATE_H
 
-#ifndef BULK_EXTRACTOR_I_H
-#error "Don't include this file directly; include bulk_extractor_i.h."
-#endif
-
 
 inline int sbuf_t::memcmp(const uint8_t *cbuf,size_t at,size_t len) const {
     if(left(at) < len) throw sbuf_t::range_exception_t();

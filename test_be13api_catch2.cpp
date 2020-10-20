@@ -1,3 +1,9 @@
+/*
+ * all be13_api test cases are in this file.
+ * The goal is to have complete test coverage of the v2 API
+ */
+
+
 // https://github.com/catchorg/Catch2/blob/master/docs/tutorial.md#top
 
 #define CATCH_CONFIG_MAIN
@@ -7,7 +13,18 @@
 
 // define stuff I need in the global environment. Only read it once.
 
-/* atomic_set_map.h */
+/****************************************************************
+ * aftimer.h
+ */
+TEST_CASE("aftimer", "[utils]") {
+    aftimer t;
+    REQUIRE(t.elapsed_seconds()==0.0);
+}
+
+
+/****************************************************************
+ * atomic_set_map.h
+ */
 int dump_cb(void *user, const std::string &val, const int &count){
     int *called = (int *)user;
     switch (*called) {
@@ -33,14 +50,15 @@ TEST_CASE( "test atomic_histogram", "[vector]" ){
     ahist.add("foo", 3);
     ahist.add("bar", 10);
 
-
     /* Now make sure things were added in the right order, and the right counts */
     int called = 0;
     ahist.dump_sorted( &called, dump_cb );
     REQUIRE( called == 2);
 }
 
-/* feature_recorder_set.h */
+/****************************************************************
+ * feature_recorder_set.h
+ */
 static std::string hash_name("md5");
 static std::string hash_func(const uint8_t *buf,size_t bufsize)
 {
@@ -121,11 +139,17 @@ TEST_CASE("feature_recorder_sql", "[frs]") {
 }
 
 
-TEST_CASE("featrure_recorder_set", "[frs]") {
+/****************************************************************
+ * feature_recorder_set.h
+ */
+
+TEST_CASE("feature_recorder_set", "[frs]") {
 }
 
 
-/* regex_vector.h & regex_vector.cpp */
+/****************************************************************
+ * regex_vector.h & regex_vector.cpp
+ */
 TEST_CASE( "test regex_vector", "[vector]" ) {
     REQUIRE( regex_vector::has_metachars("this[1234]foo") == true );
     REQUIRE( regex_vector::has_metachars("this(1234)foo") == true );
@@ -157,7 +181,10 @@ TEST_CASE( "test atomic_set_map", "[vector]" ){
     REQUIRE( as.contains("four") == false );
 }
 
-/* sbuf.h */
+/****************************************************************
+ *
+ * sbuf.h
+ */
 TEST_CASE( "pos0_t", "[vector]" ){
     REQUIRE( stoi64("12345") == 12345);
 
@@ -179,7 +206,9 @@ TEST_CASE( "pos0_t", "[vector]" ){
 }
 
 
-/* word_and_context_list.h */
+/****************************************************************
+ *  word_and_context_list.h
+ */
 TEST_CASE("word_and_context_list", "[vector]") {
     REQUIRE( word_and_context_list::rstrcmp("aaaa1", "bbbb0") < 0 );
     REQUIRE( word_and_context_list::rstrcmp("aaaa1", "aaaa1") == 0 );
@@ -187,7 +216,10 @@ TEST_CASE("word_and_context_list", "[vector]") {
 }
 
 
-
+/****************************************************************
+ * unicode_escape.h
+ * unicode_escape.cpp
+ */
 TEST_CASE("unicode_escape", "[unicode]") {
     const char *U1F601 = "\xF0\x9F\x98\x81";        // UTF8 for Grinning face with smiling eyes
     REQUIRE( hexesc('a') == "\\x61");               // escape the escape!
@@ -196,11 +228,4 @@ TEST_CASE("unicode_escape", "[unicode]") {
     REQUIRE( utf8cont( U1F601[1] ) == true);  // the second is
     REQUIRE( utf8cont( U1F601[2] ) == true);  // the third is
     REQUIRE( utf8cont( U1F601[3] ) == true);  // the fourth is
-}
-
-
-TEST_CASE("aftimer", "[utils]") {
-    aftimer t;
-    REQUIRE(t.elapsed_seconds()==0.0);
-
 }

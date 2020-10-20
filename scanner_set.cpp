@@ -7,9 +7,6 @@
 #include "config.h"
 #include "bulk_extractor_i.h"
 
-//#include <sys/stat.h>
-//#include <dirent.h>
-
 #ifdef HAVE_ERR_H
 #include <err.h>
 #endif
@@ -17,15 +14,6 @@
 #ifdef HAVE_DLFCN_H
 #include <dlfcn.h>
 #endif
-
-//static int debug;                               // local debug variable
-//static uint32_t max_depth_seen=0;               // only for those run with plugin::process_sbuf()
-//static std::mutex max_depth_seenM;
-bool plugin::dup_data_alerts = false; // by default, is disabled
-uint64_t plugin::dup_data_encountered = 0; // amount that was not processed
-
-//bool scanner_commands_processed = false;
-
 
 /****************************************************************
  *** SCANNER SET IMPLEMENTATION (previously the PLUG-IN SYSTEM)
@@ -52,29 +40,12 @@ public:
 typedef std::vector<packet_plugin_info> packet_plugin_info_vector_t;
 packet_plugin_info_vector_t  packet_handlers;   // pcap callback handlers
 
-scanner_set::scanner_set(const scanner_config &sc_,
-                         feature_recorder_set &fs_):sc(sc_),fs(fs_);
-{
-}
-
-
-/**
- * the vector of current scanners
- */
-
-//plugin::scanner_vector plugin::current_scanners;
-
-void scanner_set::set_debug(int debug_)
-{
-    debug = debug_;
-}
 
 
 /****************************************************************
  *
  * Loading Scanners
  */
-
 
 /**
  * plugin system phase 0: Load a scanner.
@@ -86,7 +57,6 @@ void scanner_set::set_debug(int debug_)
  * This is called before scanners are enabled or disabled, so the pcap handlers
  * need to be set afterwards
  */
-SIMSON IS HERE
 void scanner_set::add_scanner(scanner_t scanner)
 {
     /* If scanner is already loaded, that's an error */
@@ -94,46 +64,33 @@ void scanner_set::add_scanner(scanner_t scanner)
         if (it->scanner==scanner) throw std::runtime_error("scanner already added");
     }
 
-    /* Initialize the scanner. Use an empty sbuf and an empty feature recorder and get the list of list of feature files that it needs.
+    /* Initialize the scanner.
+     * Use an empty sbuf and an empty feature recorder to create an empty scanner params that is in PHASE_STARTUP.
+     * We then ask the scanner to initialize.
      */
     const sbuf_t sbuf;
-    feature_recorder_set fs(feature_recorder_set::SET_DISABLED,
-                            "md5",
-                            feature_recorder_set::NO_INPUT,
-                            feature_recorder_set::NO_OUTDIR); // dummy
-
- TODO: Initialize the scanner here.
-
-        // Now
-
-    //
-    // Each scanner's params are stored in a scanner_def object that
-    // is created here and retained for the duration of the run.
-    // The scanner_def includes its own scanner_info structure.
-    // We pre-load the structure with the configuration for this scanner
-    // and the global debug variable
-    //
-    // currently every scanner gets the same config. In the future, we might
-    // want to give different scanners different variables.
-    //
-
+    feature_recorder_set fs;
+    scanner_info si;                    // where the scanner info will go
     scanner_params sp(scanner_params::PHASE_STARTUP,sbuf,fs);
     scanner_def *sd = new scanner_def();
-    sd->scanner = scanner;
+    sp.config
+    sd->scanner     = scanner;
     sd->info.config = &sc;
+    sp.info         = &sd->info;
 
-    sp.info  = &sd->info;
-
-    // Make an empty recursion control block and call the scanner's
-    // initialization function. Scanners are disabled by default.
+    /*
+     * Make an empty recursion control block and call the scanner's
+     */
     recursion_control_block rcb(0,"");
-    (*scanner)(sp,rcb);                  // phase 0
+
+    // Initialize the scanner!
+    (*scanner)(sp,rcb);
 
     sd->enabled      = !(sd->info.flags & scanner_info::SCANNER_DISABLED);
     current_scanners.push_back(sd);
 }
 
-void scanner_set::load_scanner_file(std::string fn,const scanner_info::scanner_config &sc)
+void scanner_set::load_scanner_file(std::string fn, const scanner_info::scanner_config &sc)
 {
     /* Figure out the function name */
     size_t extloc = fn.rfind('.');
@@ -279,7 +236,7 @@ void scanner_set::set_scanner_enabled_all(bool enable)
 /****************************************************************
  *** scanner plugin loading
  ****************************************************************/
-scanner_t *plugin::find_scanner(const std::string &search_name)
+scanner_t *scanner_set::find_scanner(const std::string &search_name)
 {
     for(scanner_vector::const_iterator it = current_scanners.begin();it!=current_scanners.end();it++){
 	if(search_name == (*it)->info.name){
@@ -290,7 +247,7 @@ scanner_t *plugin::find_scanner(const std::string &search_name)
 }
 
 // put the enabled scanners into the vector
-void plugin::get_enabled_scanners(std::vector<std::string> &svector)
+void scanner_set::get_enabled_scanners(std::vector<std::string> &svector)
 {
     for (scanner_vector::const_iterator it=current_scanners.begin();it!=current_scanners.end();it++){
 	if((*it)->enabled){
@@ -299,7 +256,7 @@ void plugin::get_enabled_scanners(std::vector<std::string> &svector)
     }
 }
 
-bool plugin::find_scanner_enabled()
+bool scanner_set::find_scanner_enabled()
 {
     for (scanner_vector::const_iterator it = current_scanners.begin(); it!=current_scanners.end(); it++){
         if( ((*it)->info.flags & scanner_info::SCANNER_FIND_SCANNER)
@@ -311,7 +268,7 @@ bool plugin::find_scanner_enabled()
 }
 
 
-void plugin::add_enabled_scanner_histograms_to_feature_recorder_set(feature_recorder_set &fs)
+void scanner_set::add_enabled_scanner_histograms_to_feature_recorder_set(feature_recorder_set &fs)
 {
     for (scanner_vector::const_iterator it = current_scanners.begin(); it!=current_scanners.end(); it++){
         if((*it)->enabled){
@@ -324,7 +281,7 @@ void plugin::add_enabled_scanner_histograms_to_feature_recorder_set(feature_reco
     }
 }
 
-void plugin::scanners_init(feature_recorder_set &fs)
+void scanner_set::scanners_init(feature_recorder_set &fs)
 {
     assert(scanner_commands_processed==true);
 }
@@ -335,31 +292,31 @@ void plugin::scanners_init(feature_recorder_set &fs)
  *** Scanner Commands (which one is enabled or disabled)
  ****************************************************************/
 
-void plugin::scanners_disable_all()
+void scanner_set::scanners_disable_all()
 {
     assert(scanner_commands_processed==false);
     scanner_commands.push_back(scanner_command(scanner_command::DISABLE_ALL,std::string("")));
 }
 
-void plugin::scanners_enable_all()
+void scanner_set::scanners_enable_all()
 {
     assert(scanner_commands_processed==false);
     scanner_commands.push_back(scanner_command(scanner_command::ENABLE_ALL,std::string("")));
 }
 
-void plugin::scanners_enable(const std::string &name)
+void scanner_set::scanners_enable(const std::string &name)
 {
     assert(scanner_commands_processed==false);
     scanner_commands.push_back(scanner_command(scanner_command::ENABLE,name));
 }
 
-void plugin::scanners_disable(const std::string &name)
+void scanner_set::scanners_disable(const std::string &name)
 {
     assert(scanner_commands_processed==false);
     scanner_commands.push_back(scanner_command(scanner_command::DISABLE,name));
 }
 
-void plugin::scanners_process_enable_disable_commands()
+void scanner_set::scanners_process_enable_disable_commands()
 {
     for(std::vector<scanner_command>::const_iterator it=scanner_commands.begin();
         it!=scanner_commands.end();it++){
@@ -379,7 +336,7 @@ void plugin::scanners_process_enable_disable_commands()
  *** PHASE_SHUTDOWN (formerly phase 2): shut down the scanners
  ****************************************************************/
 
-void plugin::phase_shutdown(feature_recorder_set &fs,std::stringstream *sxml)
+void scanner_set::phase_shutdown(feature_recorder_set &fs,std::stringstream *sxml)
 {
     assert(scanner_commands_processed==true);
     for(scanner_vector::iterator it = current_scanners.begin();it!=current_scanners.end();it++){
@@ -392,87 +349,12 @@ void plugin::phase_shutdown(feature_recorder_set &fs,std::stringstream *sxml)
     }
 }
 
-/************************************
- *** HELP and  option processing  ***
- ************************************/
-
-/* Get the config and build the help strings at the same time! */
-
-std::stringstream scanner_info::helpstream;
-void scanner_info::get_config(const scanner_info::config_t &c,
-                              const std::string &n,std::string *val,const std::string &help)
-{
-    /* Check to see if we are being called as part of a help operation */
-    helpstream << "   -S " << n << "=" << *val << "    " << help << " (" << name << ")\n";
-    scanner_info::config_t::const_iterator it = c.find(n);
-    if(it!=c.end() && val){
-        *val = it->second;
-    }
-}
-
-void scanner_info::get_config(const std::string &n,
-                                    std::string *val,const std::string &help)
-{
-    scanner_info::get_config(config->namevals,n,val,help);
-}
-
-/* Should this be redone with templates? */
-#define GET_CONFIG(T) void scanner_info::get_config(const std::string &n,T *val,const std::string &help) { \
-        std::stringstream ss;\
-        ss << *val;\
-        std::string v(ss.str());\
-        get_config(n,&v,help);\
-        ss.str(v);\
-        ss >> *val;\
-    }
-
-GET_CONFIG(uint64_t)
-GET_CONFIG(int32_t)                     // both int32_t and uint32_t
-GET_CONFIG(uint32_t)
-GET_CONFIG(uint16_t)
-#ifdef HAVE_GET_CONFIG_SIZE_T
-GET_CONFIG(size_t)
-#endif
-
-
-/* uint8_t needs cast to uint32_t for <<
- * Otherwise it is interpreted as a character.
- */
-void scanner_info::get_config(const std::string &n,uint8_t *val_,const std::string &help)
-{
-    uint32_t val = *val_;
-    std::stringstream ss;
-    ss << val;
-    std::string v(ss.str());
-    get_config(n,&v,help);
-    ss.str(v);
-    ss >> val;
-    *val_ = (uint8_t)val;
-}
-
-/* bool needs special processing for YES/NO/TRUE/FALSE */
-void scanner_info::get_config(const std::string &n,bool *val,const std::string &help)
-{
-    std::stringstream ss;
-    ss << ((*val) ? "YES" : "NO");
-    std::string v(ss.str());
-    get_config(n,&v,help);
-    switch(v.at(0)){
-    case 'Y':case 'y':case 'T':case 't':case '1':
-        *val = true;
-        break;
-    default:
-        *val = false;
-    }
-}
-
-
 /**
  * Print a list of scanners.
  * We need to load them to do this, so they are loaded with empty config
  * Note that scanners can only be loaded once, so this exits.
  */
-void plugin::info_scanners(bool detailed_info,
+void scanner_set::info_scanners(bool detailed_info,
                                  bool detailed_settings,
                                  scanner_t * const *scanners_builtin,
                                  const char enable_opt,const char disable_opt)
@@ -552,7 +434,7 @@ static size_t find_ngram_size(const sbuf_t &sbuf)
     return 0;                           // no ngram size
 }
 
-uint32_t plugin::get_max_depth_seen()
+uint32_t scanner_set::get_max_depth_seen()
 {
     std::lock_guard<std::mutex> lock(max_depth_seenM);
     return max_depth_seen;
@@ -563,7 +445,7 @@ uint32_t plugin::get_max_depth_seen()
  * It is also the recursive entry point for sub-analysis.
  */
 
-void plugin::process_sbuf(const class scanner_params &sp, unit32_t *max_depth_seen)
+void scanner_set::process_sbuf(const class scanner_params &sp, unit32_t *max_depth_seen)
 {
     const pos0_t &pos0 = sp.sbuf.pos0;
     class feature_recorder_set &fs = sp.fs;
@@ -688,6 +570,7 @@ void plugin::process_sbuf(const class scanner_params &sp, unit32_t *max_depth_se
     }
     fs.flush_all();
 }
+#endif
 
 
 
@@ -695,7 +578,7 @@ void plugin::process_sbuf(const class scanner_params &sp, unit32_t *max_depth_se
  * Process a pcap packet.
  * Designed to be very efficient because we have so many packets.
  */
-void plugin::process_packet(const be13::packet_info &pi)
+void scanner_set::process_packet(const be13::packet_info &pi)
 {
     for (packet_plugin_info_vector_t::iterator it = packet_handlers.begin(); it != packet_handlers.end(); it++){
         (*(*it).callback)((*it).user,pi);
@@ -703,7 +586,7 @@ void plugin::process_packet(const be13::packet_info &pi)
 }
 
 
-void plugin::get_scanner_feature_file_names(feature_file_names_t &feature_file_names)
+void scanner_set::get_scanner_feature_file_names(feature_file_names_t &feature_file_names)
 {
     for (scanner_vector::const_iterator it=current_scanners.begin();it!=current_scanners.end();it++){
         if((*it)->enabled){

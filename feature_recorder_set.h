@@ -2,10 +2,6 @@
 #ifndef FEATURE_RECORDER_SET_H
 #define FEATURE_RECORDER_SET_H
 
-#ifndef BULK_EXTRACTOR_I_H
-#error "Don't include this file directly; include bulk_extractor_i.h."
-#endif
-
 
 /** \addtogroup internal_interfaces
  * @{
@@ -60,9 +56,16 @@ class feature_recorder_set {
 public:
     /** Constructor:
      * create an emptry feature recorder set. If disabled, create a disabled recorder.
+     * @param flags_ = config flags
+     * @param hash_algorithm - which algorithm to use for de-duplication
+     * @param input_fname_ = where input comes from
+     * @param outdir_ = output directory (passed to feature recorders).
+     * This clearly needs work.
      */
-    feature_recorder_set( uint32_t flags_, const std::string hash_algorithm,
-                          const std::string &input_fname_, const std::string &outdir_);
+    feature_recorder_set( uint32_t flags_ = feature_recorder_set::SET_DISABLED,
+                          const std::string hash_algorithm = "md5",
+                          const std::string &input_fname_ = feature_recorder_set::NO_INPUT,
+                          const std::string &outdir_ = feature_recorder_set::NO_OUTDIR);
     virtual ~feature_recorder_set();
 
     /* the feature recorder set automatically hashes all of the sbuf's that it processes. */

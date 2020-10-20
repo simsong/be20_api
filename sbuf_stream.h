@@ -2,10 +2,6 @@
 #ifndef SBUF_STREAM_H
 #define SBUF_STREAM_H
 
-#ifndef BULK_EXTRACTOR_I_H
-#error "Don't include this file directly; include bulk_extractor_i.h."
-#endif
-
 
 /** \addtogroup bulk_extractor_APIs
  * @{

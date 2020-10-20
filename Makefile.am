@@ -1,11 +1,11 @@
 # be13_api Makefile.am
-# This file is compiled with automake to create Makefile.in. 
+# This file is compiled with automake to create Makefile.in.
 # Makefile.in is transformed by "configure" to create Makefile
 #
 # (C) 2020 Simson L. Garfinkel
 # https://www.gnu.org/licenses/lgpl-3.0.en.html
 
-# don't include bootstrap. People run it, and they shoudln't
+# don't include bootstrap. People run it, and they shouldn't
 # It's only for people who check out the git repo
 
 EXTRA_DIST = \
@@ -24,7 +24,7 @@ include Makefile.defs
 DFXML_WRITER = dfxml/src/dfxml_writer.cpp \
       dfxml/src/dfxml_writer.h \
       dfxml/src/hash_t.h \
-      dfxml/src/cpuid.h 
+      dfxml/src/cpuid.h
 
 
 AUTOMAKE_OPTIONS = subdir-objects
@@ -35,5 +35,8 @@ AUTOMAKE_OPTIONS = subdir-objects
 check_PROGRAMS = test_be13api_catch2
 TESTS = $(check_PROGRAMS)
 
+apitest: test_be13api_catch2
+
 # Slowly add modules as tests are written for them.
-test_be13api_catch2_SOURCES = $(BE13_API_SRC) $(DFXML_WRITER) test_be13api_catch2.cpp tests/catch2.h 
+test_be13api_catch2_SOURCES = $(BE13_API_SRC) $(DFXML_WRITER) test_be13api_catch2.cpp tests/catch2.h \
+	scanner_config.h scanner_config.cpp

@@ -2,10 +2,17 @@
 #ifndef FEATURE_RECORDER_H
 #define FEATURE_RECORDER_H
 
-#ifndef BULK_EXTRACTOR_I_H
-#error "Don't include this file directly; include bulk_extractor_i.h."
-#endif
+#include <cinttypes>
+#include <string>
+#include <regex>
+#include <set>
+#include <map>
+#include <thread>
+#include <iostream>
+#include <fstream>
 
+#include "atomic_set_map.h"
+#include "
 
 /**
  * \addtogroup bulk_extractor_APIs

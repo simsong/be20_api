@@ -23,11 +23,6 @@
 #define BE13_API_VERSION  2.0
 
 /* required per C++ standard */
-//#ifndef __STDC_FORMAT_MACROS
-//#define __STDC_FORMAT_MACROS
-//#endif
-
-
 
 #include <atomic>
 #include <cassert>
@@ -123,6 +118,7 @@ const int DEBUG_ALLOCATE_512MiB = 1002;      // Allocate 512MiB, but don't set a
 #include "packet_info.h"
 #include "sbuf_private.h"
 #include "sbuf_stream.h"
+#include "scanner_config.h"
 #include "scanner_set.h"
 #include "word_and_context_list.h"
 #include "unicode_escape.h"

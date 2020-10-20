@@ -9,19 +9,20 @@
 
 /**
  * \file
- * bulk_extractor scanner plug_in architecture.
+ * bulk_extractor scanner architecture.
  *
  * The scanner_set class implements loadable scanners from files and
  * keeps track of which are enabled and which are not.
  *
  * Sequence of operations:
- * 1. scanner_set() is created with built-in scanners.
- * 2. Additional scanners loaded as desired.
- * 3. Enable-disable commands are processed to determine which scanners are enabled and disabled.
- * 4. Scanners are queried to determine which feature files they write to, and which histograms they created.
- * 5. Data is processed.
- * 6. Scanners are shutdown.
- * 7. Histograms are written out.
+ * 1. scanner_config is loaded with any name=value configurations.
+ * 2. scanner_set() is created with the config. The scanner_set:
+ *     - Loads any scanners from specified directories.
+       - Processes all enable/disable commands to determine which scanners are enabled and disabled.
+ * 3. Scanners are queried to determine which feature files they write to, and which histograms they created.
+ * 4. Data is processed.
+ * 5. Scanners are shutdown.
+ * 6. Histograms are written out.
  *
  * Scanners are called with two parameters:
  * A reference to a scanner_params (SP) object.
@@ -45,7 +46,6 @@
  */
 
 
-
 /**
  * scanner_info gets filled in by the scanner to tell the caller about the scanner.
  *
@@ -58,7 +58,6 @@ struct scanner_info {
     scanner_info(const scanner_info &i)=delete;
     scanner_info &operator=(const scanner_info &i)=delete;
     std::string helpstr(){ return helpstream.str();}
-    typedef std::map<std::string,std::string>  config_t ; // configuration for scanner passed in
 
     /* scanner flags */
     static const int SCANNER_DISABLED       = 0x001; //  enabled by default
@@ -85,18 +84,6 @@ struct scanner_info {
         return ret;
     }
 
-    /* Config is passed to each scanner as a pointer when it is loaded.
-     * All of the scanners get the same config, so the names that the scanners want need to be unique.
-     * We could have adopted a system where each scanner had its own configuraiton space, but we didn't.
-     * Scanner histograms are added to 'histograms' by machinery.
-     */
-    struct scanner_config {
-        scanner_config(){};
-        virtual ~scanner_config(){};
-        config_t  namevals{};             //  (input) name=val map
-        int       debug{};                //  (input) current debug level
-    };
-
     // never change the order or delete old fields, or else you will
     // break backwards compatability
     scanner_info(){};
@@ -115,23 +102,8 @@ struct scanner_info {
 
     /* PASSED FROM API TO SCANNER; access with functions below */
     /* TODO: Why is this not a &? */
-    const scanner_config *config {};          //  (intput to scanner) config
+    const scanner_config config;          //  (intput to scanner) config
 
-    // These methods are implemented in the plugin system for the scanner to get config information.
-    // The get_config methods should be called on the si object during PHASE_STARTUP
-    virtual void get_config(const scanner_info::config_t &c,
-                            const std::string &name,std::string *val,const std::string &help);
-    virtual void get_config(const std::string &name,std::string *val,const std::string &help);
-    virtual void get_config(const std::string &name,uint64_t *val,const std::string &help);
-    virtual void get_config(const std::string &name,int32_t *val,const std::string &help);
-    virtual void get_config(const std::string &name,uint32_t *val,const std::string &help);
-    virtual void get_config(const std::string &name,uint16_t *val,const std::string &help);
-    virtual void get_config(const std::string &name,uint8_t *val,const std::string &help);
-#ifdef __APPLE__
-    virtual void get_config(const std::string &name,size_t *val,const std::string &help);
-#define HAVE_GET_CONFIG_SIZE_T
-#endif
-    virtual void get_config(const std::string &name,bool *val,const std::string &help);
     virtual ~scanner_info(){};
 };
 
@@ -144,6 +116,7 @@ struct scanner_info {
  * @param fs            - where the features should be saved.
  *                        This is an element of the scanner_set class.
  *                        We could pass the entier scanner_set, but there is no reason to do so.
+ * @param config        - The current configuration. Typically only accessed as initialization
  *
  * The scanner_params struct is a way for sending parameters to the scanner
  * regarding the particular sbuf to be scanned.
@@ -183,34 +156,34 @@ struct scanner_params {
         PHASE_SHUTDOWN = 2,            // called in main thread for every ENABLED scanner when scanner is shutdown
     } phase_t ;
 
-    /********************
-     *** CONSTRUCTORS ***
-     ********************/
+    /*
+     * CONSTRUCTORS
+     *
+     * Scanner_params are made whenever a scanner needs to be called. These constructors cover all of those cases.
+     */
 
     /* A scanner params with all of the instance variables, typically for scanning  */
-    scanner_params(phase_t phase_,const sbuf_t &sbuf_,class feature_recorder_set &fs_,
-                   PrintOptions print_options_):
+    scanner_params(phase_t phase_, const sbuf_t &sbuf_, class feature_recorder_set &fs_, PrintOptions print_options_):
         phase(phase_),sbuf(sbuf_),fs(fs_),print_options(print_options_){ }
 
     /* A scanner params with no print options */
-    scanner_params(phase_t phase_,const sbuf_t &sbuf_, class feature_recorder_set &fs_):
+    scanner_params(phase_t phase_, const sbuf_t &sbuf_, class feature_recorder_set &fs_):
         phase(phase_),sbuf(sbuf_),fs(fs_){ }
 
     /* A scanner params with no print options but an xmlstream */
-    scanner_params(phase_t phase_,const sbuf_t &sbuf_,class feature_recorder_set &fs_,std::stringstream *xmladd):
+    scanner_params(phase_t phase_, const sbuf_t &sbuf_, class feature_recorder_set &fs_, std::stringstream *xmladd):
         phase(phase_),sbuf(sbuf_),fs(fs_),sxml(xmladd){ }
 
     /** Construct a scanner_params for recursion from an existing sp and a new sbuf.
      * Defaults to phase1.
      * This is the complicated one!
      */
-    scanner_params(const scanner_params &sp_existing,const sbuf_t &sbuf_new):
+    scanner_params(const scanner_params &sp_existing, const sbuf_t &sbuf_new):
         depth(sp_existing.depth+1),
         phase(sp_existing.phase),sbuf(sbuf_new),
         fs(sp_existing.fs),
         print_options(sp_existing.print_options),
         info(sp_existing.info){
-        assert(sp_existing.sp_version==CURRENT_SP_VERSION);
     };
 
     /**
@@ -234,6 +207,7 @@ struct scanner_params {
      * Constant instance variables that must always be provided. These cannot default.
      */
 
+    class scanner_config        *config{}; // scanner config for scanners in this scanner_set.
     const phase_t               phase; /*  0=startup, 1=normal, 2=shutdown (changed to phase_t in v1.3) */
     const sbuf_t                &sbuf; /*  what to scan / only valid in SCAN_PHASE */
     class feature_recorder_set  &fs; /* where to put the results / only valid in SCAN_PHASE */
@@ -250,6 +224,31 @@ inline std::ostream & operator <<(std::ostream &os,const scanner_params &sp){
     os << "scanner_params(" << sp.sbuf << ")";
     return os;
 };
+
+/**
+ * the recursion_control_block keeps track of what gets added to
+ * the path when there is recursive re-analysis. It's now a structure within the scanner_set
+ * because it's controlled by the scanning process.
+ */
+
+struct recursion_control_block {
+    /* process_t is a function that processes a scanner_params block.
+     */
+    typedef void process_t(const scanner_params &sp);
+
+    /**
+     * @param callback_ - the function to call back
+     * @param partName_ - the part of the forensic path processed by this scanner.
+     */
+    recursion_control_block(process_t *callback_,std::string partName_):
+        callback(callback_),partName(partName_){}
+    process_t *callback{};
+    std::string partName{};            /* eg "ZIP", "GZIP" */
+};
+
+
+/** A scanner is a function that takes a reference to scanner params and a recrusion control block */
+typedef void scanner_t(const scanner_params &sp, const recursion_control_block &rcb);
 
 
 
@@ -268,32 +267,43 @@ class scanner_set {
     scanner_set(const scanner_set &s)=delete;
     scanner_set &operator=(const scanner_set &s)=delete;
 
-public:;
 
-    /**
-     * the recursion_control_block keeps track of what gets added to
-     * the path when there is recursive re-analysis. It's now a structure within the scanner_set
-     * because it's controlled by the scanning process.
+    /* Scanner definitions and the variables in which they are kept
+     *
+     * The scanner_def class holds configuration information for each scanner.
+     * loaded into this scanner_set.
      */
+    struct scanner_def {
+        uint32_t max_depth {7};       // maximum depth to scan for the scanners
+        uint32_t max_ngram {10};      // maximum ngram size to change
 
-    struct recursion_control_block {
-        /* process_t is a function that processes a scanner_params block.
-         */
-        typedef void process_t(const scanner_params &sp);
-
-        /**
-         * @param callback_ - the function to call back
-         * @param partName_ - the part of the forensic path processed by this scanner.
-         */
-        recursion_control_block(process_t *callback_,std::string partName_):
-            callback(callback_),partName(partName_){}
-        process_t *callback{};
-        std::string partName{};            /* eg "ZIP", "GZIP" */
+        scanner_def(){};
+        scanner_t   *scanner{};        // the scanner function.
+        std::string  pathPrefix{};     // this scanner's path prefix for recursive scanners. e.g. "GZIP"
     };
 
 
-    /** A scanner is a function that takes a reference to scanner params and a recrusion control block */
-    typedef void scanner_t(const scanner_params &sp, const recursion_control_block &rcb);
+    /* These vectors should be turned into sets.... */
+    typedef std::vector<scanner_def* > scanner_vector;
+    scanner_vector all_scanners;        // all of the scanners
+    scanner_vector enabled_scanners;    // the scanners that are enabled
+
+    // The commands for those scanners (enable, disable, options, etc.
+    std::vector<struct scanner_command> scanner_commands {};
+
+    // The scanner_set's configuration for all the scanners that are loaded.
+    const scanner_config sc;
+
+    // And the feature recorder set.
+    // Each feature recorder is is created by a scanner.
+    class feature_recorder_set fs;
+
+    bool     dup_data_alerts       {false};  // notify when duplicate data is not processed
+    uint64_t dup_data_encountered  {0}; // amount of dup data encountered
+
+public:;
+    // Create a scanner set with these builtin_scanners.
+    scanner_set(const scanner_config &);
 
     /**
      *  Commands whether to enable or disable a scanner. Typically created from parsing command-line arguments
@@ -305,41 +315,6 @@ public:;
         command_t command {};
         std::string name  {};
     };
-
-    /**
-     * the scanner_def class holds configuraiton information for each scanner
-     * loaded into this scanner_set.
-     */
-    struct scanner_def {
-        uint32_t max_depth {7};       // maximum depth to scan for the scanners
-        uint32_t max_ngram {10};      // maximum ngram size to change
-
-        scanner_def(){};
-        scanner_t   *scanner{};        // the scanner function.
-        bool         enabled{false};   // is this scanner enabled?
-        scanner_info info{};          // info block sent to and returned by scanner
-        std::string  pathPrefix{};     // path prefix for recursive scanners
-    };
-
-    // The scanners in the set
-    typedef std::vector<scanner_def> scanner_vector;
-    scanner_vector scanners;
-
-    // The commadns for those scanners (enable, disable, options, etc.
-    std::vector<struct scanner_command> scanner_commands {};
-
-    // The config for the scanners
-    const scanner_info::scanner_config &sc;
-
-    // And the feature recorder set.
-    // Each feature recorder is is created by a scanner.
-    class feature_recorder_set fs;
-
-    // Create a scanner set with these builtin_scanners.
-    scanner_set(const scanner_info::scanner_config &);
-
-    bool     dup_data_alerts;  // notify when duplicate data is not processed
-    uint64_t dup_data_encountered; // amount of dup data encountered
 
     void set_debug(int debug);
 
@@ -377,17 +352,16 @@ public:;
     void add_enabled_scanner_histograms_to_feature_recorder_set(feature_recorder_set &fs);
     bool find_scanner_enabled(); // return true if a find scanner is enabled
 
-    void scanners_init(feature_recorder_set &fs); // init the scanners
-
-    void info_scanners(bool detailed_info,
-                       bool detailed_settings,
-                       scanner_t * const *scanners_builtin,const char enable_opt,const char disable_opt);
+    void     scanners_init(feature_recorder_set &fs); // init the scanners
+    void     info_scanners(bool detailed_info,
+                           bool detailed_settings,
+                           scanner_t * const *scanners_builtin,const char enable_opt,const char disable_opt);
 
     /* Run the phases on the scanners */
-    void message_enabled_scanners(scanner_params::phase_t phase);
-    void process_sbuf(const scanner_params &sp);                              /* process for feature extraction */
-    void process_packet(const be13::packet_info &pi);
-    void phase_shutdown(feature_recorder_set &fs,std::stringstream *sxml=0); // sxml is where to put XML from scanners that shutdown
+    void     message_enabled_scanners(scanner_params::phase_t phase);
+    void     process_sbuf(const scanner_params &sp);                              /* process for feature extraction */
+    void     process_packet(const be13::packet_info &pi);
+    void     phase_shutdown(feature_recorder_set &fs,std::stringstream *sxml=0); // sxml is where to put XML from scanners that shutdown
     uint32_t get_max_depth_seen();
 };
 

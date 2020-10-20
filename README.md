@@ -20,12 +20,15 @@ The API defines functions for:
 6. Shutting down.
 
 ## Working with this repo
-This repo can used in two ways:
+This repo can used in three ways:
 
-1. As a stand-alone repo for developing and testing scanners.
-2. As a submodule repo to bulk_extractor.
+1. As a stand-alone repo for testing the API modules.
+2. As a stand-alone repo for developing and testing scanners.
+3. As a submodule repo to bulk_extractor or tcplow
 
 The autotools implementation is this repo is designed to either be included in the parent's `configure.ac` file or to use its own `configure.ac` file. It makes a library called `be13_api.a` which can then be linked into the bulk_extractor program or the testing program.
+
+Use the  `bootstrap.sh` program in *this* repo to compile the test programs.
 
 ### Help on git submodules
 
@@ -52,9 +55,8 @@ If you get this error:
     hint: counterpart. If you did not intend to push that branch, you may want to
     hint: specify branches to push or set the 'push.default' configuration
     hint: variable to 'current' or 'upstream' to push only the current branch.
-    $ 
+    $
 
 Do this:
 
     $ git checkout -b tmp  ; git fetch ; git checkout -b $USER-dev ; git merge master ; git merge tmp ; git push origin $USER-dev
-
