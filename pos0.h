@@ -40,9 +40,9 @@ public:
     const std::string path;                     /* forensic path of decoders*/
     const uint64_t    offset;                   /* location of buf[0] */
 
-    explicit pos0_t():path(""),offset(0){}
-    pos0_t(std::string s):path(s),offset(0){}
-    pos0_t(std::string s,uint64_t o):path(s),offset(o){}
+    explicit pos0_t():path(""),offset(0){} // the beginning of a nothing
+    //pos0_t(std::string s):path(s),offset(0){} // the beginning of a named place
+    pos0_t(std::string s,uint64_t o=0):path(s),offset(o){} // a specific offset in a place
     pos0_t(const pos0_t &obj):path(obj.path),offset(obj.offset){ }
     std::string str() const {           // convert to a string, with offset included
         std::stringstream ss;

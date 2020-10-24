@@ -12,7 +12,13 @@
 #include <fstream>
 
 #include "atomic_set_map.h"
-#include "
+#include "pos0.h"
+#include "sbuf.h"
+#include "histogram.h"
+
+#if defined(HAVE_SQLITE3_H)
+#include <sqlite3.h>
+#endif
 
 /**
  * \addtogroup bulk_extractor_APIs
@@ -44,82 +50,45 @@
  * The file assumes that bulk_extractor.h is being included.
  */
 
-
-/**
- * histogram_def defines the histograms that will be made by a feature recorder.
- * If the mhistogram is set, the histogram is generated when features are recorded
- * and kept in memory. If mhistogram is not set, the histogram is generated when the feature recorder is closed.
- */
-
-struct histogram_def {
-    /**
-     * @param feature- the feature file to histogram (no .txt)
-     * @param re     - the regular expression to extract
-     * @param require- require this string on the line (usually in context)
-     * @param suffix - the suffix to add to the histogram file after feature name before .txt
-     * @param flags  - any flags (see above)
-     */
-
-    histogram_def(std::string feature_,std::string re_,std::string suffix_,uint32_t flags_=0):
-        feature(feature_),pattern(re_),require(),suffix(suffix_),flags(flags_),reg(pattern){}
-    histogram_def(std::string feature_,std::string re_,std::string require_,std::string suffix_,uint32_t flags_=0):
-        feature(feature_),pattern(re_),require(require_),suffix(suffix_),flags(flags_),reg(pattern){ }
-    const std::string feature;      /* feature file name */
-    const std::string pattern;      /* extract pattern; "" means use entire feature */
-    const std::string require;      /* text required somewhere on the feature line; used for IP histograms */
-    const std::string suffix;       /* suffix to append; "" means "histogram" */
-    const uint32_t    flags;        // defined in histogram.h
-    const std::regex  reg;          // regular expression for pattern
-};
-
-/* NOTE:
- * 1 - This typedef must remain outside the the feature_recorder due
- *     to historical reasons and cannot be made a vector
- * 2 - Do not make historam_def const!  It breaks some compilers.
- */
-
-typedef  std::set<histogram_def> histogram_defs_t; // a set of histogram definitions
-
-inline bool operator <(const histogram_def &h1,const histogram_def &h2)  {
-    if ( h1.feature<h2.feature ) return true;
-    if ( h1.feature>h2.feature ) return false;
-    if ( h1.pattern<h2.pattern ) return true;
-    if ( h1.pattern>h2.pattern ) return false;
-    if ( h1.suffix<h2.suffix ) return true;
-    if ( h1.suffix>h2.suffix ) return false;
-    return false;                       /* equal */
-};
-
-inline bool operator !=(const histogram_def &h1,const histogram_def &h2)  {
-    return h1.feature!=h2.feature || h1.pattern!=h2.pattern || h1.suffix!=h2.suffix;
-};
-
-
-/* carve object cache */
-typedef atomic_set<std::string> carve_cache_t;
-
-/* in-memory histograms */
-typedef atomic_histogram<std::string,uint64_t> mhistogram_t;             // memory histogram
-typedef std::map<histogram_def,mhistogram_t *> mhistograms_t;
-
 class feature_recorder {
-    // default copy construction and assignment are meaningless and not implemented
+public:;
+
+    /* The main public interface:
+     * Note that feature_recorders exist in a feature_recorder_set and have a name.
+     */
+    feature_recorder(class feature_recorder_set &fs, const std::string &name);
+    virtual        ~feature_recorder();
+    virtual void   set_flag(uint32_t flags_);
+    virtual void   unset_flag(uint32_t flags_);
+    void           enable_memory_histograms();              // only called from feature_recorder_set
+    bool           flag_set(uint32_t f)    const {return flags & f;}
+    bool           flag_notset(uint32_t f) const {return !(flags & f);}
+    uint32_t       get_flags()             const {return flags;}
+    virtual const std::string &get_outdir() const; // cannot be inline becuase it accesses fs
+
+    static size_t context_window_default; // global option
+    class  feature_recorder_set &fs;              // the set in which this feature_recorder resides
+    const  std::string name {};                   // name of this feature recorder
+    bool   validateOrEscapeUTF8_validate { true };     // should we validate or escape the HTML?
+
+
+    /* default copy construction and assignment are meaningless and not implemented */
     static std::thread::id main_thread_id;
     feature_recorder(const feature_recorder &)=delete;
     feature_recorder &operator=(const feature_recorder &)=delete;
 
     static uint32_t debug;              // are we debugging?
-    uint32_t        flags {0};              // flags for this feature recorder
+    uint32_t        flags {0};          // flags for this feature recorder
     /****************************************************************/
 
 public:
-#ifdef BEAPI_SQLITE3
+#if defined(HAVE_SQLITE3_H) and defined(HAVE_LIBSQLITE3)
     struct besql_stmt {
         besql_stmt(const besql_stmt &)=delete;
         besql_stmt &operator=(const besql_stmt &)=delete;
         std::mutex         Mstmt {};
-        BEAPI_SQLITE3_STMT *stmt {};      // the prepared statement
-        besql_stmt(BEAPI_SQLITE3 *db3,const char *sql);
+        sqlite3_stmt *stmt {};      // the prepared statement
+        besql_stmt(sqlite3 *db3,const char *sql);
         virtual ~besql_stmt();
         void insert_feature(const pos0_t &pos, // insert it into this table!
                             const std::string &feature,const std::string &feature8, const std::string &context);
@@ -173,29 +142,12 @@ public:
     static std::string banner_file;         // banner for top of every file
     static std::string extract_feature(const std::string &line);
 
-    /* The main public interface: */
-    feature_recorder(class feature_recorder_set &fs, const std::string &name);
-    virtual        ~feature_recorder();
-    virtual void   set_flag(uint32_t flags_);
-    virtual void   unset_flag(uint32_t flags_);
-    void           enable_memory_histograms();              // only called from feature_recorder_set
-    virtual void   set_memhist_limit(int64_t limit_);
-    bool           flag_set(uint32_t f)    const {return flags & f;}
-    bool           flag_notset(uint32_t f) const {return !(flags & f);}
-    uint32_t       get_flags()             const {return flags;}
-    virtual const std::string &get_outdir() const;
-
-    static size_t context_window_default; // global option
-    class  feature_recorder_set &fs;              // the set in which this feature_recorder resides
-    const  std::string name {};                   // name of this feature recorder
-    bool   validateOrEscapeUTF8_validate { true };     // should we validate or escape the HTML?
-
 private:
     std::string  ignore_encoding {};            // encoding to ignore for carving
     std::fstream ios {};                        // where features are written
 
-#ifdef BEAPI_SQLITE3
-    class besql_stmt *bs;                    // prepared beapi sql statement
+#if defined(HAVE_SQLITE3_H) and defined(HAVE_LIBSQLITE3)
+    struct besql_stmt *bs;                    // prepared beapi sql statement
 #endif
 
 protected:;
@@ -216,17 +168,16 @@ protected:
     carve_cache_t          carve_cache {};
 public:
     /* these are not threadsafe and should only be called in startup */
-    void MAINTHREAD() {        assert( main_thread_id == std::this_thread::get_id() ); }
+    void MAINTHREAD() {
+        assert( main_thread_id == std::this_thread::get_id() );
+    }
 
-    void set_stop_list_recorder(class feature_recorder *fr){
+    virtual void   set_memhist_limit(int64_t limit_) {
         MAINTHREAD();
-        stop_list_recorder = fr;
-    }
-    void set_context_window(size_t win){
-        MAINTHREAD();
-        context_window_before = win;
-        context_window_after  = win;
-    }
+        mhistogram_limit = limit_;
+    };
+    void set_stop_list_recorder(class feature_recorder *fr){ MAINTHREAD(); stop_list_recorder = fr; }
+    void set_context_window(size_t win)       { MAINTHREAD(); context_window_before = win; context_window_after  = win;}
     void set_context_window_before( size_t win )                 { MAINTHREAD(); context_window_before = win;}
     void set_context_window_after( size_t win )                  { MAINTHREAD(); context_window_after = win; }
     void set_carve_ignore_encoding( const std::string &encoding ){ MAINTHREAD();ignore_encoding = encoding;}
@@ -240,7 +191,9 @@ public:
 
     void   banner_stamp(std::ostream &os,const std::string &header) const; // stamp banner, and header
 
-    /* where stopped items (on stop_list or context_stop_list) get recorded: */
+    /* where stopped items (on stop_list or context_stop_list) get recorded:
+     * Cannot be made inline becuase it accesses fs.
+     */
     std::string        fname_counter(std::string suffix) const;
     static std::string quote_string(const std::string &feature); // turns unprintable characters to octal escape
     static std::string unquote_string(const std::string &feature); // turns octal escape back to binary characters
@@ -260,7 +213,7 @@ public:
      */
     virtual void add_histogram(const histogram_def &def); // adds a histogram to process
     virtual void dump_histogram_file(const histogram_def &def,void *user,feature_recorder::dump_callback_t cb) const;
-#ifdef BEAPI_SQLITE3
+#if defined(HAVE_SQLITE3_H) and defined(HAVE_LIBSQLITE3)
     virtual void dump_histogram_sqlite3(const histogram_def &def,void *user,feature_recorder::dump_callback_t cb) const;
 #endif
     virtual void dump_histogram(const histogram_def &def,void *user,feature_recorder::dump_callback_t cb) const;
@@ -299,7 +252,7 @@ public:
     // write0() calls write0_sqlite3() if sqlwriting is enabled
     virtual void write0(const pos0_t &pos0,const std::string &feature,const std::string &context);
 private:
-#ifdef BEAPI_SQLITE3
+#if defined(HAVE_SQLITE3_H) and defined(HAVE_LIBSQLITE3)
     virtual void write0_sqlite3(const pos0_t &pos0,const std::string &feature,const std::string &context);
 #endif
     static const char *db_insert_stmt;
@@ -343,6 +296,8 @@ public:
     // Set the time of the carved file to iso8601 file
     virtual void set_carve_mtime(const std::string &fname, const std::string &mtime_iso8601);
 };
+
+
 
 
 /** @} */

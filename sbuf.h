@@ -22,6 +22,13 @@
  * sbuf_stream is a stream-oriented interface for reading sbuf data.
  */
 
+#include "pos0.h"
+#include <string>
+#include <fstream>
+#include <exception>
+
+#include <sys/mman.h>
+#include <unistd.h>
 
 /*
  * NOTE: The crash identified in November 2019 was because access to
@@ -41,11 +48,6 @@
 
 //Don't turn this on; it currently makes scan_net crash.
 //#define SBUF_TRACK
-
-/* required per C++ standard */
-//#ifndef __STDC_FORMAT_MACROS
-//#define __STDC_FORMAT_MACROS
-//#endif
 
 
 /**
@@ -411,7 +413,7 @@ public:
      * starting at a given point.
      * return -1 if there is none to find.
      */
-    ssize_t find(uint8_t ch,size_t start) const {
+    ssize_t find(uint8_t ch,size_t start=0) const {
         for(;start<pagesize;start++){
             if(buf[start]==ch) return start;
         }
@@ -424,7 +426,7 @@ public:
      * Return offset or -1 if there is none to find.
      * This would benefit from a boyer-Moore implementation
      */
-    ssize_t find(const char *str,size_t start) const {
+    ssize_t find(const char *str,size_t start=0) const {
         if(str[0]==0) return -1;        // nothing to search for
 
         for(;start<pagesize;start++){

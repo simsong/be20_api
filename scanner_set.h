@@ -146,15 +146,17 @@ struct scanner_params {
         }
     }
 
-    // phase_t specifies when the scanner is being called
-    typedef enum {
-        PHASE_NONE     = -1,
-        PHASE_STARTUP  = 0,            // called in main thread when scanner loads; called on EVERY scanner (called for help)
-        PHASE_INIT     = 3,            // called in main thread for every ENABLED scanner after all scanners loaded
-        PHASE_THREAD_BEFORE_SCAN = 4,  // called in worker thread for every ENABLED scanner before first scan
-        PHASE_SCAN     = 1,            // called in worker thread for every ENABLED scanner to scan an sbuf
-        PHASE_SHUTDOWN = 2,            // called in main thread for every ENABLED scanner when scanner is shutdown
-    } phase_t ;
+    // phase_t specifies when the scanner is being called.
+    // the scans are implemented in the scanner set
+    enum phase_t {
+
+        PHASE_NONE     ,
+        PHASE_STARTUP  ,            // called in main thread when scanner loads; called on EVERY scanner (called for help)
+        PHASE_INIT     ,            // called in main thread for every ENABLED scanner after all scanners loaded
+        PHASE_THREAD_BEFORE_SCAN4,  // called in worker thread for every ENABLED scanner before first scan
+        PHASE_SCAN     ,            // called in worker thread for every ENABLED scanner to scan an sbuf
+        PHASE_SHUTDOWN             // called in main thread for every ENABLED scanner when scanner is shutdown
+    };
 
     /*
      * CONSTRUCTORS
@@ -207,7 +209,7 @@ struct scanner_params {
      * Constant instance variables that must always be provided. These cannot default.
      */
 
-    class scanner_config        *config{}; // scanner config for scanners in this scanner_set.
+    struct scanner_config        *config{}; // scanner config for scanners in this scanner_set.
     const phase_t               phase; /*  0=startup, 1=normal, 2=shutdown (changed to phase_t in v1.3) */
     const sbuf_t                &sbuf; /*  what to scan / only valid in SCAN_PHASE */
     class feature_recorder_set  &fs; /* where to put the results / only valid in SCAN_PHASE */

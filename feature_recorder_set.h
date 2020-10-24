@@ -3,6 +3,9 @@
 #define FEATURE_RECORDER_SET_H
 
 
+#include "sbuf.h"
+#include "feature_recorder.h"
+#include "dfxml/src/dfxml_writer.h"
 /** \addtogroup internal_interfaces
  * @{
  */
@@ -49,8 +52,8 @@ class feature_recorder_set {
     histogram_defs_t      histogram_defs {};   // histograms that are to be created.
     mutable std::mutex    Min_transaction {};
     bool                  in_transaction {};
-#ifdef BEAPI_SQLITE3
-    BEAPI_SQLITE3         *db {};              // databse handle opened in SQLITE_OPEN_FULLMUTEX mode
+#if defined(HAVE_SQLITE3_H) and defined(HAVE_LIBSQLITE3)
+    sqlite3               *db3 {};              // databse handle opened in SQLITE_OPEN_FULLMUTEX mode
 #endif
 
 public:
@@ -150,9 +153,9 @@ public:
      *** DB interface
      ****************************************************************/
 
-#ifdef BEAPI_SQLITE3
-    virtual  void db_send_sql(BEAPI_SQLITE3 *db3,const char **stmts, ...) ;
-    virtual  BEAPI_SQLITE3 *db_create_empty(const std::string &name) ;
+#if defined(HAVE_SQLITE3_H) and defined(HAVE_LIBSQLITE3)
+    virtual  void db_send_sql(sqlite3 *db3,const char **stmts, ...) ;
+    virtual  sqlite3 *db_create_empty(const std::string &name) ;
     void     db_create_table(const std::string &name) ;
     void     db_create() ;
     void     db_transaction_begin() ;

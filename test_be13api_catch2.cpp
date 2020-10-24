@@ -9,13 +9,12 @@
 #define CATCH_CONFIG_MAIN
 #include "config.h"                     // supposed to come after bulk_extractor_i.h
 #include "tests/catch.hpp"
-#include "bulk_extractor_i.h"           // brings in entire header set
 
-// define stuff I need in the global environment. Only read it once.
 
 /****************************************************************
  * aftimer.h
  */
+#include "aftimer.h"
 TEST_CASE("aftimer", "[utils]") {
     aftimer t;
     REQUIRE(t.elapsed_seconds()==0.0);
@@ -25,6 +24,7 @@ TEST_CASE("aftimer", "[utils]") {
 /****************************************************************
  * atomic_set_map.h
  */
+#include "atomic_set_map.h"
 int dump_cb(void *user, const std::string &val, const int &count){
     int *called = (int *)user;
     switch (*called) {
@@ -57,10 +57,10 @@ TEST_CASE( "test atomic_histogram", "[vector]" ){
 }
 
 /****************************************************************
- * feature_recorder_set.h
+ * hash_t.h
  */
+#include "dfxml/src/hash_t.h"
 static std::string hash_name("md5");
-static std::string hash_func(const uint8_t *buf,size_t bufsize)
 {
     if(hash_name=="md5" || hash_name=="MD5"){
         return dfxml::md5_generator::hash_buf(buf,bufsize).hexdigest();
@@ -75,19 +75,27 @@ static std::string hash_func(const uint8_t *buf,size_t bufsize)
     std::cerr << "This version of bulk_extractor only supports MD5, SHA1, and SHA256\n";
     exit(1);
 }
-static feature_recorder_set::hash_def my_hasher(hash_name,hash_func);
 
-/*
- * test a feature recorder set. Note the order:
- * - Create a list of the filenames that we need
- * - create the set
- * - Init the set
- * - create the recorder
- * - init the scanners
- * - start the transaction
- * - close the transaction
+
+/****************************************************************
+ * feature_recorder.h
  */
+#if 0
+#include "feature_recorder.h"
+#endif
 
+/****************************************************************
+ * feature_recorder_set.h
+ */
+#if 0
+#include "feature_recorder_set.h"
+static std::string hash_func(const uint8_t *buf,size_t bufsize)
+static feature_recorder_set::hash_def my_hasher(hash_name,hash_func);
+TEST_CASE("feature_recorder_set", "[frs]" ) {
+}
+#endif
+
+#if 0
 TEST_CASE("feature_recorder_sql", "[frs]") {
     be13::plugin::scanners_process_enable_disable_commands();
     feature_file_names_t feature_file_names;
@@ -106,7 +114,7 @@ TEST_CASE("feature_recorder_sql", "[frs]") {
 
     be13::plugin::scanners_init(fs);
 
-#ifdef BEAPI_SQLITE3
+#if defined(HAVE_SQLITE3_H) and defined(HAVE_LIBSQLITE3)
     fs.db_transaction_begin();
 #endif
 
@@ -129,7 +137,7 @@ TEST_CASE("feature_recorder_sql", "[frs]") {
         fr.write(p1, feature, context);
         //insert_statement(stmt,p1,feature,context);
     }
-#ifdef BEAPI_SQLITE3
+#if defined(HAVE_SQLITE3_H) and defined(HAVE_LIBSQLITE3)
     fs.db_transaction_commit();
 #endif
     //sqlite3_exec(db,"COMMIT TRANSACTION",NULL,NULL,&errmsg);
@@ -137,10 +145,21 @@ TEST_CASE("feature_recorder_sql", "[frs]") {
 
     /* Now verify that they are there */
 }
-
+#endif
 
 /****************************************************************
  * feature_recorder_set.h
+ */
+
+/*
+ * test a feature recorder set. Note the order:
+ * - Create a list of the filenames that we need
+ * - create the set
+ * - Init the set
+ * - create the recorder
+ * - init the scanners
+ * - start the transaction
+ * - close the transaction
  */
 
 TEST_CASE("feature_recorder_set", "[frs]") {
@@ -148,8 +167,14 @@ TEST_CASE("feature_recorder_set", "[frs]") {
 
 
 /****************************************************************
+ * histogram.h
+ */
+#include "histogram.h"
+
+/****************************************************************
  * regex_vector.h & regex_vector.cpp
  */
+#include "regex_vector.h"
 TEST_CASE( "test regex_vector", "[vector]" ) {
     REQUIRE( regex_vector::has_metachars("this[1234]foo") == true );
     REQUIRE( regex_vector::has_metachars("this(1234)foo") == true );
@@ -183,8 +208,10 @@ TEST_CASE( "test atomic_set_map", "[vector]" ){
 
 /****************************************************************
  *
- * sbuf.h
+ * pos0.h:
  */
+
+#include "pos0.h"
 TEST_CASE( "pos0_t", "[vector]" ){
     REQUIRE( stoi64("12345") == 12345);
 
@@ -206,9 +233,30 @@ TEST_CASE( "pos0_t", "[vector]" ){
 }
 
 
+
+/****************************************************************
+ *
+ * sbuf.h
+ */
+#include "sbuf.h"
+TEST_CASE("sbuf","[sbuf]") {
+    const char *hello="Hello world!";
+    const uint8_t *hello_buf = reinterpret_cast<const uint8_t *>(hello);
+    pos0_t p0("hello");
+    sbuf_t sb1(p0, hello_buf, strlen(hello), strlen(hello), 0, false, false, false);
+    REQUIRE( sb1.size()==strlen(hello));
+    REQUIRE( sb1.offset(&hello_buf[2]) == 2);
+    REQUIRE( sb1.asString() == std::string("Hello world!"));
+    REQUIRE( sb1.get8uBE(0) == 'H');
+    REQUIRE( sb1.find('o', 0) == 4);
+    REQUIRE( sb1.find("world") == 6);
+}
+
+
 /****************************************************************
  *  word_and_context_list.h
  */
+#include "word_and_context_list.h"
 TEST_CASE("word_and_context_list", "[vector]") {
     REQUIRE( word_and_context_list::rstrcmp("aaaa1", "bbbb0") < 0 );
     REQUIRE( word_and_context_list::rstrcmp("aaaa1", "aaaa1") == 0 );
@@ -220,6 +268,7 @@ TEST_CASE("word_and_context_list", "[vector]") {
  * unicode_escape.h
  * unicode_escape.cpp
  */
+#include "unicode_escape.h"
 TEST_CASE("unicode_escape", "[unicode]") {
     const char *U1F601 = "\xF0\x9F\x98\x81";        // UTF8 for Grinning face with smiling eyes
     REQUIRE( hexesc('a') == "\\x61");               // escape the escape!

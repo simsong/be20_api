@@ -91,15 +91,6 @@ const int DEBUG_INFO        = 0x0040;   // print extra info
 const int DEBUG_EXIT_EARLY  = 1000;     // just print the size of the volume and exis
 const int DEBUG_ALLOCATE_512MiB = 1002;      // Allocate 512MiB, but don't set any flags
 
-#ifdef HAVE_SQLITE3_H
-#include <sqlite3.h>
-#define BEAPI_SQLITE3 sqlite3
-#define BEAPI_SQLITE3_STMT sqlite3_stmt
-#else
-#define BEAPI_SQLITE3 void
-#define BEAPI_SQLITE3_STMT void
-#endif
-
 /**
  * \addtogroup plugin_module
  * @{

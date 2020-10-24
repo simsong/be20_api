@@ -333,7 +333,13 @@ void scanner_set::scanners_process_enable_disable_commands()
 
 
 /****************************************************************
- *** PHASE_SHUTDOWN (formerly phase 2): shut down the scanners
+ *** PHASE_SCAN methods.
+ ****************************************************************/
+
+
+
+/****************************************************************
+ *** PHASE_SHUTDOWN methods.
  ****************************************************************/
 
 void scanner_set::phase_shutdown(feature_recorder_set &fs,std::stringstream *sxml)

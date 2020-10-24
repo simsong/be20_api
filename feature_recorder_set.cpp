@@ -79,9 +79,9 @@ feature_recorder_set::feature_recorder_set(uint32_t flags_,const std::string has
         create_name(feature_recorder_set::ALERT_RECORDER_NAME,false); // make the alert recorder
     }
 
-    message_enabled_scanners(scanner_params::PHASE_INIT); // tell all enabled scanners to init
+    //message_enabled_scanners(scanner_params::PHASE_INIT); // tell all enabled scanners to init
 
-#ifdef BEAPI_SQLITE3
+#if defined(HAVE_SQLITE3_H) and defined(HAVE_LIBSQLITE3)
     if (flag_set(ENABLE_SQLITE3_RECORDERS)) {
         db_create();
     }
@@ -103,7 +103,7 @@ feature_recorder_set::~feature_recorder_set()
     for ( auto it:frm ){
         delete it.second;
     }
-#ifdef BEAPI_SQLITE3
+#if defined(HAVE_SQLITE3_H) and defined(HAVE_LIBSQLITE3)
     db_close();
 #endif
 }
@@ -158,7 +158,7 @@ void feature_recorder_set::close_all()
     for (auto it:frm){
         it.second->close();
     }
-#ifdef BEAPI_SQLITE3
+#if defined(HAVE_SQLITE3_H) and defined(HAVE_LIBSQLITE3)
     if ( flag_set(feature_recorder_set::ENABLE_SQLITE3_RECORDERS )) {
         db_transaction_commit();
     }
@@ -346,7 +346,7 @@ void feature_recorder_set::get_feature_file_list(std::vector<std::string> &ret)
 }
 
 
-#ifdef BEAPI_SQLITE3
+#if defined(HAVE_SQLITE3_H) and defined(HAVE_LIBSQLITE3)
 
 /*** SQL Support ***/
 
@@ -391,7 +391,7 @@ static const char *schema_tbl[] = {
 
 static const char *begin_transaction[] = {"BEGIN TRANSACTION",0};
 static const char *commit_transaction[] = {"COMMIT TRANSACTION",0};
-void feature_recorder_set::db_send_sql(BEAPI_SQLITE3 *db,const char **stmts, ...)
+void feature_recorder_set::db_send_sql(sqlite3 *db,const char **stmts, ...)
 {
     assert(db!=0);
     for(int i=0;stmts[i];i++){
@@ -419,12 +419,12 @@ void feature_recorder_set::db_create_table(const std::string &name)
     db_send_sql(db3,schema_tbl,name.c_str(),name.c_str());
 }
 
-BEAPI_SQLITE3 *feature_recorder_set::db_create_empty(const std::string &name)
+sqlite3 *feature_recorder_set::db_create_empty(const std::string &name)
 {
     assert(name.size()>0);
     std::string dbfname  = outdir + "/" + name +  SQLITE_EXTENSION;
     if(debug) std::cerr << "create_feature_database " << dbfname << "\n";
-    BEAPI_SQLITE3 *db=0;
+    sqlite3 *db=0;
     if (sqlite3_open_v2(dbfname.c_str(), &db,
                         SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE|SQLITE_OPEN_FULLMUTEX,
                         0)!=SQLITE_OK) {

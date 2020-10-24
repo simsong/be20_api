@@ -130,6 +130,65 @@ public:
     virtual ~HistogramMaker(){};
 };
 
+
+/**
+ * histogram_def defines the histograms that will be made by a feature recorder.
+ * If the mhistogram is set, the histogram is generated when features are recorded
+ * and kept in memory. If mhistogram is not set, the histogram is generated when the feature recorder is closed.
+ */
+
+struct histogram_def {
+    /**
+     * @param feature- the feature file to histogram (no .txt)
+     * @param re     - the regular expression to extract
+     * @param require- require this string on the line (usually in context)
+     * @param suffix - the suffix to add to the histogram file after feature name before .txt
+     * @param flags  - any flags (see above)
+     */
+
+    histogram_def(std::string feature_,std::string re_,std::string suffix_,uint32_t flags_=0):
+        feature(feature_),pattern(re_),require(),suffix(suffix_),flags(flags_),reg(pattern){}
+    histogram_def(std::string feature_,std::string re_,std::string require_,std::string suffix_,uint32_t flags_=0):
+        feature(feature_),pattern(re_),require(require_),suffix(suffix_),flags(flags_),reg(pattern){ }
+    const std::string feature;      /* feature file name */
+    const std::string pattern;      /* extract pattern; "" means use entire feature */
+    const std::string require;      /* text required somewhere on the feature line; used for IP histograms */
+    const std::string suffix;       /* suffix to append; "" means "histogram" */
+    const uint32_t    flags;        // defined in histogram.h
+    const std::regex  reg;          // regular expression for pattern
+};
+
+/* NOTE:
+ * 1 - This typedef must remain outside the the feature_recorder due
+ *     to historical reasons and cannot be made a vector
+ * 2 - Do not make historam_def const!  It breaks some compilers.
+ */
+
+typedef  std::set<histogram_def> histogram_defs_t; // a set of histogram definitions
+
+/* carve object cache */
+typedef atomic_set<std::string> carve_cache_t;
+
+/* in-memory histograms */
+typedef atomic_histogram<std::string,uint64_t> mhistogram_t;             // memory histogram
+typedef std::map<histogram_def,mhistogram_t *> mhistograms_t;
+
+/*** END OF HISTOGRAM STUFF ***/
+
 std::ostream & operator <<(std::ostream &os,const HistogramMaker::FrequencyReportVector &rep);
+
+inline bool operator <(const histogram_def &h1,const histogram_def &h2)  {
+    if ( h1.feature<h2.feature ) return true;
+    if ( h1.feature>h2.feature ) return false;
+    if ( h1.pattern<h2.pattern ) return true;
+    if ( h1.pattern>h2.pattern ) return false;
+    if ( h1.suffix<h2.suffix ) return true;
+    if ( h1.suffix>h2.suffix ) return false;
+    return false;                       /* equal */
+};
+
+inline bool operator !=(const histogram_def &h1,const histogram_def &h2)  {
+    return h1.feature!=h2.feature || h1.pattern!=h2.pattern || h1.suffix!=h2.suffix;
+};
 
 #endif

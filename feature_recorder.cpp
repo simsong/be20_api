@@ -1,6 +1,7 @@
 /* -*- mode: C++; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 
 #include "config.h"
+
 #include "feature_recorder.h"
 #include "bulk_extractor_i.h"
 #include "unicode_escape.h"
@@ -106,18 +107,9 @@ void feature_recorder::banner_stamp(std::ostream &os,const std::string &header) 
 
 
 
-/**
- * Return the filename with a counter
- */
-std::string feature_recorder::fname_counter(std::string suffix) const
-{
-    return fs.get_outdir() + "/" + this->name + (suffix.size()>0 ? (std::string("_") + suffix) : "") + ".txt";
-}
-
 
 const std::string &feature_recorder::get_outdir() const
 {
-    return fs.get_outdir();
 }
 
 /**
@@ -131,7 +123,7 @@ void feature_recorder::open()
 
     std::cerr << "DDD  \n";
     /* write to a database? Create tables if necessary and create a prepared statement */
-#ifdef BEAPI_SQLITE3
+#if defined(HAVE_SQLITE3_H) and defined(HAVE_LIBSQLITE3)
     if (fs.flag_set(feature_recorder_set::ENABLE_SQLITE3_RECORDERS)) {
         char buf[1024];
         fs.db_create_table(name);
@@ -276,11 +268,17 @@ void feature_recorder::unset_flag(uint32_t flags_)
     flags &= (~flags_);
 }
 
-void feature_recorder::set_memhist_limit(int64_t limit_)
+std::string fname_counter(std::string suffix) const
 {
-    MAINTHREAD();
-    mhistogram_limit = limit_;
+    return fs.get_outdir() + "/" + this->name + (suffix.size()>0 ? (std::string("_") + suffix) : "") + ".txt";
 }
+
+
+virtual const std::string &get_outdir() const // cannot be inline becuase it accesses fs
+{
+    return fs.get_outdir();
+}
+
 
 
 // add a memory histogram; assume the position in the mhistograms is stable
@@ -451,7 +449,7 @@ void feature_recorder::dump_histogram(const histogram_def &def,void *user,featur
         return;
     }
 
-#ifdef BEAPI_SQLITE3
+#if defined(HAVE_SQLITE3_H) and defined(HAVE_LIBSQLITE3)
     if (fs.flag_set(feature_recorder_set::ENABLE_SQLITE3_RECORDERS)) {
         dump_histogram_sqlite3(def,user,cb);
     }
@@ -565,7 +563,7 @@ void feature_recorder::printf(const char *fmt, ...)
 
 void feature_recorder::write0(const pos0_t &pos0,const std::string &feature,const std::string &context)
 {
-#ifdef BEAPI_SQLITE3
+#if defined(HAVE_SQLITE3_H) and defined(HAVE_LIBSQLITE3)
     if ( fs.flag_set(feature_recorder_set::ENABLE_SQLITE3_RECORDERS ) &&
          this->flag_notset(feature_recorder::FLAG_NO_FEATURES_SQL) ) {
         write0_sqlite3( pos0, feature, context);
@@ -1087,7 +1085,7 @@ void feature_recorder::set_carve_mtime(const std::string &fname, const std::stri
 #endif
 }
 
-#ifdef BEAPI_SQLITE3
+#if defined(HAVE_SQLITE3_H) and defined(HAVE_LIBSQLITE3)
 /*** SQL Routines Follow ***
  *
  * Time results with ubnist1 on R4:
@@ -1145,7 +1143,7 @@ void feature_recorder::besql_stmt::insert_feature(const pos0_t &pos,
     sqlite3_reset(stmt);
 };
 
-feature_recorder::besql_stmt::besql_stmt(BEAPI_SQLITE3 *db3,const char *sql):Mstmt(),stmt()
+feature_recorder::besql_stmt::besql_stmt(sqlite3 *db3,const char *sql):Mstmt(),stmt()
 {
     assert(db3!=0);
     assert(sql!=0);
