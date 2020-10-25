@@ -2,18 +2,17 @@
  * histogram.cpp:
  * Maintain a histogram for Unicode strings provided as UTF-8 and UTF-16 encodings.
  * Track number of each coding provided.
- * 
+ *
  * TK: Reimplement top-n with a priority queue.
  *  http://www.cplusplus.com/reference/queue/priority_queue/
  */
 
 #include "config.h"
-#include "bulk_extractor_i.h"
 #include "unicode_escape.h"
 #include "histogram.h"
 #include "utf8.h"
 
-using namespace std;
+#if 0
 
 ostream & operator << (ostream &os, const HistogramMaker::FrequencyReportVector &rep){
     for(HistogramMaker::FrequencyReportVector::const_iterator i = rep.begin(); i!=rep.end();i++){
@@ -162,7 +161,7 @@ void HistogramMaker::add(const std::string &key)
             found_utf16 = true;
         }
     }
-    
+
     /* If any conversion is necessary AND we have not converted key from UTF-16 to UTF-8,
      * then the original key is still in 'key'. Allocate tempKey and copy key to tempKey.
      */
@@ -237,4 +236,4 @@ void HistogramMaker::add(const std::string &key)
 	delete tempKey;
     }
 }
-    
+#endif

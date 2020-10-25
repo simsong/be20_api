@@ -84,8 +84,6 @@ struct scanner_info {
         return ret;
     }
 
-    // never change the order or delete old fields, or else you will
-    // break backwards compatability
     scanner_info(){};
     /* PASSED FROM SCANNER to API: */
     int               si_version { CURRENT_SI_VERSION};             // version number for this structure
@@ -209,7 +207,7 @@ struct scanner_params {
      * Constant instance variables that must always be provided. These cannot default.
      */
 
-    struct scanner_config        *config{}; // scanner config for scanners in this scanner_set.
+    class scanner_config        *config{}; // scanner config for scanners in this scanner_set.
     const phase_t               phase; /*  0=startup, 1=normal, 2=shutdown (changed to phase_t in v1.3) */
     const sbuf_t                &sbuf; /*  what to scan / only valid in SCAN_PHASE */
     class feature_recorder_set  &fs; /* where to put the results / only valid in SCAN_PHASE */

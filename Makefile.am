@@ -38,5 +38,7 @@ TESTS = $(check_PROGRAMS)
 apitest: test_be13api_catch2
 
 # Slowly add modules as tests are written for them.
-test_be13api_catch2_SOURCES = $(BE13_API_SRC) $(DFXML_WRITER) test_be13api_catch2.cpp tests/catch2.h \
+test_be13api_catch2_SOURCES = $(DFXML_WRITER) test_be13api_catch2.cpp tests/catch2.h \
+	regex_vector.h regex_vector.cpp \
+	unicode_escape.h unicode_escape.cpp \
 	scanner_config.h scanner_config.cpp

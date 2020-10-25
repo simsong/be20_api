@@ -13,6 +13,9 @@
 
 #include <vector>
 #include <map>
+#include <regex>
+
+#include "atomic_set_map.h"
 
 /**
  * \class CharClass

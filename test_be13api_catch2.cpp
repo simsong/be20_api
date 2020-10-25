@@ -61,6 +61,7 @@ TEST_CASE( "test atomic_histogram", "[vector]" ){
  */
 #include "dfxml/src/hash_t.h"
 static std::string hash_name("md5");
+static std::string hash_func(const uint8_t *buf,size_t bufsize)
 {
     if(hash_name=="md5" || hash_name=="MD5"){
         return dfxml::md5_generator::hash_buf(buf,bufsize).hexdigest();
@@ -89,7 +90,6 @@ static std::string hash_name("md5");
  */
 #if 0
 #include "feature_recorder_set.h"
-static std::string hash_func(const uint8_t *buf,size_t bufsize)
 static feature_recorder_set::hash_def my_hasher(hash_name,hash_func);
 TEST_CASE("feature_recorder_set", "[frs]" ) {
 }
@@ -172,6 +172,34 @@ TEST_CASE("feature_recorder_set", "[frs]") {
 #include "histogram.h"
 
 /****************************************************************
+ *
+ * pos0.h:
+ */
+
+#include "pos0.h"
+TEST_CASE( "pos0_t", "[vector]" ){
+    REQUIRE( stoi64("12345") == 12345);
+
+    pos0_t p0("10000-hello-200-bar",300);
+    pos0_t p1("10000-hello-200-bar",310);
+    pos0_t p2("10000-hello-200-bar",310);
+    REQUIRE( p0.path == "10000-hello-200-bar" );
+    REQUIRE( p0.offset == 300);
+    REQUIRE( p0.isRecursive() == true);
+    REQUIRE( p0.firstPart() == "10000" );
+    REQUIRE( p0.lastAddedPart() == "bar" );
+    REQUIRE( p0.alphaPart() == "hello/bar" );
+    REQUIRE( p0.imageOffset() == 10000 );
+    REQUIRE( p0 + 10 == p1);
+    REQUIRE( p0 < p1 );
+    REQUIRE( p1 > p0 );
+    REQUIRE( p0 != p1 );
+    REQUIRE( p1 == p2 );
+}
+
+
+
+/****************************************************************
  * regex_vector.h & regex_vector.cpp
  */
 #include "regex_vector.h"
@@ -208,34 +236,6 @@ TEST_CASE( "test atomic_set_map", "[vector]" ){
 
 /****************************************************************
  *
- * pos0.h:
- */
-
-#include "pos0.h"
-TEST_CASE( "pos0_t", "[vector]" ){
-    REQUIRE( stoi64("12345") == 12345);
-
-    pos0_t p0("10000-hello-200-bar",300);
-    pos0_t p1("10000-hello-200-bar",310);
-    pos0_t p2("10000-hello-200-bar",310);
-    REQUIRE( p0.path == "10000-hello-200-bar" );
-    REQUIRE( p0.offset == 300);
-    REQUIRE( p0.isRecursive() == true);
-    REQUIRE( p0.firstPart() == "10000" );
-    REQUIRE( p0.lastAddedPart() == "bar" );
-    REQUIRE( p0.alphaPart() == "hello/bar" );
-    REQUIRE( p0.imageOffset() == 10000 );
-    REQUIRE( p0 + 10 == p1);
-    REQUIRE( p0 < p1 );
-    REQUIRE( p1 > p0 );
-    REQUIRE( p0 != p1 );
-    REQUIRE( p1 == p2 );
-}
-
-
-
-/****************************************************************
- *
  * sbuf.h
  */
 #include "sbuf.h"
@@ -252,6 +252,34 @@ TEST_CASE("sbuf","[sbuf]") {
     REQUIRE( sb1.find("world") == 6);
 }
 
+/****************************************************************
+ * scanner_config.h:
+ * holds the name=value configurations for all scanners.
+ * A scanner_config is required to make a scanner_set.
+ * The scanner_set then loads the scanners and creates a feature recorder set, which
+ * holds the feature recorders. THey are called with the default values.
+ */
+#include "scanner_config.h"
+TEST_CASE("scanner_config", "[sc]") {
+    std::string help_string {"   -S first-day=sunday    value for first-day (first-day)\n"
+                             "   -S age=0    age in years (age)\n"};
+    class scanner_config sc;
+    /* Normally the set_configs would be called by main()
+    * These two would be called by -S first-day=monday  -S age=5
+    */
+    sc.set_config("first-day","monday");
+    sc.set_config("age","5");
+
+    std::string val {"sunday"};
+    sc.get_config("first-day", &val, "value for first-day");
+    REQUIRE(val == "monday");
+
+    uint64_t ival {0};
+    sc.get_config("age", &ival, "age in years");
+    REQUIRE(ival == 5);
+
+    REQUIRE(sc.help() == help_string);
+}
 
 /****************************************************************
  *  word_and_context_list.h

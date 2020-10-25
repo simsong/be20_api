@@ -3,7 +3,6 @@
 #include "config.h"
 
 #include "feature_recorder.h"
-#include "bulk_extractor_i.h"
 #include "unicode_escape.h"
 #include "histogram.h"
 
@@ -96,6 +95,7 @@ void feature_recorder::banner_stamp(std::ostream &os,const std::string &header) 
 
     os << bulk_extractor_version_header;
     os << "# Feature-Recorder: " << name << "\n";
+
     if (fs.get_input_fname().size()) os << "# Filename: " << fs.get_input_fname() << "\n";
     if (feature_recorder::debug!=0){
         os << "# DEBUG: " << debug << " (";
@@ -106,11 +106,6 @@ void feature_recorder::banner_stamp(std::ostream &os,const std::string &header) 
 }
 
 
-
-
-const std::string &feature_recorder::get_outdir() const
-{
-}
 
 /**
  * open a feature recorder file in the specified output directory.
@@ -268,13 +263,13 @@ void feature_recorder::unset_flag(uint32_t flags_)
     flags &= (~flags_);
 }
 
-std::string fname_counter(std::string suffix) const
+std::string feature_recorder::fname_counter(std::string suffix) const
 {
     return fs.get_outdir() + "/" + this->name + (suffix.size()>0 ? (std::string("_") + suffix) : "") + ".txt";
 }
 
 
-virtual const std::string &get_outdir() const // cannot be inline becuase it accesses fs
+const std::string &feature_recorder::get_outdir() const // cannot be inline becuase it accesses fs
 {
     return fs.get_outdir();
 }

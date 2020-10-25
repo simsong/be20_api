@@ -17,17 +17,22 @@
 #include <cinttypes>
 #include <map>
 #include <string>
+#include <sstream>
 
-struct scanner_config {
+class  scanner_config {
     typedef std::map<std::string,std::string>  config_t ; // configuration for scanner passed in
+    config_t  namevals{};             //  (input) name=val map
+    std::stringstream helpstream;
+public:
     virtual ~scanner_config(){};
     scanner_config(){};
-    config_t  namevals{};             //  (input) name=val map
-    int       debug{};                //  (input) current debug level
+    std::string help() { return helpstream.str();} ;
 
     // These methods are implemented in the plugin system for the scanner to get config information.
+    // which is why they need to be virtual functions.
     // The get_config methods should be called on the si object during PHASE_STARTUP
     //virtual void get_config(const scanner_info::config_t &c, const std::string &name,std::string *val,const std::string &help);
+    virtual void set_config(const std::string &name, const std::string &val);
     virtual void get_config(const std::string &name, std::string *val, const std::string &help);
     virtual void get_config(const std::string &name, uint64_t *val,    const std::string &help);
     virtual void get_config(const std::string &name, int32_t *val,     const std::string &help);
