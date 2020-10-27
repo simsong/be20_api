@@ -31,9 +31,9 @@
 /* object for keeping track of packet callbacks */
 class packet_plugin_info {
 public:
-    packet_plugin_info(void *user_,packet_callback_t *callback_):user(user_),callback(callback_){};
+    packet_plugin_info(void *user_,be13::packet_callback_t *callback_):user(user_),callback(callback_){};
     void *user;
-    packet_callback_t *callback;
+    be13::packet_callback_t *callback;
 };
 
 /* Vector of callbacks */
@@ -57,6 +57,7 @@ packet_plugin_info_vector_t  packet_handlers;   // pcap callback handlers
  * This is called before scanners are enabled or disabled, so the pcap handlers
  * need to be set afterwards
  */
+#if 0
 void scanner_set::add_scanner(scanner_t scanner)
 {
     /* If scanner is already loaded, that's an error */
@@ -69,14 +70,10 @@ void scanner_set::add_scanner(scanner_t scanner)
      * We then ask the scanner to initialize.
      */
     const sbuf_t sbuf;
-    feature_recorder_set fs;
+    //feature_recorder_set fs;
     scanner_info si;                    // where the scanner info will go
     scanner_params sp(scanner_params::PHASE_STARTUP,sbuf,fs);
-    scanner_def *sd = new scanner_def();
     sp.config
-    sd->scanner     = scanner;
-    sd->info.config = &sc;
-    sp.info         = &sd->info;
 
     /*
      * Make an empty recursion control block and call the scanner's
@@ -89,10 +86,11 @@ void scanner_set::add_scanner(scanner_t scanner)
     sd->enabled      = !(sd->info.flags & scanner_info::SCANNER_DISABLED);
     current_scanners.push_back(sd);
 }
+#endif
 
-void scanner_set::load_scanner_file(std::string fn, const scanner_info::scanner_config &sc)
-{
-    /* Figure out the function name */
+#if 0
+void scanner_set::load_scanner_file(std::string fn, const scanner_config &c)
+{    /* Figure out the function name */
     size_t extloc = fn.rfind('.');
     if(extloc==std::string::npos){
         fprintf(stderr,"Cannot find '.' in %s",fn.c_str());
@@ -140,7 +138,10 @@ void scanner_set::load_scanner_file(std::string fn, const scanner_info::scanner_
 #endif
     load_scanner(*scanner,sc);
 }
+#endif
 
+
+#if 0
 void scanner_set::load_scanners(scanner_t * const *scanners,const scanner_info::scanner_config &sc)
 {
     for(int i=0;scanners[i];i++){
@@ -191,6 +192,7 @@ void scanner_set::load_scanner_packet_handlers()
         }
     }
 }
+#endif
 
 
 /**
@@ -592,6 +594,7 @@ void scanner_set::process_packet(const be13::packet_info &pi)
 }
 
 
+#if 0
 void scanner_set::get_scanner_feature_file_names(feature_file_names_t &feature_file_names)
 {
     for (scanner_vector::const_iterator it=current_scanners.begin();it!=current_scanners.end();it++){
@@ -604,3 +607,4 @@ void scanner_set::get_scanner_feature_file_names(feature_file_names_t &feature_f
         }
     }
 }
+#endif

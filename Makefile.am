@@ -41,4 +41,7 @@ apitest: test_be13api_catch2
 test_be13api_catch2_SOURCES = $(DFXML_WRITER) test_be13api_catch2.cpp tests/catch2.h \
 	regex_vector.h regex_vector.cpp \
 	unicode_escape.h unicode_escape.cpp \
-	scanner_config.h scanner_config.cpp
+	scanner_config.h scanner_config.cpp \
+	scanner_set.h scanner_set.cpp \
+	packet_info.h pcap_fake.h \
+	utils.h

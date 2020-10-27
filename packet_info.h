@@ -52,9 +52,6 @@
 #  include "pcap_fake.h"
 #endif
 
-
-
-
 /* namespace needed here because of conflicts below */
 namespace be13 {
 
@@ -94,13 +91,12 @@ namespace be13 {
      * Structure of an internet header, naked of options.
      */
     struct ip4 {
-#if __BYTE_ORDER == __LITTLE_ENDIAN
-        uint8_t ip_hl:4;                /* header length */
-        uint8_t ip_v:4;                 /* version */
-#endif
-#if __BYTE_ORDER == __BIG_ENDIAN
+#ifdef BE13API_BIGENDIAN
         uint8_t ip_v:4;                 /* version */
         uint8_t ip_hl:4;                /* header length */
+#else
+        uint8_t ip_hl:4;                /* header length */
+        uint8_t ip_v:4;                 /* version */
 #endif
         uint8_t  ip_tos;                /* type of service */
         uint16_t ip_len;                /* total length */
@@ -162,14 +158,13 @@ namespace be13 {
         uint16_t th_dport;              /* destination port */
         tcp_seq th_seq;         /* sequence number */
         tcp_seq th_ack;         /* acknowledgement number */
-#  if __BYTE_ORDER == __LITTLE_ENDIAN
-        uint8_t th_x2:4;                /* (unused) */
-        uint8_t th_off:4;               /* data offset */
-#  endif
-#  if __BYTE_ORDER == __BIG_ENDIAN
+#ifdef BE13_API_BIGENDIAN
         uint8_t th_off:4;               /* data offset */
         uint8_t th_x2:4;                /* (unused) */
-#  endif
+#else
+        uint8_t th_x2:4;                /* (unused) */
+        uint8_t th_off:4;               /* data offset */
+#endif
         uint8_t th_flags;
 #  define TH_FIN        0x01
 #  define TH_SYN        0x02
@@ -320,8 +315,7 @@ namespace be13 {
 #endif
 
 
-    inline u_short packet_info::nshort(const u_char *buf,size_t pos)
-    {
+    inline u_short packet_info::nshort(const u_char *buf,size_t pos) {
         return (buf[pos]<<8) | (buf[pos+1]);
     }
 
@@ -476,9 +470,10 @@ namespace be13 {
         //return ntohs(*((uint16_t *) (ip_data + sizeof(struct ip6_hdr) + tcp_dport_off)));
         return nshort(ip_data,sizeof(struct ip6_hdr) + tcp_dport_off); //
     }
+
+    /* A packet_info provided as a callback.
+     */
+    typedef void packet_callback_t(void *user,const be13::packet_info &pi);
 };
 
-/* A packet_info provided as a callback.
- */
-typedef void packet_callback_t(void *user,const be13::packet_info &pi);
 #endif

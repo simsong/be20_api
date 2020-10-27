@@ -1,6 +1,13 @@
 /*
  * all be13_api test cases are in this file.
  * The goal is to have complete test coverage of the v2 API
+ *
+ * Todo list:
+ * - test an individual feature recorder (they can exist without scanners)
+ * - test a feature recorder set with two feature recorders.
+ * - create a generic scanner that counts the number of empty pages.
+ * - test the code for creating a scanner set that registering and enabling the scanner.
+ * - test code for running the single scanner set.
  */
 
 
@@ -8,6 +15,8 @@
 
 #define CATCH_CONFIG_MAIN
 #include "config.h"                     // supposed to come after bulk_extractor_i.h
+
+
 #include "tests/catch.hpp"
 
 
@@ -213,7 +222,7 @@ TEST_CASE( "test regex_vector", "[vector]" ) {
     rv.push_back("this.*");
     rv.push_back("check[1-9]");
     rv.push_back("thing");
-    std::cout << rv;
+    //std::cout << rv;
     REQUIRE( rv.size() == 3);
 
     std::string found;
@@ -280,6 +289,22 @@ TEST_CASE("scanner_config", "[sc]") {
 
     REQUIRE(sc.help() == help_string);
 }
+
+/****************************************************************
+ * scanner.h:
+ * The interface used by scanners.
+ */
+//#include "scanner.h"
+
+/****************************************************************
+ * scanner_set.h:
+ * Creates a place to hold all of the scanners.
+ * The be13_api contains a single scanner for testing purposes:
+ * scan_null, the null scanner, which writes metadata into a version.txt feature file.
+ */
+//#include "scanner_set.h"
+
+
 
 /****************************************************************
  *  word_and_context_list.h

@@ -1,8 +1,8 @@
-#                                               -*- Autoconf -*- 
-# Process this file with autoconf to produce a configure script. 
-# Order is largely irrelevant, although it must start with AC_INIT and end with AC_OUTPUT 
-# See http://autotoolset.sourceforge.net/tutorial.html 
-# and http://www.openismus.com/documents/linux/automake/automake.shtml 
+#                                               -*- Autoconf -*-
+# Process this file with autoconf to produce a configure script.
+# Order is largely irrelevant, although it must start with AC_INIT and end with AC_OUTPUT
+# See http://autotoolset.sourceforge.net/tutorial.html
+# and http://www.openismus.com/documents/linux/automake/automake.shtml
 
 #
 # This file is public domain
@@ -29,7 +29,7 @@ AC_PROG_INSTALL
 
 m4_include([m4/ax_cxx_compile_stdcxx.m4])
 AC_LANG_PUSH(C++)
-AX_CXX_COMPILE_STDCXX([14], [noext], [mandatory]) 
+AX_CXX_COMPILE_STDCXX([14], [noext], [mandatory])
 AC_LANG_POP()
 
 # Turn on all warnings
