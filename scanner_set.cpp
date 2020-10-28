@@ -61,7 +61,7 @@ packet_plugin_info_vector_t  packet_handlers;   // pcap callback handlers
 void scanner_set::add_scanner(scanner_t scanner)
 {
     /* If scanner is already loaded, that's an error */
-    for (auto it: current_scanners) {
+    for (auto it: all_scanners) {
         if (it->scanner==scanner) throw std::runtime_error("scanner already added");
     }
 
@@ -84,7 +84,7 @@ void scanner_set::add_scanner(scanner_t scanner)
     (*scanner)(sp,rcb);
 
     sd->enabled      = !(sd->info.flags & scanner_info::SCANNER_DISABLED);
-    current_scanners.push_back(sd);
+    all_scanners.push_back(sd);
 }
 #endif
 
@@ -183,7 +183,7 @@ void scanner_set::load_scanner_directories(const std::vector<std::string> &dirna
 
 void scanner_set::load_scanner_packet_handlers()
 {
-    for(scanner_vector::const_iterator it = current_scanners.begin(); it!=current_scanners.end(); it++){
+    for(scanner_vector::const_iterator it = all_scanners.begin(); it!=all_scanners.end(); it++){
         if((*it)->enabled){
             const scanner_def *sd = (*it);
             if(sd->info.packet_cb){
@@ -207,29 +207,40 @@ void scanner_set::load_scanner_packet_handlers()
 
 void scanner_set::set_scanner_enabled(const std::string &name,bool enable)
 {
-    for (auto it: current_scanners) {
-        /* If the scanner name matches, set its flag and return (we can only have one of each scanner) */
-        if (it->info.name==name) {
-            it->enabled = enable;
-            return;
+    /* If name is 'all' and the NO_ALL flag is not set for that scanner, then either enable it or disable it as appropriate */
+    if (name=="all"){
+        for (auto it: all_scanners) {
+            if (scanner_info_db[it].flags & scanner_info::SCANNER_NO_ALL) {
+                continue;
+            }
+            if (enable) {
+                enabled_scanners.insert( it );
+            } else {
+                enabled_scanners.erase( enabled_scanners.find( it ));
+            }
         }
-        /* If name is 'all' and the NO_ALL flag is not set, set the scanner's enabled flag to enable */
-        if (name=="all" && ((it->info.flags & scanner_info::SCANNER_NO_ALL)==0)){
-            it->enabled = enable;
-        }
+        return;
     }
-    if (name!="all"){
+    scanner_t *scanner = find_scanner_by_name(name);
+    if (!scanner) {
         /* Scanner wasn't found */
         throw std::invalid_argument("Invalid scanner name" + name);
     }
+    if (enable) {
+        enabled_scanners.insert(scanner);
+    } else {
+        enabled_scanners.erase( enabled_scanners.find( scanner ));
+    }
 }
 
+#if 0
 void scanner_set::set_scanner_enabled_all(bool enable)
 {
-    for (auto it: current_scanners) {
+    for (auto it: all_scanners) {
         it->enabled = enable;
     }
 }
+#endif
 
 /** Name of feature files that should be histogramed.
  * The histogram should be done in the plug-in
@@ -238,31 +249,29 @@ void scanner_set::set_scanner_enabled_all(bool enable)
 /****************************************************************
  *** scanner plugin loading
  ****************************************************************/
-scanner_t *scanner_set::find_scanner(const std::string &search_name)
+scanner_t *scanner_set::find_scanner_by_name(const std::string &search_name)
 {
-    for(scanner_vector::const_iterator it = current_scanners.begin();it!=current_scanners.end();it++){
-	if(search_name == (*it)->info.name){
-            return (*it)->scanner;
+    for (auto it: all_scanners) {
+        if ( scanner_info_db[it].name == search_name) {
+            return it;
         }
     }
-    return 0;
+    return nullptr;
 }
 
 // put the enabled scanners into the vector
 void scanner_set::get_enabled_scanners(std::vector<std::string> &svector)
 {
-    for (scanner_vector::const_iterator it=current_scanners.begin();it!=current_scanners.end();it++){
-	if((*it)->enabled){
-            svector.push_back((*it)->info.name);
-	}
+    for (auto it: enabled_scanners) {
+        svector.push_back( scanner_info_db[it].name );
     }
 }
 
-bool scanner_set::find_scanner_enabled()
+// Return true if any of the enabled scanners are a FIND scanner
+bool scanner_set::is_find_scanner_enabled()
 {
-    for (scanner_vector::const_iterator it = current_scanners.begin(); it!=current_scanners.end(); it++){
-        if( ((*it)->info.flags & scanner_info::SCANNER_FIND_SCANNER)
-            && ((*it)->enabled)){
+    for (auto it: enabled_scanners) {
+        if (scanner_info_db[it].flags & scanner_info::SCANNER_FIND_SCANNER){
             return true;
         }
     }
@@ -270,32 +279,30 @@ bool scanner_set::find_scanner_enabled()
 }
 
 
-void scanner_set::add_enabled_scanner_histograms_to_feature_recorder_set(feature_recorder_set &fs)
+#if 0
+void scanner_set::add_enabled_scanner_histograms()
 {
-    for (scanner_vector::const_iterator it = current_scanners.begin(); it!=current_scanners.end(); it++){
-        if((*it)->enabled){
-            const scanner_def *sd = (*it);
-            for(histogram_defs_t::const_iterator i2 = sd->info.histogram_defs.begin();
-                i2 != sd->info.histogram_defs.end(); i2++){
-                fs.add_histogram((*i2));
-            }
+    for (auto it: enabled_scanners ){
+        const scanner_def *sd = (*it);
+        for(histogram_defs_t::const_iterator i2 = sd->info.histogram_defs.begin();
+            i2 != sd->info.histogram_defs.end(); i2++){
+            fs.add_histogram((*i2));
         }
     }
 }
-
-void scanner_set::scanners_init(feature_recorder_set &fs)
-{
-    assert(scanner_commands_processed==true);
-}
+#endif
 
 
+
+#if 0
 
 /****************************************************************
  *** Scanner Commands (which one is enabled or disabled)
  ****************************************************************/
 
-void scanner_set::scanners_disable_all()
+void scanner_set::set_scanner_enabled_all( bool shouldEnable )
 {
+
     assert(scanner_commands_processed==false);
     scanner_commands.push_back(scanner_command(scanner_command::DISABLE_ALL,std::string("")));
 }
@@ -332,6 +339,7 @@ void scanner_set::scanners_process_enable_disable_commands()
     load_scanner_packet_handlers();     // can't do until enable/disable commands are run
     scanner_commands_processed = true;
 }
+#endif
 
 
 /****************************************************************
@@ -344,19 +352,19 @@ void scanner_set::scanners_process_enable_disable_commands()
  *** PHASE_SHUTDOWN methods.
  ****************************************************************/
 
-void scanner_set::phase_shutdown(feature_recorder_set &fs,std::stringstream *sxml)
+#if 0
+void scanner_set::phase_shutdown(std::stringstream *sxml)
 {
-    assert(scanner_commands_processed==true);
-    for(scanner_vector::iterator it = current_scanners.begin();it!=current_scanners.end();it++){
-        if((*it)->enabled){
-            const sbuf_t sbuf; // empty sbuf
-            scanner_params sp(scanner_params::PHASE_SHUTDOWN,sbuf,fs,sxml);
-            recursion_control_block rcb(0,"");        // empty rcb
-            (*(*it)->scanner)(sp,rcb);
-        }
+    for ( auto it: enabled_scanners ){
+        const sbuf_t sbuf; // empty sbuf
+        scanner_params sp(scanner_params::PHASE_SHUTDOWN,sbuf,fs,sxml);
+        recursion_control_block rcb(0,"");        // empty rcb
+        (*(*it)->scanner)(sp,rcb);
     }
 }
+#endif
 
+#if 0
 /**
  * Print a list of scanners.
  * We need to load them to do this, so they are loaded with empty config
@@ -373,7 +381,7 @@ void scanner_set::info_scanners(bool detailed_info,
     std::cout << "\n";
     std::vector<std::string> enabled_wordlist;
     std::vector<std::string> disabled_wordlist;
-    for(scanner_vector::const_iterator it = current_scanners.begin();it!=current_scanners.end();it++){
+    for(scanner_vector::const_iterator it = all_scanners.begin();it!=all_scanners.end();it++){
         if(detailed_info){
             if ((*it)->info.name.size()) std::cout << "Scanner Name: " << (*it)->info.name << "\n";
             std::cout << "flags:  " << scanner_info::flag_to_string((*it)->info.flags) << "\n";
@@ -415,6 +423,7 @@ void scanner_set::info_scanners(bool detailed_info,
         std::cout << "   -" << disable_opt << " " <<  *it << " - disable scanner " << *it << "\n";
     }
 }
+#endif
 
 /**
  * upperstr - Turns an ASCII string into upper case (should be UTF-8)
@@ -429,6 +438,7 @@ static std::string upperstr(const std::string &str)
     return ret;
 }
 
+#if 0
 /* Determine if the sbuf consists of a repeating ngram */
 static size_t find_ngram_size(const sbuf_t &sbuf)
 {
@@ -441,25 +451,28 @@ static size_t find_ngram_size(const sbuf_t &sbuf)
     }
     return 0;                           // no ngram size
 }
+#endif
 
+#if 0
 uint32_t scanner_set::get_max_depth_seen()
 {
     std::lock_guard<std::mutex> lock(max_depth_seenM);
     return max_depth_seen;
 }
+#endif
 
 /** process_sbuf is the main workhorse. It is calls each scanner on each page.
  * @param sp    - the scanner params, including the sbuf to process
  * It is also the recursive entry point for sub-analysis.
  */
 
+#if 0
 void scanner_set::process_sbuf(const class scanner_params &sp, unit32_t *max_depth_seen)
 {
     const pos0_t &pos0 = sp.sbuf.pos0;
     class feature_recorder_set &fs = sp.fs;
 
     //fs.heartbeat();                     // note that we are alive
-
 
     {
         /* note the maximum depth that we've seen */
@@ -503,7 +516,7 @@ void scanner_set::process_sbuf(const class scanner_params &sp, unit32_t *max_dep
         sp.sbuf.hex_dump(std::cerr);
     }
 
-    for(scanner_vector::iterator it = current_scanners.begin();it!=current_scanners.end();it++){
+    for(scanner_vector::iterator it = all_scanners.begin();it!=all_scanners.end();it++){
         // Look for reasons not to run a scanner
         if((*it)->enabled==false) continue; // not enabled
 
@@ -580,6 +593,7 @@ void scanner_set::process_sbuf(const class scanner_params &sp, unit32_t *max_dep
 }
 #endif
 
+#if 0
 
 
 /**
@@ -592,12 +606,13 @@ void scanner_set::process_packet(const be13::packet_info &pi)
         (*(*it).callback)((*it).user,pi);
     }
 }
+#endif
 
 
 #if 0
 void scanner_set::get_scanner_feature_file_names(feature_file_names_t &feature_file_names)
 {
-    for (scanner_vector::const_iterator it=current_scanners.begin();it!=current_scanners.end();it++){
+    for (scanner_vector::const_iterator it=all_scanners.begin();it!=all_scanners.end();it++){
         if((*it)->enabled){
             for(std::set<std::string>::const_iterator fi=(*it)->info.feature_names.begin();
                 fi!=(*it)->info.feature_names.end();

@@ -17,7 +17,7 @@
 #include "config.h"                     // supposed to come after bulk_extractor_i.h
 
 
-#include "tests/catch.hpp"
+#include "catch.hpp"
 
 
 /****************************************************************
@@ -90,9 +90,7 @@ static std::string hash_func(const uint8_t *buf,size_t bufsize)
 /****************************************************************
  * feature_recorder.h
  */
-#if 0
 #include "feature_recorder.h"
-#endif
 
 /****************************************************************
  * feature_recorder_set.h

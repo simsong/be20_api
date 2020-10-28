@@ -78,9 +78,13 @@ class scanner_set {
     void    process_scanner_commands(const std::vector<scanner_command> &scanner_commands); // process the commands
 
     /* These vectors keep track of the scanners that have been registered, enabled, and information about each scanner. */
-    typedef std::vector<scanner_t *> scanner_vector_t;
-    scanner_vector_t all_scanners;        // all of the scanners in the set
-    scanner_vector_t enabled_scanners;    // the scanners that are enabled
+    //typedef std::vector<scanner_t *> scanner_vector_t;
+    //scanner_vector_t all_scanners;        // all of the scanners in the set
+    //scanner_vector_t enabled_scanners;    // the scanners that are enabled
+
+    typedef std::set<scanner_t *> scanner_set_set_t;
+    scanner_set_set_t all_scanners;        // all of the scanners in the set
+    scanner_set_set_t enabled_scanners;    // the scanners that are enabled
 
     std::map<scanner_t *, struct scanner_info >scanner_info_db;
 
@@ -135,7 +139,7 @@ public:;
     //void scanner_disable(const std::string &name); // saves a command to disable this scanner
 
     // returns the named scanner, or 0 if no scanner of that name
-    void     add_enabled_scanner_histograms_to_feature_recorder_set(class feature_recorder_set &fs);
+    void     add_enabled_scanner_histograms();
     bool     is_find_scanner_enabled(); // return true if a find scanner is enabled
 
     /* Run the phases on the scanners */
@@ -143,8 +147,8 @@ public:;
     //bool detailed_settings,
     //scanner_t * const *scanners_builtin,const char enable_opt,const char disable_opt);
 
-    void     phase_scanners_init(class feature_recorder_set &fs); // init the scanners
-    //void     phase_scanners_info();
+    // Scanners automatically get initted when they are loaded, so there is no scanners init or info phase
+    // They are immediately ready to process sbufs and packets!
     void     process_sbuf(const scanner_params &sp);                              /* process for feature extraction */
     void     process_packet(const be13::packet_info &pi);
     // make the histograms
