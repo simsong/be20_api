@@ -19,7 +19,31 @@
 
 #include "catch.hpp"
 
+#include <algorithm>
+#include <array>
+#include <cstring>
+#include <functional>
+#include <random>
+#include <string>
 
+// https://inversepalindrome.com/blog/how-to-create-a-random-string-in-cpp
+std::string random_string(std::size_t length)
+{
+    const std::string CHARACTERS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+
+    std::random_device random_device;
+    std::mt19937 generator(random_device());
+    std::uniform_int_distribution<> distribution(0, CHARACTERS.size() - 1);
+
+    std::string random_string;
+
+    for (std::size_t i = 0; i < length; ++i)
+    {
+        random_string += CHARACTERS[distribution(generator)];
+    }
+
+    return random_string;
+}
 /****************************************************************
  * aftimer.h
  */
@@ -90,6 +114,8 @@ static std::string hash_func(const uint8_t *buf,size_t bufsize)
 
 /****************************************************************
  * feature_recorder_set.h
+ *
+ * Create a simple set and write a feature.
  */
 #include "feature_recorder.h"
 #include "feature_recorder_set.h"
@@ -98,31 +124,38 @@ static std::string hash_func(const uint8_t *buf,size_t bufsize)
 //static feature_recorder_set::hash_def my_hasher(hash_name,hash_func);
 TEST_CASE("feature_recorder_set", "[frs]" ) {
 
-    std::string tempdir = std::filesystem::temp_directory_path();
-    feature_recorder_set frs(feature_recorder_set::NO_ALERT,"md5", "/dev/null", tempdir);
-    frs.create_named_feature_recorder("test", false);
-    REQUIRE( frs.has_name("test") == true);
-    REQUIRE( frs.has_name("test_not") == false);
+    std::string tempdir = std::filesystem::temp_directory_path().string() + random_string(8);
+    {
+        std::filesystem::create_directory(tempdir);
+
+        feature_recorder_set frs(feature_recorder_set::NO_ALERT,"md5", "/dev/null", tempdir);
+        //feature_recorder_set::feature_file_names_t feature_files;
+        frs.create_named_feature_recorder("test", false);
+        REQUIRE( frs.has_name("test") == true);
+        REQUIRE( frs.has_name("test_not") == false);
+        //frs.init(feature_files);
+
+        feature_recorder *ft = frs.get_name("test");
+        pos0_t p;
+        ft->write(p, "feature", "context");
+        frs.close_all();
+    }
+    std::cout << "check out: " << tempdir << "\n";
+    /* get the last line of the test file and see if it is correct */
+    std::string expected_lastline {"0\tfeature\tcontext\n"};
+    std::string found_lastline;
+    std::string line;
+    std::ifstream inFile;
+    inFile.open(tempdir+"test.txt");
+    while (std::getline(inFile, line)){
+        if (line.size()>0){
+            found_lastline = line;
+        }
+    }
+    REQUIRE( line == found_lastline);
 }
 
 #if 0
-TEST_CASE("feature_recorder_sql", "[frs]") {
-    be13::plugin::scanners_process_enable_disable_commands();
-    feature_file_names_t feature_file_names;
-    be13::plugin::get_scanner_feature_file_names(feature_file_names);
-
-    std::string input_fname = "";
-    std::string outdir = std::string("/tmp/work") + itos(getpid());
-    mkdir(outdir.c_str(),0777);
-    std::cerr << "test_AAA\n";
-    feature_recorder_set fs(feature_recorder_set::ENABLE_SQLITE3_RECORDERS, "sha-1", input_fname, outdir);
-    std::cerr << "test_BBB\n";
-    fs.init( feature_file_names );
-
-    feature_recorder fr(fs, "mail_test");
-    std::cerr << "test_CCC\n";
-
-    be13::plugin::scanners_init(fs);
 
 #if defined(HAVE_SQLITE3_H) and defined(HAVE_LIBSQLITE3)
     fs.db_transaction_begin();

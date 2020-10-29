@@ -34,7 +34,6 @@
 class word_and_context_list;
 class feature_recorder_set {
     typedef std::map<std::string, class feature_recorder *> feature_recorder_map;
-    typedef std::set<std::string>feature_file_names_t;
 
     // neither copying nor assignment is implemented
     feature_recorder_set(const feature_recorder_set &fs)=delete;
@@ -117,7 +116,8 @@ public:
      * init() is called after all of the scanners have been loaded. It
      * tells each feature file about its histograms (among other things)
      */
-    void    init(const feature_file_names_t &feature_files);
+    //typedef std::set<std::string>feature_file_names_t;
+    //void    init(const feature_file_names_t &feature_files);
     void    flush_all();
     void    close_all();
     bool    has_name(std::string name) const;           /* does the named feature exist? */

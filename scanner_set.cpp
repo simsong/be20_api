@@ -41,7 +41,6 @@ typedef std::vector<packet_plugin_info> packet_plugin_info_vector_t;
 packet_plugin_info_vector_t  packet_handlers;   // pcap callback handlers
 
 
-
 /****************************************************************
  *
  * Loading Scanners

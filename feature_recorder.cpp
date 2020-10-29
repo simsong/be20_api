@@ -119,7 +119,6 @@ void feature_recorder::open()
 {
     if (fs.flag_set(feature_recorder_set::SET_DISABLED)) return;        // feature recorder set is disabled
 
-    std::cerr << "DDD  \n";
     /* write to a database? Create tables if necessary and create a prepared statement */
 #if defined(HAVE_SQLITE3_H) and defined(HAVE_LIBSQLITE3)
     if (fs.flag_set(feature_recorder_set::ENABLE_SQLITE3_RECORDERS)) {
@@ -130,7 +129,6 @@ void feature_recorder::open()
     }
 #endif
 
-    std::cerr << "EEE  \n";
     /* Write to a file? Open the file and seek to the last line if it exist, otherwise just open database */
     if (fs.flag_notset(feature_recorder_set::DISABLE_FILE_RECORDERS)){
         /* Open the file recorder */
@@ -161,7 +159,6 @@ void feature_recorder::open()
             throw std::invalid_argument("cannot open feature file for writing");
         }
     }
-    std::cerr << "FFF  \n";
 }
 
 void feature_recorder::close()
