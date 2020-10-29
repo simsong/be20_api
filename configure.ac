@@ -25,11 +25,11 @@ AC_PROG_CXX
 AM_PROG_CC_C_O                    dnl allow per-produce flags
 AC_PROG_INSTALL
 
-# Must use C++14 mode. (mandatory)
+# Must use C++17 mode. (mandatory)
 
 m4_include([m4/ax_cxx_compile_stdcxx.m4])
 AC_LANG_PUSH(C++)
-AX_CXX_COMPILE_STDCXX([14], [noext], [mandatory])
+AX_CXX_COMPILE_STDCXX([17], [noext], [mandatory])
 AC_LANG_POP()
 
 # Turn on all warnings

@@ -93,12 +93,16 @@ static std::string hash_func(const uint8_t *buf,size_t bufsize)
  */
 #include "feature_recorder.h"
 #include "feature_recorder_set.h"
+#include <iostream>
+#include <filesystem>
 //static feature_recorder_set::hash_def my_hasher(hash_name,hash_func);
 TEST_CASE("feature_recorder_set", "[frs]" ) {
-    feature_recorder_set fs(feature_recorder_set::NO_ALERT);
-    fs.create_named_feature_recorder("test", false);
-    REQUIRE( fs.has_name("test") == true);
-    REQUIRE( fs.has_name("test_not") == false);
+
+    std::string tempdir = std::filesystem::temp_directory_path();
+    feature_recorder_set frs(feature_recorder_set::NO_ALERT,"md5", "/dev/null", tempdir);
+    frs.create_named_feature_recorder("test", false);
+    REQUIRE( frs.has_name("test") == true);
+    REQUIRE( frs.has_name("test_not") == false);
 }
 
 #if 0
