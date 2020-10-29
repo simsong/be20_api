@@ -69,7 +69,7 @@ sbuf_t *sbuf_t::map_file(const std::string &fname, int fd, bool should_close)
                               st.st_size, // bufsize
                               st.st_size, // pagesize
                               fd,         // fd
-                              should_unmap, 
+                              should_unmap,
                               should_free,
                               should_close);
     return sbuf;
@@ -78,10 +78,10 @@ sbuf_t *sbuf_t::map_file(const std::string &fname, int fd, bool should_close)
 /*
  * Returns self or the highest parent of self, whichever is higher
  */
-const sbuf_t *sbuf_t::highest_parent() const 
+const sbuf_t *sbuf_t::highest_parent() const
 {
     const sbuf_t *hp = this;
-    while(hp->parent != 0){
+    while (hp->parent != 0){
         hp = hp->parent;
     }
     return hp;
@@ -187,7 +187,7 @@ bool sbuf_t::is_constant(size_t off,size_t len,uint8_t ch) const // verify that 
     return true;
 }
 
-void sbuf_t::hex_dump(std::ostream &os) const 
+void sbuf_t::hex_dump(std::ostream &os) const
 {
     hex_dump(os,0,bufsize);
 }
@@ -232,7 +232,7 @@ static const char *hexbuf(char *dst,int dst_len,const unsigned char *bin,int byt
         dst_len -= 2;
         bytes--;
         charcount++;                    // how many characters
-        
+
         if((flag & NSRL_HEXBUF_SPACE2) || ((flag & NSRL_HEXBUF_SPACE4) && charcount%2==0)){
             *dst++ = ' ';
             *dst   = '\000';
@@ -389,4 +389,3 @@ void sbuf_t::getUTF16(size_t i, byte_order_t bo, std::wstring &utf16_string) con
         utf16_string.push_back(code_unit);
     }
 }
-

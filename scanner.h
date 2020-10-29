@@ -7,6 +7,8 @@
  * Interface for individual scanners.
  */
 
+#include "packet_info.h"
+
 /**
  * scanner_info gets filled in by the scanner to tell the caller about the scanner.
  *

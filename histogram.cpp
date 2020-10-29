@@ -12,9 +12,10 @@
 #include "histogram.h"
 #include "utf8.h"
 
-#if 0
+#include <fstream>
+#include <iostream>
 
-ostream & operator << (ostream &os, const HistogramMaker::FrequencyReportVector &rep){
+std::ostream & operator << (std::ostream &os, const HistogramMaker::FrequencyReportVector &rep){
     for(HistogramMaker::FrequencyReportVector::const_iterator i = rep.begin(); i!=rep.end();i++){
         const HistogramMaker::ReportElement &r = *(*i);
 	os << "n=" << r.tally.count << "\t" << validateOrEscapeUTF8(r.value, true, true, true);
@@ -103,10 +104,10 @@ std::string *HistogramMaker::convert_utf16_to_utf8(const std::string &key,bool l
         /* Erase any nulls if present */
         while(tempKey->size()>0) {
             size_t nullpos = tempKey->find('\000');
-            if(nullpos==string::npos) break;
+            if (nullpos==std::string::npos) break;
             tempKey->erase(nullpos,1);
         }
-    } catch(const utf8::invalid_utf16 &){
+    } catch (const utf8::invalid_utf16 &){
         /* Exception; bad UTF16 encoding */
         delete tempKey;
         tempKey = 0;		// give up on temp key; otherwise its invalidated below
@@ -226,7 +227,7 @@ void HistogramMaker::add(const std::string &key)
      */
     if(debug_histogram_malloc_fail_frequency){
 	if((h.size() % debug_histogram_malloc_fail_frequency)==(debug_histogram_malloc_fail_frequency-1)){
-	    throw bad_alloc();
+	    throw std::bad_alloc();
 	}
     }
 
@@ -236,4 +237,3 @@ void HistogramMaker::add(const std::string &key)
 	delete tempKey;
     }
 }
-#endif

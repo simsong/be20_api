@@ -69,6 +69,7 @@ TEST_CASE( "test atomic_histogram", "[vector]" ){
  * hash_t.h
  */
 #include "dfxml/src/hash_t.h"
+#if 0
 static std::string hash_name("md5");
 static std::string hash_func(const uint8_t *buf,size_t bufsize)
 {
@@ -85,22 +86,20 @@ static std::string hash_func(const uint8_t *buf,size_t bufsize)
     std::cerr << "This version of bulk_extractor only supports MD5, SHA1, and SHA256\n";
     exit(1);
 }
-
-
-/****************************************************************
- * feature_recorder.h
- */
-#include "feature_recorder.h"
+#endif
 
 /****************************************************************
  * feature_recorder_set.h
  */
-#if 0
+#include "feature_recorder.h"
 #include "feature_recorder_set.h"
-static feature_recorder_set::hash_def my_hasher(hash_name,hash_func);
+//static feature_recorder_set::hash_def my_hasher(hash_name,hash_func);
 TEST_CASE("feature_recorder_set", "[frs]" ) {
+    feature_recorder_set fs(feature_recorder_set::NO_ALERT);
+    fs.create_named_feature_recorder("test", false);
+    REQUIRE( fs.has_name("test") == true);
+    REQUIRE( fs.has_name("test_not") == false);
 }
-#endif
 
 #if 0
 TEST_CASE("feature_recorder_sql", "[frs]") {
@@ -169,7 +168,7 @@ TEST_CASE("feature_recorder_sql", "[frs]") {
  * - close the transaction
  */
 
-TEST_CASE("feature_recorder_set", "[frs]") {
+TEST_CASE("feature_recorder_set2", "[frs]") {
 }
 
 
@@ -292,7 +291,7 @@ TEST_CASE("scanner_config", "[sc]") {
  * scanner.h:
  * The interface used by scanners.
  */
-//#include "scanner.h"
+#include "scanner.h"
 
 /****************************************************************
  * scanner_set.h:
@@ -300,7 +299,7 @@ TEST_CASE("scanner_config", "[sc]") {
  * The be13_api contains a single scanner for testing purposes:
  * scan_null, the null scanner, which writes metadata into a version.txt feature file.
  */
-//#include "scanner_set.h"
+#include "scanner_set.h"
 
 
 

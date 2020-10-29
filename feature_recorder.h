@@ -51,6 +51,11 @@
  */
 
 class feature_recorder {
+    static void truncate_at(std::string &line, char ch) {
+        size_t pos = line.find(ch);
+        if(pos != std::string::npos) line.resize(pos);
+    };
+
 public:;
 
     /* The main public interface:
@@ -66,7 +71,6 @@ public:;
     uint32_t       get_flags()             const {return flags;}
     virtual const std::string &get_outdir() const; // cannot be inline becuase it accesses fs
 
-    static size_t context_window_default; // global option
     class  feature_recorder_set &fs;              // the set in which this feature_recorder resides
     const  std::string name {};                   // name of this feature recorder
     bool   validateOrEscapeUTF8_validate { true };     // should we validate or escape the HTML?
@@ -154,8 +158,6 @@ protected:;
     histogram_defs_t      histogram_defs {};    // histograms that are to be created for this feature recorder
 protected:
     std::atomic<int64_t>      count_ {};                     /* number of records written */
-    size_t       context_window_before {context_window_default};      // context window
-    size_t       context_window_after {context_window_default};       // context window
 
     mutable std::mutex Mf {};      // protects the file  & file_number_
     mutable std::mutex Mr {};                     // protects the redlist
@@ -163,9 +165,10 @@ protected:
     uint64_t      mhistogram_limit {};          // how many we want (per feature recorder limit, rather than per histogram)
 
 
-    class feature_recorder *stop_list_recorder {}; // where stopped features get written
-    std::atomic<int64_t>   file_number_ {};            /* starts at 0; gets incremented by carve(); */
+    feature_recorder       *stop_list_recorder {nullptr}; // where stopped features get written
+    std::atomic<int64_t>   file_number_ {};        // starts at 0; gets incremented by carve();
     carve_cache_t          carve_cache {};
+    size_t                 context_window {0};      // context window
 public:
     /* these are not threadsafe and should only be called in startup */
     void MAINTHREAD() {
@@ -177,9 +180,7 @@ public:
         mhistogram_limit = limit_;
     };
     void set_stop_list_recorder(class feature_recorder *fr){ MAINTHREAD(); stop_list_recorder = fr; }
-    void set_context_window(size_t win)       { MAINTHREAD(); context_window_before = win; context_window_after  = win;}
-    void set_context_window_before( size_t win )                 { MAINTHREAD(); context_window_before = win;}
-    void set_context_window_after( size_t win )                  { MAINTHREAD(); context_window_after = win; }
+    void set_context_window(size_t win)                          { MAINTHREAD(); context_window =  win;}
     void set_carve_ignore_encoding( const std::string &encoding ){ MAINTHREAD();ignore_encoding = encoding;}
     /* End non-threadsafe */
 

@@ -51,7 +51,7 @@ feature_recorder_set::hash_func_t feature_recorder_set::hash_def::hash_func_for_
 
 /**
  * Constructor.
- *  Create an empty recorder with no outdir.
+ * Create an empty recorder with no outdir.
  */
 feature_recorder_set::feature_recorder_set(uint32_t flags_,const std::string hash_algorithm,
                                            const std::string &input_fname_,const std::string &outdir_):
@@ -70,13 +70,13 @@ feature_recorder_set::feature_recorder_set(uint32_t flags_,const std::string has
 
     /* Create a disabled feature recorder if necessary */
     if (flag_set(SET_DISABLED)){
-        create_name(DISABLED_RECORDER_NAME,false);
+        create_named_feature_recorder(DISABLED_RECORDER_NAME,false);
         frm[DISABLED_RECORDER_NAME]->set_flag(feature_recorder::FLAG_DISABLED);
     }
 
     /* Create an alert recorder if necessary */
     if (flag_notset(NO_ALERT)) {
-        create_name(feature_recorder_set::ALERT_RECORDER_NAME,false); // make the alert recorder
+        create_named_feature_recorder(feature_recorder_set::ALERT_RECORDER_NAME,false); // make the alert recorder
     }
 
     //message_enabled_scanners(scanner_params::PHASE_INIT); // tell all enabled scanners to init
@@ -87,11 +87,12 @@ feature_recorder_set::feature_recorder_set(uint32_t flags_,const std::string has
     }
 #endif
 
-
+#if 0
     /* Create the requested feature files */
     for( auto it:feature_files){
         create_name(it, flags & CREATE_STOP_LIST_RECORDERS);
     }
+#endif
 }
 
 
@@ -170,13 +171,36 @@ void feature_recorder_set::close_all()
  *** adding and removing feature recorders
  ****************************************************************/
 
+/*
+ * Create a named feature recorder, any associated stoplist recorders, and open the files
+ * stop recorders are basically a second feature paired with every feature recorder that records
+ * things that were sent to the stop list.
+ *
+ * previously called create_name()
+ */
+void feature_recorder_set::create_named_feature_recorder(const std::string &name,bool create_stop_recorder)
+{
+    if(frm.find(name)!=frm.end()){
+        std::cerr << "create_name: feature recorder '" << name << "' already exists\n";
+        return;
+    }
+
+    frm[name] = new feature_recorder(*this, name);
+    if (create_stop_recorder){
+        std::string name_stopped = name+"_stopped";
+        frm[name_stopped] = new feature_recorder(*this, name_stopped);
+        frm[name]->set_stop_list_recorder( frm[name_stopped] );
+    }
+}
+
+
 bool feature_recorder_set::has_name(std::string name) const
 {
     return frm.find(name) != frm.end();
 }
 
 /*
- * Gets a feature_recorder_set.
+ * Gets a feature_recorder fromn from the set.
  */
 feature_recorder *feature_recorder_set::get_name(const std::string &name) const
 {
@@ -195,50 +219,16 @@ feature_recorder *feature_recorder_set::get_name(const std::string &name) const
     return(0);                          // feature recorder does not exist
 }
 
-
-/*
- * This is its own function so that it can be overwritten by a subclass.
- */
-feature_recorder *feature_recorder_set::create_name_factory(const std::string &name_)
-{
-    return new feature_recorder(*this,name_);
-}
-
-
-/*
- * Create a named feature recorder, any associated stoplist recorders, and open the files
- * stop recorders are basically a second feature paired with every feature recorder that records
- * things that were sent to the stop list.
- */
-void feature_recorder_set::create_name(const std::string &name,bool create_stop_recorder)
-{
-    if(frm.find(name)!=frm.end()){
-        std::cerr << "create_name: feature recorder '" << name << "' already exists\n";
-        return;
-    }
-
-    feature_recorder *fr = create_name_factory(name);
-
-    frm[name] = fr;
-    if (create_stop_recorder){
-        std::string name_stopped = name+"_stopped";
-
-        feature_recorder *fr_stopped = create_name_factory(name_stopped);
-        fr->set_stop_list_recorder(fr_stopped);
-        frm[name_stopped] = fr_stopped;
-    }
-}
-
 /*
  * The alert recorder is special.
  */
 feature_recorder *feature_recorder_set::get_alert_recorder() const
 {
     if (flag_set(NO_ALERT)) return 0;
-
     return get_name(feature_recorder_set::ALERT_RECORDER_NAME);
 }
 
+#if 0
 // send every enabled scanner the phase message
 void feature_recorder_set::message_enabled_scanners(scanner_params::phase_t phase)
 {
@@ -251,7 +241,7 @@ void feature_recorder_set::message_enabled_scanners(scanner_params::phase_t phas
         }
     }
 }
-
+#endif
 
 
 /****************************************************************

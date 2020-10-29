@@ -81,12 +81,6 @@ inline std::wstring safe_utf8to16(std::string s){ // needs to be cleaned up
     return utf16_line;
 }
 
-// truncate string at the matching char
-inline void truncate_at(std::string &line, char ch) {
-    size_t pos = line.find(ch);
-    if(pos != std::string::npos) line.resize(pos);
-}
-
 #ifndef HAVE_ISXDIGIT
 inline int isxdigit(int c)
 {

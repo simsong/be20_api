@@ -2,16 +2,19 @@
 
 #include "config.h"
 
-#include "feature_recorder.h"
-#include "unicode_escape.h"
-#include "histogram.h"
-
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/stat.h>
 
 #include <cstdarg>
 #include <regex>
+
+#include "feature_recorder.h"
+#include "feature_recorder_set.h"
+#include "word_and_context_list.h"
+#include "unicode_escape.h"
+#include "histogram.h"
+#include "utils.h"
 
 #ifndef MAXPATHLEN
 #define MAXPATHLEN 65536
@@ -25,12 +28,11 @@
 #define DEBUG_PEDANTIC    0x0001// check values more rigorously
 #endif
 
-size_t  feature_recorder::context_window_default=16;                    /* number of bytes of context */
 int64_t feature_recorder::offset_add   = 0;
 std::string  feature_recorder::banner_file;
 uint32_t feature_recorder::opt_max_context_size=1024*1024;
 uint32_t feature_recorder::opt_max_feature_size=1024*1024;
-uint32_t feature_recorder::debug=0;
+uint32_t feature_recorder::debug = DEBUG_PEDANTIC; // default during development
 
 
 /**
@@ -58,7 +60,8 @@ feature_recorder::feature_recorder(class feature_recorder_set &fs_,
                                    const std::string &name_):
     fs(fs_),name(name_)
 {
-    //std::cerr << "feature_recorder(" << name << ") created\n";
+    std::cerr << "feature_recorder(" << name << ") created\n";
+
     open();                         // open if we are created
 }
 
@@ -742,8 +745,8 @@ void feature_recorder::write_buf(const sbuf_t &sbuf,size_t pos,size_t len)
 
     if((flags & FLAG_NO_CONTEXT)==0){
         /* Context write; create a clean context */
-        size_t p0 = context_window_before < pos ? pos-context_window_before : 0;
-        size_t p1 = pos+len+context_window_after;
+        size_t p0 = context_window < pos ? pos-context_window : 0;
+        size_t p1 = pos+len+context_window;
 
         if(p1>sbuf.bufsize) p1 = sbuf.bufsize;
         assert(p0<=p1);

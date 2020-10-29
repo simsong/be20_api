@@ -425,19 +425,6 @@ void scanner_set::info_scanners(bool detailed_info,
 }
 #endif
 
-/**
- * upperstr - Turns an ASCII string into upper case (should be UTF-8)
- */
-
-static std::string upperstr(const std::string &str)
-{
-    std::string ret;
-    for(std::string::const_iterator i=str.begin();i!=str.end();i++){
-        ret.push_back(toupper(*i));
-    }
-    return ret;
-}
-
 #if 0
 /* Determine if the sbuf consists of a repeating ngram */
 static size_t find_ngram_size(const sbuf_t &sbuf)
@@ -469,6 +456,22 @@ uint32_t scanner_set::get_max_depth_seen()
 #if 0
 void scanner_set::process_sbuf(const class scanner_params &sp, unit32_t *max_depth_seen)
 {
+
+    /**
+     * upperstr - Turns an ASCII string into upper case (should be UTF-8)
+     */
+
+    std::string upperstr(const std::string &str)
+    {
+        std::string ret;
+        for(std::string::const_iterator i=str.begin();i!=str.end();i++){
+            ret.push_back(toupper(*i));
+        }
+        return ret;
+    }
+
+
+
     const pos0_t &pos0 = sp.sbuf.pos0;
     class feature_recorder_set &fs = sp.fs;
 

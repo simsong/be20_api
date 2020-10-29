@@ -31,10 +31,11 @@
  *   It initializes the feature recorders and itself.
  */
 
-typedef std::map<std::string,class feature_recorder *> feature_recorder_map;
-typedef std::set<std::string>feature_file_names_t;
 class word_and_context_list;
 class feature_recorder_set {
+    typedef std::map<std::string, class feature_recorder *> feature_recorder_map;
+    typedef std::set<std::string>feature_file_names_t;
+
     // neither copying nor assignment is implemented
     feature_recorder_set(const feature_recorder_set &fs)=delete;
     feature_recorder_set &operator=(const feature_recorder_set &fs)=delete;
@@ -45,10 +46,11 @@ class feature_recorder_set {
     atomic_set<std::string> seen_set {};       // hex hash values of pages that have been seen
     const std::string     input_fname {};      // input file
     const std::string     outdir {};           // where output goes
+    size_t   context_window_default {16};           // global option
 
     // TK-replace with an atomic_set:
     feature_recorder_map  frm {};              // map of feature recorders, name->feature recorder, by name
-    mutable std::mutex    Mscanner_stats {};         // locks frm and scanner_stats_map
+    mutable std::mutex    Mscanner_stats {};   // locks frm and scanner_stats_map
     histogram_defs_t      histogram_defs {};   // histograms that are to be created.
     mutable std::mutex    Min_transaction {};
     bool                  in_transaction {};
@@ -140,9 +142,14 @@ public:
     void     add_histogram(const histogram_def &def); // adds it to a local set or to the specific feature recorder
     void     dump_histograms(void *user,feature_recorder::dump_callback_t cb, xml_notifier_t xml_error_notifier) const;
 
-    /* support for communiucating with feature recorders */
-    virtual feature_recorder *create_name_factory(const std::string &name_);
-    virtual void create_name(const std::string &name,bool create_stop_also);
+    /* support for creating and finding feature recorders */
+    /* Previously called create_name().
+     * functions must be virtual so they can be called by plug-in.
+     */
+    virtual void create_named_feature_recorder(const std::string &name,bool create_stop_also);
+    virtual feature_recorder *get_name(const std::string &name) const;
+    virtual feature_recorder *get_alert_recorder() const;
+    virtual void get_feature_file_list(std::vector<std::string> &ret); // clears ret and fills with a list of feature file names
 
     void    add_stats(const std::string &bucket,double seconds);
     typedef int (*stat_callback_t)(void *user,const std::string &name,uint64_t calls,double seconds);
@@ -170,10 +177,6 @@ public:
     // Management of previously seen data
     virtual bool check_previously_processed(const sbuf_t &sbuf);
 
-    // NOTE:
-    virtual feature_recorder *get_name(const std::string &name) const;
-    virtual feature_recorder *get_alert_recorder() const;
-    virtual void get_feature_file_list(std::vector<std::string> &ret); // clears ret and fills with a list of feature file names
 };
 
 

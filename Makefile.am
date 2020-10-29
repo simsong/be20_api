@@ -44,4 +44,9 @@ test_be13api_catch2_SOURCES = $(DFXML_WRITER) test_be13api_catch2.cpp catch.hpp 
 	scanner_config.h scanner_config.cpp \
 	scanner_set.h scanner_set.cpp \
 	packet_info.h pcap_fake.h \
+	histogram.h histogram.cpp \
+	feature_recorder_set.h 	feature_recorder_set.cpp \
+	feature_recorder.h 	feature_recorder.cpp \
+	word_and_context_list.h  word_and_context_list.cpp \
+	sbuf.h sbuf.cpp \
 	utils.h
