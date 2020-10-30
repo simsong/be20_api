@@ -50,7 +50,7 @@ std::string random_string(std::size_t length)
 #include "aftimer.h"
 TEST_CASE("aftimer", "[utils]") {
     aftimer t;
-    REQUIRE(t.elapsed_seconds()==0.0);
+    REQUIRE( int(t.elapsed_seconds()) == 0);
 }
 
 
@@ -124,9 +124,14 @@ static std::string hash_func(const uint8_t *buf,size_t bufsize)
 //static feature_recorder_set::hash_def my_hasher(hash_name,hash_func);
 TEST_CASE("feature_recorder_set", "[frs]" ) {
 
-    std::string tempdir = std::filesystem::temp_directory_path().string() + random_string(8);
+    // Create a random directory for the output of the feature recorder
+    std::string tempdir = std::filesystem::temp_directory_path().string();
+    if (tempdir.back()!='/'){
+        tempdir += '/';
+    }
+    tempdir += random_string(8);
+    std::filesystem::create_directory(tempdir);
     {
-        std::filesystem::create_directory(tempdir);
 
         feature_recorder_set frs(feature_recorder_set::NO_ALERT,"md5", "/dev/null", tempdir);
         //feature_recorder_set::feature_file_names_t feature_files;

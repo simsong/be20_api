@@ -3,6 +3,8 @@
 #define FEATURE_RECORDER_H
 
 #include <cinttypes>
+#include <cassert>
+
 #include <string>
 #include <regex>
 #include <set>
@@ -10,6 +12,7 @@
 #include <thread>
 #include <iostream>
 #include <fstream>
+#include <atomic>
 
 #include "atomic_set_map.h"
 #include "pos0.h"

@@ -96,7 +96,6 @@ const int DEBUG_ALLOCATE_512MiB = 1002;      // Allocate 512MiB, but don't set a
  * @{
  */
 
-/* Order matters! */
 #include "histogram.h"
 #include "dfxml/src/dfxml_writer.h"
 #include "dfxml/src/hash_t.h"

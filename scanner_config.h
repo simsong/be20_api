@@ -22,7 +22,7 @@
 class  scanner_config {
     typedef std::map<std::string,std::string>  config_t ; // configuration for scanner passed in
     config_t  namevals{};             //  (input) name=val map
-    std::stringstream helpstream;
+    std::stringstream helpstream{};
 public:
     virtual ~scanner_config(){};
     scanner_config(){};

@@ -3,7 +3,15 @@
 #ifndef SCANNER_SET_H
 #define SCANNER_SET_H
 
+#include <map>
+#include <set>
+#include <string>
+#include <vector>
+#include <sstream>
+
 #include "scanner.h"
+#include "scanner_config.h"
+#include "sbuf.h"
 
 /**
  * \file
@@ -86,7 +94,7 @@ class scanner_set {
     scanner_set_set_t all_scanners;        // all of the scanners in the set
     scanner_set_set_t enabled_scanners;    // the scanners that are enabled
 
-    std::map<scanner_t *, struct scanner_info >scanner_info_db;
+    std::map<scanner_t *, struct scanner_params::scanner_info *>scanner_info_db; // a pointer to every scanner info in all of the scanners
 
     // The scanner_set's configuration for all the scanners that are loaded.
     const  scanner_config sc;

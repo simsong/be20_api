@@ -5,7 +5,6 @@
  */
 
 #include "config.h"
-#include "bulk_extractor_i.h"
 
 #ifdef HAVE_ERR_H
 #include <err.h>
@@ -14,6 +13,10 @@
 #ifdef HAVE_DLFCN_H
 #include <dlfcn.h>
 #endif
+
+#include "scanner_config.h"
+#include "scanner_set.h"
+
 
 /****************************************************************
  *** SCANNER SET IMPLEMENTATION (previously the PLUG-IN SYSTEM)
@@ -209,7 +212,7 @@ void scanner_set::set_scanner_enabled(const std::string &name,bool enable)
     /* If name is 'all' and the NO_ALL flag is not set for that scanner, then either enable it or disable it as appropriate */
     if (name=="all"){
         for (auto it: all_scanners) {
-            if (scanner_info_db[it].flags & scanner_info::SCANNER_NO_ALL) {
+            if (scanner_info_db[it]->flags & scanner_params::scanner_info::SCANNER_NO_ALL) {
                 continue;
             }
             if (enable) {
@@ -251,7 +254,7 @@ void scanner_set::set_scanner_enabled_all(bool enable)
 scanner_t *scanner_set::find_scanner_by_name(const std::string &search_name)
 {
     for (auto it: all_scanners) {
-        if ( scanner_info_db[it].name == search_name) {
+        if ( scanner_info_db[it]->name == search_name) {
             return it;
         }
     }
@@ -262,7 +265,7 @@ scanner_t *scanner_set::find_scanner_by_name(const std::string &search_name)
 void scanner_set::get_enabled_scanners(std::vector<std::string> &svector)
 {
     for (auto it: enabled_scanners) {
-        svector.push_back( scanner_info_db[it].name );
+        svector.push_back( scanner_info_db[it]->name );
     }
 }
 
@@ -270,7 +273,7 @@ void scanner_set::get_enabled_scanners(std::vector<std::string> &svector)
 bool scanner_set::is_find_scanner_enabled()
 {
     for (auto it: enabled_scanners) {
-        if (scanner_info_db[it].flags & scanner_info::SCANNER_FIND_SCANNER){
+        if (scanner_info_db[it]->flags & scanner_params::scanner_info::SCANNER_FIND_SCANNER){
             return true;
         }
     }
