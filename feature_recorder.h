@@ -154,7 +154,7 @@ private:
     std::fstream ios {};                        // where features are written
 
 #if defined(HAVE_SQLITE3_H) and defined(HAVE_LIBSQLITE3)
-    struct besql_stmt *bs;                    // prepared beapi sql statement
+    struct besql_stmt *bs {nullptr};            // prepared beapi sql statement
 #endif
 
 protected:;
