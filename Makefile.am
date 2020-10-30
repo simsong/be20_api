@@ -32,13 +32,13 @@ AUTOMAKE_OPTIONS = subdir-objects
 #noinst_LIBRARIES = libbe13api.a
 #libbe13api_a_SOURCES = $(BE13_API_SRC)
 
-check_PROGRAMS = test_be13api_catch2
+check_PROGRAMS = test_be13_api
 TESTS = $(check_PROGRAMS)
 
-apitest: test_be13api_catch2
+apitest: test_be13_api
 
 # Slowly add modules as tests are written for them.
-test_be13api_catch2_SOURCES = $(DFXML_WRITER) test_be13api_catch2.cpp catch.hpp \
+test_be13_api_SOURCES = $(DFXML_WRITER) test_be13_api.cpp catch.hpp \
 	regex_vector.h regex_vector.cpp \
 	unicode_escape.h unicode_escape.cpp \
 	scanner_config.h scanner_config.cpp \
