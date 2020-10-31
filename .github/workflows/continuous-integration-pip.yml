@@ -40,8 +40,6 @@ jobs:
 
       - uses: ammaraskar/gcc-problem-matcher@0.1
         name: GCC Problem Matcher
-        run: make
-
 
       - name: codecov report
         if: startsWith(matrix.os, 'ubuntu')
