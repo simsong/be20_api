@@ -330,9 +330,30 @@ TEST_CASE("scanner", "[scanner]") {
  * scan_null, the null scanner, which writes metadata into a version.txt feature file.
  */
 #include "scanner_set.h"
+#include "scan_md5.h"
 TEST_CASE("scanner_set", "[scanner_set]") {
     class scanner_config sc;
     scanner_set ss(sc);
+    ss.add_scanner(scan_md5);
+#if 0
+
+    REQUIRE( ss.find_scanner_by_name("no_such_scanner") == nullptr );
+    REQUIRE( ss.find_scanner_by_name("md5") == scan_md5 );
+
+    ss.set_scanner_enabled("md5", true);
+    REQUIRE( ss.is_scanner_enabled("md5") == true );
+
+    REQUIRE( ss.is_find_scanner_enabled() == false); // only md5 scanner is enabled
+
+    ss.set_scanner_enabled("md5", false);
+    REQUIRE( ss.is_scanner_enabled("md5") == false );
+
+    ss.set_scanner_enabled(scanner_set::ALL_SCANNERS,true);
+    REQUIRE( ss.is_scanner_enabled("md5") == true );
+
+    ss.set_scanner_enabled(scanner_set::ALL_SCANNERS,false);
+    REQUIRE( ss.is_scanner_enabled("md5") == false );
+#endif
 }
 
 

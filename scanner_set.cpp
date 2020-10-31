@@ -44,6 +44,8 @@ public:
 typedef std::vector<packet_plugin_info> packet_plugin_info_vector_t;
 packet_plugin_info_vector_t  packet_handlers;   // pcap callback handlers
 
+std::string scanner_set::ALL_SCANNERS {"all"};
+
 
 /****************************************************************
  * create the scanner set
@@ -57,9 +59,10 @@ scanner_set::scanner_set(const scanner_config &sc_):sc(sc_)
  * Add the scanner.
  */
 
-void scanner_set::register_info(scanner_set *owner, const scanner_params::scanner_info *si)
+void scanner_set::register_info(const scanner_params::scanner_info *si)
 {
-    owner->scanner_info_db[si->scanner] = si;
+    std::cerr << "in register_info\n";
+    scanner_info_db[si->scanner] = si;
 }
 
 void scanner_set::add_scanner(scanner_t scanner)
@@ -74,11 +77,11 @@ void scanner_set::add_scanner(scanner_t scanner)
      * We then ask the scanner to initialize.
      */
     const sbuf_t sbuf;
-    //feature_recorder_set fs;
-    //scanner_info si;                    // where the scanner info will go
-    scanner_params sp(this, sc, scanner_params::PHASE_STARTUP,sbuf,fs); // make Phase1 sp
-    recursion_control_block rcb(0,"");                        // make an empty rcb
+    scanner_params::PrintOptions po;
+    scanner_params sp(this, sc, scanner_params::PHASE_INIT, sbuf, fs, po);
+    recursion_control_block rcb(0,"");
 
+    //std::cerr << "register_info: " << register_info << "\n";
     // Initialize the scanner!
     (*scanner)(sp,rcb);
 
@@ -147,14 +150,14 @@ void scanner_set::load_scanner_file(std::string fn, const scanner_config &c)
 #endif
 
 
-#if 0
-void scanner_set::load_scanners(scanner_t * const *scanners,const scanner_info::scanner_config &sc)
+void scanner_set::add_scanners(scanner_t * const *scanners)
 {
-    for(int i=0;scanners[i];i++){
-        load_scanner(scanners[i],sc);
+    for( int i=0 ; scanners[i] ; i++){
+        add_scanner(scanners[i]);
     }
 }
 
+#if 0
 void scanner_set::load_scanner_directory(const std::string &dirname,const scanner_info::scanner_config &sc )
 {
     DIR *dirp = opendir(dirname.c_str());
@@ -214,7 +217,7 @@ void scanner_set::load_scanner_packet_handlers()
 void scanner_set::set_scanner_enabled(const std::string &name,bool enable)
 {
     /* If name is 'all' and the NO_ALL flag is not set for that scanner, then either enable it or disable it as appropriate */
-    if (name=="all"){
+    if (name == scanner_set::ALL_SCANNERS){
         for (auto it: all_scanners) {
             if (scanner_info_db[it]->flags & scanner_params::scanner_info::SCANNER_NO_ALL) {
                 continue;
@@ -239,14 +242,6 @@ void scanner_set::set_scanner_enabled(const std::string &name,bool enable)
     }
 }
 
-#if 0
-void scanner_set::set_scanner_enabled_all(bool enable)
-{
-    for (auto it: all_scanners) {
-        it->enabled = enable;
-    }
-}
-#endif
 
 /** Name of feature files that should be histogramed.
  * The histogram should be done in the plug-in
@@ -263,6 +258,12 @@ scanner_t *scanner_set::find_scanner_by_name(const std::string &search_name)
         }
     }
     return nullptr;
+}
+
+bool scanner_set::is_scanner_enabled(const std::string &name)
+{
+    scanner_t *scanner = find_scanner_by_name(name);
+    return scanner && enabled_scanners.find(scanner) != enabled_scanners.end();
 }
 
 // put the enabled scanners into the vector

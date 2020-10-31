@@ -124,14 +124,15 @@ public:;
      * Loaded scanners are added to the 'scanners' vector.
      *
      * After the scanners are loaded, the scan starts.
-     * Each scanner is called with a scanner control block
+     * Each scanner is called with scanner_params and a scanner control block as arguments.
+     * See "scanner.h".
      */
-    static void register_info(scanner_set *owner, const scanner_params::scanner_info *info);
+    void register_info(const scanner_params::scanner_info *si);
     void add_scanner(scanner_t scanner);      // load a specific scanner in memory
-    void add_scanner_file(std::string fn);    // load a scanner from a file
-    //void add_scanners(std::vector<scanner_t> &builtin_scanners);
-    void add_scanners(scanner_t * const *scanners_builtin); // load the scan_ plugins
+    void add_scanner_file(std::string fn);    // load a scanner from a shared library file
+    void add_scanners(scanner_t * const *scanners_builtin); // load a nullptr array of scanners.
     void add_scanner_directory(const std::string &dirname); // load all scanners in the directory
+    //void add_scanners(std::vector<scanner_t> &builtin_scanners);
     //void add_scanner_directories(const std::vector<std::string> &dirnames);
 
     void load_scanner_packet_handlers(); // after all scanners are loaded, this sets up the packet handlers.
@@ -141,11 +142,15 @@ public:;
     //void  get_scanner_feature_file_names(feature_file_names_t &feature_file_names);
 
     // enabling and disabling of scanners
-    void get_enabled_scanners(std::vector<std::string> &svector); // put names of the enabled scanners into the vector
     //void scanners_disable_all();                    // saves a command to disable all
     //void scanners_enable_all();                    // enable all of them
+    static std::string ALL_SCANNERS;
     void set_scanner_enabled(const std::string &name, bool shouldEnable); // enable/disable a specific scanner
     void set_scanner_enabled_all(bool shouldEnable); // enable/disable all scanners
+
+    bool is_scanner_enabled(const std::string &name); // report if it is enabled or not
+    void get_enabled_scanners(std::vector<std::string> &svector); // put names of the enabled scanners into the vector
+
     //void scanner_enable(const std::string &name); // saves a command to enable this scanner
     //void scanner_disable(const std::string &name); // saves a command to disable this scanner
 

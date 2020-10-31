@@ -21,6 +21,9 @@ include Makefile.defs
 clean-local:
 	rm -f *.gcov *~ *.gcda *.gcno
 
+clean-gcov:
+	rm -f *.gcov *.gcda *.gcno
+
 #DFXML_SRC_DIR=dfxml/src/
 #include dfxml/src/Makefile.defs
 

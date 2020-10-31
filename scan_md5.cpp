@@ -12,21 +12,23 @@
 
 #include "scan_md5.h"
 #include "scanner.h"
+#include "scanner_set.h"
 #include "dfxml/src/hash_t.h"
 
 
 
-extern "C"
 void  scan_md5(const struct scanner_params &sp,const recursion_control_block &rcb)
 {
 
-    if(sp.phase==scanner_params::PHASE_STARTUP){
+    if(sp.phase==scanner_params::PHASE_INIT){
         static scanner_params::scanner_info info;
         info.scanner = scan_md5;
         info.name   = "md5";
         info.author = "Simson L. Garfinkel";
         info.flags  = scanner_params::scanner_info::SCANNER_DEFAULT_DISABLED;
-        (*sp.register_info)(sp.owner, &info);
+        std::cerr << "about to call sp.register_info\n";
+        //std::cerr << "addr=" << sp.register_info << "\n";
+        sp.ss->register_info(&info);
         return;
     }
 

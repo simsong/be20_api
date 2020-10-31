@@ -124,9 +124,7 @@ struct scanner_params {
     // phase_t specifies when the scanner is being called.
     // the scans are implemented in the scanner set
     enum phase_t {
-        PHASE_NONE     ,
-        PHASE_STARTUP  ,            // called in main thread when scanner loads; called on EVERY scanner (called for help)
-        PHASE_INIT     ,            // called in main thread for every ENABLED scanner after all scanners loaded
+        PHASE_INIT     ,            // called in main thread when scanner loads
         PHASE_THREAD_BEFORE_SCAN4,  // called in worker thread for every ENABLED scanner before first scan
         PHASE_SCAN     ,            // called in worker thread for every ENABLED scanner to scan an sbuf
         PHASE_SHUTDOWN             // called in main thread for every ENABLED scanner when scanner is shutdown
@@ -141,46 +139,50 @@ struct scanner_params {
     scanner_params &operator=(const scanner_params &)=delete;
 
 
+    typedef void (*register_info_t)(class scanner_set *ss,
+                                    const scanner_params::scanner_info *info);
+
+
     /* A scanner params with all of the instance variables, typically for scanning  */
-    scanner_params(class scanner_set *owner_,
+    scanner_params(scanner_set *ss_,
                    const scanner_config &config_,phase_t phase_, const sbuf_t &sbuf_,
                    class feature_recorder_set &fs_, PrintOptions print_options_):
-        owner(owner_),config(config_),phase(phase_),sbuf(sbuf_),fs(fs_),print_options(print_options_){ }
+        ss(ss_),config(config_),phase(phase_),sbuf(sbuf_),fs(fs_),print_options(print_options_){ }
 
+#if 0
     /* A scanner params with no print options */
-    scanner_params(class scanner_set *owner_,
-                   const scanner_config &config_,phase_t phase_, const sbuf_t &sbuf_, class feature_recorder_set &fs_):
-        owner(owner_),config(config_),phase(phase_),sbuf(sbuf_),fs(fs_){ }
+    scanner_params(const scanner_config &config_,phase_t phase_, const sbuf_t &sbuf_, class feature_recorder_set &fs_):
+        config(config_),phase(phase_),sbuf(sbuf_),fs(fs_){ }
 
     /* A scanner params with no print options but an xmlstream */
-    scanner_params(class scanner_set *owner_,
-                   const scanner_config &config_,phase_t phase_, const sbuf_t &sbuf_, class feature_recorder_set &fs_,
+    scanner_params(const scanner_config &config_,phase_t phase_, const sbuf_t &sbuf_, class feature_recorder_set &fs_,
                    std::stringstream *xmladd):
-        owner(owner_),config(config_),phase(phase_),sbuf(sbuf_),fs(fs_),sxml(xmladd){ }
+        config(config_),phase(phase_),sbuf(sbuf_),fs(fs_),sxml(xmladd){ }
 
     /** Construct a scanner_params for recursion from an existing sp and a new sbuf.
      * Defaults to phase1.
      * This is the complicated one!
      */
-    scanner_params(class scanner_set *owner_,const scanner_params &sp_existing, const sbuf_t &sbuf_new):
-        owner(owner_),
+    scanner_params(const scanner_params &sp_existing, const sbuf_t &sbuf_new):
+        //register_info(register_info_),
+        //owner(owner_),
         config(sp_existing.config),
         phase(sp_existing.phase),
         sbuf(sbuf_new),
         fs(sp_existing.fs),
         print_options(sp_existing.print_options),
         depth(sp_existing.depth+1){ };
+#endif
 
-    class scanner_set *owner;
-    const class scanner_config  &config; // allows scanners to review the configuration for this scanner set
-    const phase_t               phase; /*  0=startup, 1=normal, 2=shutdown (changed to phase_t in v1.3) */
-    void  (*register_info)(class scanner_set *ss,
-                           const scanner_params::scanner_info *info); // callback to register info
-    const sbuf_t                &sbuf; /*  what to scan / only valid in SCAN_PHASE */
-    class feature_recorder_set  &fs; /* where to put the results / only valid in SCAN_PHASE */
-    PrintOptions                print_options {}; /* how to print. Default is that there are now options*/
-    const uint32_t              depth {0};        /*  how far down are we? / only valid in SCAN_PHASE */
-    std::stringstream           *sxml{};    /* on scanning and shutdown: CDATA added to XML stream if provided (advanced feature) */
+    //register_info_t             register_info; // callback function to register the scanner
+    class scanner_set           *ss;           // the scanner set calling this scanner
+    const class scanner_config  &config;       // configuration for all scanners.
+    const phase_t               phase;         // what scanner should do
+    const sbuf_t                &sbuf;         // what to scan / only valid in SCAN_PHASE
+    class feature_recorder_set  &fs;           // where to put the results / only valid in SCAN_PHASE
+    PrintOptions                print_options {}; // how to print. Default is that there are no options
+    const uint32_t              depth {0};     //  how far down are we? / only valid in SCAN_PHASE
+    std::stringstream           *sxml{};       //  on scanning and shutdown: CDATA added to XML stream if provided
 };
 
 inline std::ostream & operator <<(std::ostream &os,const scanner_params &sp){

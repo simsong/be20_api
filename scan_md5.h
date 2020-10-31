@@ -3,6 +3,5 @@
 
 #include "scanner.h"
 
-extern "C"
 void  scan_md5(const struct scanner_params &sp,const recursion_control_block &rcb);
 #endif
