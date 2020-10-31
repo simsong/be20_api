@@ -5,6 +5,7 @@
  */
 
 #include "config.h"
+#include <cassert>
 
 #ifdef HAVE_ERR_H
 #include <err.h>
@@ -45,26 +46,27 @@ packet_plugin_info_vector_t  packet_handlers;   // pcap callback handlers
 
 
 /****************************************************************
+ * create the scanner set
+ */
+scanner_set::scanner_set(const scanner_config &sc_):sc(sc_)
+{
+}
+
+/****************************************************************
  *
- * Loading Scanners
+ * Add the scanner.
  */
 
-/**
- * plugin system phase 0: Load a scanner.
- *
- * As part of scanner loading:
- * - pass configuration to the scanner
- * - feature files that the scanner requires
- * - Histograms that the scanner makes (see feature_recorder_set)
- * This is called before scanners are enabled or disabled, so the pcap handlers
- * need to be set afterwards
- */
-#if 0
+void scanner_set::register_info(scanner_set *owner, const scanner_params::scanner_info *si)
+{
+    owner->scanner_info_db[si->scanner] = si;
+}
+
 void scanner_set::add_scanner(scanner_t scanner)
 {
     /* If scanner is already loaded, that's an error */
     for (auto it: all_scanners) {
-        if (it->scanner==scanner) throw std::runtime_error("scanner already added");
+        if (it == scanner) throw std::runtime_error("scanner already added");
     }
 
     /* Initialize the scanner.
@@ -73,22 +75,24 @@ void scanner_set::add_scanner(scanner_t scanner)
      */
     const sbuf_t sbuf;
     //feature_recorder_set fs;
-    scanner_info si;                    // where the scanner info will go
-    scanner_params sp(scanner_params::PHASE_STARTUP,sbuf,fs);
-    sp.config
-
-    /*
-     * Make an empty recursion control block and call the scanner's
-     */
-    recursion_control_block rcb(0,"");
+    //scanner_info si;                    // where the scanner info will go
+    scanner_params sp(this, sc, scanner_params::PHASE_STARTUP,sbuf,fs); // make Phase1 sp
+    recursion_control_block rcb(0,"");                        // make an empty rcb
 
     // Initialize the scanner!
     (*scanner)(sp,rcb);
 
-    sd->enabled      = !(sd->info.flags & scanner_info::SCANNER_DISABLED);
-    all_scanners.push_back(sd);
+    // Now add the scanner
+    all_scanners.insert( scanner );
+
+    // it must have been registered
+    assert(scanner_info_db.find(scanner) != scanner_info_db.end());
+
+    // Enable the scanner if it is not disabled by default.
+    if (!(scanner_info_db[scanner]->flags & scanner_params::scanner_info::SCANNER_DEFAULT_DISABLED)){
+        enabled_scanners.insert(scanner);
+    }
 }
-#endif
 
 #if 0
 void scanner_set::load_scanner_file(std::string fn, const scanner_config &c)

@@ -17,6 +17,10 @@
 #include "histogram.h"
 #include "packet_info.h"
 #include "sbuf.h"
+#include "scanner_config.h"
+
+/** A scanner is a function that takes a reference to scanner params and a recrusion control block */
+typedef void scanner_t(const struct scanner_params &sp, const struct recursion_control_block &rcb);
 
 /**
  * \class scanner_params
@@ -35,7 +39,6 @@
  * regarding the particular sbuf to be scanned.
  */
 struct scanner_params {
-
     /**
      * scanner_info is an object created by the scanner when it is initialized.
      * A pointer to the object is passed back to the scanner_set in the scanner_params.
@@ -52,7 +55,7 @@ struct scanner_params {
         std::string helpstr(){ return helpstream.str();}
 
         /* scanner flags */
-        static const int SCANNER_DISABLED       = 0x001; //  enabled by default
+        static const int SCANNER_DEFAULT_DISABLED       = 0x001; //  enabled by default
         static const int SCANNER_NO_USAGE       = 0x002; //  do not show scanner in usage
         static const int SCANNER_NO_ALL         = 0x004; //  do not enable with -eall
         static const int SCANNER_FIND_SCANNER   = 0x008; //  this scanner uses the find_list
@@ -66,7 +69,7 @@ struct scanner_params {
         static const std::string flag_to_string(const int flag){
             std::string ret {};
             if(flag==0)                       ret += "NONE ";
-            if(flag & SCANNER_DISABLED)       ret += "SCANNER_DISABLED ";
+            if(flag & SCANNER_DEFAULT_DISABLED)  ret += "SCANNER_DEFAULT_DISABLED ";
             if(flag & SCANNER_NO_USAGE)       ret += "SCANNER_NO_USAGE ";
             if(flag & SCANNER_NO_ALL)         ret += "SCANNER_NO_ALL ";
             if(flag & SCANNER_FIND_SCANNER)   ret += "SCANNER_FIND_SCANNER ";
@@ -78,18 +81,19 @@ struct scanner_params {
 
         scanner_info(){};
         /* PASSED FROM SCANNER to API: */
-        int               si_version { CURRENT_SI_VERSION};             // version number for this structure
-        const std::string       name {};                //   scanner name
-        const std::string       author {};              //   who wrote me?
-        const std::string       description {};         //   what do I do?
-        const std::string       url {};                 //   where I come from
-        const std::string       scanner_version {};     //   version for the scanner
-        const std::string       pathPrefix{};           //   this scanner's path prefix for recursive scanners. e.g. "GZIP"
-        const uint64_t          flags {};               //   flags
-        const std::set<std::string> feature_names {};   //   features I need
-        const histogram_defs_t  histogram_defs {};      //   histogram definition info
-        const void              *packet_user {};        //   data for network callback
-        be13::packet_callback_t *packet_cb {};    //   callback for processing network packets, or NULL
+        int               si_version { CURRENT_SI_VERSION };             // version number for this structure
+        scanner_t         *scanner;            // the scanner
+        std::string       name {};                //   scanner name
+        std::string       author {};              //   who wrote me?
+        std::string       description {};         //   what do I do?
+        std::string       url {};                 //   where I come from
+        std::string       scanner_version {};     //   version for the scanner
+        std::string       pathPrefix{};           //   this scanner's path prefix for recursive scanners. e.g. "GZIP"
+        uint64_t          flags {};               //   flags
+        std::set<std::string> feature_names {};   //   features I need
+        histogram_defs_t  histogram_defs {};      //   histogram definition info
+        //void              *packet_user {};        //   data for network callback
+        //be13::packet_callback_t *packet_cb {};    //   callback for processing network packets, or NULL
     };
 
     /* Scanners can also be asked to assist in printing. */
@@ -138,39 +142,45 @@ struct scanner_params {
 
 
     /* A scanner params with all of the instance variables, typically for scanning  */
-    scanner_params(scanner_config &config_,phase_t phase_, const sbuf_t &sbuf_, class feature_recorder_set &fs_, PrintOptions print_options_):
-        config(config_),phase(phase_),sbuf(sbuf_),fs(fs_),print_options(print_options_){ }
+    scanner_params(class scanner_set *owner_,
+                   const scanner_config &config_,phase_t phase_, const sbuf_t &sbuf_,
+                   class feature_recorder_set &fs_, PrintOptions print_options_):
+        owner(owner_),config(config_),phase(phase_),sbuf(sbuf_),fs(fs_),print_options(print_options_){ }
 
     /* A scanner params with no print options */
-    scanner_params(scanner_config &config_,phase_t phase_, const sbuf_t &sbuf_, class feature_recorder_set &fs_):
-        config(config_),phase(phase_),sbuf(sbuf_),fs(fs_){ }
+    scanner_params(class scanner_set *owner_,
+                   const scanner_config &config_,phase_t phase_, const sbuf_t &sbuf_, class feature_recorder_set &fs_):
+        owner(owner_),config(config_),phase(phase_),sbuf(sbuf_),fs(fs_){ }
 
     /* A scanner params with no print options but an xmlstream */
-    scanner_params(scanner_config &config_,phase_t phase_, const sbuf_t &sbuf_, class feature_recorder_set &fs_, std::stringstream *xmladd):
-        config(config_),phase(phase_),sbuf(sbuf_),fs(fs_),sxml(xmladd){ }
+    scanner_params(class scanner_set *owner_,
+                   const scanner_config &config_,phase_t phase_, const sbuf_t &sbuf_, class feature_recorder_set &fs_,
+                   std::stringstream *xmladd):
+        owner(owner_),config(config_),phase(phase_),sbuf(sbuf_),fs(fs_),sxml(xmladd){ }
 
     /** Construct a scanner_params for recursion from an existing sp and a new sbuf.
      * Defaults to phase1.
      * This is the complicated one!
      */
-    scanner_params(const scanner_params &sp_existing, const sbuf_t &sbuf_new):
+    scanner_params(class scanner_set *owner_,const scanner_params &sp_existing, const sbuf_t &sbuf_new):
+        owner(owner_),
         config(sp_existing.config),
         phase(sp_existing.phase),
         sbuf(sbuf_new),
         fs(sp_existing.fs),
         print_options(sp_existing.print_options),
-        info(sp_existing.info),
         depth(sp_existing.depth+1){ };
 
-
-    class scanner_config        &config; // allows scanners to review the configuration for this scanner set
+    class scanner_set *owner;
+    const class scanner_config  &config; // allows scanners to review the configuration for this scanner set
     const phase_t               phase; /*  0=startup, 1=normal, 2=shutdown (changed to phase_t in v1.3) */
+    void  (*register_info)(class scanner_set *ss,
+                           const scanner_params::scanner_info *info); // callback to register info
     const sbuf_t                &sbuf; /*  what to scan / only valid in SCAN_PHASE */
     class feature_recorder_set  &fs; /* where to put the results / only valid in SCAN_PHASE */
     PrintOptions                print_options {}; /* how to print. Default is that there are now options*/
-    scanner_info                *info{};           /* set/get parameters on startup, hasher */
     const uint32_t              depth {0};        /*  how far down are we? / only valid in SCAN_PHASE */
-    std::stringstream           *sxml{};           /* on scanning and shutdown: CDATA added to XML stream if provided (advanced feature) */
+    std::stringstream           *sxml{};    /* on scanning and shutdown: CDATA added to XML stream if provided (advanced feature) */
 };
 
 inline std::ostream & operator <<(std::ostream &os,const scanner_params &sp){
@@ -199,8 +209,5 @@ struct recursion_control_block {
     std::string partName{};            /* eg "ZIP", "GZIP" */
 };
 
-
-/** A scanner is a function that takes a reference to scanner params and a recrusion control block */
-typedef void scanner_t(const scanner_params &sp, const recursion_control_block &rcb);
 
 #endif

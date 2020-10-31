@@ -19,7 +19,10 @@ void scanner_config::set_config(const std::string &name, const std::string &val)
  */
 void scanner_config::get_config(const std::string &name, std::string *val,const std::string &help)
 {
-    helpstream << "   -S " << name << "=" << *val << "    " << help << " (" << name << ")\n";
+    std::stringstream ss;
+    ss << "   -S " << name << "=" << *val << "    " << help << " (" << name << ")\n";
+    help_str += ss.str();
+
     auto it = namevals.find(name);
     if ( it != namevals.end() && val){
         *val = it->second;

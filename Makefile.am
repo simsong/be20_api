@@ -18,6 +18,9 @@ ACLOCAL_AMFLAGS = -I m4
 BE13_API_DIR=
 include Makefile.defs
 
+clean-local:
+	rm -f *.gcov *~ *.gcda *.gcno
+
 #DFXML_SRC_DIR=dfxml/src/
 #include dfxml/src/Makefile.defs
 
@@ -48,5 +51,6 @@ test_be13_api_SOURCES = $(DFXML_WRITER) test_be13_api.cpp catch.hpp \
 	feature_recorder_set.h 	feature_recorder_set.cpp \
 	feature_recorder.h 	feature_recorder.cpp \
 	word_and_context_list.h  word_and_context_list.cpp \
+	scan_md5.h scan_md5.cpp \
 	sbuf.h sbuf.cpp \
 	utils.h

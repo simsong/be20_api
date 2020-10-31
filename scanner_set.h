@@ -94,7 +94,7 @@ class scanner_set {
     scanner_set_set_t all_scanners;        // all of the scanners in the set
     scanner_set_set_t enabled_scanners;    // the scanners that are enabled
 
-    std::map<scanner_t *, struct scanner_params::scanner_info *>scanner_info_db; // a pointer to every scanner info in all of the scanners
+    std::map<scanner_t *, const struct scanner_params::scanner_info *>scanner_info_db; // a pointer to every scanner info in all of the scanners
 
     // The scanner_set's configuration for all the scanners that are loaded.
     const  scanner_config sc;
@@ -111,6 +111,8 @@ class scanner_set {
     bool     dup_data_alerts       {false};  // notify when duplicate data is not processed
     uint64_t dup_data_encountered  {0}; // amount of dup data encountered
 
+    void     message_enabled_scanners(scanner_params::phase_t phase);
+
 public:;
     // Create a scanner set with these builtin_scanners.
     scanner_set(const scanner_config &);
@@ -124,6 +126,7 @@ public:;
      * After the scanners are loaded, the scan starts.
      * Each scanner is called with a scanner control block
      */
+    static void register_info(scanner_set *owner, const scanner_params::scanner_info *info);
     void add_scanner(scanner_t scanner);      // load a specific scanner in memory
     void add_scanner_file(std::string fn);    // load a scanner from a file
     //void add_scanners(std::vector<scanner_t> &builtin_scanners);
@@ -164,7 +167,6 @@ public:;
     void     phase_shutdown(class feature_recorder_set &fs,std::stringstream *sxml=0);
 
 
-    void     message_enabled_scanners(scanner_params::phase_t phase);
     uint32_t get_max_depth_seen();
 };
 

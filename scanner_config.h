@@ -22,11 +22,13 @@
 class  scanner_config {
     typedef std::map<std::string,std::string>  config_t ; // configuration for scanner passed in
     config_t  namevals{};             //  (input) name=val map
-    std::stringstream helpstream{};
+    std::string help_str;             // help string that is built
+    //std::stringstream helpstream{};
 public:
     virtual ~scanner_config(){};
     scanner_config(){};
-    std::string help() { return helpstream.str();} ;
+    scanner_config( const scanner_config &) = default;
+    std::string help() { return help_str; };
 
     // These methods are implemented in the plugin system for the scanner to get config information.
     // which is why they need to be virtual functions.

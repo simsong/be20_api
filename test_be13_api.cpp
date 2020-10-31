@@ -93,7 +93,6 @@ TEST_CASE( "test atomic_histogram", "[vector]" ){
  * hash_t.h
  */
 #include "dfxml/src/hash_t.h"
-#if 0
 static std::string hash_name("md5");
 static std::string hash_func(const uint8_t *buf,size_t bufsize)
 {
@@ -110,7 +109,10 @@ static std::string hash_func(const uint8_t *buf,size_t bufsize)
     std::cerr << "This version of bulk_extractor only supports MD5, SHA1, and SHA256\n";
     exit(1);
 }
-#endif
+TEST_CASE("hash_func", "[md5]") {
+    const char *hello="hello";
+    REQUIRE( hash_func(reinterpret_cast<const uint8_t *>(hello),strlen(hello))=="5d41402abc4b2a76b9719d911017c592");
+}
 
 /****************************************************************
  * feature_recorder_set.h
@@ -195,24 +197,6 @@ TEST_CASE("feature_recorder_set", "[frs]" ) {
 }
 #endif
 
-/****************************************************************
- * feature_recorder_set.h
- */
-
-/*
- * test a feature recorder set. Note the order:
- * - Create a list of the filenames that we need
- * - create the set
- * - Init the set
- * - create the recorder
- * - init the scanners
- * - start the transaction
- * - close the transaction
- */
-
-TEST_CASE("feature_recorder_set2", "[frs]") {
-}
-
 
 /****************************************************************
  * histogram.h
@@ -244,7 +228,6 @@ TEST_CASE( "pos0_t", "[vector]" ){
     REQUIRE( p0 != p1 );
     REQUIRE( p1 == p2 );
 }
-
 
 
 /****************************************************************
@@ -334,6 +317,11 @@ TEST_CASE("scanner_config", "[sc]") {
  * The interface used by scanners.
  */
 #include "scanner.h"
+TEST_CASE("scanner", "[scanner]") {
+    /* check that scanner params made from an existing scanner params are deeper */
+
+
+}
 
 /****************************************************************
  * scanner_set.h:
@@ -342,7 +330,10 @@ TEST_CASE("scanner_config", "[sc]") {
  * scan_null, the null scanner, which writes metadata into a version.txt feature file.
  */
 #include "scanner_set.h"
-
+TEST_CASE("scanner_set", "[scanner_set]") {
+    class scanner_config sc;
+    scanner_set ss(sc);
+}
 
 
 /****************************************************************
