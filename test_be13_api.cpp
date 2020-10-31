@@ -270,7 +270,7 @@ TEST_CASE( "test atomic_set_map", "[vector]" ){
  * sbuf.h
  */
 #include "sbuf.h"
-TEST_CASE("sbuf","[sbuf]") {
+TEST_CASE("sbuf.h","[sbuf]") {
     const char *hello="Hello world!";
     const uint8_t *hello_buf = reinterpret_cast<const uint8_t *>(hello);
     pos0_t p0("hello");
@@ -281,7 +281,13 @@ TEST_CASE("sbuf","[sbuf]") {
     REQUIRE( sb1.get8uBE(0) == 'H');
     REQUIRE( sb1.find('o', 0) == 4);
     REQUIRE( sb1.find("world") == 6);
+
+    std::string s;
+    sb1.getUTF8(6, 5, s);
+    REQUIRE(s == "world");
 }
+
+
 
 /****************************************************************
  * scanner_config.h:
