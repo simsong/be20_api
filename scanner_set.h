@@ -91,16 +91,17 @@ class scanner_set {
     //scanner_vector_t enabled_scanners;    // the scanners that are enabled
 
     typedef std::set<scanner_t *> scanner_set_set_t;
-    scanner_set_set_t all_scanners;        // all of the scanners in the set
-    scanner_set_set_t enabled_scanners;    // the scanners that are enabled
+    scanner_set_set_t all_scanners {};        // all of the scanners in the set
+    scanner_set_set_t enabled_scanners {};    // the scanners that are enabled
 
-    std::map<scanner_t *, const struct scanner_params::scanner_info *>scanner_info_db; // a pointer to every scanner info in all of the scanners
+    // a pointer to every scanner info in all of the scanners:
+    std::map<scanner_t *, const struct scanner_params::scanner_info *>scanner_info_db {};
 
     // The scanner_set's configuration for all the scanners that are loaded.
     const  scanner_config sc;
 
     /* The feature recorder set where the scanners outputs are stored */
-    class    feature_recorder_set fs;
+    class    feature_recorder_set fs {};
 
     /* Run-time configuration for all of the scanners (per-scanner configuration is stored in sc)
      * Default values are hard-coded below.
@@ -111,8 +112,10 @@ class scanner_set {
     bool     dup_data_alerts       {false};  // notify when duplicate data is not processed
     uint64_t dup_data_encountered  {0}; // amount of dup data encountered
 
-    void     message_enabled_scanners(scanner_params::phase_t phase);
+    //void     message_enabled_scanners(scanner_params::phase_t phase);
+    scanner_params::phase_t     current_phase {scanner_params::PHASE_INIT};
 
+    void     add_enabled_scanner_histograms(); // called when switching from PHASE_INIT to PHASE_SCAN
 public:;
     // Create a scanner set with these builtin_scanners.
     scanner_set(const scanner_config &);
@@ -155,7 +158,6 @@ public:;
     //void scanner_disable(const std::string &name); // saves a command to disable this scanner
 
     // returns the named scanner, or 0 if no scanner of that name
-    void     add_enabled_scanner_histograms();
     bool     is_find_scanner_enabled(); // return true if a find scanner is enabled
 
     /* Run the phases on the scanners */
@@ -165,13 +167,13 @@ public:;
 
     // Scanners automatically get initted when they are loaded, so there is no scanners init or info phase
     // They are immediately ready to process sbufs and packets!
-    void     process_sbuf(const scanner_params &sp);                              /* process for feature extraction */
+    // These trigger a move the PHASE_SCAN
+    void     process_sbuf(const sbuf_t &sbuf);                              /* process for feature extraction */
     void     process_packet(const be13::packet_info &pi);
+    scanner_params::phase_t get_current_phase() const { return current_phase;};
     // make the histograms
     // sxml is where to put XML from scanners that shutdown
-    void     phase_shutdown(class feature_recorder_set &fs,std::stringstream *sxml=0);
-
-
+    void     shutdown(std::stringstream *sxml=0);
     uint32_t get_max_depth_seen();
 };
 

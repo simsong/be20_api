@@ -270,11 +270,16 @@ TEST_CASE( "test atomic_set_map", "[vector]" ){
  * sbuf.h
  */
 #include "sbuf.h"
-TEST_CASE("sbuf.h","[sbuf]") {
-    const char *hello="Hello world!";
-    const uint8_t *hello_buf = reinterpret_cast<const uint8_t *>(hello);
+
+const char *hello="Hello world!";
+const uint8_t *hello_buf = reinterpret_cast<const uint8_t *>(hello);
+sbuf_t hello_sbuf() {
     pos0_t p0("hello");
-    sbuf_t sb1(p0, hello_buf, strlen(hello), strlen(hello), 0, false, false, false);
+    return sbuf_t(p0, hello_buf, strlen(hello), strlen(hello), 0, false, false, false);
+}
+
+TEST_CASE("sbuf.h","[sbuf]") {
+    sbuf_t sb1 = hello_sbuf();
     REQUIRE( sb1.size()==strlen(hello));
     REQUIRE( sb1.offset(&hello_buf[2]) == 2);
     REQUIRE( sb1.asString() == std::string("Hello world!"));
@@ -341,7 +346,6 @@ TEST_CASE("scanner_set", "[scanner_set]") {
     class scanner_config sc;
     scanner_set ss(sc);
     ss.add_scanner(scan_md5);
-#if 0
 
     REQUIRE( ss.find_scanner_by_name("no_such_scanner") == nullptr );
     REQUIRE( ss.find_scanner_by_name("md5") == scan_md5 );
@@ -359,7 +363,11 @@ TEST_CASE("scanner_set", "[scanner_set]") {
 
     ss.set_scanner_enabled(scanner_set::ALL_SCANNERS,false);
     REQUIRE( ss.is_scanner_enabled("md5") == false );
-#endif
+
+    /* Might as well use it! */
+    //ss.process_sbuf( hello_sbuf() );
+
+    //ss.shutdown();
 }
 
 

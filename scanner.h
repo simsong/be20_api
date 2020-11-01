@@ -82,7 +82,7 @@ struct scanner_params {
         scanner_info(){};
         /* PASSED FROM SCANNER to API: */
         int               si_version { CURRENT_SI_VERSION };             // version number for this structure
-        scanner_t         *scanner;            // the scanner
+        scanner_t         *scanner {};            // the scanner
         std::string       name {};                //   scanner name
         std::string       author {};              //   who wrote me?
         std::string       description {};         //   what do I do?
@@ -146,8 +146,9 @@ struct scanner_params {
     /* A scanner params with all of the instance variables, typically for scanning  */
     scanner_params(scanner_set *ss_,
                    const scanner_config &config_,phase_t phase_, const sbuf_t &sbuf_,
-                   class feature_recorder_set &fs_, PrintOptions print_options_):
-        ss(ss_),config(config_),phase(phase_),sbuf(sbuf_),fs(fs_),print_options(print_options_){ }
+                   class feature_recorder_set &fs_, PrintOptions print_options_,
+                   std::stringstream *xmladd=nullptr ):
+        ss(ss_),config(config_),phase(phase_),sbuf(sbuf_),fs(fs_),print_options(print_options_),sxml(xmladd){ }
 
 #if 0
     /* A scanner params with no print options */

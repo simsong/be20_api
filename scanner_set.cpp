@@ -286,19 +286,14 @@ bool scanner_set::is_find_scanner_enabled()
 }
 
 
-#if 0
 void scanner_set::add_enabled_scanner_histograms()
 {
-    for (auto it: enabled_scanners ){
-        const scanner_def *sd = (*it);
-        for(histogram_defs_t::const_iterator i2 = sd->info.histogram_defs.begin();
-            i2 != sd->info.histogram_defs.end(); i2++){
-            fs.add_histogram((*i2));
+    for (auto it: scanner_info_db ){
+        for (auto hi: it.second->histogram_defs ){
+            fs.add_histogram( hi );
         }
     }
 }
-#endif
-
 
 
 #if 0
@@ -359,17 +354,18 @@ void scanner_set::scanners_process_enable_disable_commands()
  *** PHASE_SHUTDOWN methods.
  ****************************************************************/
 
-#if 0
-void scanner_set::phase_shutdown(std::stringstream *sxml)
+void scanner_set::shutdown(std::stringstream *sxml)
 {
+    assert(current_phase == scanner_params::PHASE_SCAN);
+    current_phase = scanner_params::PHASE_SHUTDOWN;
+    const sbuf_t sbuf;              // empty sbuf
+    scanner_params::PrintOptions po; // empty po
+    scanner_params sp(this, sc, scanner_params::PHASE_SHUTDOWN, sbuf, fs, po, sxml);
+    recursion_control_block rcb(0,"");        // empty rcb
     for ( auto it: enabled_scanners ){
-        const sbuf_t sbuf; // empty sbuf
-        scanner_params sp(scanner_params::PHASE_SHUTDOWN,sbuf,fs,sxml);
-        recursion_control_block rcb(0,"");        // empty rcb
-        (*(*it)->scanner)(sp,rcb);
+        (*it)(sp,rcb);
     }
 }
-#endif
 
 #if 0
 /**
@@ -455,15 +451,15 @@ uint32_t scanner_set::get_max_depth_seen()
 }
 #endif
 
-/** process_sbuf is the main workhorse. It is calls each scanner on each page.
+/** process_sbuf is the main workhorse. It is calls each scanner on the sbuf,
+ * And the scanners can recursively call the scanner set.
  * @param sp    - the scanner params, including the sbuf to process
- * It is also the recursive entry point for sub-analysis.
+ * We now track depth through pos0_t of sbuf_t.
  */
 
 #if 0
-void scanner_set::process_sbuf(const class scanner_params &sp, unit32_t *max_depth_seen)
+void scanner_set::process_sbuf(const class sbuf_t &sbuf)
 {
-
     /**
      * upperstr - Turns an ASCII string into upper case (should be UTF-8)
      */
@@ -476,8 +472,6 @@ void scanner_set::process_sbuf(const class scanner_params &sp, unit32_t *max_dep
         }
         return ret;
     }
-
-
 
     const pos0_t &pos0 = sp.sbuf.pos0;
     class feature_recorder_set &fs = sp.fs;
@@ -557,7 +551,6 @@ void scanner_set::process_sbuf(const class scanner_params &sp, unit32_t *max_dep
             for(std::string::const_iterator cc=name.begin();cc!=name.end();cc++){
                 epath.push_back(toupper(*cc));
             }
-
 
             /* Create a RCB that will recursively call process_sbuf() */
             recursion_control_block rcb(process_sbuf,upperstr(name));
