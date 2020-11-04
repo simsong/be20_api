@@ -91,10 +91,10 @@ class scanner_set {
     //scanner_vector_t enabled_scanners;    // the scanners that are enabled
 
     typedef std::set<scanner_t *> scanner_set_set_t;
-    scanner_set_set_t all_scanners {};        // all of the scanners in the set
     scanner_set_set_t enabled_scanners {};    // the scanners that are enabled
 
-    // a pointer to every scanner info in all of the scanners:
+    // a pointer to every scanner info in all of the scanners.
+    // This provides all_scanners
     std::map<scanner_t *, const struct scanner_params::scanner_info *>scanner_info_db {};
 
     // The scanner_set's configuration for all the scanners that are loaded.
@@ -108,6 +108,8 @@ class scanner_set {
      */
 
     uint32_t max_depth             {7};       // maximum depth for recursive scans
+    uint32_t max_depth_seen        {0};       // maximum depth for recursive scans
+    mutable std::mutex max_depth_seenM     {};
     uint32_t max_ngram             {10};      // maximum ngram size to scan for
     bool     dup_data_alerts       {false};  // notify when duplicate data is not processed
     uint64_t dup_data_encountered  {0}; // amount of dup data encountered
@@ -119,6 +121,9 @@ class scanner_set {
 public:;
     // Create a scanner set with these builtin_scanners.
     scanner_set(const scanner_config &);
+
+    void set_max_depth_seen(uint32_t max_depth_seen_);
+    uint32_t get_max_depth_seen() const;
 
     //void set_debug(int debug);
 
@@ -141,6 +146,7 @@ public:;
     void load_scanner_packet_handlers(); // after all scanners are loaded, this sets up the packet handlers.
 
     /* Managing scanners */
+    size_t find_ngram_size(const sbuf_t &sbuf) const;
     scanner_t *find_scanner_by_name(const std::string &name);
     //void  get_scanner_feature_file_names(feature_file_names_t &feature_file_names);
 
@@ -160,10 +166,10 @@ public:;
     // returns the named scanner, or 0 if no scanner of that name
     bool     is_find_scanner_enabled(); // return true if a find scanner is enabled
 
-    /* Run the phases on the scanners */
-    //void     info_scanners(bool detailed_info,
-    //bool detailed_settings,
-    //scanner_t * const *scanners_builtin,const char enable_opt,const char disable_opt);
+    // report on the loaded scanners
+    void     info_scanners(std::ostream &out,
+                           bool detailed_info,bool detailed_settings,
+                           const char enable_opt,const char disable_opt);
 
     // Scanners automatically get initted when they are loaded, so there is no scanners init or info phase
     // They are immediately ready to process sbufs and packets!
@@ -173,8 +179,8 @@ public:;
     scanner_params::phase_t get_current_phase() const { return current_phase;};
     // make the histograms
     // sxml is where to put XML from scanners that shutdown
+    // the sxml should go to the constructor
     void     shutdown(std::stringstream *sxml=0);
-    uint32_t get_max_depth_seen();
 };
 
 #endif

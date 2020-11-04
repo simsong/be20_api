@@ -48,6 +48,8 @@ uint32_t feature_recorder::debug = DEBUG_PEDANTIC; // default during development
  */
 
 std::thread::id feature_recorder::main_thread_id = std::this_thread::get_id();
+std::string feature_recorder::MAX_DEPTH_REACHED_ERROR_FEATURE {"process_extract: MAX DEPTH REACHED"};
+std::string feature_recorder::MAX_DEPTH_REACHED_ERROR_CONTEXT {""};
 
 
 

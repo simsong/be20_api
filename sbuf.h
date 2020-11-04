@@ -92,24 +92,22 @@ public:
  * subset will now point to unallocated memory.)
  */
 class sbuf_t {
-private:
     /* The private structures keep track of memory management */
+    static size_t min(size_t a,size_t b){
+        return a<b ? a : b;
+    }
     int    fd;                          /* file this came from if mmapped file */
 public:;
     const bool should_unmap;                /* munmap buffer when done */
     const bool should_free;                 /* should buf be freed when this sbuf is deleted? */
     const bool should_close;                /* close(fd) when done. */
-    static size_t min(size_t a,size_t b){
-        return a<b ? a : b;
-    }
-
-public:
     const uint64_t page_number;        /* from iterator when sbuf is created */
     const pos0_t  pos0;                 /* the path of buf[0] */
 private:
     const sbuf_t  *parent;              // parent sbuf references data in another.
 public:
     mutable int   children;             // number of child sbufs; can get increment in copy
+    size_t depth() const { return pos0.depth; }
 #ifdef PRIVATE_SBUF_BUF
 private:               // one day
 #else

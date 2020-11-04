@@ -36,13 +36,17 @@ inline int64_t stoi64(std::string str)
 }
 
 class pos0_t {
-public:
-    const std::string path;                     /* forensic path of decoders*/
-    const uint64_t    offset;                   /* location of buf[0] */
+    const size_t calc_depth(const std::string &s) const {
+        return std::count_if( s.begin(), s.end(), []( char c ){ return c =='-'; });
+    }
 
-    explicit pos0_t():path(""),offset(0){} // the beginning of a nothing
-    //pos0_t(std::string s):path(s),offset(0){} // the beginning of a named place
-    pos0_t(std::string s,uint64_t o=0):path(s),offset(o){} // a specific offset in a place
+public:
+    const std::string path   {};                     /* forensic path of decoders*/
+    const uint64_t    offset {0};                   /* location of buf[0] */
+    const unsigned int  depth  {0};
+
+    explicit pos0_t(){} // the beginning of a nothing
+    pos0_t(std::string s,uint64_t o=0):path(s),offset(o),depth( calc_depth(s)){ } // a specific offset in a place
     pos0_t(const pos0_t &obj):path(obj.path),offset(obj.offset){ }
     std::string str() const {           // convert to a string, with offset included
         std::stringstream ss;

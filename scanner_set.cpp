@@ -17,6 +17,8 @@
 
 #include "scanner_config.h"
 #include "scanner_set.h"
+#include "dfxml/src/hash_t.h"
+#include "aftimer.h"
 
 
 /****************************************************************
@@ -68,8 +70,8 @@ void scanner_set::register_info(const scanner_params::scanner_info *si)
 void scanner_set::add_scanner(scanner_t scanner)
 {
     /* If scanner is already loaded, that's an error */
-    for (auto it: all_scanners) {
-        if (it == scanner) throw std::runtime_error("scanner already added");
+    if (scanner_info_db.find(scanner) != scanner_info_db.end()) {
+        throw std::runtime_error("scanner already added");
     }
 
     /* Initialize the scanner.
@@ -78,18 +80,16 @@ void scanner_set::add_scanner(scanner_t scanner)
      */
     const sbuf_t sbuf;
     scanner_params::PrintOptions po;
-    scanner_params sp(this, sc, scanner_params::PHASE_INIT, sbuf, fs, po);
-    recursion_control_block rcb(0,"");
+    scanner_params sp(this, scanner_params::PHASE_INIT, sbuf, po);
+    //recursion_control_block rcb(0,"");
 
     //std::cerr << "register_info: " << register_info << "\n";
-    // Initialize the scanner!
-    (*scanner)(sp,rcb);
+    // Initialize the scanner, which adds it to the database
+    (*scanner)(sp);
 
-    // Now add the scanner
-    all_scanners.insert( scanner );
-
-    // it must have been registered
-    assert(scanner_info_db.find(scanner) != scanner_info_db.end());
+    if (scanner_info_db.find(scanner) == scanner_info_db.end()){
+        throw std::runtime_error("a scanner did not register itself");
+    }
 
     // Enable the scanner if it is not disabled by default.
     if (!(scanner_info_db[scanner]->flags & scanner_params::scanner_info::SCANNER_DEFAULT_DISABLED)){
@@ -216,16 +216,17 @@ void scanner_set::load_scanner_packet_handlers()
 
 void scanner_set::set_scanner_enabled(const std::string &name,bool enable)
 {
-    /* If name is 'all' and the NO_ALL flag is not set for that scanner, then either enable it or disable it as appropriate */
+    /* If name is 'all' and the NO_ALL flag is not set for that scanner,
+     * then either enable it or disable it as appropriate */
     if (name == scanner_set::ALL_SCANNERS){
-        for (auto it: all_scanners) {
-            if (scanner_info_db[it]->flags & scanner_params::scanner_info::SCANNER_NO_ALL) {
+        for (auto it: scanner_info_db) {
+            if (it.second->flags & scanner_params::scanner_info::SCANNER_NO_ALL) {
                 continue;
             }
             if (enable) {
-                enabled_scanners.insert( it );
+                enabled_scanners.insert( it.first );
             } else {
-                enabled_scanners.erase( enabled_scanners.find( it ));
+                enabled_scanners.erase( it.first );
             }
         }
         return;
@@ -236,9 +237,9 @@ void scanner_set::set_scanner_enabled(const std::string &name,bool enable)
         throw std::invalid_argument("Invalid scanner name" + name);
     }
     if (enable) {
-        enabled_scanners.insert(scanner);
+        enabled_scanners.insert(scanner );
     } else {
-        enabled_scanners.erase( enabled_scanners.find( scanner ));
+        enabled_scanners.erase( scanner );
     }
 }
 
@@ -252,9 +253,9 @@ void scanner_set::set_scanner_enabled(const std::string &name,bool enable)
  ****************************************************************/
 scanner_t *scanner_set::find_scanner_by_name(const std::string &search_name)
 {
-    for (auto it: all_scanners) {
-        if ( scanner_info_db[it]->name == search_name) {
-            return it;
+    for (auto it: scanner_info_db) {
+        if ( it.second->name == search_name) {
+            return it.first;
         }
     }
     return nullptr;
@@ -360,96 +361,83 @@ void scanner_set::shutdown(std::stringstream *sxml)
     current_phase = scanner_params::PHASE_SHUTDOWN;
     const sbuf_t sbuf;              // empty sbuf
     scanner_params::PrintOptions po; // empty po
-    scanner_params sp(this, sc, scanner_params::PHASE_SHUTDOWN, sbuf, fs, po, sxml);
-    recursion_control_block rcb(0,"");        // empty rcb
+    scanner_params sp(this, scanner_params::PHASE_SHUTDOWN, sbuf, po, sxml);
+    //recursion_control_block rcb(0,"");        // empty rcb
     for ( auto it: enabled_scanners ){
-        (*it)(sp,rcb);
+        (*it)(sp);
     }
 }
 
-#if 0
 /**
  * Print a list of scanners.
  * We need to load them to do this, so they are loaded with empty config
  * Note that scanners can only be loaded once, so this exits.
  */
-void scanner_set::info_scanners(bool detailed_info,
-                                 bool detailed_settings,
-                                 scanner_t * const *scanners_builtin,
-                                 const char enable_opt,const char disable_opt)
+void scanner_set::info_scanners(std::ostream &out,
+                                bool detailed_info,
+                                bool detailed_settings,
+                                const char enable_opt,const char disable_opt)
 {
-    const scanner_info::scanner_config empty_config;
-
-    load_scanners(scanners_builtin,empty_config);
-    std::cout << "\n";
-    std::vector<std::string> enabled_wordlist;
-    std::vector<std::string> disabled_wordlist;
-    for(scanner_vector::const_iterator it = all_scanners.begin();it!=all_scanners.end();it++){
-        if(detailed_info){
-            if ((*it)->info.name.size()) std::cout << "Scanner Name: " << (*it)->info.name << "\n";
-            std::cout << "flags:  " << scanner_info::flag_to_string((*it)->info.flags) << "\n";
-            std::cout << "Scanner Interface version: " << (*it)->info.si_version << "\n";
-            if ((*it)->info.author.size()) std::cout << "Author: " << (*it)->info.author << "\n";
-            if ((*it)->info.description.size()) std::cout << "Description: " << (*it)->info.description << "\n";
-            if ((*it)->info.url.size()) std::cout << "URL: " << (*it)->info.url << "\n";
-            if ((*it)->info.scanner_version.size()) std::cout << "Scanner Version: " << (*it)->info.scanner_version << "\n";
-            std::cout << "Feature Names: ";
-            for(std::set<std::string>::const_iterator i2 = (*it)->info.feature_names.begin();
-                i2 != (*it)->info.feature_names.end();
-                i2++){
-                std::cout << *i2 << " ";
+    std::vector<std::string> enabled_scanner_names, disabled_scanner_names;
+    for (auto it: scanner_info_db) {
+        if (detailed_info){
+            if (it.second->name.size()) out << "Scanner Name: " << it.second->name;
+            if (is_scanner_enabled(it.second->name)) {
+                out << " (ENABLED) ";
             }
-            std::cout << "\n\n";
+            out << "\n";
+            out << "flags:  " << scanner_params::scanner_info::flag_to_string(it.second->flags) << "\n";
+            out << "Scanner Interface version: " << it.second->si_version << "\n";
+            if (it.second->author.size()) out << "Author: " << it.second->author << "\n";
+            if (it.second->description.size()) out << "Description: " << it.second->description << "\n";
+            if (it.second->url.size()) out << "URL: " << it.second->url << "\n";
+            if (it.second->scanner_version.size()) out << "Scanner Version: " << it.second->scanner_version << "\n";
+            out << "Feature Names: ";
+            for ( auto i2: it.second->feature_names ) {
+                out << i2 << " ";
+            }
+            if (detailed_settings){
+                out << "Settable Options (and their defaults): \n";
+                out << it.second->helpstr();
+            }
+            out << "\n\n";
         }
-        if((*it)->info.flags & scanner_info::SCANNER_NO_USAGE) continue;
-        if((*it)->info.flags & scanner_info::SCANNER_DISABLED){
-            disabled_wordlist.push_back((*it)->info.name);
+        if (it.second->flags & scanner_params::scanner_info::SCANNER_NO_USAGE) continue;
+        if (is_scanner_enabled(it.second->name)){
+            enabled_scanner_names.push_back(it.second->name);
         } else {
-            enabled_wordlist.push_back((*it)->info.name);
+            disabled_scanner_names.push_back(it.second->name);
         }
     }
-    if(detailed_settings){
-        std::cout << "Settable Options (and their defaults): \n";
-        std::cout << scanner_info::helpstr();
+    out << "\n";
+    out << "These scanners disabled by default; enable with -" << enable_opt << ":\n";
+
+    sort( disabled_scanner_names.begin(), disabled_scanner_names.end());
+    sort( enabled_scanner_names.begin(), enabled_scanner_names.end());
+
+    for ( auto it:disabled_scanner_names ){
+        out << "   -" << enable_opt << " " <<  it << " - enable scanner " << it << "\n";
     }
-    sort(disabled_wordlist.begin(),disabled_wordlist.end());
-    sort(enabled_wordlist.begin(),enabled_wordlist.end());
-    std::cout << "\n";
-    std::cout << "These scanners disabled by default; enable with -" << enable_opt << ":\n";
-    for(std::vector<std::string>::const_iterator it = disabled_wordlist.begin();
-        it!=disabled_wordlist.end();it++){
-        std::cout << "   -" << enable_opt << " " <<  *it << " - enable scanner " << *it << "\n";
-    }
-    std::cout << "\n";
-    std::cout << "These scanners enabled by default; disable with -" << disable_opt << ":\n";
-    for(std::vector<std::string>::const_iterator it = enabled_wordlist.begin();it!=enabled_wordlist.end();it++){
-        std::cout << "   -" << disable_opt << " " <<  *it << " - disable scanner " << *it << "\n";
+    out << "\n";
+    out << "These scanners enabled by default; disable with -" << disable_opt << ":\n";
+    for ( auto it:disabled_scanner_names ){
+        out << "   -" << disable_opt << " " <<  it << " - disable scanner " << it << "\n";
     }
 }
-#endif
 
-#if 0
+
 /* Determine if the sbuf consists of a repeating ngram */
-static size_t find_ngram_size(const sbuf_t &sbuf)
+size_t scanner_set::find_ngram_size(const sbuf_t &sbuf) const
 {
-    for(size_t ngram_size = 1; ngram_size < scanner_def::max_ngram; ngram_size++){
+    for (size_t ngram_size = 1; ngram_size < max_ngram; ngram_size++){
 	bool ngram_match = true;
-	for(size_t i=ngram_size;i<sbuf.pagesize && ngram_match;i++){
-	    if(sbuf[i%ngram_size]!=sbuf[i]) ngram_match = false;
+	for (size_t i=ngram_size;i<sbuf.pagesize && ngram_match;i++){
+	    if (sbuf[i%ngram_size]!=sbuf[i]) ngram_match = false;
 	}
-	if(ngram_match) return ngram_size;
+	if (ngram_match) return ngram_size;
     }
     return 0;                           // no ngram size
 }
-#endif
-
-#if 0
-uint32_t scanner_set::get_max_depth_seen()
-{
-    std::lock_guard<std::mutex> lock(max_depth_seenM);
-    return max_depth_seen;
-}
-#endif
 
 /** process_sbuf is the main workhorse. It is calls each scanner on the sbuf,
  * And the scanners can recursively call the scanner set.
@@ -458,47 +446,61 @@ uint32_t scanner_set::get_max_depth_seen()
  */
 
 #if 0
+static std::string upperstr(const std::string &str)
+{
+    std::string ret;
+    for(std::string::const_iterator i=str.begin();i!=str.end();i++){
+        ret.push_back(toupper(*i));
+    }
+    return ret;
+}
+#endif
+
+
+void scanner_set::set_max_depth_seen(uint32_t max_depth_seen_)
+{
+    std::lock_guard<std::mutex> lock(max_depth_seenM);
+    max_depth_seen = max_depth_seen_;
+}
+
+uint32_t scanner_set::get_max_depth_seen() const
+{
+    std::lock_guard<std::mutex> lock(max_depth_seenM);
+    return max_depth_seen;
+}
+
+
 void scanner_set::process_sbuf(const class sbuf_t &sbuf)
 {
     /**
      * upperstr - Turns an ASCII string into upper case (should be UTF-8)
      */
 
-    std::string upperstr(const std::string &str)
-    {
-        std::string ret;
-        for(std::string::const_iterator i=str.begin();i!=str.end();i++){
-            ret.push_back(toupper(*i));
-        }
-        return ret;
-    }
+    const pos0_t &pos0 = sbuf.pos0;
 
-    const pos0_t &pos0 = sp.sbuf.pos0;
-    class feature_recorder_set &fs = sp.fs;
-
-    //fs.heartbeat();                     // note that we are alive
-
-    {
-        /* note the maximum depth that we've seen */
-        std::lock_guard<std::mutex> lock(max_depth_seenM);
-        if(sp.depth > max_depth_seen) max_depth_seen = sp.depth;
+    if (sbuf.depth() > get_max_depth_seen()) {
+        set_max_depth_seen( sbuf.depth() );
     }
 
     /* If we are too deep, error out */
-    if(sp.depth >= scanner_def::max_depth){
+    if (sbuf.depth() >= max_depth ) {
         feature_recorder *fr = fs.get_alert_recorder();
-        if(fr) fr->write(pos0,"process_extract: MAX DEPTH REACHED","");
+        if(fr) fr->write(pos0,
+                         feature_recorder::MAX_DEPTH_REACHED_ERROR_FEATURE,
+                         feature_recorder::MAX_DEPTH_REACHED_ERROR_CONTEXT );
         return;
     }
 
     /* Determine if we have seen this buffer before */
-    bool seen_before = fs.check_previously_processed(sp.sbuf);
+    bool seen_before = fs.check_previously_processed(sbuf);
     if (seen_before) {
-        dfxml::md5_t md5 = dfxml::md5_generator::hash_buf(sp.sbuf.buf,sp.sbuf.bufsize);
+        dfxml::md5_t md5 = dfxml::md5_generator::hash_buf(sbuf.buf, sbuf.bufsize);
         feature_recorder *alert_recorder = fs.get_alert_recorder();
         std::stringstream ss;
-        ss << "<buflen>" << sp.sbuf.bufsize  << "</buflen>";
-        if(alert_recorder && dup_data_alerts) alert_recorder->write(sp.sbuf.pos0,"DUP SBUF "+md5.hexdigest(),ss.str());
+        ss << "<buflen>" << sbuf.bufsize  << "</buflen>";
+        if(alert_recorder && dup_data_alerts) {
+            alert_recorder->write(sbuf.pos0,"DUP SBUF "+md5.hexdigest(),ss.str());
+        }
 #ifdef HAVE__SYNC_ADD_AND_FETCH
         // TODO - replace with std::atomic<
         __sync_add_and_fetch(&dup_data_encountered,sp.sbuf.bufsize);
@@ -510,65 +512,74 @@ void scanner_set::process_sbuf(const class sbuf_t &sbuf)
      * such sbufs are booring.)
      */
 
-    size_t ngram_size = find_ngram_size(sp.sbuf);
+    size_t ngram_size = find_ngram_size( sbuf );
 
     /****************************************************************
      *** CALL EACH OF THE SCANNERS ON THE SBUF
      ****************************************************************/
 
-    if(debug & DEBUG_DUMP_DATA){
+#if 0
+    if (debug & DEBUG_DUMP_DATA) {
         sp.sbuf.hex_dump(std::cerr);
     }
+#endif
 
-    for(scanner_vector::iterator it = all_scanners.begin();it!=all_scanners.end();it++){
+    for (auto it: scanner_info_db) {
         // Look for reasons not to run a scanner
-        if((*it)->enabled==false) continue; // not enabled
-
-        if(((*it)->info.flags & scanner_info::SCANNER_WANTS_NGRAMS)==0){
-            /* If the scanner does not want ngrams, don't run it if we have ngrams or duplicate data */
-            if(ngram_size > 0) continue;
-            if(seen_before)    continue;
+        if (enabled_scanners.find(it.first) == enabled_scanners.end()){
+            continue;                       //  not enabled
         }
 
-        if(sp.depth > 0 && ((*it)->info.flags & scanner_info::SCANNER_DEPTH_0)){
+        if ( (it.second->flags & scanner_params::scanner_info::SCANNER_WANTS_NGRAMS)==0){
+            /* If the scanner does not want ngrams, don't run it if we have ngrams or duplicate data */
+            if (ngram_size > 0) continue;
+            if (seen_before)    continue;
+        }
+
+        if ( sbuf.depth() > 0 && (it.second->flags & scanner_params::scanner_info::SCANNER_DEPTH_0)){
             // depth >0 and this scanner only run at depth 0
             continue;
         }
 
-        const std::string &name = (*it)->info.name;
+        const std::string &name = it.second->name;
 
         try {
 
             /* Compute the effective path for stats */
             bool inname=false;
             std::string epath;
-            for(std::string::const_iterator cc=sp.sbuf.pos0.path.begin();cc!=sp.sbuf.pos0.path.end();cc++){
-                if(isupper(*cc)) inname=true;
-                if(inname) epath.push_back(toupper(*cc));
-                if(*cc=='-') inname=false;
+            for( auto cc: sbuf.pos0.path){
+                if (isupper(cc)) inname=true;
+                if (inname) epath.push_back(toupper(cc));
+                if (cc=='-') inname=false;
             }
-            if(epath.size()>0) epath.push_back('-');
-            for(std::string::const_iterator cc=name.begin();cc!=name.end();cc++){
-                epath.push_back(toupper(*cc));
+            if (epath.size()>0) epath.push_back('-');
+            for (auto cc:name){
+                epath.push_back(toupper(cc));
             }
 
             /* Create a RCB that will recursively call process_sbuf() */
-            recursion_control_block rcb(process_sbuf,upperstr(name));
+            //recursion_control_block rcb(process_sbuf, upperstr(name));
 
             /* Call the scanner.*/
             {
                 aftimer t;
-                if(debug & DEBUG_PRINT_STEPS){
-                    std::cerr << "sbuf.pos0=" << sp.sbuf.pos0 << " calling scanner " << name << "\n";
+#if 0
+                if (debug & DEBUG_PRINT_STEPS){
+                    std::cerr << "sbuf.pos0=" << sbuf.pos0 << " calling scanner " << name << "\n";
                 }
+#endif
                 t.start();
-                ((*it)->scanner)(sp,rcb);
+                scanner_params sp(this, scanner_params::PHASE_SCAN, sbuf, scanner_params::PrintOptions());
+                (*it.first)( sp );
                 t.stop();
-                if(debug & DEBUG_PRINT_STEPS){
-                    std::cerr << "sbuf.pos0=" << sp.sbuf.pos0 << " scanner "
+#if 0
+                if (debug & DEBUG_PRINT_STEPS){
+                    std::cerr << "sbuf.pos0=" << sbuf.pos0 << " scanner "
                               << name << " t=" << t.elapsed_seconds() << "\n";
                 }
-                sp.fs.add_stats(epath,t.elapsed_seconds());
+#endif
+                fs.add_stats(epath,t.elapsed_seconds());
             }
 
         }
@@ -576,33 +587,32 @@ void scanner_set::process_sbuf(const class sbuf_t &sbuf)
             std::stringstream ss;
             ss << "std::exception Scanner: " << name
                << " Exception: " << e.what()
-               << " sbuf.pos0: " << sp.sbuf.pos0 << " bufsize=" << sp.sbuf.bufsize << "\n";
+               << " sbuf.pos0: " << sbuf.pos0 << " bufsize=" << sbuf.bufsize << "\n";
             std::cerr << ss.str();
             feature_recorder *alert_recorder = fs.get_alert_recorder();
-            if(alert_recorder) alert_recorder->write(sp.sbuf.pos0,"scanner="+name,
+            if(alert_recorder) alert_recorder->write(sbuf.pos0,"scanner="+name,
                                                      std::string("<exception>")+e.what()+"</exception>");
         }
         catch (...) {
             std::stringstream ss;
             ss << "std::exception Scanner: " << name
                << " Unknown Exception "
-               << " sbuf.pos0: " << sp.sbuf.pos0 << " bufsize=" << sp.sbuf.bufsize << "\n";
+               << " sbuf.pos0: " << sbuf.pos0 << " bufsize=" << sbuf.bufsize << "\n";
             std::cerr << ss.str();
             feature_recorder *alert_recorder = fs.get_alert_recorder();
-            if(alert_recorder) alert_recorder->write(sp.sbuf.pos0,"scanner="+name,"<unknown_exception/>");
+            if(alert_recorder) alert_recorder->write(sbuf.pos0,"scanner="+name,"<unknown_exception/>");
         }
     }
     fs.flush_all();
 }
-#endif
 
-#if 0
 
 
 /**
  * Process a pcap packet.
  * Designed to be very efficient because we have so many packets.
  */
+#if 0
 void scanner_set::process_packet(const be13::packet_info &pi)
 {
     for (packet_plugin_info_vector_t::iterator it = packet_handlers.begin(); it != packet_handlers.end(); it++){
@@ -615,12 +625,10 @@ void scanner_set::process_packet(const be13::packet_info &pi)
 #if 0
 void scanner_set::get_scanner_feature_file_names(feature_file_names_t &feature_file_names)
 {
-    for (scanner_vector::const_iterator it=all_scanners.begin();it!=all_scanners.end();it++){
-        if((*it)->enabled){
-            for(std::set<std::string>::const_iterator fi=(*it)->info.feature_names.begin();
-                fi!=(*it)->info.feature_names.end();
-                fi++){
-                feature_file_names.insert(*fi);
+    for (auto it: scanner_info_db) {
+        if (enabled_scanners.find(it.first) != enabled_scanners.end()){
+            for( auto it2:second->feature_names) {
+                feature_file_names.insert(it2);
             }
         }
     }

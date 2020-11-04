@@ -364,8 +364,11 @@ TEST_CASE("scanner_set", "[scanner_set]") {
     ss.set_scanner_enabled(scanner_set::ALL_SCANNERS,false);
     REQUIRE( ss.is_scanner_enabled("md5") == false );
 
+    std::cout << "Scanner set info:\n";
+    ss.info_scanners(std::cout, true, true, 'e', 'd');
+
     /* Might as well use it! */
-    //ss.process_sbuf( hello_sbuf() );
+    ss.process_sbuf( hello_sbuf() );
 
     //ss.shutdown();
 }

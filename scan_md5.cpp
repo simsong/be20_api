@@ -17,7 +17,7 @@
 
 
 
-void  scan_md5(const struct scanner_params &sp,const recursion_control_block &rcb)
+void  scan_md5(const struct scanner_params &sp)
 {
 
     if(sp.phase==scanner_params::PHASE_INIT){

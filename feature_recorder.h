@@ -64,6 +64,8 @@ public:;
     /* The main public interface:
      * Note that feature_recorders exist in a feature_recorder_set and have a name.
      */
+    static std::string MAX_DEPTH_REACHED_ERROR_FEATURE;
+    static std::string MAX_DEPTH_REACHED_ERROR_CONTEXT;
     feature_recorder(class feature_recorder_set &fs, const std::string &name);
     virtual        ~feature_recorder();
     virtual void   set_flag(uint32_t flags_);
@@ -137,7 +139,7 @@ public:
     static const uint32_t FLAG_NO_FEATURES_SQL = 0x80;  // do not write features to SQL
 
     /** @} */
-    static const int max_histogram_files = 10;  // don't make more than 10 files in low-memory conditions
+    static constexpr int max_histogram_files = 10;  // don't make more than 10 files in low-memory conditions
     static const std::string histogram_file_header;
     static const std::string feature_file_header;
     static const std::string bulk_extractor_version_header;

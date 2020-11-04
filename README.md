@@ -60,3 +60,13 @@ If you get this error:
 Do this:
 
     $ git checkout -b tmp  ; git fetch ; git checkout -b $USER-dev ; git merge master ; git merge tmp ; git push origin $USER-dev
+
+
+# Major changes with BE13 v. 2.0:
+* `scanner_set` now controls the recursive scanning process. Scanner
+  set holds the configuration information for the scan and the scanners.
+
+* sbuf now keeps track of the depth.
+* max_depth is now defined for the `scanner_set`, not per scanner. An
+  individual scanner can just look at the depth in the sbuf and abort
+  if the scanner things have gone on too long.

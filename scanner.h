@@ -20,7 +20,7 @@
 #include "scanner_config.h"
 
 /** A scanner is a function that takes a reference to scanner params and a recrusion control block */
-typedef void scanner_t(const struct scanner_params &sp, const struct recursion_control_block &rcb);
+typedef void scanner_t(const struct scanner_params &sp);
 
 /**
  * \class scanner_params
@@ -52,7 +52,7 @@ struct scanner_params {
         // and not implemented
         scanner_info(const scanner_info &i)=delete;
         scanner_info &operator=(const scanner_info &i)=delete;
-        std::string helpstr(){ return helpstream.str();}
+        std::string helpstr() const { return helpstream.str();}
 
         /* scanner flags */
         static const int SCANNER_DEFAULT_DISABLED       = 0x001; //  enabled by default
@@ -144,21 +144,19 @@ struct scanner_params {
 
 
     /* A scanner params with all of the instance variables, typically for scanning  */
-    scanner_params(scanner_set *ss_,
-                   const scanner_config &config_,phase_t phase_, const sbuf_t &sbuf_,
-                   class feature_recorder_set &fs_, PrintOptions print_options_,
-                   std::stringstream *xmladd=nullptr ):
-        ss(ss_),config(config_),phase(phase_),sbuf(sbuf_),fs(fs_),print_options(print_options_),sxml(xmladd){ }
+    scanner_params(scanner_set *ss_, phase_t phase_, const sbuf_t &sbuf_,
+                   PrintOptions print_options_, std::stringstream *xmladd=nullptr ):
+        ss(ss_),phase(phase_),sbuf(sbuf_),print_options(print_options_),sxml(xmladd){ }
 
 #if 0
     /* A scanner params with no print options */
-    scanner_params(const scanner_config &config_,phase_t phase_, const sbuf_t &sbuf_, class feature_recorder_set &fs_):
-        config(config_),phase(phase_),sbuf(sbuf_),fs(fs_){ }
+    scanner_params(phase_t phase_, const sbuf_t &sbuf_, class feature_recorder_set &fs_):
+        phase(phase_),sbuf(sbuf_),fs(fs_){ }
 
     /* A scanner params with no print options but an xmlstream */
-    scanner_params(const scanner_config &config_,phase_t phase_, const sbuf_t &sbuf_, class feature_recorder_set &fs_,
+    scanner_params(phase_t phase_, const sbuf_t &sbuf_, class feature_recorder_set &fs_,
                    std::stringstream *xmladd):
-        config(config_),phase(phase_),sbuf(sbuf_),fs(fs_),sxml(xmladd){ }
+        phase(phase_),sbuf(sbuf_),fs(fs_),sxml(xmladd){ }
 
     /** Construct a scanner_params for recursion from an existing sp and a new sbuf.
      * Defaults to phase1.
@@ -176,11 +174,11 @@ struct scanner_params {
 #endif
 
     //register_info_t             register_info; // callback function to register the scanner
-    class scanner_set           *ss;           // the scanner set calling this scanner
-    const class scanner_config  &config;       // configuration for all scanners.
+    class scanner_set           *ss;           // the scanner set calling this scanner. Includes the scanner_config and feature_recorder_set
+    //const class scanner_config  &config;       // configuration for all scanners.
     const phase_t               phase;         // what scanner should do
     const sbuf_t                &sbuf;         // what to scan / only valid in SCAN_PHASE
-    class feature_recorder_set  &fs;           // where to put the results / only valid in SCAN_PHASE
+    //class feature_recorder_set  &fs;           // where to put the results / only valid in SCAN_PHASE
     PrintOptions                print_options {}; // how to print. Default is that there are no options
     const uint32_t              depth {0};     //  how far down are we? / only valid in SCAN_PHASE
     std::stringstream           *sxml{};       //  on scanning and shutdown: CDATA added to XML stream if provided
