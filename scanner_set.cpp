@@ -52,7 +52,8 @@ std::string scanner_set::ALL_SCANNERS {"all"};
 /****************************************************************
  * create the scanner set
  */
-scanner_set::scanner_set(const scanner_config &sc_):sc(sc_)
+scanner_set::scanner_set(const scanner_config &sc_, std::ostream *sxml_):
+    sc(sc_),sxml(sxml_)
 {
 }
 
@@ -355,13 +356,13 @@ void scanner_set::scanners_process_enable_disable_commands()
  *** PHASE_SHUTDOWN methods.
  ****************************************************************/
 
-void scanner_set::shutdown(std::stringstream *sxml)
+void scanner_set::shutdown()
 {
-    assert(current_phase == scanner_params::PHASE_SCAN);
+    assert(current_phase != scanner_params::PHASE_SHUTDOWN);
     current_phase = scanner_params::PHASE_SHUTDOWN;
     const sbuf_t sbuf;              // empty sbuf
     scanner_params::PrintOptions po; // empty po
-    scanner_params sp(this, scanner_params::PHASE_SHUTDOWN, sbuf, po, sxml);
+    scanner_params sp(this, scanner_params::PHASE_SHUTDOWN, sbuf, po);
     //recursion_control_block rcb(0,"");        // empty rcb
     for ( auto it: enabled_scanners ){
         (*it)(sp);

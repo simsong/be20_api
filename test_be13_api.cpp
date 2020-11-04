@@ -347,6 +347,7 @@ TEST_CASE("scanner_set", "[scanner_set]") {
     scanner_set ss(sc);
     ss.add_scanner(scan_md5);
 
+    std::cout << "one\n";
     REQUIRE( ss.find_scanner_by_name("no_such_scanner") == nullptr );
     REQUIRE( ss.find_scanner_by_name("md5") == scan_md5 );
 
@@ -369,8 +370,7 @@ TEST_CASE("scanner_set", "[scanner_set]") {
 
     /* Might as well use it! */
     ss.process_sbuf( hello_sbuf() );
-
-    //ss.shutdown();
+    ss.shutdown();
 }
 
 

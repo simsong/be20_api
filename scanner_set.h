@@ -113,14 +113,14 @@ class scanner_set {
     uint32_t max_ngram             {10};      // maximum ngram size to scan for
     bool     dup_data_alerts       {false};  // notify when duplicate data is not processed
     uint64_t dup_data_encountered  {0}; // amount of dup data encountered
-
+    std::ostream *sxml            {nullptr}; // if provided, a place to put XML tags when scanning
     //void     message_enabled_scanners(scanner_params::phase_t phase);
     scanner_params::phase_t     current_phase {scanner_params::PHASE_INIT};
 
     void     add_enabled_scanner_histograms(); // called when switching from PHASE_INIT to PHASE_SCAN
 public:;
     // Create a scanner set with these builtin_scanners.
-    scanner_set(const scanner_config &);
+    scanner_set(const scanner_config &, std::ostream *sxml=0);
 
     void set_max_depth_seen(uint32_t max_depth_seen_);
     uint32_t get_max_depth_seen() const;
@@ -180,7 +180,7 @@ public:;
     // make the histograms
     // sxml is where to put XML from scanners that shutdown
     // the sxml should go to the constructor
-    void     shutdown(std::stringstream *sxml=0);
+    void     shutdown();
 };
 
 #endif
