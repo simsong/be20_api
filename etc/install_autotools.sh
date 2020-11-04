@@ -8,7 +8,8 @@
 # Newer versions of these libraries are available and may work better on OS X
 ##
 
-export build=~/devtools # or wherever you'd like to build
+export build=~/devtools             # or wherever you'd like to build
+export PATH=$PATH:/usr/local/bin
 mkdir -p $build
 
 ##
@@ -17,13 +18,12 @@ mkdir -p $build
 
 AUTOCONF="autoconf-2.69"
 cd $build
-curl -OL https://ftpmirror.gnu.org/autoconf/$AUTOCONF.tar.gz
-tar xzf $AUTOCONF.tar.gz
+curl -OL https://ftpmirror.gnu.org/autoconf/$AUTOCONF.tar.gz || exit 1
+tar xzf $AUTOCONF.tar.gz  || exit 1
 cd $AUTOCONF
-./configure --prefix=/usr/local
-make
-sudo make install
-export PATH=$PATH:/usr/local/bin
+./configure --prefix=/usr/local || exit 1
+make || exit 1
+sudo make install || exit 1
 
 ##
 # Automake
@@ -31,7 +31,7 @@ export PATH=$PATH:/usr/local/bin
 
 AUTOMAKE="automake-1.16.2"
 cd $build
-curl -OL https://ftpmirror.gnu.org/automake/$AUTOMAKE.tar.gz
+curl -OL https://ftpmirror.gnu.org/automake/$AUTOMAKE.tar.gz || exit 1
 tar xzf $AUTOMAKE.tar.gz
 cd $AUTOMAKE
 ./configure --prefix=/usr/local
@@ -43,7 +43,7 @@ sudo make install
 # https://ftpmirror.gnu.org/libtool
 
 cd $build
-curl -OL https://ftpmirror.gnu.org/libtool/libtool-2.4.6.tar.gz
+curl -OL https://ftpmirror.gnu.org/libtool/libtool-2.4.6.tar.gz || exit 1
 tar xzf libtool-2.4.6.tar.gz
 cd libtool-2.4.6
 ./configure --prefix=/usr/local
