@@ -15,10 +15,11 @@ mkdir -p $build
 # Autoconf
 # https://ftpmirror.gnu.org/autoconf
 
+AUTOCONF="autoconf-2.69"
 cd $build
-curl -OL https://ftpmirror.gnu.org/autoconf/autoconf-2.69.tar.gz
-tar xzf autoconf-2.69.tar.gz
-cd autoconf-2.69
+curl -OL https://ftpmirror.gnu.org/autoconf/$AUTOCONF.tar.gz
+tar xzf $AUTOCONF.tar.gz
+cd $AUTOCONF
 ./configure --prefix=/usr/local
 make
 sudo make install
@@ -28,10 +29,11 @@ export PATH=$PATH:/usr/local/bin
 # Automake
 # https://ftpmirror.gnu.org/automake
 
+AUTOMAKE="automake-1.16.2"
 cd $build
-curl -OL https://ftpmirror.gnu.org/automake/automake-1.16.tar.gz
-tar xzf automake-1.16.tar.gz
-cd automake-1.16
+curl -OL https://ftpmirror.gnu.org/automake/$AUTOMAKE.tar.gz
+tar xzf $AUTOMAKE.tar.gz
+cd $AUTOMAKE
 ./configure --prefix=/usr/local
 make
 sudo make install
