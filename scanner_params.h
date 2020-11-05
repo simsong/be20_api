@@ -1,7 +1,7 @@
 /* -*- mode: C++; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 
-#ifndef SCANNER_H
-#define SCANNER_H
+#ifndef SCANNER_PARAMS_H
+#define SCANNER_PARAMS_H
 
 /*
  * Interface for individual scanners.
@@ -144,7 +144,7 @@ struct scanner_params {
 
 
     /* A scanner params with all of the instance variables, typically for scanning  */
-    scanner_params(scanner_set *ss_, phase_t phase_, const sbuf_t &sbuf_,
+    scanner_params(scanner_set &ss_, phase_t phase_, const sbuf_t &sbuf_,
                    PrintOptions print_options_, std::stringstream *xmladd=nullptr ):
         ss(ss_),phase(phase_),sbuf(sbuf_),print_options(print_options_),sxml(xmladd){ }
 
@@ -174,7 +174,7 @@ struct scanner_params {
 #endif
 
     //register_info_t             register_info; // callback function to register the scanner
-    class scanner_set           *ss;           // the scanner set calling this scanner. Includes the scanner_config and feature_recorder_set
+    class scanner_set           &ss;           // the scanner set calling this scanner. Includes the scanner_config and feature_recorder_set
     //const class scanner_config  &config;       // configuration for all scanners.
     const phase_t               phase;         // what scanner should do
     const sbuf_t                &sbuf;         // what to scan / only valid in SCAN_PHASE
@@ -182,6 +182,8 @@ struct scanner_params {
     PrintOptions                print_options {}; // how to print. Default is that there are no options
     const uint32_t              depth {0};     //  how far down are we? / only valid in SCAN_PHASE
     std::stringstream           *sxml{};       //  on scanning and shutdown: CDATA added to XML stream if provided
+
+    std::string const &get_input_fname() const;
 };
 
 inline std::ostream & operator <<(std::ostream &os,const scanner_params &sp){

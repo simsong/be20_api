@@ -41,11 +41,14 @@ class feature_recorder_set {
 
     friend class feature_recorder;
 
-    uint32_t flags {};
+    uint32_t              flags {};       // how it was configured
+    const std::string     input_fname {}; // input file; copy for convenience.
+    const std::string     outdir {};      // where output goes; must know.
+
+
     atomic_set<std::string> seen_set {};       // hex hash values of pages that have been seen
-    const std::string     input_fname {};      // input file
-    const std::string     outdir {};           // where output goes
     size_t   context_window_default {16};           // global option
+
 
     // TK-replace with an atomic_set:
     feature_recorder_map  frm {};              // map of feature recorders, name->feature recorder, by name
@@ -66,10 +69,10 @@ public:
      * @param outdir_ = output directory (passed to feature recorders).
      * This clearly needs work.
      */
-    feature_recorder_set( uint32_t flags_ = feature_recorder_set::SET_DISABLED,
-                          const std::string hash_algorithm = "md5",
-                          const std::string &input_fname_ = feature_recorder_set::NO_INPUT,
-                          const std::string &outdir_ = feature_recorder_set::NO_OUTDIR);
+    feature_recorder_set( uint32_t flags_,
+                          const std::string hash_algorithm,
+                          const std::string &input_fname_,
+                          const std::string &outdir_);
     virtual ~feature_recorder_set();
 
     /* the feature recorder set automatically hashes all of the sbuf's that it processes. */
@@ -102,8 +105,6 @@ public:
 
     static const std::string   ALERT_RECORDER_NAME;  // the name of the alert recorder
     static const std::string   DISABLED_RECORDER_NAME; // the fake disabled feature recorder
-    static const std::string   NO_INPUT;  // 'filename' indicator that the FRS has no input file
-    static const std::string   NO_OUTDIR; // 'dirname' indicator that the FRS produces no file output
 
     std::string   get_input_fname()           const { return input_fname;}
     virtual const std::string &get_outdir()   const { return outdir;}

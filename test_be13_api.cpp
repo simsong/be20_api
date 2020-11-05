@@ -114,12 +114,25 @@ TEST_CASE("hash_func", "[md5]") {
     REQUIRE( hash_func(reinterpret_cast<const uint8_t *>(hello),strlen(hello))=="5d41402abc4b2a76b9719d911017c592");
 }
 
+std::string get_tempdir()
+{
+    std::string tempdir = std::filesystem::temp_directory_path().string();
+    if (tempdir.back()!='/'){
+        tempdir += '/';
+    }
+    tempdir += random_string(8);
+    std::cout << "tempdir: " << tempdir << "\n";
+    std::filesystem::create_directory(tempdir);
+    return tempdir;
+}
+
 /****************************************************************
  * feature_recorder_set.h
  *
  * Create a simple set and write a feature.
  */
 #include "feature_recorder.h"
+#include "scanner_config.h"
 #include "feature_recorder_set.h"
 #include <iostream>
 #include <filesystem>
@@ -127,15 +140,10 @@ TEST_CASE("hash_func", "[md5]") {
 TEST_CASE("feature_recorder_set", "[frs]" ) {
 
     // Create a random directory for the output of the feature recorder
-    std::string tempdir = std::filesystem::temp_directory_path().string();
-    if (tempdir.back()!='/'){
-        tempdir += '/';
-    }
-    tempdir += random_string(8);
-    std::filesystem::create_directory(tempdir);
+    std::string tempdir = get_tempdir();
     {
 
-        feature_recorder_set frs(feature_recorder_set::NO_ALERT,"md5", "/dev/null", tempdir);
+        feature_recorder_set frs(feature_recorder_set::NO_ALERT, "md5", scanner_config::NO_INPUT, tempdir);
         //feature_recorder_set::feature_file_names_t feature_files;
         frs.create_named_feature_recorder("test", false);
         REQUIRE( frs.has_name("test") == true);
@@ -324,10 +332,10 @@ TEST_CASE("scanner_config", "[sc]") {
 }
 
 /****************************************************************
- * scanner.h:
+ * scanner_params.h:
  * The interface used by scanners.
  */
-#include "scanner.h"
+#include "scanner_params.h"
 TEST_CASE("scanner", "[scanner]") {
     /* check that scanner params made from an existing scanner params are deeper */
 
@@ -344,6 +352,8 @@ TEST_CASE("scanner", "[scanner]") {
 #include "scan_md5.h"
 TEST_CASE("scanner_set", "[scanner_set]") {
     class scanner_config sc;
+    sc.outdir = get_tempdir();
+
     scanner_set ss(sc);
     ss.add_scanner(scan_md5);
 

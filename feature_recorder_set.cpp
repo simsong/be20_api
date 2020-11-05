@@ -3,6 +3,7 @@
 #include "config.h"
 
 //#include "bulk_extractor_i.h"
+#include "scanner_config.h"
 #include "histogram.h"
 #include "feature_recorder_set.h"
 #include "dfxml/src/dfxml_writer.h"
@@ -17,8 +18,6 @@
 
 const std::string feature_recorder_set::ALERT_RECORDER_NAME = "alerts";
 const std::string feature_recorder_set::DISABLED_RECORDER_NAME = "disabled";
-const std::string feature_recorder_set::NO_INPUT = "<NO-INPUT>";
-const std::string feature_recorder_set::NO_OUTDIR = "<NO-OUTDIR>";
 
 /* be_hash. Currently this just returns the MD5 of the sbuf,
  * but eventually it will allow the use of different hashes.
@@ -59,8 +58,9 @@ feature_recorder_set::hash_func_t feature_recorder_set::hash_def::hash_func_for_
  * Create an empty recorder with no outdir.
  */
 feature_recorder_set::feature_recorder_set(uint32_t flags_,const std::string hash_algorithm,
-                                           const std::string &input_fname_,const std::string &outdir_):
-    flags(flags_), input_fname(input_fname_), outdir(outdir_),
+                                           const std::string &input_fname_,
+                                           const std::string &outdir_):
+    flags(flags_), input_fname(input_fname_),outdir(outdir_),
     hasher( hash_def(hash_algorithm, hash_def::hash_func_for_name(hash_algorithm)))
 {
     if (outdir.size() == 0){
@@ -68,7 +68,7 @@ feature_recorder_set::feature_recorder_set(uint32_t flags_,const std::string has
     }
 
     /* Make sure we can write to the outdir if one is provided */
-    if ((outdir != NO_OUTDIR) && (access(outdir.c_str(),W_OK)!=0)) {
+    if ((outdir != scanner_config::NO_OUTDIR) && (access(outdir.c_str(),W_OK)!=0)) {
         throw std::invalid_argument("output directory not writable");
     }
     /* Now initialize the scanners */

@@ -5,6 +5,9 @@
  *** HELP and  option processing  ***
  ************************************/
 
+const std::string scanner_config::NO_INPUT = "<NO-INPUT>";
+const std::string scanner_config::NO_OUTDIR = "<NO-OUTDIR>";
+
 void scanner_config::set_config(const std::string &name, const std::string &val)
 {
     namevals[name] = val;

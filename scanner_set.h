@@ -9,7 +9,7 @@
 #include <vector>
 #include <sstream>
 
-#include "scanner.h"
+#include "scanner_params.h"
 #include "scanner_config.h"
 #include "sbuf.h"
 
@@ -101,7 +101,7 @@ class scanner_set {
     const  scanner_config sc;
 
     /* The feature recorder set where the scanners outputs are stored */
-    class    feature_recorder_set fs {};
+    class    feature_recorder_set fs;
 
     /* Run-time configuration for all of the scanners (per-scanner configuration is stored in sc)
      * Default values are hard-coded below.
@@ -133,7 +133,7 @@ public:;
      *
      * After the scanners are loaded, the scan starts.
      * Each scanner is called with scanner_params and a scanner control block as arguments.
-     * See "scanner.h".
+     * See "scanner_params.h".
      */
     void register_info(const scanner_params::scanner_info *si);
     void add_scanner(scanner_t scanner);      // load a specific scanner in memory

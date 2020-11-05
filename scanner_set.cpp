@@ -53,7 +53,7 @@ std::string scanner_set::ALL_SCANNERS {"all"};
  * create the scanner set
  */
 scanner_set::scanner_set(const scanner_config &sc_, std::ostream *sxml_):
-    sc(sc_),sxml(sxml_)
+    sc(sc_),fs(0,"md5",sc.input_fname,sc.outdir), sxml(sxml_)
 {
 }
 
@@ -81,7 +81,7 @@ void scanner_set::add_scanner(scanner_t scanner)
      */
     const sbuf_t sbuf;
     scanner_params::PrintOptions po;
-    scanner_params sp(this, scanner_params::PHASE_INIT, sbuf, po);
+    scanner_params sp(*this, scanner_params::PHASE_INIT, sbuf, po);
     //recursion_control_block rcb(0,"");
 
     //std::cerr << "register_info: " << register_info << "\n";
@@ -362,7 +362,7 @@ void scanner_set::shutdown()
     current_phase = scanner_params::PHASE_SHUTDOWN;
     const sbuf_t sbuf;              // empty sbuf
     scanner_params::PrintOptions po; // empty po
-    scanner_params sp(this, scanner_params::PHASE_SHUTDOWN, sbuf, po);
+    scanner_params sp(*this, scanner_params::PHASE_SHUTDOWN, sbuf, po);
     //recursion_control_block rcb(0,"");        // empty rcb
     for ( auto it: enabled_scanners ){
         (*it)(sp);
@@ -571,7 +571,7 @@ void scanner_set::process_sbuf(const class sbuf_t &sbuf)
                 }
 #endif
                 t.start();
-                scanner_params sp(this, scanner_params::PHASE_SCAN, sbuf, scanner_params::PrintOptions());
+                scanner_params sp(*this, scanner_params::PHASE_SCAN, sbuf, scanner_params::PrintOptions());
                 (*it.first)( sp );
                 t.stop();
 #if 0

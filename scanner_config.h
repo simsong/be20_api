@@ -30,7 +30,11 @@ public:
     virtual ~scanner_config(){};
     scanner_config(){};
     scanner_config( const scanner_config &) = default;
+    std::string input_fname {};         // where input comes from
+    std::string outdir {};              // where output goes
     std::string help() { return help_str; };
+    static const std::string   NO_INPUT;  // 'filename' indicator that the FRS has no input file
+    static const std::string   NO_OUTDIR; // 'dirname' indicator that the FRS produces no file output
 
     // These methods are implemented in the plugin system for the scanner to get config information.
     // which is why they need to be virtual functions.

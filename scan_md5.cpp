@@ -11,7 +11,7 @@
 #include <sys/types.h>
 
 #include "scan_md5.h"
-#include "scanner.h"
+#include "scanner_params.h"
 #include "scanner_set.h"
 #include "dfxml/src/hash_t.h"
 
@@ -28,7 +28,7 @@ void  scan_md5(const struct scanner_params &sp)
         info.flags  = scanner_params::scanner_info::SCANNER_DEFAULT_DISABLED;
         std::cerr << "about to call sp.register_info\n";
         //std::cerr << "addr=" << sp.register_info << "\n";
-        sp.ss->register_info(&info);
+        sp.ss.register_info(&info);
         return;
     }
 
