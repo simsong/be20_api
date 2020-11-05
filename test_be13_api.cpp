@@ -25,6 +25,8 @@
 #include <functional>
 #include <random>
 #include <string>
+#include <iostream>
+#include <filesystem>
 
 // https://inversepalindrome.com/blog/how-to-create-a-random-string-in-cpp
 std::string random_string(std::size_t length)
@@ -134,8 +136,6 @@ std::string get_tempdir()
 #include "feature_recorder.h"
 #include "scanner_config.h"
 #include "feature_recorder_set.h"
-#include <iostream>
-#include <filesystem>
 //static feature_recorder_set::hash_def my_hasher(hash_name,hash_func);
 TEST_CASE("feature_recorder_set", "[frs]" ) {
 
