@@ -374,11 +374,11 @@ void feature_recorder::dump_histogram_file(const histogram_def &def,
                 }
 
                 std::string feature = extract_feature(line);
-                if(feature.find('\\')!=std::string::npos){
+                if (feature.find('\\')!=std::string::npos){
                     feature = unquote_string(feature);  // reverse \xxx encoding
                 }
                 /** If there is a pattern to use to prune down the feature, use it */
-                if(def.pattern.size()){
+                if (def.pattern.size()){
                     std::smatch sm;
                     std::regex_search( feature, sm, def.reg);
                     if (sm.size()>0) {
@@ -681,7 +681,7 @@ void feature_recorder::write(const pos0_t &pos0,const std::string &feature_,cons
         std::string new_feature = *feature_utf8;
         if(def.require.size()==0 || new_feature.find_first_of(def.require)!=std::string::npos){
             /* If there is a pattern to use, use it to simplify the feature */
-            if(def.pattern.size()){
+            if (def.pattern.size()){
                 std::smatch sm;
                 std::regex_search( new_feature, sm, def.reg);
                 if (sm.size() == 0){

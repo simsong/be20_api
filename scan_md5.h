@@ -3,5 +3,5 @@
 
 #include "scanner_params.h"
 
-void  scan_md5(const struct scanner_params &sp);
+scanner_t scan_md5;
 #endif

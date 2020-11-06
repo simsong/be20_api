@@ -235,7 +235,7 @@ void scanner_set::set_scanner_enabled(const std::string &name,bool enable)
     scanner_t *scanner = find_scanner_by_name(name);
     if (!scanner) {
         /* Scanner wasn't found */
-        throw std::invalid_argument("Invalid scanner name" + name);
+        throw std::invalid_argument("Invalid scanner name: " + name);
     }
     if (enable) {
         enabled_scanners.insert(scanner );
@@ -252,7 +252,7 @@ void scanner_set::set_scanner_enabled(const std::string &name,bool enable)
 /****************************************************************
  *** scanner plugin loading
  ****************************************************************/
-scanner_t *scanner_set::find_scanner_by_name(const std::string &search_name)
+scanner_t *scanner_set::find_scanner_by_name(const std::string &search_name) const
 {
     for (auto it: scanner_info_db) {
         if ( it.second->name == search_name) {
@@ -260,6 +260,11 @@ scanner_t *scanner_set::find_scanner_by_name(const std::string &search_name)
         }
     }
     return nullptr;
+}
+
+feature_recorder *scanner_set::find_feature_recorder_by_name(const std::string &name) const
+{
+    return fs.get_name(name);
 }
 
 bool scanner_set::is_scanner_enabled(const std::string &name)
@@ -344,6 +349,12 @@ void scanner_set::scanners_process_enable_disable_commands()
     scanner_commands_processed = true;
 }
 #endif
+
+
+const std::string & scanner_set::get_input_fname() const
+{
+    return sc.input_fname;
+}
 
 
 /****************************************************************

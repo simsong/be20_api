@@ -338,8 +338,6 @@ TEST_CASE("scanner_config", "[sc]") {
 #include "scanner_params.h"
 TEST_CASE("scanner", "[scanner]") {
     /* check that scanner params made from an existing scanner params are deeper */
-
-
 }
 
 /****************************************************************

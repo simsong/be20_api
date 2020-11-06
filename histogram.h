@@ -149,16 +149,14 @@ struct histogram_def {
      * @param flags  - any flags (see above)
      */
 
-    histogram_def(std::string feature_,std::string re_,std::string suffix_,uint32_t flags_=0):
-        feature(feature_),pattern(re_),require(),suffix(suffix_),flags(flags_),reg(pattern){}
-    histogram_def(std::string feature_,std::string re_,std::string require_,std::string suffix_,uint32_t flags_=0):
-        feature(feature_),pattern(re_),require(require_),suffix(suffix_),flags(flags_),reg(pattern){ }
+    histogram_def(std::string feature_,std::string pattern_,std::string suffix_="",uint32_t flags_=0):
+        feature(feature_),pattern(pattern_),require(),suffix(suffix_),flags(flags_),reg(pattern){}
     const std::string feature;      /* feature file name */
-    const std::string pattern;      /* extract pattern; "" means use entire feature */
-    const std::string require;      /* text required somewhere on the feature line; used for IP histograms */
-    const std::string suffix;       /* suffix to append; "" means "histogram" */
-    const uint32_t    flags;        // defined in histogram.h
-    const std::regex  reg;          // regular expression for pattern
+    const std::string pattern;      /* regular expression used to extract feature substring from feature. "" means use the entire feature*/
+    const std::string require;      /* text required somewhere on the feature line. Sort of like grep. used for IP histograms */
+    const std::string suffix;       /* suffix to append TK TO WHAT???; "" means "histogram" */
+    const uint32_t    flags;        // see above
+    const std::regex  reg;          // the compiled regular expression.
 };
 
 /* NOTE:

@@ -18,9 +18,10 @@
 #include "packet_info.h"
 #include "sbuf.h"
 #include "scanner_config.h"
+#include "feature_recorder.h"
 
 /** A scanner is a function that takes a reference to scanner params and a recrusion control block */
-typedef void scanner_t(const struct scanner_params &sp);
+typedef void scanner_t(struct scanner_params &sp);
 
 /**
  * \class scanner_params
@@ -90,7 +91,7 @@ struct scanner_params {
         std::string       scanner_version {};     //   version for the scanner
         std::string       pathPrefix{};           //   this scanner's path prefix for recursive scanners. e.g. "GZIP"
         uint64_t          flags {};               //   flags
-        std::set<std::string> feature_names {};   //   features I need
+        std::set<std::string> feature_names {};   //   feature files that this scanner needs.
         histogram_defs_t  histogram_defs {};      //   histogram definition info
         //void              *packet_user {};        //   data for network callback
         //be13::packet_callback_t *packet_cb {};    //   callback for processing network packets, or NULL
@@ -148,6 +149,11 @@ struct scanner_params {
                    PrintOptions print_options_, std::stringstream *xmladd=nullptr ):
         ss(ss_),phase(phase_),sbuf(sbuf_),print_options(print_options_),sxml(xmladd){ }
 
+    /* User-servicable parts: */
+    virtual void register_info(const scanner_info &si); // called by a scanner to register its info
+    virtual feature_recorder &get_name(const std::string &name); // returns a reference to a feature recorder
+    virtual ~scanner_params(){};
+
 #if 0
     /* A scanner params with no print options */
     scanner_params(phase_t phase_, const sbuf_t &sbuf_, class feature_recorder_set &fs_):
@@ -157,6 +163,7 @@ struct scanner_params {
     scanner_params(phase_t phase_, const sbuf_t &sbuf_, class feature_recorder_set &fs_,
                    std::stringstream *xmladd):
         phase(phase_),sbuf(sbuf_),fs(fs_),sxml(xmladd){ }
+
 
     /** Construct a scanner_params for recursion from an existing sp and a new sbuf.
      * Defaults to phase1.
@@ -173,8 +180,7 @@ struct scanner_params {
         depth(sp_existing.depth+1){ };
 #endif
 
-    //register_info_t             register_info; // callback function to register the scanner
-    class scanner_set           &ss;           // the scanner set calling this scanner. Includes the scanner_config and feature_recorder_set
+    class scanner_set           &ss;           // the scanner set calling this scanner. Includes the scanner_config and feature_    //register_info_t             register_info; // callback function to register the scanner
     //const class scanner_config  &config;       // configuration for all scanners.
     const phase_t               phase;         // what scanner should do
     const sbuf_t                &sbuf;         // what to scan / only valid in SCAN_PHASE

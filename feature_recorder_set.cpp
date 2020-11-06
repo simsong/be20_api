@@ -48,7 +48,7 @@ feature_recorder_set::hash_func_t feature_recorder_set::hash_def::hash_func_for_
     if(name=="sha256" || name=="SHA256" || name=="sha-256" || name=="SHA-256"){
         return sha256_hasher;
     }
-    throw std::invalid_argument("invalid hasher name " + name);
+    throw std::invalid_argument("invalid hasher name: " + name);
 }
 
 

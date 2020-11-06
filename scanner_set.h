@@ -147,7 +147,8 @@ public:;
 
     /* Managing scanners */
     size_t find_ngram_size(const sbuf_t &sbuf) const;
-    scanner_t *find_scanner_by_name(const std::string &name);
+    scanner_t *find_scanner_by_name(const std::string &name) const;
+    feature_recorder *find_feature_recorder_by_name(const std::string &name) const;
     //void  get_scanner_feature_file_names(feature_file_names_t &feature_file_names);
 
     // enabling and disabling of scanners
@@ -165,6 +166,8 @@ public:;
 
     // returns the named scanner, or 0 if no scanner of that name
     bool     is_find_scanner_enabled(); // return true if a find scanner is enabled
+
+    const std::string & get_input_fname() const;
 
     // report on the loaded scanners
     void     info_scanners(std::ostream &out,
