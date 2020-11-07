@@ -32,6 +32,7 @@ public:
     scanner_config( const scanner_config &) = default;
     std::string input_fname {};         // where input comes from
     std::string outdir {};              // where output goes
+    std::string hash_alg {};            // which hash algorithm are se using
     std::string help() { return help_str; };
     static const std::string   NO_INPUT;  // 'filename' indicator that the FRS has no input file
     static const std::string   NO_OUTDIR; // 'dirname' indicator that the FRS produces no file output

@@ -13,7 +13,7 @@ void scanner_params::register_info(const scanner_info &si)
 
 feature_recorder & scanner_params::get_name(const std::string &feature_recorder_name)
 {
-    feature_recorder *fr = ss.find_feature_recorder_by_name(feature_recorder_name);
+    feature_recorder *fr = ss.get_feature_recorder_by_name(feature_recorder_name);
     if (fr) {
         return *fr;
     }

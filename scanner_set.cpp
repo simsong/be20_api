@@ -26,8 +26,8 @@
  ****************************************************************/
 
 /* BE2 revision:
- * In BE1, the active scanners were maintained by the plugin system.
- * In BE2, there is no plugin system. Instead, scanners are grouped into scanner set, which
+ * In BE1, the active scanners were maintained by the plugin system's global state.
+ * In BE2, there is no global states. Instead, scanners are grouped into scanner set, which
  *         in turn has a feature_recorder_set, which in turn has multiple feature recorders.
  *         The scanner set can then be asked to process a sbuf.
  *         All of the global variables go away.
@@ -53,20 +53,28 @@ std::string scanner_set::ALL_SCANNERS {"all"};
  * create the scanner set
  */
 scanner_set::scanner_set(const scanner_config &sc_, std::ostream *sxml_):
-    sc(sc_),fs(0,"md5",sc.input_fname,sc.outdir), sxml(sxml_)
+    sc(sc_),fs(0,sc_.hash_alg, sc_.input_fname, sc_.outdir), sxml(sxml_)
 {
 }
+
+
+/****************************************************************
+ ** PHASE_INIT:
+ ** Add scanners to the scanner set.
+ ****************************************************************/
+
+
+/* Callback for a scanner to register its info with the scanner set. */
+void scanner_set::register_info(const scanner_params::scanner_info *si)
+{
+    scanner_info_db[si->scanner] = si;
+}
+
 
 /****************************************************************
  *
  * Add the scanner.
  */
-
-void scanner_set::register_info(const scanner_params::scanner_info *si)
-{
-    std::cerr << "in register_info\n";
-    scanner_info_db[si->scanner] = si;
-}
 
 void scanner_set::add_scanner(scanner_t scanner)
 {
@@ -98,8 +106,18 @@ void scanner_set::add_scanner(scanner_t scanner)
     }
 }
 
+
+/* add_scanners allows a calling program to add a null-terminated array of scanners. */
+void scanner_set::add_scanners(scanner_t * const *scanners)
+{
+    for( int i=0 ; scanners[i] ; i++){
+        add_scanner(scanners[i]);
+    }
+}
+
+/* Add a scanner from a file (it's in the file as a shared library) */
 #if 0
-void scanner_set::load_scanner_file(std::string fn, const scanner_config &c)
+void scanner_set::add_scanner_file(std::string fn, const scanner_config &c)
 {    /* Figure out the function name */
     size_t extloc = fn.rfind('.');
     if(extloc==std::string::npos){
@@ -150,16 +168,9 @@ void scanner_set::load_scanner_file(std::string fn, const scanner_config &c)
 }
 #endif
 
-
-void scanner_set::add_scanners(scanner_t * const *scanners)
-{
-    for( int i=0 ; scanners[i] ; i++){
-        add_scanner(scanners[i]);
-    }
-}
-
 #if 0
-void scanner_set::load_scanner_directory(const std::string &dirname,const scanner_info::scanner_config &sc )
+/* Add all of the scanners in a directory */
+void scanner_set::add_scanner_directory(const std::string &dirname,const scanner_info::scanner_config &sc )
 {
     DIR *dirp = opendir(dirname.c_str());
     if(dirp==0){
@@ -182,20 +193,13 @@ void scanner_set::load_scanner_directory(const std::string &dirname,const scanne
         }
     }
 }
+#endif
 
-void scanner_set::load_scanner_directories(const std::vector<std::string> &dirnames,
-                                            const scanner_info::scanner_config &sc)
-{
-    for(std::vector<std::string>::const_iterator it = dirnames.begin();it!=dirnames.end();it++){
-        load_scanner_directory(*it,sc);
-    }
-}
-
+#if 0
 void scanner_set::load_scanner_packet_handlers()
 {
-    for(scanner_vector::const_iterator it = all_scanners.begin(); it!=all_scanners.end(); it++){
-        if((*it)->enabled){
-            const scanner_def *sd = (*it);
+    for (auto it: enabled_scanners){
+        const scanner_def *sd = (*it);
             if(sd->info.packet_cb){
                 packet_handlers.push_back(packet_plugin_info(sd->info.packet_user,sd->info.packet_cb));
             }
@@ -232,7 +236,7 @@ void scanner_set::set_scanner_enabled(const std::string &name,bool enable)
         }
         return;
     }
-    scanner_t *scanner = find_scanner_by_name(name);
+    scanner_t *scanner = get_scanner_by_name(name);
     if (!scanner) {
         /* Scanner wasn't found */
         throw std::invalid_argument("Invalid scanner name: " + name);
@@ -245,31 +249,9 @@ void scanner_set::set_scanner_enabled(const std::string &name,bool enable)
 }
 
 
-/** Name of feature files that should be histogramed.
- * The histogram should be done in the plug-in
- */
-
-/****************************************************************
- *** scanner plugin loading
- ****************************************************************/
-scanner_t *scanner_set::find_scanner_by_name(const std::string &search_name) const
-{
-    for (auto it: scanner_info_db) {
-        if ( it.second->name == search_name) {
-            return it.first;
-        }
-    }
-    return nullptr;
-}
-
-feature_recorder *scanner_set::find_feature_recorder_by_name(const std::string &name) const
-{
-    return fs.get_name(name);
-}
-
 bool scanner_set::is_scanner_enabled(const std::string &name)
 {
-    scanner_t *scanner = find_scanner_by_name(name);
+    scanner_t *scanner = get_scanner_by_name(name);
     return scanner && enabled_scanners.find(scanner) != enabled_scanners.end();
 }
 
@@ -293,6 +275,87 @@ bool scanner_set::is_find_scanner_enabled()
 }
 
 
+/** Name of feature files that should be histogramed.
+ * The histogram should be done in the plug-in
+ */
+
+/****************************************************************
+ *** scanner plugin loading
+ ****************************************************************/
+scanner_t *scanner_set::get_scanner_by_name(const std::string &search_name) const
+{
+    for (auto it: scanner_info_db) {
+        if ( it.second->name == search_name) {
+            return it.first;
+        }
+    }
+    return nullptr;
+}
+
+feature_recorder *scanner_set::get_feature_recorder_by_name(const std::string &name) const
+{
+    return fs.get_name(name);
+}
+
+/**
+ * Print a list of scanners.
+ * We need to load them to do this, so they are loaded with empty config
+ * Note that scanners can only be loaded once, so this exits.
+ */
+void scanner_set::info_scanners(std::ostream &out,
+                                bool detailed_info,
+                                bool detailed_settings,
+                                const char enable_opt,const char disable_opt)
+{
+    std::vector<std::string> enabled_scanner_names, disabled_scanner_names;
+    for (auto it: scanner_info_db) {
+        if (detailed_info){
+            if (it.second->name.size()) out << "Scanner Name: " << it.second->name;
+            if (is_scanner_enabled(it.second->name)) {
+                out << " (ENABLED) ";
+            }
+            out << "\n";
+            out << "flags:  " << scanner_params::scanner_info::flag_to_string(it.second->flags) << "\n";
+            out << "Scanner Interface version: " << it.second->si_version << "\n";
+            if (it.second->author.size()) out << "Author: " << it.second->author << "\n";
+            if (it.second->description.size()) out << "Description: " << it.second->description << "\n";
+            if (it.second->url.size()) out << "URL: " << it.second->url << "\n";
+            if (it.second->scanner_version.size()) out << "Scanner Version: " << it.second->scanner_version << "\n";
+            out << "Feature Names: ";
+            for ( auto i2: it.second->feature_names ) {
+                out << i2 << " ";
+            }
+            if (detailed_settings){
+                out << "Settable Options (and their defaults): \n";
+                out << it.second->helpstr();
+            }
+            out << "\n\n";
+        }
+        if (it.second->flags & scanner_params::scanner_info::SCANNER_NO_USAGE) continue;
+        if (is_scanner_enabled(it.second->name)){
+            enabled_scanner_names.push_back(it.second->name);
+        } else {
+            disabled_scanner_names.push_back(it.second->name);
+        }
+    }
+    out << "\n";
+    out << "These scanners disabled by default; enable with -" << enable_opt << ":\n";
+
+    sort( disabled_scanner_names.begin(), disabled_scanner_names.end());
+    sort( enabled_scanner_names.begin(), enabled_scanner_names.end());
+
+    for ( auto it:disabled_scanner_names ){
+        out << "   -" << enable_opt << " " <<  it << " - enable scanner " << it << "\n";
+    }
+    out << "\n";
+    out << "These scanners enabled by default; disable with -" << disable_opt << ":\n";
+    for ( auto it:disabled_scanner_names ){
+        out << "   -" << disable_opt << " " <<  it << " - disable scanner " << it << "\n";
+    }
+}
+
+
+/* Add the histograms to the feature recorders for all of the enabled scanners */
 void scanner_set::add_enabled_scanner_histograms()
 {
     for (auto it: scanner_info_db ){
@@ -367,9 +430,14 @@ const std::string & scanner_set::get_input_fname() const
  *** PHASE_SHUTDOWN methods.
  ****************************************************************/
 
+size_t scanner_set::count_histograms() const
+{
+    return fs.count_histograms();
+}
+
 void scanner_set::shutdown()
 {
-    assert(current_phase != scanner_params::PHASE_SHUTDOWN);
+    assert(current_phase == scanner_params::PHASE_SCAN);
     current_phase = scanner_params::PHASE_SHUTDOWN;
     const sbuf_t sbuf;              // empty sbuf
     scanner_params::PrintOptions po; // empty po
@@ -380,76 +448,6 @@ void scanner_set::shutdown()
     }
 }
 
-/**
- * Print a list of scanners.
- * We need to load them to do this, so they are loaded with empty config
- * Note that scanners can only be loaded once, so this exits.
- */
-void scanner_set::info_scanners(std::ostream &out,
-                                bool detailed_info,
-                                bool detailed_settings,
-                                const char enable_opt,const char disable_opt)
-{
-    std::vector<std::string> enabled_scanner_names, disabled_scanner_names;
-    for (auto it: scanner_info_db) {
-        if (detailed_info){
-            if (it.second->name.size()) out << "Scanner Name: " << it.second->name;
-            if (is_scanner_enabled(it.second->name)) {
-                out << " (ENABLED) ";
-            }
-            out << "\n";
-            out << "flags:  " << scanner_params::scanner_info::flag_to_string(it.second->flags) << "\n";
-            out << "Scanner Interface version: " << it.second->si_version << "\n";
-            if (it.second->author.size()) out << "Author: " << it.second->author << "\n";
-            if (it.second->description.size()) out << "Description: " << it.second->description << "\n";
-            if (it.second->url.size()) out << "URL: " << it.second->url << "\n";
-            if (it.second->scanner_version.size()) out << "Scanner Version: " << it.second->scanner_version << "\n";
-            out << "Feature Names: ";
-            for ( auto i2: it.second->feature_names ) {
-                out << i2 << " ";
-            }
-            if (detailed_settings){
-                out << "Settable Options (and their defaults): \n";
-                out << it.second->helpstr();
-            }
-            out << "\n\n";
-        }
-        if (it.second->flags & scanner_params::scanner_info::SCANNER_NO_USAGE) continue;
-        if (is_scanner_enabled(it.second->name)){
-            enabled_scanner_names.push_back(it.second->name);
-        } else {
-            disabled_scanner_names.push_back(it.second->name);
-        }
-    }
-    out << "\n";
-    out << "These scanners disabled by default; enable with -" << enable_opt << ":\n";
-
-    sort( disabled_scanner_names.begin(), disabled_scanner_names.end());
-    sort( enabled_scanner_names.begin(), enabled_scanner_names.end());
-
-    for ( auto it:disabled_scanner_names ){
-        out << "   -" << enable_opt << " " <<  it << " - enable scanner " << it << "\n";
-    }
-    out << "\n";
-    out << "These scanners enabled by default; disable with -" << disable_opt << ":\n";
-    for ( auto it:disabled_scanner_names ){
-        out << "   -" << disable_opt << " " <<  it << " - disable scanner " << it << "\n";
-    }
-}
-
-
-/* Determine if the sbuf consists of a repeating ngram */
-size_t scanner_set::find_ngram_size(const sbuf_t &sbuf) const
-{
-    for (size_t ngram_size = 1; ngram_size < max_ngram; ngram_size++){
-	bool ngram_match = true;
-	for (size_t i=ngram_size;i<sbuf.pagesize && ngram_match;i++){
-	    if (sbuf[i%ngram_size]!=sbuf[i]) ngram_match = false;
-	}
-	if (ngram_match) return ngram_size;
-    }
-    return 0;                           // no ngram size
-}
 
 /** process_sbuf is the main workhorse. It is calls each scanner on the sbuf,
  * And the scanners can recursively call the scanner set.
@@ -471,19 +469,30 @@ static std::string upperstr(const std::string &str)
 
 void scanner_set::set_max_depth_seen(uint32_t max_depth_seen_)
 {
-    std::lock_guard<std::mutex> lock(max_depth_seenM);
+    //std::lock_guard<std::mutex> lock(max_depth_seenM);
     max_depth_seen = max_depth_seen_;
 }
 
 uint32_t scanner_set::get_max_depth_seen() const
 {
-    std::lock_guard<std::mutex> lock(max_depth_seenM);
+    //std::lock_guard<std::mutex> lock(max_depth_seenM);
     return max_depth_seen;
 }
 
 
+/* Transition to the scanning phase */
+void scanner_set::start_scan()
+{
+    assert(current_phase == scanner_params::PHASE_INIT);
+    add_enabled_scanner_histograms();
+    assert(current_phase == scanner_params::PHASE_SCAN);
+}
+
 void scanner_set::process_sbuf(const class sbuf_t &sbuf)
 {
+    /* If we  have not transitioned to PHASE::SCAN, error */
+    assert(current_phase == scanner_params::PHASE_SCAN);
+
     /**
      * upperstr - Turns an ASCII string into upper case (should be UTF-8)
      */
@@ -524,7 +533,7 @@ void scanner_set::process_sbuf(const class sbuf_t &sbuf)
      * such sbufs are booring.)
      */
 
-    size_t ngram_size = find_ngram_size( sbuf );
+    size_t ngram_size = sbuf.find_ngram_size( max_ngram );
 
     /****************************************************************
      *** CALL EACH OF THE SCANNERS ON THE SBUF

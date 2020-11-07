@@ -243,6 +243,21 @@ static const char *hexbuf(char *dst,int dst_len,const unsigned char *bin,int byt
 }
 
 
+/* Determine if the sbuf consists of a repeating ngram */
+size_t sbuf_t::find_ngram_size(const size_t max_ngram) const
+{
+    for (size_t ngram_size = 1; ngram_size < max_ngram; ngram_size++){
+	bool ngram_match = true;
+	for (size_t i=ngram_size; i < pagesize && ngram_match; i++){
+	    if ((*this)[i%ngram_size]!=(*this)[i]) ngram_match = false;
+	}
+	if (ngram_match) return ngram_size;
+    }
+    return 0;                           // no ngram size
+}
+
+
+
 std::ostream & operator <<(std::ostream &os,const sbuf_t &t){
         char hex[17];
         hexbuf(hex,sizeof(hex),t.buf, 8, 0);

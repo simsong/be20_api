@@ -317,6 +317,17 @@ void feature_recorder_set::dump_name_count_stats(dfxml_writer &writer) const
  */
 
 
+size_t feature_recorder_set::count_histograms() const
+{
+    /* Ask each feature recorder to dump its histograms */
+    size_t count = 0;
+    for (feature_recorder_map::const_iterator it = frm.begin(); it!=frm.end(); it++){
+        feature_recorder *fr = it->second;
+        count += fr->count_histograms();
+    }
+    return count;
+}
+
 void feature_recorder_set::add_histogram(const histogram_def &def)
 {
     feature_recorder *fr = get_name(def.feature);

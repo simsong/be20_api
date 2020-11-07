@@ -276,6 +276,9 @@ public:
 
     std::string asString() const {return std::string((reinterpret_cast<const char *>(buf)),bufsize);}
 
+    /* return true if the sbuf consists solely of ngrams */
+    size_t find_ngram_size(size_t max_ngram) const;
+
     /****************************************************************
      *** range_exception_t
      *** An sbuf_range_exception object is thrown if the attempted sbuf access is out of range.

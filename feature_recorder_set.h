@@ -140,6 +140,7 @@ public:
     /* histogram support */
 
     typedef  void (*xml_notifier_t)(const std::string &xmlstring);
+    size_t   count_histograms() const;
     void     add_histogram(const histogram_def &def); // adds it to a local set or to the specific feature recorder
     void     dump_histograms(void *user,feature_recorder::dump_callback_t cb, xml_notifier_t xml_error_notifier) const;
 

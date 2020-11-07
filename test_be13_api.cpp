@@ -210,7 +210,24 @@ TEST_CASE("feature_recorder_set", "[frs]" ) {
  * histogram.h
  */
 #include "histogram.h"
+TEST_CASE( "histogram.h", "[be13_api]") {
+    CharClass c;
+    c.add('a');
+    c.add('0');
+    REQUIRE( c.range_A_Fi == 1);
+    REQUIRE( c.range_g_z == 0);
+    REQUIRE( c.range_G_Z == 0);
+    REQUIRE( c.range_0_9 == 1);
 
+    c.add(reinterpret_cast<const uint8_t *>("ab"),2);
+    REQUIRE( c.range_A_Fi == 3);
+    REQUIRE( c.range_g_z == 0);
+    REQUIRE( c.range_G_Z == 0);
+    REQUIRE( c.range_0_9 == 1);
+
+
+
+}
 /****************************************************************
  *
  * pos0.h:
@@ -351,27 +368,40 @@ TEST_CASE("scanner", "[scanner]") {
 TEST_CASE("scanner_set", "[scanner_set]") {
     class scanner_config sc;
     sc.outdir = get_tempdir();
+    sc.hash_alg = "md5";
 
     scanner_set ss(sc);
     ss.add_scanner(scan_md5);
 
-    std::cout << "one\n";
-    REQUIRE( ss.find_scanner_by_name("no_such_scanner") == nullptr );
-    REQUIRE( ss.find_scanner_by_name("md5") == scan_md5 );
 
+    /* Make sure that the scanner was added */
+    REQUIRE( ss.get_scanner_by_name("no_such_scanner") == nullptr );
+    REQUIRE( ss.get_scanner_by_name("md5") == scan_md5 );
+
+    /* Enable the scanner */
     ss.set_scanner_enabled("md5", true);
-    REQUIRE( ss.is_scanner_enabled("md5") == true );
 
+    /* Make sure that the md5 scanner is enabled and only the md5 scanner is enabled */
+    REQUIRE( ss.is_scanner_enabled("md5") == true );
     REQUIRE( ss.is_find_scanner_enabled() == false); // only md5 scanner is enabled
 
+    /* Turn it off and make sure that it's disabled */
     ss.set_scanner_enabled("md5", false);
     REQUIRE( ss.is_scanner_enabled("md5") == false );
 
+    /* Try enabling all */
     ss.set_scanner_enabled(scanner_set::ALL_SCANNERS,true);
     REQUIRE( ss.is_scanner_enabled("md5") == true );
 
+    /* Try disabling all */
     ss.set_scanner_enabled(scanner_set::ALL_SCANNERS,false);
     REQUIRE( ss.is_scanner_enabled("md5") == false );
+
+    /* Turn it back on */
+    ss.set_scanner_enabled("md5", true);
+
+    /* Make sure we have one histogram defined */
+    REQUIRE( ss.count_histograms() == 1);
 
     std::cout << "Scanner set info:\n";
     ss.info_scanners(std::cout, true, true, 'e', 'd');

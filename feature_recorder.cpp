@@ -339,6 +339,12 @@ public:
  */
 
 
+size_t feature_recorder::count_histograms() const
+{
+    return histogram_defs.size();
+}
+
+
 /** Dump a specific histogram */
 void feature_recorder::dump_histogram_file(const histogram_def &def,
                                            void *user,
@@ -505,8 +511,8 @@ void feature_recorder::add_histogram(const histogram_def &def)
  */
 void feature_recorder::write(const std::string &str)
 {
-    if(debug & DEBUG_PEDANTIC){
-        if(utf8::find_invalid(str.begin(),str.end()) != str.end()){
+    if (debug & DEBUG_PEDANTIC){
+        if (utf8::find_invalid(str.begin(),str.end()) != str.end()){
             std::cerr << "******************************************\n";
             std::cerr << "feature recorder: " << name << "\n";
             std::cerr << "invalid UTF-8 in write: " << str << "\n";
@@ -679,7 +685,7 @@ void feature_recorder::write(const pos0_t &pos0,const std::string &feature_,cons
         const histogram_def &def = it.first;
         mhistogram_t *m = it.second;
         std::string new_feature = *feature_utf8;
-        if(def.require.size()==0 || new_feature.find_first_of(def.require)!=std::string::npos){
+        if (def.require.size()==0 || new_feature.find_first_of(def.require)!=std::string::npos){
             /* If there is a pattern to use, use it to simplify the feature */
             if (def.pattern.size()){
                 std::smatch sm;

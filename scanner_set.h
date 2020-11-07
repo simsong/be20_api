@@ -108,8 +108,12 @@ class scanner_set {
      */
 
     uint32_t max_depth             {7};       // maximum depth for recursive scans
-    uint32_t max_depth_seen        {0};       // maximum depth for recursive scans
-    mutable std::mutex max_depth_seenM     {};
+    //uint32_t max_depth_seen        {0};       // maximum depth for recursive scans
+    //mutable std::mutex max_depth_seenM     {};
+    std::atomic<uint32_t> max_depth_seen {0};
+
+    std::atomic<uint64_t> sbuf_seen {0}; // number of seen sbufs.
+
     uint32_t max_ngram             {10};      // maximum ngram size to scan for
     bool     dup_data_alerts       {false};  // notify when duplicate data is not processed
     uint64_t dup_data_encountered  {0}; // amount of dup data encountered
@@ -117,13 +121,16 @@ class scanner_set {
     //void     message_enabled_scanners(scanner_params::phase_t phase);
     scanner_params::phase_t     current_phase {scanner_params::PHASE_INIT};
 
+    /* Implementation of transition from the init phase to the first scanning phase */
     void     add_enabled_scanner_histograms(); // called when switching from PHASE_INIT to PHASE_SCAN
-public:;
-    // Create a scanner set with these builtin_scanners.
-    scanner_set(const scanner_config &, std::ostream *sxml=0);
 
-    void set_max_depth_seen(uint32_t max_depth_seen_);
-    uint32_t get_max_depth_seen() const;
+public:;
+    /* constructor and destructor */
+    scanner_set(const scanner_config &, std::ostream *sxml=0);
+    virtual ~scanner_set(){};
+
+    /* PHASE_INIT */
+    // Add scanners to the scanner set.
 
     //void set_debug(int debug);
 
@@ -135,44 +142,54 @@ public:;
      * Each scanner is called with scanner_params and a scanner control block as arguments.
      * See "scanner_params.h".
      */
-    void register_info(const scanner_params::scanner_info *si);
-    void add_scanner(scanner_t scanner);      // load a specific scanner in memory
-    void add_scanner_file(std::string fn);    // load a scanner from a shared library file
-    void add_scanners(scanner_t * const *scanners_builtin); // load a nullptr array of scanners.
-    void add_scanner_directory(const std::string &dirname); // load all scanners in the directory
-    //void add_scanners(std::vector<scanner_t> &builtin_scanners);
-    //void add_scanner_directories(const std::vector<std::string> &dirnames);
+    void    register_info(const scanner_params::scanner_info *si);
+    void    add_scanner(scanner_t scanner);      // load a specific scanner in memory
+    void    add_scanners(scanner_t * const *scanners_builtin); // load a nullptr array of scanners.
+    void    add_scanner_file(std::string fn);    // load a scanner from a shared library file
+    void    add_scanner_directory(const std::string &dirname); // load all scanners in the directory
 
-    void load_scanner_packet_handlers(); // after all scanners are loaded, this sets up the packet handlers.
+    void    load_scanner_packet_handlers(); // after all scanners are loaded, this sets up the packet handlers.
+
+    /* Control which scanners are enabled */
+    void    set_scanner_enabled(const std::string &name, bool shouldEnable); // enable/disable a specific scanner
+    void    set_scanner_enabled_all(bool shouldEnable); // enable/disable all scanners
+
+    bool    is_scanner_enabled(const std::string &name); // report if it is enabled or not
+    void    get_enabled_scanners(std::vector<std::string> &svector); // put names of the enabled scanners into the vector
+    bool    is_find_scanner_enabled(); // return true if a find scanner is enabled
+
+    /* These functions must be virtual so they can be called by dynamically loaded plugins */
+    virtual scanner_t *get_scanner_by_name(const std::string &name) const;
+    virtual feature_recorder *get_feature_recorder_by_name(const std::string &name) const;
+
+    // report on the loaded scanners
+    void     info_scanners(std::ostream &out,
+                           bool detailed_info,bool detailed_settings,
+                           const char enable_opt,const char disable_opt);
+
+    /* Control the histograms set up during initialization phase */
+    const std::string & get_input_fname() const;
+
+    /* PHASE SCAN */
+    void start_scan();
+    void set_max_depth_seen(uint32_t max_depth_seen_);
+    uint32_t get_max_depth_seen() const;
 
     /* Managing scanners */
+    // TK - should this be an sbuf function?
     size_t find_ngram_size(const sbuf_t &sbuf) const;
-    scanner_t *find_scanner_by_name(const std::string &name) const;
-    feature_recorder *find_feature_recorder_by_name(const std::string &name) const;
+
     //void  get_scanner_feature_file_names(feature_file_names_t &feature_file_names);
 
     // enabling and disabling of scanners
     //void scanners_disable_all();                    // saves a command to disable all
     //void scanners_enable_all();                    // enable all of them
     static std::string ALL_SCANNERS;
-    void set_scanner_enabled(const std::string &name, bool shouldEnable); // enable/disable a specific scanner
-    void set_scanner_enabled_all(bool shouldEnable); // enable/disable all scanners
-
-    bool is_scanner_enabled(const std::string &name); // report if it is enabled or not
-    void get_enabled_scanners(std::vector<std::string> &svector); // put names of the enabled scanners into the vector
-
     //void scanner_enable(const std::string &name); // saves a command to enable this scanner
     //void scanner_disable(const std::string &name); // saves a command to disable this scanner
 
     // returns the named scanner, or 0 if no scanner of that name
-    bool     is_find_scanner_enabled(); // return true if a find scanner is enabled
 
-    const std::string & get_input_fname() const;
-
-    // report on the loaded scanners
-    void     info_scanners(std::ostream &out,
-                           bool detailed_info,bool detailed_settings,
-                           const char enable_opt,const char disable_opt);
 
     // Scanners automatically get initted when they are loaded, so there is no scanners init or info phase
     // They are immediately ready to process sbufs and packets!
@@ -183,6 +200,10 @@ public:;
     // make the histograms
     // sxml is where to put XML from scanners that shutdown
     // the sxml should go to the constructor
+
+    /* PHASE_SHUTDOWN */
+
+    size_t   count_histograms() const;
     void     shutdown();
 };
 

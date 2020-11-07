@@ -159,9 +159,7 @@ private:
     struct besql_stmt *bs {nullptr};            // prepared beapi sql statement
 #endif
 
-protected:;
     histogram_defs_t      histogram_defs {};    // histograms that are to be created for this feature recorder
-protected:
     std::atomic<int64_t>      count_ {};                     /* number of records written */
 
     mutable std::mutex Mf {};      // protects the file  & file_number_
@@ -222,6 +220,7 @@ public:
 #if defined(HAVE_SQLITE3_H) and defined(HAVE_LIBSQLITE3)
     virtual void dump_histogram_sqlite3(const histogram_def &def,void *user,feature_recorder::dump_callback_t cb) const;
 #endif
+    virtual size_t count_histograms() const;
     virtual void dump_histogram(const histogram_def &def,void *user,feature_recorder::dump_callback_t cb) const;
     typedef void (*xml_notifier_t)(const std::string &xmlstring);
     virtual void dump_histograms(void *user,feature_recorder::dump_callback_t cb, xml_notifier_t xml_error_notifier) const;

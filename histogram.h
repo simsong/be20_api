@@ -26,20 +26,19 @@
 
 class CharClass {
 public:
-    uint32_t range_0_9;			// a range_0_9 character
-    uint32_t range_A_Fi;		// a-f or A-F
-    uint32_t range_g_z;			// g-z
-    uint32_t range_G_Z;			// G-Z
-    CharClass():range_0_9(0),range_A_Fi(0),range_g_z(0),range_G_Z(0){
+    uint32_t range_0_9 {0};			// a range_0_9 character
+    uint32_t range_A_Fi {0};		// a-f or A-F
+    uint32_t range_g_z  {0};			// g-z
+    uint32_t range_G_Z  {0};			// G-Z
+    CharClass(){}
+    void add(const uint8_t ch){
+	if (ch>='a' && ch<='f') range_A_Fi++;
+	if (ch>='A' && ch<='F') range_A_Fi++;
+	if (ch>='g' && ch<='z') range_g_z++;
+	if (ch>='G' && ch<='Z') range_G_Z++;
+	if (ch>='0' && ch<='9') range_0_9++;
     }
-    void add(uint8_t ch){
-	if(ch>='a' && ch<='f') range_A_Fi++;
-	if(ch>='A' && ch<='F') range_A_Fi++;
-	if(ch>='g' && ch<='z') range_g_z++;
-	if(ch>='G' && ch<='Z') range_G_Z++;
-	if(ch>='0' && ch<='9') range_0_9++;
-    }
-    void add(uint8_t *buf,size_t len){
+    void add(const uint8_t *buf,size_t len){
 	for (size_t i=0;i<len;i++){
 	    add(buf[i]);
 	}
@@ -154,7 +153,7 @@ struct histogram_def {
     const std::string feature;      /* feature file name */
     const std::string pattern;      /* regular expression used to extract feature substring from feature. "" means use the entire feature*/
     const std::string require;      /* text required somewhere on the feature line. Sort of like grep. used for IP histograms */
-    const std::string suffix;       /* suffix to append TK TO WHAT???; "" means "histogram" */
+    const std::string suffix;       /* suffix to append to histogram report name */
     const uint32_t    flags;        // see above
     const std::regex  reg;          // the compiled regular expression.
 };
