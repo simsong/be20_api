@@ -12,6 +12,7 @@ EXTRA_DIST = \
 	cester_configure.m4 \
 	slg_gcc_all_warnings.m4
 
+ETAGS = etags-emacs
 ACLOCAL_AMFLAGS = -I m4
 
 # Use the current directory
@@ -52,6 +53,7 @@ test_be13_api_SOURCES = $(DFXML_WRITER) test_be13_api.cpp catch.hpp \
 	scanner_params.h scanner_params.cpp \
 	packet_info.h pcap_fake.h \
 	histogram.h histogram.cpp \
+	feature_recorder_file.h feature_recorder_file.cpp \
 	feature_recorder_set.h 	feature_recorder_set.cpp \
 	feature_recorder.h 	feature_recorder.cpp \
 	word_and_context_list.h  word_and_context_list.cpp \

@@ -18,6 +18,41 @@
 #include "atomic_set_map.h"
 
 /**
+ * histogram_def defines the histograms that will be made by a feature recorder.
+ * If the mhistogram is set, the histogram is generated when features are recorded
+ * and kept in memory. If mhistogram is not set, the histogram is generated when the feature recorder is closed.
+ */
+
+struct histogram_def {
+    /**
+     * @param feature- the feature file to histogram (no .txt)
+     * @param re     - the regular expression to extract
+     * @param require- require this string on the line (usually in context)
+     * @param suffix - the suffix to add to the histogram file after feature name before .txt
+     * @param flags  - any flags (see above)
+     */
+
+    histogram_def(std::string feature_,std::string pattern_,std::string suffix_="",uint32_t flags_=0):
+        feature(feature_),pattern(pattern_),require(),suffix(suffix_),flags(flags_),reg(pattern){}
+    const std::string feature;      /* feature file name */
+    const std::string pattern;      /* regular expression used to extract feature substring from feature. "" means use the entire feature*/
+    const std::string require;      /* text required somewhere on the feature line. Sort of like grep. used for IP histograms */
+    const std::string suffix;       /* suffix to append to histogram report name */
+    const uint32_t    flags;        // see above
+    const std::regex  reg;          // the compiled regular expression.
+};
+
+/* NOTE:
+ * 1 - This typedef must remain outside the the feature_recorder due
+ *     to historical reasons and cannot be made a vector
+ * 2 - Do not make historam_def const!  It breaks some compilers.
+ */
+
+typedef  std::set<histogram_def> histogram_defs_t; // a set of histogram definitions
+
+
+
+/**
  * \class CharClass
  * Examine a block of text and count the number of characters
  * in various ranges. This is useful for determining if a block of
@@ -132,39 +167,6 @@ public:
     virtual ~HistogramMaker(){};
 };
 
-
-/**
- * histogram_def defines the histograms that will be made by a feature recorder.
- * If the mhistogram is set, the histogram is generated when features are recorded
- * and kept in memory. If mhistogram is not set, the histogram is generated when the feature recorder is closed.
- */
-
-struct histogram_def {
-    /**
-     * @param feature- the feature file to histogram (no .txt)
-     * @param re     - the regular expression to extract
-     * @param require- require this string on the line (usually in context)
-     * @param suffix - the suffix to add to the histogram file after feature name before .txt
-     * @param flags  - any flags (see above)
-     */
-
-    histogram_def(std::string feature_,std::string pattern_,std::string suffix_="",uint32_t flags_=0):
-        feature(feature_),pattern(pattern_),require(),suffix(suffix_),flags(flags_),reg(pattern){}
-    const std::string feature;      /* feature file name */
-    const std::string pattern;      /* regular expression used to extract feature substring from feature. "" means use the entire feature*/
-    const std::string require;      /* text required somewhere on the feature line. Sort of like grep. used for IP histograms */
-    const std::string suffix;       /* suffix to append to histogram report name */
-    const uint32_t    flags;        // see above
-    const std::regex  reg;          // the compiled regular expression.
-};
-
-/* NOTE:
- * 1 - This typedef must remain outside the the feature_recorder due
- *     to historical reasons and cannot be made a vector
- * 2 - Do not make historam_def const!  It breaks some compilers.
- */
-
-typedef  std::set<histogram_def> histogram_defs_t; // a set of histogram definitions
 
 /* carve object cache */
 typedef atomic_set<std::string> carve_cache_t;

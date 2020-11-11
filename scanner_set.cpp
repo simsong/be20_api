@@ -367,7 +367,6 @@ void scanner_set::add_enabled_scanner_histograms()
 
 
 #if 0
-
 /****************************************************************
  *** Scanner Commands (which one is enabled or disabled)
  ****************************************************************/
@@ -432,20 +431,28 @@ const std::string & scanner_set::get_input_fname() const
 
 size_t scanner_set::count_histograms() const
 {
+    assert(current_phase == scanner_params::PHASE_SHUTDOWN);
     return fs.count_histograms();
 }
 
 void scanner_set::shutdown()
 {
-    assert(current_phase == scanner_params::PHASE_SCAN);
+    if (current_phase != scanner_params::PHASE_SCAN){
+        throw std::runtime_error("shutdown can only be called in scanner_params::PHASE_SCAN");
+    }
     current_phase = scanner_params::PHASE_SHUTDOWN;
+
+    /* Tell the scanners we are shutting down */
     const sbuf_t sbuf;              // empty sbuf
     scanner_params::PrintOptions po; // empty po
     scanner_params sp(*this, scanner_params::PHASE_SHUTDOWN, sbuf, po);
-    //recursion_control_block rcb(0,"");        // empty rcb
     for ( auto it: enabled_scanners ){
         (*it)(sp);
     }
+
+    /* Add the histograms */
+    add_enabled_scanner_histograms();
+    fs.generate_histograms();
 }
 
 
@@ -483,15 +490,17 @@ uint32_t scanner_set::get_max_depth_seen() const
 /* Transition to the scanning phase */
 void scanner_set::start_scan()
 {
-    assert(current_phase == scanner_params::PHASE_INIT);
-    add_enabled_scanner_histograms();
-    assert(current_phase == scanner_params::PHASE_SCAN);
+    if (current_phase != scanner_params::PHASE_INIT){
+        throw std::runtime_error("start_scan can only be run in scanner_params::PHASE_INIT");
+    }
 }
 
 void scanner_set::process_sbuf(const class sbuf_t &sbuf)
 {
     /* If we  have not transitioned to PHASE::SCAN, error */
-    assert(current_phase == scanner_params::PHASE_SCAN);
+    if (current_phase != scanner_params::PHASE_SCAN){
+        throw std::runtime_error("process_sbuf can only be run in scanner_params::PHASE_SCAN");
+    }
 
     /**
      * upperstr - Turns an ASCII string into upper case (should be UTF-8)

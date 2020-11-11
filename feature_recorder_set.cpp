@@ -125,6 +125,7 @@ feature_recorder_set::~feature_recorder_set()
 
 void    feature_recorder_set::set_flag(uint32_t f)
 {
+#if 0
     if(f & MEM_HISTOGRAM){
         if(flags & MEM_HISTOGRAM){
             std::cerr << "MEM_HISTOGRAM flag cannot be set twice\n";
@@ -136,14 +137,17 @@ void    feature_recorder_set::set_flag(uint32_t f)
             fr->enable_memory_histograms();
         }
     }
+#endif
     flags |= f;
 }
 
 void    feature_recorder_set::unset_flag(uint32_t f)
 {
+#if 0
     if(f & MEM_HISTOGRAM){
         throw std::runtime_error("MEM_HISTOGRAM flag cannot be cleared");
     }
+#endif
     flags &= ~f;
 }
 
@@ -305,7 +309,7 @@ void feature_recorder_set::dump_name_count_stats(dfxml_writer &writer) const
 
 
 /****************************************************************
- *** PHASE HISTOGRAM (formerly phase 3): Create the histograms
+ *** Histogram Support - Called during shutdown of scanner_set.
  ****************************************************************/
 
 /**
@@ -319,10 +323,10 @@ void feature_recorder_set::dump_name_count_stats(dfxml_writer &writer) const
 
 size_t feature_recorder_set::count_histograms() const
 {
-    /* Ask each feature recorder to dump its histograms */
+    /* Ask each feature recorder to count the number of histograms it can produce */
     size_t count = 0;
-    for (feature_recorder_map::const_iterator it = frm.begin(); it!=frm.end(); it++){
-        feature_recorder *fr = it->second;
+    for ( auto it: frm ){
+        feature_recorder *fr = it.second;
         count += fr->count_histograms();
     }
     return count;
@@ -334,7 +338,8 @@ void feature_recorder_set::add_histogram(const histogram_def &def)
     if(fr) fr->add_histogram(def);
 }
 
-void feature_recorder_set::dump_histograms(void *user,feature_recorder::dump_callback_t cb,
+#if 0
+void feature_recorder_set::generate_histograms(void *user,feature_recorder::dump_callback_t cb,
                                            feature_recorder_set::xml_notifier_t xml_error_notifier) const
 {
     /* Ask each feature recorder to dump its histograms */
@@ -343,6 +348,17 @@ void feature_recorder_set::dump_histograms(void *user,feature_recorder::dump_cal
         fr->dump_histograms(user,cb,xml_error_notifier);
     }
 }
+#endif
+
+void feature_recorder_set::generate_histograms()
+{
+    /* Ask each feature recorder to dump its histograms */
+    for (auto it : frm ){
+        // it.second.dump_histograms(user,cb,xml_error_notifier);
+        std::cerr << "should dump histogram for " << it.first << "\n";
+    }
+}
+
 
 void feature_recorder_set::get_feature_file_list(std::vector<std::string> &ret)
 {

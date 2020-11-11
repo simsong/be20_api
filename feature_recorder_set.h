@@ -2,10 +2,15 @@
 #ifndef FEATURE_RECORDER_SET_H
 #define FEATURE_RECORDER_SET_H
 
+#if defined(HAVE_SQLITE3_H)
+#include <sqlite3.h>
+#endif
 
 #include "sbuf.h"
 #include "feature_recorder.h"
+#include "histogram.h"
 #include "dfxml/src/dfxml_writer.h"
+
 /** \addtogroup internal_interfaces
  * @{
  */
@@ -53,9 +58,9 @@ class feature_recorder_set {
     // TK-replace with an atomic_set:
     feature_recorder_map  frm {};              // map of feature recorders, name->feature recorder, by name
     mutable std::mutex    Mscanner_stats {};   // locks frm and scanner_stats_map
-    histogram_defs_t      histogram_defs {};   // histograms that are to be created.
-    mutable std::mutex    Min_transaction {};
-    bool                  in_transaction {};
+    //histogram_defs_t      histogram_defs {};   // histograms that are to be created.
+    //mutable std::mutex    Min_transaction {};
+    //bool                  in_transaction {};
 #if defined(HAVE_SQLITE3_H) and defined(HAVE_LIBSQLITE3)
     sqlite3               *db3 {};              // databse handle opened in SQLITE_OPEN_FULLMUTEX mode
 #endif
@@ -127,7 +132,7 @@ public:
     static const uint32_t ONLY_ALERT                = 0x01;  // always return the alert recorder
     static const uint32_t SET_DISABLED              = 0x02;  // the set is effectively disabled; for path-printer
     static const uint32_t CREATE_STOP_LIST_RECORDERS= 0x04;  //
-    static const uint32_t MEM_HISTOGRAM             = 0x20;  // enable the in-memory histogram
+    //static const uint32_t MEM_HISTOGRAM             = 0x20;  // enable the in-memory histogram
     static const uint32_t ENABLE_SQLITE3_RECORDERS  = 0x40;  // save features to an SQLITE3 databse
     static const uint32_t DISABLE_FILE_RECORDERS    = 0x80;  // do not save features to file-based recorders
     static const uint32_t NO_ALERT                  = 0x100; // no alert recorder
@@ -137,12 +142,18 @@ public:
     bool     flag_notset(uint32_t f)  const { return !(flags & f); }
     uint32_t get_flags()              const { return flags; }
 
+    /* These used to be static variables in the feature recorder class. They are more properly here */
+    uint32_t    opt_max_context_size;
+    uint32_t    opt_max_feature_size;
+    int64_t     offset_add;          // added to every reported offset, for use with hadoop
+    std::string banner_file;         // banner for top of every file
+
     /* histogram support */
 
     typedef  void (*xml_notifier_t)(const std::string &xmlstring);
-    size_t   count_histograms() const;
     void     add_histogram(const histogram_def &def); // adds it to a local set or to the specific feature recorder
-    void     dump_histograms(void *user,feature_recorder::dump_callback_t cb, xml_notifier_t xml_error_notifier) const;
+    size_t   count_histograms() const;  // counts histograms in all feature recorders
+    void     generate_histograms();     // make the histograms in the output directory (and optionally in the database)
 
     /* support for creating and finding feature recorders */
     /* Previously called create_name().
