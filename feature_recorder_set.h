@@ -38,7 +38,7 @@
 
 class word_and_context_list;
 class feature_recorder_set {
-    typedef std::map<std::string, class feature_recorder *> feature_recorder_map;
+    //typedef std::map<std::string, class feature_recorder *> feature_recorder_map;
 
     // neither copying nor assignment is implemented
     feature_recorder_set(const feature_recorder_set &fs)=delete;
@@ -56,8 +56,10 @@ class feature_recorder_set {
 
 
     // TK-replace with an atomic_set:
-    feature_recorder_map  frm {};              // map of feature recorders, name->feature recorder, by name
+    atomic_map<std::string, class feature_recorder *> frm {};
+    //feature_recorder_map  frm {};              // map of feature recorders, name->feature recorder, by name
     mutable std::mutex    Mscanner_stats {};   // locks frm and scanner_stats_map
+    feature_recorder      *stop_list_recorder {nullptr}; // where stopped features get written (if there is one)
     //histogram_defs_t      histogram_defs {};   // histograms that are to be created.
     //mutable std::mutex    Min_transaction {};
     //bool                  in_transaction {};

@@ -106,9 +106,7 @@ feature_recorder_set::feature_recorder_set(uint32_t flags_,const std::string has
  */
 feature_recorder_set::~feature_recorder_set()
 {
-    for ( auto it:frm ){
-        delete it.second;
-    }
+    frm.delete_all();
 #if defined(HAVE_SQLITE3_H) and defined(HAVE_LIBSQLITE3)
     db_close();
 #endif
@@ -153,6 +151,7 @@ void    feature_recorder_set::unset_flag(uint32_t f)
 
 
 
+#if 0
 /** Flush all of the feature recorder files.
  *  Typically done at the end of an sbuf.
  */
@@ -162,12 +161,13 @@ void feature_recorder_set::flush_all()
         it.second->flush();
     }
 }
+#endif
 
 void feature_recorder_set::close_all()
 {
-    for (auto it:frm){
-        it.second->close();
-    }
+    //for (auto it:frm){
+    //it.second->close();
+//}
 #if defined(HAVE_SQLITE3_H) and defined(HAVE_LIBSQLITE3)
     if ( flag_set(feature_recorder_set::ENABLE_SQLITE3_RECORDERS )) {
         db_transaction_commit();
@@ -189,27 +189,23 @@ void feature_recorder_set::close_all()
  */
 void feature_recorder_set::create_named_feature_recorder(const std::string &name,bool create_stop_recorder)
 {
-    if(frm.find(name)!=frm.end()){
-        std::cerr << "create_name: feature recorder '" << name << "' already exists\n";
+    if ( frm.contains(name) ){
+        throw std::runtime_error(name);
         return;
     }
 
-    frm[name] = new feature_recorder(*this, name);
+    feature_recorder *fr = new feature_recorder(*this, name);
+    frm.insert(name, fr)
     if (create_stop_recorder){
         std::string name_stopped = name+"_stopped";
         frm[name_stopped] = new feature_recorder(*this, name_stopped);
-        frm[name]->set_stop_list_recorder( frm[name_stopped] );
+        fr->set_stop_list_recorder( frm[name_stopped] );
     }
 }
 
 
-bool feature_recorder_set::has_name(std::string name) const
-{
-    return frm.find(name) != frm.end();
-}
-
 /*
- * Gets a feature_recorder fromn from the set.
+ * Gets a feature_recorder from the set.
  */
 feature_recorder *feature_recorder_set::get_name(const std::string &name) const
 {
@@ -222,18 +218,23 @@ feature_recorder *feature_recorder_set::get_name(const std::string &name) const
         thename = &feature_recorder_set::ALERT_RECORDER_NAME;
     }
 
-    std::lock_guard<std::mutex> lock(Mscanner_stats);
-    feature_recorder_map::const_iterator it = frm.find(*thename);
-    if(it!=frm.end()) return it->second;
-    return(0);                          // feature recorder does not exist
+    auto it = frm.find(*thename);
+    if (it!=frm.end()) return it->second;
+    return (0);                          // feature recorder does not exist
 }
 
 /*
- * The alert recorder is special.
+ * The alert recorder is special. It's provided for all of the feature recorders.
+ * If one doesn't exist, create it.
  */
 feature_recorder *feature_recorder_set::get_alert_recorder() const
 {
     if (flag_set(NO_ALERT)) return 0;
+    feature_recorder *alert_recorder = get_name(feature_recorder_set::ALERT_RECORDER_NAME);
+    if (alert_recorder) {
+        return alert_recorder;
+    }
+    create_named_feature_recorder(feature_recorder_set::ALERT_RECORDER_NAME, false);
     return get_name(feature_recorder_set::ALERT_RECORDER_NAME);
 }
 

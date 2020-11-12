@@ -96,8 +96,8 @@ public:;
     virtual const std::string &get_outdir() const;      // cannot be inline becuase it accesses fs
 
     /* State variables for this feature recorder */
-    std::atomic<size_t>                context_window {0};      // context window for this feature recorder
-    void set_context_window(size_t win)                          { context_window =  win;}
+    std::atomic<size_t>       context_window {0};      // context window for this feature recorder
+    //void set_context_window(size_t win)                          { context_window =  win;}
     std::atomic<int64_t>      count {};                     /* number of records written */
 
     /* Flag System */

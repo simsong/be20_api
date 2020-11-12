@@ -11,6 +11,7 @@
 #include <vector>
 #include <algorithm>
 #include <set>
+#include <map>
 #include <mutex>
 #include <unordered_map>
 #include <unordered_set>
@@ -100,6 +101,42 @@ public:
         if(myset.find(s)!=myset.end()) return true; // in the set
         myset.insert(s);                // otherwise insert it
         return false;                   // and return that it wasn't
+    }
+};
+
+template <class T1,class T2 > class atomic_map {
+    std::mutex M {};
+    std::map<T1, T2>mymap {};
+public:
+    atomic_map(){}
+    T2 operator [](const T1 &key){
+        const std::lock_guard<std::mutex> lock(M);
+        return mymap[key];
+    }
+    typename std::map<T1, T2>::const_iterator find(const T1 &key){
+        const std::lock_guard<std::mutex> lock(M);
+        return mymap.find(key);
+    }
+    typename std::map<T1, T2>::const_iterator begin(const T1 &key){
+        const std::lock_guard<std::mutex> lock(M);
+        return mymap.begin(key);
+    }
+    typename std::map<T1, T2>::const_iterator end(const T1 &key){
+        const std::lock_guard<std::mutex> lock(M);
+        return mymap.end(key);
+    }
+    void delete_all() {
+        const std::lock_guard<std::mutex> lock(M);
+        for (auto it: mymap) {
+            delete it.second;
+        }
+    }
+    bool contains(T2 i){
+        const std::lock_guard<std::mutex> lock(M);
+        return mymap.find(i)!=mymap.end();
+    }
+    void insert(T1 key, T2 val){
+        mymap[key] = val;
     }
 };
 
