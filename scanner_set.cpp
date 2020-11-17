@@ -52,8 +52,10 @@ std::string scanner_set::ALL_SCANNERS {"all"};
 /****************************************************************
  * create the scanner set
  */
-scanner_set::scanner_set(const scanner_config &sc_, std::ostream *sxml_):
-    sc(sc_),fs(0,sc_.hash_alg, sc_.input_fname, sc_.outdir), sxml(sxml_)
+scanner_set::scanner_set(const scanner_config &sc_,
+                         const feature_recorder_set::flags_t &f,
+                         std::ostream *sxml_):
+    sc(sc_),fs(f,sc_.hash_alg, sc_.input_fname, sc_.outdir), sxml(sxml_)
 {
 }
 
@@ -101,7 +103,7 @@ void scanner_set::add_scanner(scanner_t scanner)
     }
 
     // Enable the scanner if it is not disabled by default.
-    if (!(scanner_info_db[scanner]->flags & scanner_params::scanner_info::SCANNER_DEFAULT_DISABLED)){
+    if ( scanner_info_db[scanner]->scanner_flags.default_enabled ) {
         enabled_scanners.insert(scanner);
     }
 }
@@ -225,7 +227,7 @@ void scanner_set::set_scanner_enabled(const std::string &name,bool enable)
      * then either enable it or disable it as appropriate */
     if (name == scanner_set::ALL_SCANNERS){
         for (auto it: scanner_info_db) {
-            if (it.second->flags & scanner_params::scanner_info::SCANNER_NO_ALL) {
+            if (it.second->scanner_flags.no_all) {
                 continue;
             }
             if (enable) {
@@ -267,7 +269,7 @@ void scanner_set::get_enabled_scanners(std::vector<std::string> &svector)
 bool scanner_set::is_find_scanner_enabled()
 {
     for (auto it: enabled_scanners) {
-        if (scanner_info_db[it]->flags & scanner_params::scanner_info::SCANNER_FIND_SCANNER){
+        if (scanner_info_db[it]->scanner_flags.find_scanner){
             return true;
         }
     }
@@ -315,8 +317,7 @@ void scanner_set::info_scanners(std::ostream &out,
                 out << " (ENABLED) ";
             }
             out << "\n";
-            out << "flags:  " << scanner_params::scanner_info::flag_to_string(it.second->flags) << "\n";
-            out << "Scanner Interface version: " << it.second->si_version << "\n";
+            out << "flags:  " << it.second->scanner_flags.asString() << "\n";
             if (it.second->author.size()) out << "Author: " << it.second->author << "\n";
             if (it.second->description.size()) out << "Description: " << it.second->description << "\n";
             if (it.second->url.size()) out << "URL: " << it.second->url << "\n";
@@ -331,7 +332,7 @@ void scanner_set::info_scanners(std::ostream &out,
             }
             out << "\n\n";
         }
-        if (it.second->flags & scanner_params::scanner_info::SCANNER_NO_USAGE) continue;
+        if (it.second->scanner_flags.no_usage) continue;
         if (is_scanner_enabled(it.second->name)){
             enabled_scanner_names.push_back(it.second->name);
         } else {
@@ -476,13 +477,13 @@ static std::string upperstr(const std::string &str)
 
 void scanner_set::set_max_depth_seen(uint32_t max_depth_seen_)
 {
-    //std::lock_guard<std::mutex> lock(max_depth_seenM);
+    //const std::lock_guard<std::mutex> lock(max_depth_seenM);
     max_depth_seen = max_depth_seen_;
 }
 
 uint32_t scanner_set::get_max_depth_seen() const
 {
-    //std::lock_guard<std::mutex> lock(max_depth_seenM);
+    //const std::lock_guard<std::mutex> lock(max_depth_seenM);
     return max_depth_seen;
 }
 
@@ -560,13 +561,13 @@ void scanner_set::process_sbuf(const class sbuf_t &sbuf)
             continue;                       //  not enabled
         }
 
-        if ( (it.second->flags & scanner_params::scanner_info::SCANNER_WANTS_NGRAMS)==0){
+        if ( (it.second->scanner_flags.wants_ngrams)==0){
             /* If the scanner does not want ngrams, don't run it if we have ngrams or duplicate data */
             if (ngram_size > 0) continue;
             if (seen_before)    continue;
         }
 
-        if ( sbuf.depth() > 0 && (it.second->flags & scanner_params::scanner_info::SCANNER_DEPTH_0)){
+        if ( sbuf.depth() > 0 && it.second->scanner_flags.depth_0)){
             // depth >0 and this scanner only run at depth 0
             continue;
         }

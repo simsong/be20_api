@@ -19,6 +19,7 @@
 
 #include "pos0.h"
 #include "sbuf.h"
+#include "atomic_set_map.h"
 
 /**
  * \addtogroup bulk_extractor_APIs
@@ -74,19 +75,16 @@ public:
 
 
 class feature_recorder {
+    /* default copy construction and assignment are meaningless and not implemented */
+    feature_recorder(const feature_recorder &)=delete;
+    feature_recorder &operator=(const feature_recorder &)=delete;
 
 public:;
-    /* represent a feature */
-
     /* The main public interface:
      * Note that feature_recorders exist in a feature_recorder_set and have a name.
      */
     feature_recorder(class feature_recorder_set &fs, const std::string &name);
     virtual        ~feature_recorder();
-
-    /* default copy construction and assignment are meaningless and not implemented */
-    feature_recorder(const feature_recorder &)=delete;
-    feature_recorder &operator=(const feature_recorder &)=delete;
 
     /* Main state variables */
     class  feature_recorder_set &fs; // the set in which this feature_recorder resides
@@ -97,21 +95,20 @@ public:;
 
     /* State variables for this feature recorder */
     std::atomic<size_t>       context_window {0};      // context window for this feature recorder
-    //void set_context_window(size_t win)                          { context_window =  win;}
-    std::atomic<int64_t>      count {};                     /* number of records written */
+    //std::atomic<int64_t>      features_written {0};
 
-    /* Flag System */
-    uint32_t        flags {0};      // flags for this feature recorder
-    virtual void   set_flag(uint32_t flags_);
-    virtual void   unset_flag(uint32_t flags_);
-    bool           flag_set(uint32_t f)    const {return flags & f;}
-    bool           flag_notset(uint32_t f) const {return !(flags & f);}
-    uint32_t       get_flags()             const {return flags;}
+    /* Flag System no longer used; now we just use booleans */
+    //std::atomic<uint32_t>     flags {0};      // flags for this feature recorder
+    //virtual void   set_flag(uint32_t flags_);    // must be virtual so can be run by plugins.
+    //virtual void   unset_flag(uint32_t flags_);
+    //bool           flag_set(uint32_t f)    const {return flags & f;}
+    //bool           flag_notset(uint32_t f) const {return !(flags & f);}
+    //uint32_t       get_flags()             const {return flags;}
 
     /**
      * \name Flags that control scanners
      * @{
-     * These flags control scanners.  Set them with set_flag().
+     * These flags control scanners.  Set them with flag_set().
      */
     /** Disable this recorder. */
     static const int FLAG_DISABLED         = 0x01;      // feature recorder is Disabled
@@ -139,14 +136,20 @@ public:;
 
     /** @} */
     static constexpr int max_histogram_files = 10;  // don't make more than 10 files in low-memory conditions
-    static const std::string histogram_file_header;
-    static const std::string feature_file_header;
-    static const std::string bulk_extractor_version_header;
-
 
     static std::string MAX_DEPTH_REACHED_ERROR_FEATURE;
     static std::string MAX_DEPTH_REACHED_ERROR_CONTEXT;
 
+    /* Support for hashing */
+    //typedef      std::string (*hashing_function_t)( const sbuf_t &sbuf); // returns a hex value
+    std::string hash(const sbuf_t &sbuf); // hash an sbuf with the current hashing function and return it
+
+
+
+    /* File management */
+    // returns a feature recorder filename in the outdir with an optional suffix before the file extension.
+    // The suffix is used for histograms.
+    std::string        fname_suffix(std::string suffix) const;
 
     // These must only be changed in the main thread at the start of program execution:
 
@@ -159,7 +162,7 @@ public:;
 
     /**
      * write() actually does the writing to the file.
-     * It uses locks and is threadsafe.
+     * It must be threadsafe (either uses locks or goes to a DBMS)
      * Callers therefore do not need locks.
      */
     virtual void write(const std::string &str);
@@ -168,23 +171,12 @@ public:;
      * support for writing features
      */
 
-    void quote_if_necessary(std::string &feature,std::string &context);
+    //void quote_if_necessary(std::string &feature,std::string &context);
 
-    // only virtual functions may be called by plug-ins
     // printf() prints to the feature file.
     virtual void printf(const char *fmt_,...) __attribute__((format(printf, 2, 3)));
     //
     // write a feature and its context; the feature may be in the context, but doesn't need to be.
-    // write() calls write0() after histogram, quoting, and stoplist processing
-    // write0() calls write0_sqlite3() if sqlwriting is enabled
-    virtual void write0(const pos0_t &pos0,const std::string &feature,const std::string &context);
-private:
-#if defined(HAVE_SQLITE3_H) and defined(HAVE_LIBSQLITE3)
-    virtual void write0_sqlite3(const pos0_t &pos0,const std::string &feature,const std::string &context);
-#endif
-    static const char *db_insert_stmt;
-public:
-
     /****************************************************************
      *** External entry points.
      ****************************************************************/
@@ -201,28 +193,30 @@ public:
      * support for carving.
      * Carving writes the filename to the feature file; the context is the file's hash using the provided function.
      * Automatically de-duplicates.
+     * Carving is implemented in the abstract class becuase all feature recorders have access to it.
+     * Carving should not be passed on when chaining.
      */
     enum carve_mode_t {
         CARVE_NONE=0,
         CARVE_ENCODED=1,
         CARVE_ALL=2};
 
+    std::atomic<int64_t>   carved_files {0};        // starts at 0; gets incremented by carve();
+    atomic_set<std::string>     carve_cache {}; // hashes of files that have been cached, so the same file is not carved twice
+    std::string  do_not_carve_encoding {};            // do not carve files with this encoding.
     static const std::string CARVE_MODE_DESCRIPTION;
     std::atomic<carve_mode_t> carve_mode { CARVE_ENCODED};
-    typedef      std::string (*hashing_function_t)( const sbuf_t &sbuf); // returns a hex value
-    ;;void         set_carve_mode(carve_mode_t aMode){ carve_mode=aMode;}
 
-    // Carve a file; returns filename of carved file or empty string if nothing carved
-    virtual std::string carve(const sbuf_t &sbuf,size_t pos,size_t len,
-                              const std::string &ext); // appended to forensic path
+    // Carve data or a record to a file; returns filename of carved file or empty string if nothing carved
+    // if mtime!=0, set the file's mtime to be mtime
+    virtual std::string carve(const sbuf_t &sbuf, const std::string &ext, time_t mtime); // appended to forensic path
     // Carve a record; returns filename of records file or empty string if nothing carved
-    virtual std::string carve_records(const sbuf_t &sbuf, size_t pos, size_t len,
-                                      const std::string &name);
+    //virtual std::string carve_records(const sbuf_t &sbuf, size_t pos, size_t len, const std::string &name);
     // Write a data;
     virtual std::string write_data(unsigned char *data, size_t len, const std::string &filename);
 
     // Set the time of the carved file to iso8601 file
-    virtual void set_carve_mtime(const std::string &fname, const std::string &mtime_iso8601);
+    //virtual void set_carve_mtime(const std::string &fname, const std::string &mtime_iso8601);
 };
 
 #endif

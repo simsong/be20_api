@@ -142,8 +142,10 @@ TEST_CASE("feature_recorder_set", "[frs]" ) {
     // Create a random directory for the output of the feature recorder
     std::string tempdir = get_tempdir();
     {
+        feature_recorder_set::flags_t flags;
+        flags.no_alert = true;
 
-        feature_recorder_set frs(feature_recorder_set::NO_ALERT, "md5", scanner_config::NO_INPUT, tempdir);
+        feature_recorder_set frs( flags, "md5", scanner_config::NO_INPUT, tempdir);
         //feature_recorder_set::feature_file_names_t feature_files;
         frs.create_named_feature_recorder("test", false);
         REQUIRE( frs.has_name("test") == true);
@@ -330,7 +332,7 @@ TEST_CASE("sbuf.h","[sbuf]") {
 TEST_CASE("scanner_config", "[sc]") {
     std::string help_string {"   -S first-day=sunday    value for first-day (first-day)\n"
                              "   -S age=0    age in years (age)\n"};
-    class scanner_config sc;
+    scanner_config sc;
     /* Normally the set_configs would be called by main()
     * These two would be called by -S first-day=monday  -S age=5
     */
@@ -366,11 +368,12 @@ TEST_CASE("scanner", "[scanner]") {
 #include "scanner_set.h"
 #include "scan_md5.h"
 TEST_CASE("scanner_set", "[scanner_set]") {
-    class scanner_config sc;
+    scanner_config sc;
     sc.outdir = get_tempdir();
     sc.hash_alg = "md5";
 
-    scanner_set ss(sc);
+    struct feature_recorder_set::flags_t f;
+    scanner_set ss(sc, f);
     ss.add_scanner(scan_md5);
 
 

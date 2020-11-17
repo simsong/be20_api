@@ -126,13 +126,25 @@ class scanner_set {
 
 public:;
     /* constructor and destructor */
-    scanner_set(const scanner_config &, std::ostream *sxml=0);
+    scanner_set(const scanner_config &sc, const feature_recorder_set::flags_t &f, std::ostream *sxml=0);
     virtual ~scanner_set(){};
 
     /* PHASE_INIT */
     // Add scanners to the scanner set.
 
-    //void set_debug(int debug);
+    /* Debug for feature recorders. This used to be a flag, but Stroustrup (2013) recommends just having
+     * a bunch of bools.
+     */
+    struct debug_flags_t {
+        bool debug_print_steps {false}; // prints as each scanner is started
+        bool debug_scanner {false};     // dump all feature writes to stderr
+        bool debug_no_scanners {false}; // run with no scanners
+        bool debug_dump_data {false};   // scanners should dump data as they see them
+        bool debug_decoding {false};    // scanners should dump information on decoding as they see them
+        bool debug_info {false};        // print extra info
+        bool debug_exit_early {false};  // just print the size of the volume and exit
+        bool debug_allocate_512MiB;     // allocate 512MiB but don't set any flags
+    } debug_flags;
 
     /* Scanners can be compiled in (which are passed to the constructor), loaded one-by-one from meory,
      * or loaded from a file, a directory, or a set of directories.

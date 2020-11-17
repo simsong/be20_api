@@ -81,16 +81,6 @@
 #endif
 
 
-const int DEBUG_PEDANTIC    = 0x0001;   // check values more rigorously
-const int DEBUG_PRINT_STEPS = 0x0002;   // prints as each scanner is started
-const int DEBUG_SCANNER     = 0x0004;   // dump all feature writes to stderr
-const int DEBUG_NO_SCANNERS = 0x0008;   // do not run the scanners
-const int DEBUG_DUMP_DATA   = 0x0010;   // dump data as it is seen
-const int DEBUG_DECODING    = 0x0020;   // debug decoders in scanner
-const int DEBUG_INFO        = 0x0040;   // print extra info
-const int DEBUG_EXIT_EARLY  = 1000;     // just print the size of the volume and exis
-const int DEBUG_ALLOCATE_512MiB = 1002;      // Allocate 512MiB, but don't set any flags
-
 /**
  * \addtogroup plugin_module
  * @{

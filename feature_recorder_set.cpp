@@ -275,7 +275,7 @@ bool feature_recorder_set::check_previously_processed(const sbuf_t &sbuf)
 
 void feature_recorder_set::add_stats(const std::string &bucket,double seconds)
 {
-    std::lock_guard<std::mutex> lock(Mscanner_stats);
+    const std::lock_guard<std::mutex> lock(Mscanner_stats);
     struct pstats &p = scanner_stats[bucket]; // get the location of the stats
     p.seconds += seconds;
     p.calls ++;
@@ -295,7 +295,7 @@ void feature_recorder_set::get_stats(void *user,stat_callback_t stat_callback) c
 
 void feature_recorder_set::dump_name_count_stats(dfxml_writer &writer) const
 {
-    std::lock_guard<std::mutex> lock(Mscanner_stats);
+    const std::lock_guard<std::mutex> lock(Mscanner_stats);
     writer.push("feature_files");
     for (auto ij: frm) {
         writer.set_oneline(true);
@@ -477,7 +477,7 @@ void feature_recorder_set::db_close()
 
 void feature_recorder_set::db_transaction_begin()
 {
-    std::lock_guard<std::mutex> lock(Min_transaction);
+    const std::lock_guard<std::mutex> lock(Min_transaction);
     if(!in_transaction){
         db_send_sql(db3,begin_transaction);
         in_transaction = true;
@@ -486,7 +486,7 @@ void feature_recorder_set::db_transaction_begin()
 
 void feature_recorder_set::db_transaction_commit()
 {
-    std::lock_guard<std::mutex> lock(Min_transaction);
+    const std::lock_guard<std::mutex> lock(Min_transaction);
     if(in_transaction){
         db_send_sql(db3,commit_transaction);
         in_transaction = false;

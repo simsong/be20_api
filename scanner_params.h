@@ -55,34 +55,35 @@ struct scanner_params {
         scanner_info &operator=(const scanner_info &i)=delete;
         std::string helpstr() const { return helpstream.str();}
 
-        /* scanner flags */
-        static const int SCANNER_DEFAULT_DISABLED       = 0x001; //  enabled by default
-        static const int SCANNER_NO_USAGE       = 0x002; //  do not show scanner in usage
-        static const int SCANNER_NO_ALL         = 0x004; //  do not enable with -eall
-        static const int SCANNER_FIND_SCANNER   = 0x008; //  this scanner uses the find_list
-        static const int SCANNER_RECURSE        = 0x010; //  this scanner will recurse
-        static const int SCANNER_RECURSE_EXPAND = 0x020; //  recurses AND result is >= original size
-        static const int SCANNER_WANTS_NGRAMS   = 0x040; //  Scanner gets buffers that are constant n-grams
-        static const int SCANNER_FAST_FIND      = 0x080; //  This scanner is a very fast FIND scanner
-        static const int SCANNER_DEPTH_0        = 0x100; //  scanner only runs at depth 0 by default
-        static const int CURRENT_SI_VERSION     = 4;
+        struct scanner_flags_t {
+            bool  default_enabled {true}; //  enabled by default
+            bool  no_usage {false}; //  do not show scanner in usage
+            bool  no_all {false}; //  do not enable with -eall
+            bool  find_scanner {false}; //  this scanner uses the find_list
+            bool  recurse {false}; //  this scanner will recurse
+            bool  recurse_expand {false}; //  recurses AND result is >= original size
+            bool  wants_ngrams {false}; //  Scanner gets buffers that are constant n-grams
+            bool  fast_find {false}; //  This scanner is a very fast FIND scanner
+            bool  depth_0 {false}; //  scanner only runs at depth 0 by default
 
-        static const std::string flag_to_string(const int flag){
-            std::string ret {};
-            if(flag==0)                       ret += "NONE ";
-            if(flag & SCANNER_DEFAULT_DISABLED)  ret += "SCANNER_DEFAULT_DISABLED ";
-            if(flag & SCANNER_NO_USAGE)       ret += "SCANNER_NO_USAGE ";
-            if(flag & SCANNER_NO_ALL)         ret += "SCANNER_NO_ALL ";
-            if(flag & SCANNER_FIND_SCANNER)   ret += "SCANNER_FIND_SCANNER ";
-            if(flag & SCANNER_RECURSE)        ret += "SCANNER_RECURSE ";
-            if(flag & SCANNER_RECURSE_EXPAND) ret += "SCANNER_RECURSE_EXPAND ";
-            if(flag & SCANNER_WANTS_NGRAMS)   ret += "SCANNER_WANTS_NGRAMS ";
-            return ret;
-        }
+            const std::string asString() const {
+                std::string ret;
+                ret += default_enabled ? "ENABLED" : "DISABLED";
+                if ( no_usage )       ret += " NO_USAGE";
+                if ( no_all )         ret += " NO_ALL";
+                if ( find_scanner )   ret += " FIND_SCANNER";
+                if ( recurse )        ret += " RECURSE";
+                if ( recurse_expand ) ret += " RECURSE_EXPAND";
+                if ( wants_ngrams )   ret += " WANTS_NGRAMS";
+                if ( fast_find )      ret += " FAST_FIND";
+                if ( depth_0 )        ret += " DEPTH0"
+                return ret;
+            }
+        } scanner_flags;
 
         scanner_info(){};
         /* PASSED FROM SCANNER to API: */
-        int               si_version { CURRENT_SI_VERSION };             // version number for this structure
+        //int               si_version { CURRENT_SI_VERSION };             // version number for this structure
         scanner_t         *scanner {};            // the scanner
         std::string       name {};                //   scanner name
         std::string       author {};              //   who wrote me?

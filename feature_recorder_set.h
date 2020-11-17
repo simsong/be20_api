@@ -46,7 +46,7 @@ class feature_recorder_set {
 
     friend class feature_recorder;
 
-    uint32_t              flags {};       // how it was configured
+    //uint32_t              flags {};       // how it was configured
     const std::string     input_fname {}; // input file; copy for convenience.
     const std::string     outdir {};      // where output goes; must know.
 
@@ -68,6 +68,14 @@ class feature_recorder_set {
 #endif
 
 public:
+    /* Debug for feature recorders. This used to be a flag, but Stroustrup (2013) recommends just having
+     * a bunch of bools.
+     */
+    struct flags_t {
+        bool debug_utf8 {false};        // make sure that all features written are valid utf-8
+        bool no_alert {false};                              // no alert recorder
+    } flags;
+
     /** Constructor:
      * create an emptry feature recorder set. If disabled, create a disabled recorder.
      * @param flags_ = config flags
@@ -76,7 +84,7 @@ public:
      * @param outdir_ = output directory (passed to feature recorders).
      * This clearly needs work.
      */
-    feature_recorder_set( uint32_t flags_,
+    feature_recorder_set( const flags_t &flags_,
                           const std::string hash_algorithm,
                           const std::string &input_fname_,
                           const std::string &outdir_);
@@ -131,24 +139,25 @@ public:
     bool    has_name(std::string name) const;           /* does the named feature exist? */
 
     /* feature_recorder_set flags */
-    static const uint32_t ONLY_ALERT                = 0x01;  // always return the alert recorder
-    static const uint32_t SET_DISABLED              = 0x02;  // the set is effectively disabled; for path-printer
-    static const uint32_t CREATE_STOP_LIST_RECORDERS= 0x04;  //
+    /* Flags are now implemented as booleans per stroustrup 2013 */
+    bool flag_only_alert {false};                                //  always return the alert recorder
+    bool flag_set_disabled {false}; //              = 0x02;  // the set is effectively disabled; for path-printer
+    bool flag_create_stop_list_crecorders {false}; // static const uint32_t CREATE_STOP_LIST_RECORDERS= 0x04;  //
     //static const uint32_t MEM_HISTOGRAM             = 0x20;  // enable the in-memory histogram
-    static const uint32_t ENABLE_SQLITE3_RECORDERS  = 0x40;  // save features to an SQLITE3 databse
-    static const uint32_t DISABLE_FILE_RECORDERS    = 0x80;  // do not save features to file-based recorders
-    static const uint32_t NO_ALERT                  = 0x100; // no alert recorder
-    void     set_flag(uint32_t f);
-    void     unset_flag(uint32_t f);
-    bool     flag_set(uint32_t f)     const { return flags & f; }
-    bool     flag_notset(uint32_t f)  const { return !(flags & f); }
-    uint32_t get_flags()              const { return flags; }
+    //static const uint32_t ENABLE_SQLITE3_RECORDERS  = 0x40;  // save features to an SQLITE3 databse
+    //static const uint32_t DISABLE_FILE_RECORDERS    = 0x80;  // do not save features to file-based recorders
+    //static const uint32_t NO_ALERT                  = 0x100; // no alert recorder
+    //void     set_flag(uint32_t f);
+    //void     unset_flag(uint32_t f);
+    //bool     flag_set(uint32_t f)     const { return flags & f; }
+    //bool     flag_notset(uint32_t f)  const { return !(flags & f); }
+    //uint32_t get_flags()              const { return flags; }
 
     /* These used to be static variables in the feature recorder class. They are more properly here */
     uint32_t    opt_max_context_size;
     uint32_t    opt_max_feature_size;
     int64_t     offset_add;          // added to every reported offset, for use with hadoop
-    std::string banner_file;         // banner for top of every file
+    std::string banner_filename;         // banner for top of every file
 
     /* histogram support */
 

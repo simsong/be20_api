@@ -19,12 +19,11 @@
 #include <string>
 #include <sstream>
 
-class  scanner_config {
+struct  scanner_config {
     typedef std::map<std::string,std::string>  config_t ; // configuration for scanner passed in
     config_t  namevals{};             //  (input) name=val map
     std::string help_str {};          // help string that is built
     //std::stringstream helpstream{};
-public:
     //static std::string MAX_DEPTH;
     //static unsigned int default_max_depth;
     virtual ~scanner_config(){};

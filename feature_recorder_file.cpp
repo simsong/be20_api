@@ -48,34 +48,67 @@
  *
  */
 //TODO - make it register itself with the feature recorder set. and do the stuff that's in init.
-feature_recorder::feature_recorder(class feature_recorder_set &fs_,
-                                   const std::string &name_):
-    fs(fs_),name(name_)
+feature_recorder_file::feature_recorder_file(class feature_recorder_set &fs_, const std::string &name_):
+    feature_recorder(fs_,name_)
 {
-    std::cerr << "feature_recorder(" << name << ") created\n";
+    /*
+     * If the feature recorder set is disabled, just return.
+     */
+    if ( fs.flag_set_disabled ) return;
+    //if ( fs.flag_set(feature_recorder_set::DISABLE_FILE_RECORDERS)) return;
 
-    open();                         // open if we are created
+    /* Open the file recorder for output.
+     * If the file exists, seek to the end and find the last complete line, and start there.
+     */
+    std::string fname = fname_suffix("");
+    ios.open( fname.c_str(), std::ios_base::in|std::ios_base::out|std::ios_base::ate);
+    if ( ios.is_open()){                  // opened existing file
+        ios.seekg(0L,std::ios_base::end);
+        while ( ios.is_open() ) {
+            /* Get current position.
+             * If we are at the beginning, just return.
+             */
+            if (int(ios.tellg())==0 ) {
+                ios.seekp(0L,std::ios_base::beg);
+                return;
+            }
+            /* backup one character and see if the next character is a newline */
+            ios.seekg(-1,std::ios_base::cur); // backup to once less than the end of the file
+            if (ios.peek()=='\n'){           // we are finally on the \n
+                ios.seekg(1L,std::ios_base::cur); // move the getting one forward
+                ios.seekp(ios.tellg(),std::ios_base::beg); // put the putter at the getter location
+                //count_ = 1;                            // greater than zero
+                return;
+            }
+        }
+    }
+    /* Just open the stream for output */
+    ios.open(fname.c_str(),std::ios_base::out);
+    if (!ios.is_open()){
+        std::cerr << "*** feature_recorder::open CANNOT OPEN FEATURE FILE FOR WRITING "
+                  << fname << ":" << strerror(errno) << "\n";
+        throw std::invalid_argument("cannot open feature file for writing");
+    }
 }
 
-/* Don't have to delete the stop_list_recorder because it is in the
- * feature_recorder_set and will be separately deleted.
+/* Exiting: make sure that the stream is closed.
  */
-feature_recorder::~feature_recorder()
+feature_recorder_file::~feature_recorder_file()
 {
-    if(ios.is_open()){
+    if (ios.is_open()){
         ios.close();
     }
 }
 
-void feature_recorder::banner_stamp(std::ostream &os,const std::string &header) const
+void feature_recorder_file::banner_stamp(std::ostream &os,const std::string &header) const
 {
     int banner_lines = 0;
-    if(banner_file.size()>0){
-        std::ifstream i(banner_file.c_str());
-        if(i.is_open()){
+    if (fs.banner_filename.size()>0){
+        std::ifstream i(fs.banner_filename.c_str());
+        if (i.is_open()){
             std::string line;
-            while(getline(i,line)){
-                if(line.size()>0 && ((*line.end()=='\r') || (*line.end()=='\n'))){
+            while (getline(i,line)){
+                if (line.size()>0 && ((*line.end()=='\r') || (*line.end()=='\n'))){
                     line.erase(line.end()); /* remove the last character while it is a \n or \r */
                 }
                 os << "# " << line << "\n";
@@ -84,7 +117,7 @@ void feature_recorder::banner_stamp(std::ostream &os,const std::string &header) 
             i.close();
         }
     }
-    if(banner_lines==0){
+    if (banner_lines==0){
         os << "# BANNER FILE NOT PROVIDED (-b option)\n";
     }
 
@@ -92,79 +125,26 @@ void feature_recorder::banner_stamp(std::ostream &os,const std::string &header) 
     os << "# Feature-Recorder: " << name << "\n";
 
     if (fs.get_input_fname().size()) os << "# Filename: " << fs.get_input_fname() << "\n";
+#if 0
     if (feature_recorder::debug!=0){
         os << "# DEBUG: " << debug << " (";
         if (feature_recorder::debug & DEBUG_PEDANTIC) os << " DEBUG_PEDANTIC ";
         os << ")\n";
     }
+#endif
     os << header;
 }
 
 
 
-/**
- * open a feature recorder file in the specified output directory.
- * Called by create_name(). Not clear why it isn't called when created.
- */
-
-void feature_recorder::open()
-{
-    if (fs.flag_set(feature_recorder_set::SET_DISABLED)) return;        // feature recorder set is disabled
-
-    /* write to a database? Create tables if necessary and create a prepared statement */
-#if defined(HAVE_SQLITE3_H) and defined(HAVE_LIBSQLITE3)
-    if (fs.flag_set(feature_recorder_set::ENABLE_SQLITE3_RECORDERS)) {
-        char buf[1024];
-        fs.db_create_table(name);
-        snprintf( buf, sizeof(buf), db_insert_stmt,name.c_str() );
-        bs = new besql_stmt( fs.db3, buf );
-    }
-#endif
-
-    /* Write to a file? Open the file and seek to the last line if it exist, otherwise just open database */
-    if (fs.flag_notset(feature_recorder_set::DISABLE_FILE_RECORDERS)){
-        /* Open the file recorder */
-        std::string fname = fname_counter("");
-        ios.open(fname.c_str(),std::ios_base::in|std::ios_base::out|std::ios_base::ate);
-        if(ios.is_open()){                  // opened existing stream
-            ios.seekg(0L,std::ios_base::end);
-            while(ios.is_open()){
-                /* Get current position */
-                if(int(ios.tellg())==0){            // at beginning of file; stamp and return
-                    ios.seekp(0L,std::ios_base::beg);    // be sure we are at the beginning of the file
-                    return;
-                }
-                ios.seekg(-1,std::ios_base::cur); // backup to once less than the end of the file
-                if (ios.peek()=='\n'){           // we are finally on the \n
-                    ios.seekg(1L,std::ios_base::cur); // move the getting one forward
-                    ios.seekp(ios.tellg(),std::ios_base::beg); // put the putter at the getter location
-                    count_ = 1;                            // greater than zero
-                    return;
-                }
-            }
-        }
-        // Just open the stream for output
-        ios.open(fname.c_str(),std::ios_base::out);
-        if(!ios.is_open()){
-            std::cerr << "*** feature_recorder::open CANNOT OPEN FEATURE FILE FOR WRITING "
-                      << fname << ":" << strerror(errno) << "\n";
-            throw std::invalid_argument("cannot open feature file for writing");
-        }
-    }
-}
-
-void feature_recorder::close()
-{
-    if(ios.is_open()){
-        ios.close();
-    }
-}
-
+#if 0
+/* I'm not sure that this is needed */
 void feature_recorder::flush()
 {
-    std::lock_guard<std::mutex> lock(Mf);            // get the lock; released when object is deallocated.
+    const std::lock_guard<std::mutex> lock(Mf);            // get the lock; released when object is deallocated.
     ios.flush();
 }
+#endif
 
 
 static inline bool isodigit(char c)
@@ -173,100 +153,21 @@ static inline bool isodigit(char c)
 }
 
 /* statics */
-const std::string feature_recorder::feature_file_header("# Feature-File-Version: 1.1\n");
-const std::string feature_recorder::histogram_file_header("# Histogram-File-Version: 1.1\n");
-const std::string feature_recorder::bulk_extractor_version_header("# " PACKAGE_NAME "-Version: " PACKAGE_VERSION " ($Rev: 10844 $)\n");
+const std::string feature_recorder_file::feature_file_header("# Feature-File-Version: 1.1\n");
+const std::string feature_recorder_file::histogram_file_header("# Histogram-File-Version: 1.1\n");
+const std::string feature_recorder_file::bulk_extractor_version_header("# " PACKAGE_NAME "-Version: " PACKAGE_VERSION " ($Rev: 10844 $)\n");
 
-static inline int hexval(char ch)
-{
-    switch (ch) {
-    case '0': return 0;
-    case '1': return 1;
-    case '2': return 2;
-    case '3': return 3;
-    case '4': return 4;
-    case '5': return 5;
-    case '6': return 6;
-    case '7': return 7;
-    case '8': return 8;
-    case '9': return 9;
-    case 'a': case 'A': return 10;
-    case 'b': case 'B': return 11;
-    case 'c': case 'C': return 12;
-    case 'd': case 'D': return 13;
-    case 'e': case 'E': return 14;
-    case 'f': case 'F': return 15;
-    }
-    return 0;
-}
-
-/**
- * Unquote Python or octal-style quoting of a string
- */
-std::string feature_recorder::unquote_string(const std::string &s)
-{
-    size_t len = s.size();
-    if(len<4) return s;                 // too small for a quote
-
-    std::string out;
-    for (size_t i=0;i<len;i++){
-        /* Look for octal coding */
-        if(i+3<len && s[i]=='\\' && isodigit(s[i+1]) && isodigit(s[i+2]) && isodigit(s[i+3])){
-            uint8_t code = (s[i+1]-'0') * 64 + (s[i+2]-'0') * 8 + (s[i+3]-'0');
-            out.push_back(code);
-            i += 3;                     // skip over the digits
-            continue;
-        }
-        /* Look for hex coding */
-        if(i+3<len && s[i]=='\\' && s[i+1]=='x' && isxdigit(s[i+2]) && isxdigit(s[i+3])){
-            uint8_t code = (hexval(s[i+2])*16) | hexval(s[i+3]);
-            out.push_back(code);
-            i += 3;                     // skip over the digits
-            continue;
-        }
-        out.push_back(s[i]);
-    }
-    return out;
-}
-
-/**
- * Get the feature which is defined as being between a \t and [\t\n]
- */
-
-/*static*/ std::string feature_recorder::extract_feature(const std::string &line)
-{
-    size_t tab1 = line.find('\t');
-    if(tab1==std::string::npos) return "";   // no feature
-    size_t feature_start = tab1+1;
-    size_t tab2 = line.find('\t',feature_start);
-    if(tab2!=std::string::npos) return line.substr(feature_start,tab2-feature_start);
-    return line.substr(feature_start);  // no context to remove
-}
-
+#if 0
 void feature_recorder::set_flag(uint32_t flags_)
 {
-    MAINTHREAD();
     flags|=flags_;
 }
 
 void feature_recorder::unset_flag(uint32_t flags_)
 {
-    MAINTHREAD();
     flags &= (~flags_);
 }
-
-std::string feature_recorder::fname_counter(std::string suffix) const
-{
-    return fs.get_outdir() + "/" + this->name + (suffix.size()>0 ? (std::string("_") + suffix) : "") + ".txt";
-}
-
-
-const std::string &feature_recorder::get_outdir() const // cannot be inline becuase it accesses fs
-{
-    return fs.get_outdir();
-}
-
-
+#endif
 
 #if 0
 // add a memory histogram; assume the position in the mhistograms is stable
@@ -278,6 +179,7 @@ void feature_recorder::enable_memory_histograms()
 }
 #endif
 
+#if 0
 /**
  *  Create a histogram for this feature recorder and an extraction pattern.
  */
@@ -342,7 +244,7 @@ void feature_recorder::dump_histogram_file(const histogram_def &def,
                                            feature_recorder::dump_callback_t cb) const
 {
     /* This is a file based histogram. We will be reading from one file and writing to another */
-    std::string ifname = fname_counter("");  // source of features
+    std::string ifname = fname_suffix("");  // source of features
     std::ifstream f(ifname.c_str());
     if(!f.is_open()){
         std::cerr << "Cannot open histogram input file: " << ifname << "\n";
@@ -400,7 +302,8 @@ void feature_recorder::dump_histogram_file(const histogram_def &def,
 
         real_suffix << def.suffix;
         if(histogram_counter>0) real_suffix << histogram_counter;
-        std::string ofname = fname_counter(real_suffix.str()); // histogram name
+
+        std::string ofname = fname_suffix(real_suffix.str()); // histogram name
         std::ofstream o;
         o.open(ofname.c_str());         // open the file
         if(!o.is_open()){
@@ -489,45 +392,44 @@ void feature_recorder::add_histogram(const histogram_def &def)
 {
     histogram_defs.insert(def);
 }
-
+#endif
 
 
 /****************************************************************
  *** WRITING SUPPORT
  ****************************************************************/
 
-/* Write to the file.
- * This is the only place where writing happens.
- * So it's an easy place to do UTF-8 validation in debug mode.
+/* write to the file.
+ * this is the only place where writing happens.
+ * so it's an easy place to do utf-8 validation in debug mode.
  */
-void feature_recorder::write(const std::string &str)
+void feature_recorder_file::write(const std::string &str)
 {
-    if (debug & DEBUG_PEDANTIC){
+    if (fs.debug & DEBUG_PEDANTIC){
         if (utf8::find_invalid(str.begin(),str.end()) != str.end()){
             std::cerr << "******************************************\n";
             std::cerr << "feature recorder: " << name << "\n";
-            std::cerr << "invalid UTF-8 in write: " << str << "\n";
+            std::cerr << "invalid utf-8 in write: " << str << "\n";
             assert(0);
         }
     }
 
-    /* This is where the writing happens. Lock the output and write */
+    /* this is where the writing happens. lock the output and write */
     if (fs.flag_set(feature_recorder_set::DISABLE_FILE_RECORDERS)) {
         return;
     }
 
-    std::lock_guard<std::mutex> lock(Mf);
+    const std::lock_guard<std::mutex> lock(Mios);
     if(ios.is_open()){
-        if(count_==0){
-            banner_stamp(ios,feature_file_header);
+        if (ios.tellg()==0){
+            banner_stamp(ios, feature_file_header);
         }
 
         ios << str << '\n';
-        if(ios.fail()){
-            std::cerr << "DISK FULL\n";
-            ios.close();
+        if (ios.fail()){
+            throw std::runtime_error("Disk full. Free up space and re-restart.");
         }
-        count_++;
+        //features_written += 1;
     }
 }
 
@@ -546,235 +448,12 @@ void feature_recorder::printf(const char *fmt, ...)
 }
 
 
-/**
- * Combine the pos0, feature and context into a single line and write it to the feature file.
- *
- * @param feature - The feature, which is valid UTF8 (but may not be exactly the bytes on the disk)
- * @param context - The context, which is valid UTF8 (but may not be exactly the bytes on the disk)
- *
- * Interlocking is done in write().
- */
-
-void feature_recorder::write0(const pos0_t &pos0,const std::string &feature,const std::string &context)
-{
-#if defined(HAVE_SQLITE3_H) and defined(HAVE_LIBSQLITE3)
-    if ( fs.flag_set(feature_recorder_set::ENABLE_SQLITE3_RECORDERS ) &&
-         this->flag_notset(feature_recorder::FLAG_NO_FEATURES_SQL) ) {
-        write0_sqlite3( pos0, feature, context);
-    }
-#endif
-    if ( fs.flag_notset(feature_recorder_set::DISABLE_FILE_RECORDERS )) {
-        std::stringstream ss;
-        ss << pos0.shift( feature_recorder::offset_add).str() << '\t' << feature;
-        if (flag_notset( FLAG_NO_CONTEXT ) && ( context.size()>0 )) ss << '\t' << context;
-        this->write( ss.str() );
-    }
-}
-
-
-/**
- * the main entry point of writing a feature and its context to the feature file.
- * processes the stop list
- */
-
-void feature_recorder::quote_if_necessary(std::string &feature,std::string &context)
-{
-    /* By default quote string that is not UTF-8, and quote backslashes. */
-    bool escape_bad_utf8  = true;
-    bool escape_backslash = true;
-
-    if(flags & FLAG_NO_QUOTE){          // don't quote either
-        escape_bad_utf8  = false;
-        escape_backslash = false;
-    }
-
-    if(flags & FLAG_XML){               // only quote bad utf8
-        escape_bad_utf8  = true;
-        escape_backslash = false;
-    }
-
-    feature = validateOrEscapeUTF8(feature, escape_bad_utf8,escape_backslash,validateOrEscapeUTF8_validate);
-    if(feature.size() > opt_max_feature_size) feature.resize(opt_max_feature_size);
-    if(flag_notset(FLAG_NO_CONTEXT)){
-        context = validateOrEscapeUTF8(context,escape_bad_utf8,escape_backslash,validateOrEscapeUTF8_validate);
-        if(context.size() > opt_max_context_size) context.resize(opt_max_context_size);
-    }
-}
-
-/**
- * write() is the main entry point for writing a feature at a given position with context.
- * write() checks the stoplist and escapes non-UTF8 characters, then calls write0().
- */
-void feature_recorder::write(const pos0_t &pos0,const std::string &feature_,const std::string &context_)
-{
-    if(flags & FLAG_DISABLED) return;           // disabled
-    if(debug & DEBUG_PEDANTIC){
-        if(feature_.size() > opt_max_feature_size){
-            std::cerr << "feature_recorder::write : feature_.size()=" << feature_.size() << "\n";
-            assert(0);
-        }
-        if(context_.size() > opt_max_context_size){
-            std::cerr << "feature_recorder::write : context_.size()=" << context_.size() << "\n";
-            assert(0);
-        }
-    }
-
-    std::string feature = feature_;
-    std::string context = flag_set(FLAG_NO_CONTEXT) ? "" : context_;
-    std::string *feature_utf8 = HistogramMaker::make_utf8(feature); // a utf8 feature
-
-    quote_if_necessary(feature,context);
-
-    if(feature.size()==0){
-        std::cerr << name << ": zero length feature at " << pos0 << "\n";
-        if(debug & DEBUG_PEDANTIC) assert(0);
-        return;
-    }
-    if(debug & DEBUG_PEDANTIC){
-        /* Check for tabs or newlines in feature and and context */
-        for(size_t i=0;i<feature.size();i++){
-            if(feature[i]=='\t') assert(0);
-            if(feature[i]=='\n') assert(0);
-            if(feature[i]=='\r') assert(0);
-        }
-        for(size_t i=0;i<context.size();i++){
-            if(context[i]=='\t') assert(0);
-            if(context[i]=='\n') assert(0);
-            if(context[i]=='\r') assert(0);
-        }
-    }
-
-    /* First check to see if the feature is on the stop list.
-     * Only do this if we have a stop_list_recorder (the stop list recorder itself
-     * does not have a stop list recorder. If it did we would infinitely recurse.
-     */
-    if(flag_notset(FLAG_NO_STOPLIST) && stop_list_recorder){
-        if(fs.stop_list
-           && fs.stop_list->check_feature_context(*feature_utf8,context)){
-            stop_list_recorder->write(pos0,feature,context);
-            delete feature_utf8;
-            return;
-        }
-    }
-
-    /* The alert list is a special features that are called out.
-     * If we have one of those, write it to the redlist.
-     */
-    if(flag_notset(FLAG_NO_ALERTLIST)
-       && fs.alert_list
-       && fs.alert_list->check_feature_context(*feature_utf8,context)){
-        std::string alert_fn = fs.get_outdir() + "/ALERTS_found.txt";
-        std::lock_guard<std::mutex> lock(Mr);                // notice we are locking the alert list
-        std::ofstream rf(alert_fn.c_str(),std::ios_base::app);
-        if(rf.is_open()){
-            rf << pos0.shift(feature_recorder::offset_add).str() << '\t' << feature << '\t' << "\n";
-        }
-    }
-
-    /* Support in-memory histograms */
-    for (auto it:mhistograms ){
-        const histogram_def &def = it.first;
-        mhistogram_t *m = it.second;
-        std::string new_feature = *feature_utf8;
-        if (def.require.size()==0 || new_feature.find_first_of(def.require)!=std::string::npos){
-            /* If there is a pattern to use, use it to simplify the feature */
-            if (def.pattern.size()){
-                std::smatch sm;
-                std::regex_search( new_feature, sm, def.reg);
-                if (sm.size() == 0){
-                    // no search match; avoid this feature
-                    new_feature = "";
-                }
-                else {
-                    new_feature = sm.str();
-                }
-            }
-            if(new_feature.size()) m->add(new_feature,1);
-        }
-    }
-
-    /* Finally write out the feature and the context */
-    if(flag_notset(FLAG_NO_FEATURES)){
-        this->write0(pos0,feature,context);
-    }
-    delete feature_utf8;
-}
-
-/**
- * Given a buffer, an offset into that buffer of the feature, and the length
- * of the feature, make the context and write it out. This is mostly used
- * for writing from within the lexical analyzers.
- */
-
-void feature_recorder::write_buf(const sbuf_t &sbuf,size_t pos,size_t len)
-{
-#ifdef DEBUG_SCANNER
-    if(debug & DEBUG_SCANNER){
-        std::cerr << "*** write_buf " << name << " sbuf=" << sbuf << " pos=" << pos << " len=" << len << "\n";
-        // for debugging, print Imagine that when pos= the location where the crash is happening.
-        // then set a breakpoint at std::cerr.
-        if(pos==9999999){
-            std::cerr << "Imagine that\n";
-        }
-    }
-#endif
-
-    /* If we are in the margin, ignore; it will be processed again */
-    if(pos >= sbuf.pagesize && pos < sbuf.bufsize){
-        return;
-    }
-
-    if(pos >= sbuf.bufsize){    /* Sanity checks */
-        std::cerr << "*** write_buf: WRITE OUTSIDE BUFFER. "
-                  << " pos="  << pos
-                  << " sbuf=" << sbuf << "\n";
-        return;
-    }
-
-    /* Asked to write beyond bufsize; bring it in */
-    if(pos+len > sbuf.bufsize){
-        len = sbuf.bufsize - pos;
-    }
-
-    std::string feature = sbuf.substr(pos,len);
-    std::string context;
-
-    if((flags & FLAG_NO_CONTEXT)==0){
-        /* Context write; create a clean context */
-        size_t p0 = context_window < pos ? pos-context_window : 0;
-        size_t p1 = pos+len+context_window;
-
-        if(p1>sbuf.bufsize) p1 = sbuf.bufsize;
-        assert(p0<=p1);
-        context = sbuf.substr(p0,p1-p0);
-    }
-    this->write(sbuf.pos0+pos,feature,context);
-#ifdef DEBUG_SCANNER
-    if(debug & DEBUG_SCANNER){
-        std::cerr << ".\n";
-    }
-#endif
-}
-
-
-/**
- * replace a character in a string with another
- */
-std::string replace(const std::string &src,char f,char t)
-{
-    std::string ret;
-    for(size_t i=0;i<src.size();i++){
-        if(src[i]==f) ret.push_back(t);
-        else ret.push_back(src[i]);
-    }
-    return ret;
-}
 
 /****************************************************************
- *** CARVING SUPPORT
+ *** carving support
  ****************************************************************
  *
- * Carving support.
+ * carving support.
  * 2014-04-24 - $ is no longer valid either
  * 2013-08-29 - replace invalid characters in filenames
  * 2013-07-30 - automatically bin directories
@@ -806,11 +485,12 @@ std::string valid_dosname(std::string in)
 //}
 
 
+#if 0
 const std::string feature_recorder::hash(const unsigned char *buf, size_t buffsize)
 {
     return (*fs.hasher.func)(buf,buffsize);
 }
-
+#endif
 
 #include <iomanip>
 /**
@@ -819,8 +499,7 @@ const std::string feature_recorder::hash(const unsigned char *buf, size_t buffsi
  * @param len    - how many bytes to carve
  *
  */
-std::string feature_recorder::carve(const sbuf_t &sbuf,size_t pos,size_t len,
-                                    const std::string &ext)
+std::string feature_recorder::carve(const sbuf_t &sbuf,size_t pos,size_t len, const std::string &ext)
 {
     if(flags & FLAG_DISABLED) return std::string();           // disabled
 
@@ -842,7 +521,7 @@ std::string feature_recorder::carve(const sbuf_t &sbuf,size_t pos,size_t len,
      * that are in HIBER files.  That is, we want to not carve a path
      * of ZIP-234234 but we do want to carve a path of
      * 1000-HIBER-33423-ZIP-2343.  This is implemented by having an
-     * ignore_encoding. the ZIP carver sets it to ZIP so it won't
+     * do_not_carve_encoding. the ZIP carver sets it to ZIP so it won't
      * carve things that are just found in a ZIP file. This means that
      * it won't carve disembodied ZIP files found in unallocated
      * space. You might want to do that.  If so, set ZIP's carve mode
@@ -852,8 +531,8 @@ std::string feature_recorder::carve(const sbuf_t &sbuf,size_t pos,size_t len,
     case CARVE_NONE:
         return std::string();                         // carve nothing
     case CARVE_ENCODED:
-        if(sbuf.pos0.path.size()==0) return std::string(); // not encoded
-        if(sbuf.pos0.alphaPart()==ignore_encoding) return std::string(); // ignore if it is just encoded with this
+        if (sbuf.pos0.path.size() == 0 ) return std::string(); // not encoded
+        if (sbuf.pos0.alphaPart() == do_not_carve_encoding) return std::string(); // ignore if it is just encoded with this
         break;                                      // otherwise carve
     case CARVE_ALL:
         break;
@@ -865,7 +544,7 @@ std::string feature_recorder::carve(const sbuf_t &sbuf,size_t pos,size_t len,
      */
 
     sbuf_t cbuf(sbuf,pos,len);          // the buf we are going to carve
-    std::string carved_hash_hexvalue = hash(cbuf.buf, cbuf.bufsize);
+    std::string carved_hash_hexvalue = hash(cbuf);
 
     /* See if this is in the cache */
     bool in_cache = carve_cache.check_for_presence_and_insert(carved_hash_hexvalue);
@@ -995,9 +674,6 @@ std::string feature_recorder::carve_records(const sbuf_t &sbuf, size_t pos, size
         return std::string();
     }
 
-    // To control multiple thread writing
-    std::lock_guard<std::mutex> lock(Mf);
-
     /* Write the file into the directory */
     int fd = ::open(fname.c_str(),O_APPEND|O_CREAT|O_BINARY|O_RDWR,0666);
     if(fd<0){
@@ -1008,52 +684,6 @@ std::string feature_recorder::carve_records(const sbuf_t &sbuf, size_t pos, size
     ssize_t ret = cbuf.write(fd,0,len);
     if(ret<0){
         std::cerr << "*** carve: Cannot write(pos=" << fd << "," << pos << " len=" << len << "): "<< strerror(errno) << "\n";
-    }
-    ::close(fd);
-    return fname;
-}
-
-/*
- write buffer to specified dirname/filename for writing data
- */
-std::string feature_recorder::write_data(unsigned char *data, size_t len, const std::string &filename)
-{
-    std::string dirname1 = fs.get_outdir()  + "/" + name;
-    std::stringstream ss;
-    ss << dirname1;
-    std::string dirname2 = ss.str();
-    std::string fname = dirname2 + std::string("/") + valid_dosname(filename);
-
-    /* Make the directory if it doesn't exist.  */
-    if (access(dirname2.c_str(),R_OK)!=0){
-#ifdef WIN32
-        mkdir(dirname1.c_str());
-        mkdir(dirname2.c_str());
-#else
-        mkdir(dirname1.c_str(),0777);
-        mkdir(dirname2.c_str(),0777);
-#endif
-    }
-
-    int oerrno = errno;                 // remember error number
-    if (access(dirname2.c_str(),R_OK)!=0){
-        std::cerr << "Could not make directory " << dirname2 << ": " << strerror(oerrno) << "\n";
-        return std::string();
-    }
-
-    // To control multiple thread writing
-    std::lock_guard<std::mutex> lock(Mf);
-
-    /* Write the file into the directory */
-    int fd = ::open(fname.c_str(),O_CREAT|O_BINARY|O_RDWR,0666);
-    if(fd<0){
-        std::cerr << "*** carve: Cannot create " << fname << ": " << strerror(errno) << "\n";
-        return std::string();
-    }
-
-    ssize_t ret = ::write(fd,data,len);
-    if(ret<0){
-        std::cerr << "*** carve: Cannot write geneated header "<< fname << ": " << strerror(errno) << "\n";
     }
     ::close(fd);
     return fname;
@@ -1124,7 +754,7 @@ void feature_recorder::besql_stmt::insert_feature(const pos0_t &pos,
                                                         const std::string &feature8, const std::string &context)
 {
     assert(stmt!=0);
-    std::lock_guard<std::mutex> lock(Mstmt);           // grab a lock
+    const std::lock_guard<std::mutex> lock(Mstmt);           // grab a lock
     const std::string &path = pos.str();
     sqlite3_bind_int64(stmt, 1, pos.imageOffset()); // offset
     sqlite3_bind_text(stmt, 2, path.data(), path.size(), SQLITE_STATIC); // path

@@ -86,7 +86,7 @@ void warnx(const char *fmt,...)
 std::mutex localtime_mutex;
 void localtime_r(time_t *t,struct tm *tm)
 {
-    std::lock_guard<std::mutex> lock(localtime_mutex);
+    const std::lock_guard<std::mutex> lock(localtime_mutex);
     *tm = *localtime(t);
 }
 #endif
@@ -98,7 +98,7 @@ std::mutex gmtime_mutex;
 void gmtime_r(time_t *t,struct tm *tm)
 {
     if(t && tm){
-        std::lock_guard<std::mutex> lock(gmtime_mutex);
+        const std::lock_guard<std::mutex> lock(gmtime_mutex);
 	struct tm *tmret = gmtime(t);
 	if(tmret){
 	    *tm = *tmret;
