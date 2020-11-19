@@ -105,7 +105,7 @@ public:
 };
 
 template <class T1,class T2 > class atomic_map {
-    std::mutex M {};
+    mutable std::mutex M {};            // allow modification in const methods
     std::map<T1, T2>mymap {};
 public:
     atomic_map(){}
@@ -113,17 +113,17 @@ public:
         const std::lock_guard<std::mutex> lock(M);
         return mymap[key];
     }
-    typename std::map<T1, T2>::const_iterator find(const T1 &key){
+    typename std::map<T1, T2>::const_iterator find(const T1 &key) const {
         const std::lock_guard<std::mutex> lock(M);
         return mymap.find(key);
     }
-    typename std::map<T1, T2>::const_iterator begin(const T1 &key){
+    typename std::map<T1, T2>::const_iterator begin() const{
         const std::lock_guard<std::mutex> lock(M);
-        return mymap.begin(key);
+        return mymap.begin();
     }
-    typename std::map<T1, T2>::const_iterator end(const T1 &key){
+    typename std::map<T1, T2>::const_iterator end() const{
         const std::lock_guard<std::mutex> lock(M);
-        return mymap.end(key);
+        return mymap.end();
     }
     void delete_all() {
         const std::lock_guard<std::mutex> lock(M);
@@ -131,9 +131,9 @@ public:
             delete it.second;
         }
     }
-    bool contains(T2 i){
+    bool contains(T1 key) const {
         const std::lock_guard<std::mutex> lock(M);
-        return mymap.find(i)!=mymap.end();
+        return mymap.find(key)!=mymap.end();
     }
     void insert(T1 key, T2 val){
         mymap[key] = val;

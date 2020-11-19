@@ -55,8 +55,6 @@ private:
         return file_number_.fetch_add(i) + i;
     }
 #endif
-    static std::string quote_string(const std::string &feature); // turns unprintable characters to octal escape
-    static std::string unquote_string(const std::string &feature); // turns octal escape back to binary characters
 
     static const std::string histogram_file_header;
     static const std::string feature_file_header;
@@ -76,7 +74,7 @@ public:
      * Cannot be made inline becuase it accesses fs.
      */
     virtual const std::string hash(const unsigned char *buf, size_t bufflen); // hash a block with the hasher
-    virtual void write(const std::string &str);
+    virtual void write0(const std::string &str);
 
     /* feature file management */
     //virtual void open();

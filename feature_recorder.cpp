@@ -16,16 +16,21 @@
 #include "histogram.h"
 #include "utils.h"
 
-int64_t feature_recorder::offset_add   = 0;
-std::string  feature_recorder::banner_file;
-uint32_t feature_recorder::opt_max_context_size=1024*1024;
-uint32_t feature_recorder::opt_max_feature_size=1024*1024;
-uint32_t feature_recorder::debug = DEBUG_PEDANTIC; // default during development
-std::thread::id feature_recorder::main_thread_id = std::this_thread::get_id();
-std::string feature_recorder::MAX_DEPTH_REACHED_ERROR_FEATURE {"process_extract: MAX DEPTH REACHED"};
-std::string feature_recorder::MAX_DEPTH_REACHED_ERROR_CONTEXT {""};
+//int64_t feature_recorder::offset_add   = 0;
+//std::string  feature_recorder::banner_file;
+//uint32_t feature_recorder::opt_max_context_size=1024*1024;
+//uint32_t feature_recorder::opt_max_feature_size=1024*1024;
+//uint32_t feature_recorder::debug = DEBUG_PEDANTIC; // default during development
+//std::thread::id feature_recorder::main_thread_id = std::this_thread::get_id();
+const std::string feature_recorder::MAX_DEPTH_REACHED_ERROR_FEATURE {"process_extract: MAX DEPTH REACHED"};
+const std::string feature_recorder::MAX_DEPTH_REACHED_ERROR_CONTEXT {""};
 
-std::string feature_recorder::CARVE_MODE_DESCRIPTION {"0=carve none; 1=carve encoded; 2=carve all"};
+const std::string feature_recorder::CARVE_MODE_DESCRIPTION {"0=carve none; 1=carve encoded; 2=carve all"};
+
+static inline bool isodigit(char c)
+{
+    return c>='0' && c<='7';
+}
 
 /* Feature recorder functions that don't have anything to do with files  or SQL databases */
 static inline int hexval(char ch)
@@ -102,7 +107,7 @@ const std::string &feature_recorder::get_outdir() const // cannot be inline becu
 /*
  * Returns a filename for this feature recorder with a specific suffix.
  */
-const std::string feature_recorder::fname_in_outdoor(std::string suffix) const
+const std::string feature_recorder::fname_in_outdir(std::string suffix) const
 {
     return fs.get_outdir() + "/" + this->name + (suffix.size()>0 ? (std::string("_") + suffix) : "") + ".txt";
 }
@@ -110,33 +115,7 @@ const std::string feature_recorder::fname_in_outdoor(std::string suffix) const
 
 
 
-/**
- * Combine the pos0, feature and context into a single line and write it to the feature file.
- *
- * @param feature - The feature, which is valid UTF8 (but may not be exactly the bytes on the disk)
- * @param context - The context, which is valid UTF8 (but may not be exactly the bytes on the disk)
- *
- * Interlocking is done in write().
- */
-
-void feature_recorder::write0(const pos0_t &pos0,const std::string &feature,const std::string &context)
-{
-#if defined(HAVE_SQLITE3_H) and defined(HAVE_LIBSQLITE3)
-    if ( fs.flag_set(feature_recorder_set::ENABLE_SQLITE3_RECORDERS ) &&
-         this->flag_notset(feature_recorder::FLAG_NO_FEATURES_SQL) ) {
-        write0_sqlite3( pos0, feature, context);
-    }
-#endif
-    if ( fs.flag_notset(feature_recorder_set::DISABLE_FILE_RECORDERS )) {
-        std::stringstream ss;
-        ss << pos0.shift( feature_recorder::offset_add).str() << '\t' << feature;
-        if (flag_notset( FLAG_NO_CONTEXT ) && ( context.size()>0 )) ss << '\t' << context;
-        this->write( ss.str() );
-    }
-}
-
-
-/**
+ /**
  * the main entry point of writing a feature and its context to the feature file.
  * processes the stop list
  */
@@ -147,21 +126,25 @@ void feature_recorder::quote_if_necessary(std::string &feature,std::string &cont
     bool escape_bad_utf8  = true;
     bool escape_backslash = true;
 
-    if(flags & FLAG_NO_QUOTE){          // don't quote either
+    if (flags.no_quote) {          // don't quote either
         escape_bad_utf8  = false;
         escape_backslash = false;
     }
 
-    if(flags & FLAG_XML){               // only quote bad utf8
+    if (flags.xml) {               // only quote bad utf8
         escape_bad_utf8  = true;
         escape_backslash = false;
     }
 
-    feature = validateOrEscapeUTF8(feature, escape_bad_utf8,escape_backslash,validateOrEscapeUTF8_validate);
-    if(feature.size() > opt_max_feature_size) feature.resize(opt_max_feature_size);
-    if(flag_notset(FLAG_NO_CONTEXT)){
-        context = validateOrEscapeUTF8(context,escape_bad_utf8,escape_backslash,validateOrEscapeUTF8_validate);
-        if(context.size() > opt_max_context_size) context.resize(opt_max_context_size);
+    feature = validateOrEscapeUTF8(feature, escape_bad_utf8, escape_backslash, validateOrEscapeUTF8_validate);
+    if (feature.size() > fs.opt_max_feature_size) {
+        feature.resize(fs.opt_max_feature_size);
+    }
+    if ( flags.no_context == false) {
+        context = validateOrEscapeUTF8(context, escape_bad_utf8, escape_backslash, validateOrEscapeUTF8_validate);
+        if (context.size() > fs.opt_max_context_size) {
+            context.resize(fs.opt_max_context_size);
+        }
     }
 }
 
@@ -171,30 +154,30 @@ void feature_recorder::quote_if_necessary(std::string &feature,std::string &cont
  */
 void feature_recorder::write(const pos0_t &pos0,const std::string &feature_,const std::string &context_)
 {
-    if(flags & FLAG_DISABLED) return;           // disabled
-    if(debug & DEBUG_PEDANTIC){
-        if(feature_.size() > opt_max_feature_size){
+    if (fs.flags.disabled) return;           // disabled
+    if (fs.flags.pedantic){
+        if (feature_.size() > fs.opt_max_feature_size){
             std::cerr << "feature_recorder::write : feature_.size()=" << feature_.size() << "\n";
             assert(0);
         }
-        if(context_.size() > opt_max_context_size){
+        if (context_.size() > fs.opt_max_context_size){
             std::cerr << "feature_recorder::write : context_.size()=" << context_.size() << "\n";
             assert(0);
         }
     }
 
     std::string feature = feature_;
-    std::string context = flag_set(FLAG_NO_CONTEXT) ? "" : context_;
+    std::string context = flags.no_context ? "" : context_;
     std::string *feature_utf8 = HistogramMaker::make_utf8(feature); // a utf8 feature
 
     quote_if_necessary(feature,context);
 
-    if(feature.size()==0){
+    if ( feature.size()==0 ){
         std::cerr << name << ": zero length feature at " << pos0 << "\n";
-        if(debug & DEBUG_PEDANTIC) assert(0);
+        if (fs.flags.pedantic) assert(0);
         return;
     }
-    if(debug & DEBUG_PEDANTIC){
+    if ( fs.flags.pedantic ){
         /* Check for tabs or newlines in feature and and context */
         for(size_t i=0;i<feature.size();i++){
             if(feature[i]=='\t') assert(0);
@@ -212,29 +195,32 @@ void feature_recorder::write(const pos0_t &pos0,const std::string &feature_,cons
      * Only do this if we have a stop_list_recorder (the stop list recorder itself
      * does not have a stop list recorder. If it did we would infinitely recurse.
      */
-    if(flag_notset(FLAG_NO_STOPLIST) && stop_list_recorder){
-        if(fs.stop_list
-           && fs.stop_list->check_feature_context(*feature_utf8,context)){
-            stop_list_recorder->write(pos0,feature,context);
-            delete feature_utf8;
-            return;
-        }
+    if (flags.no_stoplist==false
+        && fs.stop_list
+        && fs.stop_list_recorder
+        && fs.stop_list->check_feature_context(*feature_utf8,context)) {
+        fs.stop_list_recorder->write(pos0,feature,context);
+        delete feature_utf8;
+        return;
     }
 
     /* The alert list is a special features that are called out.
      * If we have one of those, write it to the redlist.
      */
-    if(flag_notset(FLAG_NO_ALERTLIST)
-       && fs.alert_list
-       && fs.alert_list->check_feature_context(*feature_utf8,context)){
+#if 0
+    if (flags.no_alertlist==false
+        && fs.alert_list
+        && fs.alert_list->check_feature_context(*feature_utf8,context)) {
         std::string alert_fn = fs.get_outdir() + "/ALERTS_found.txt";
         const std::lock_guard<std::mutex> lock(Mr);                // notice we are locking the alert list
         std::ofstream rf(alert_fn.c_str(),std::ios_base::app);
         if(rf.is_open()){
-            rf << pos0.shift(feature_recorder::offset_add).str() << '\t' << feature << '\t' << "\n";
+            rf << pos0.shift(fs.offset_add).str() << '\t' << feature << '\t' << "\n";
         }
     }
+#endif
 
+#if 0
     /* Support in-memory histograms */
     for (auto it:mhistograms ){
         const histogram_def &def = it.first;
@@ -256,9 +242,10 @@ void feature_recorder::write(const pos0_t &pos0,const std::string &feature_,cons
             if(new_feature.size()) m->add(new_feature,1);
         }
     }
+#endif
 
     /* Finally write out the feature and the context */
-    if(flag_notset(FLAG_NO_FEATURES)){
+    if ( flags.no_features == false ){
         this->write0(pos0,feature,context);
     }
     delete feature_utf8;
@@ -303,7 +290,7 @@ void feature_recorder::write_buf(const sbuf_t &sbuf,size_t pos,size_t len)
     std::string feature = sbuf.substr(pos,len);
     std::string context;
 
-    if((flags & FLAG_NO_CONTEXT)==0){
+    if (flags.no_context==false) {
         /* Context write; create a clean context */
         size_t p0 = context_window < pos ? pos-context_window : 0;
         size_t p1 = pos+len+context_window;
@@ -332,6 +319,35 @@ std::string replace(const std::string &src,char f,char t)
         else ret.push_back(src[i]);
     }
     return ret;
+}
+
+/****************************************************************
+ *** carving support
+ ****************************************************************
+ *
+ * carving support.
+ * 2014-04-24 - $ is no longer valid either
+ * 2013-08-29 - replace invalid characters in filenames
+ * 2013-07-30 - automatically bin directories
+ * 2013-06-08 - filenames are the forensic path.
+ */
+
+std::string valid_dosname(std::string in)
+{
+    std::string out;
+    for(size_t i=0;i<in.size();i++){
+        uint8_t ch = in.at(i);
+        if(ch<=32 || ch>=128
+           || ch=='"' || ch=='*' || ch=='+' || ch==','
+           || ch=='/' || ch==':' || ch==';' || ch=='<'
+           || ch=='=' || ch=='>' || ch=='?' || ch=='\\'
+           || ch=='[' || ch==']' || ch=='|' || ch=='$' ){
+            out.push_back('_');
+        } else {
+            out.push_back(ch);
+        }
+    }
+    return out;
 }
 
 /*
@@ -378,4 +394,220 @@ std::string feature_recorder::carve_data(const sbuf_t &sbuf, const std::string &
     }
     ::close(fd);
     return fname;
+}
+
+
+#include <iomanip>
+/**
+ * @param sbuf   - the buffer to carve
+ * @param pos    - offset in the buffer to carve
+ * @param len    - how many bytes to carve
+ *
+ */
+std::string feature_recorder::carve(const sbuf_t &sbuf,size_t pos,size_t len, const std::string &ext)
+{
+    if(flags & FLAG_DISABLED) return std::string();           // disabled
+
+    /* If we are in the margin, ignore; it will be processed again */
+    if(pos >= sbuf.pagesize && pos < sbuf.bufsize){
+        return std::string();
+    }
+    assert(pos < sbuf.bufsize);
+
+    /* Carve to a file depending on the carving mode.  The purpose
+     * of CARVE_ENCODED is to allow us to carve JPEGs when they are
+     * embedded in, say, GZIP files, but not carve JPEGs that are
+     * bare.  The difficulty arises when you have a tool that can go
+     * into, say, ZIP files. In this case, we don't want to carve
+     * every ZIP file, just the (for example) XORed ZIP files. So the
+     * ZIP carver doesn't carve every ZIP file, just the ZIP files
+     * that are in HIBER files.  That is, we want to not carve a path
+     * of ZIP-234234 but we do want to carve a path of
+     * 1000-HIBER-33423-ZIP-2343.  This is implemented by having an
+     * do_not_carve_encoding. the ZIP carver sets it to ZIP so it won't
+     * carve things that are just found in a ZIP file. This means that
+     * it won't carve disembodied ZIP files found in unallocated
+     * space. You might want to do that.  If so, set ZIP's carve mode
+     * to CARVE_ALL.
+     */
+    switch(carve_mode){
+    case CARVE_NONE:
+        return std::string();                         // carve nothing
+    case CARVE_ENCODED:
+        if (sbuf.pos0.path.size() == 0 ) return std::string(); // not encoded
+        if (sbuf.pos0.alphaPart() == do_not_carve_encoding) return std::string(); // ignore if it is just encoded with this
+        break;                                      // otherwise carve
+    case CARVE_ALL:
+        break;
+    }
+
+    /* If the directory doesn't exist, make it.
+     * If two threads try to make the directory,
+     * that's okay, because the second one will fail.
+     */
+
+    sbuf_t cbuf(sbuf,pos,len);          // the buf we are going to carve
+    std::string carved_hash_hexvalue = hash(cbuf);
+
+    /* See if this is in the cache */
+    bool in_cache = carve_cache.check_for_presence_and_insert(carved_hash_hexvalue);
+
+
+    uint64_t this_file_number = file_number_add(in_cache ? 0 : 1); // increment if we are not in the cache
+    std::string dirname1 = fs.get_outdir() + "/" + name;
+
+    std::stringstream ss;
+    ss << dirname1 << "/" << std::setw(3) << std::setfill('0') << (this_file_number / 1000);
+
+    std::string dirname2 = ss.str();
+    std::string fname         = dirname2 + std::string("/") + valid_dosname(cbuf.pos0.str() + ext);
+    std::string fname_feature = fname.substr(fs.get_outdir().size()+1);
+
+    /* Record what was found in the feature file.
+     */
+    if (in_cache){
+        fname="";             // no filename
+        fname_feature="<CACHED>";
+    }
+
+    // write to the feature file
+    ss.str(std::string()); // clear the stringstream
+    ss << "<fileobject>";
+    if (!in_cache) ss << "<filename>" << fname << "</filename>";
+    ss << "<filesize>" << len << "</filesize>";
+    ss << "<hashdigest type='" << fs.hasher.name << "'>" << carved_hash_hexvalue << "</hashdigest></fileobject>";
+    this->write(cbuf.pos0,fname_feature,ss.str());
+
+    if (in_cache) return fname;               // do not make directories or write out if we are cached
+
+    /* Make the directory if it doesn't exist.  */
+    if (access(dirname2.c_str(),R_OK)!=0){
+#ifdef WIN32
+        mkdir(dirname1.c_str());
+        mkdir(dirname2.c_str());
+#else
+        mkdir(dirname1.c_str(),0777);
+        mkdir(dirname2.c_str(),0777);
+#endif
+    }
+    /* Check to make sure that directory is there. We don't just the return code
+     * because there could have been two attempts to make the directory simultaneously,
+     * so the mkdir could fail but the directory could nevertheless exist. We need to
+     * remember the error number because the access() call may clear it.
+     */
+    int oerrno = errno;                 // remember error number
+    if (access(dirname2.c_str(),R_OK)!=0){
+        std::cerr << "Could not make directory " << dirname2 << ": " << strerror(oerrno) << "\n";
+        return std::string();
+    }
+
+    /* Write the file into the directory */
+    int fd = ::open(fname.c_str(),O_CREAT|O_BINARY|O_RDWR,0666);
+    if(fd<0){
+        std::cerr << "*** carve: Cannot create " << fname << ": " << strerror(errno) << "\n";
+        return std::string();
+    }
+
+    ssize_t ret = cbuf.write(fd,0,len);
+    if(ret<0){
+        std::cerr << "*** carve: Cannot write(pos=" << fd << "," << pos << " len=" << len << "): "<< strerror(errno) << "\n";
+    }
+    ::close(fd);
+    return fname;
+}
+
+/*
+ This is based on feature_recorder::carve and append carving record to specified filename
+ */
+std::string feature_recorder::carve_records(const sbuf_t &sbuf, size_t pos, size_t len,
+                                            const std::string &filename)
+{
+    if(flags & FLAG_DISABLED) return std::string();           // disabled
+
+    if(pos >= sbuf.pagesize && pos < sbuf.bufsize){
+        return std::string();
+    }
+    assert(pos < sbuf.bufsize);
+
+    sbuf_t cbuf(sbuf,pos,len);          // the buf we are going to carve
+    std::string carved_hash_hexvalue = (*fs.hasher.func)(cbuf.buf,cbuf.bufsize);
+
+    /* See if this is in the cache */
+    bool in_cache = carve_cache.check_for_presence_and_insert(carved_hash_hexvalue);
+    std::string dirname1 = fs.get_outdir()  + "/" + name;
+
+    std::stringstream ss;
+    ss << dirname1;
+
+    std::string dirname2 = ss.str();
+    std::string fname = dirname2 + std::string("/") + valid_dosname(filename);
+    std::string fname_feature = fname.substr(fs.get_outdir().size()+1);
+
+    //    std::string fname = dirname2 + std::string("/") + valid_dosname(cbuf.pos0.str() + ext);
+    //std::string fname_feature = fname.substr(fs.get_outdir().size()+1);
+
+    /* Record what was found in the feature file.
+     */
+    if (in_cache){
+        fname="";             // no filename
+        fname_feature="<CACHED>";
+    }
+
+    // write to the feature file
+    ss.str(std::string()); // clear the stringstream
+    ss << len;
+    this->write(cbuf.pos0,fname_feature,ss.str());
+
+    if (in_cache) return fname;               // do not make directories or write out if we are cached
+
+    /* Make the directory if it doesn't exist.  */
+    if (access(dirname2.c_str(),R_OK)!=0){
+#ifdef WIN32
+        mkdir(dirname1.c_str());
+        mkdir(dirname2.c_str());
+#else
+        mkdir(dirname1.c_str(),0777);
+        mkdir(dirname2.c_str(),0777);
+#endif
+    }
+
+    int oerrno = errno;                 // remember error number
+    if (access(dirname2.c_str(),R_OK)!=0){
+        std::cerr << "Could not make directory " << dirname2 << ": " << strerror(oerrno) << "\n";
+        return std::string();
+    }
+
+    /* Write the file into the directory */
+    int fd = ::open(fname.c_str(),O_APPEND|O_CREAT|O_BINARY|O_RDWR,0666);
+    if(fd<0){
+        std::cerr << "*** carve: Cannot create " << fname << ": " << strerror(errno) << "\n";
+        return std::string();
+    }
+
+    ssize_t ret = cbuf.write(fd,0,len);
+    if(ret<0){
+        std::cerr << "*** carve: Cannot write(pos=" << fd << "," << pos << " len=" << len << "): "<< strerror(errno) << "\n";
+    }
+    ::close(fd);
+    return fname;
+}
+
+/**
+ * Currently, we need strptime() and utimes() to set the time.
+ */
+void feature_recorder::set_carve_mtime(const std::string &fname, const std::string &mtime_iso8601)
+{
+    if(flags & FLAG_DISABLED) return;           // disabled
+#if defined(HAVE_STRPTIME) && defined(HAVE_UTIMES)
+    if(fname.size()){
+        struct tm tm;
+        if(strptime(mtime_iso8601.c_str(),"%Y-%m-%dT%H:%M:%S",&tm)){
+            time_t t = mktime(&tm);
+            if(t>0){
+                const struct timeval times[2] = {{t,0},{t,0}};
+                utimes(fname.c_str(),times);
+            }
+        }
+    }
+#endif
 }

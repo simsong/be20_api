@@ -57,10 +57,11 @@ feature_recorder_set::hash_func_t feature_recorder_set::hash_def::hash_func_for_
  * Constructor.
  * Create an empty recorder with no outdir.
  */
-feature_recorder_set::feature_recorder_set(uint32_t flags_,const std::string hash_algorithm,
-                                           const std::string &input_fname_,
-                                           const std::string &outdir_):
-    flags(flags_), input_fname(input_fname_),outdir(outdir_),
+feature_recorder_set::feature_recorder_set( const flags_t &flags_,
+                                            const std::string &hash_algorithm,
+                                            const std::string &input_fname_,
+                                            const std::string &outdir_):
+    input_fname(input_fname_),outdir(outdir_),flags(flags_),
     hasher( hash_def(hash_algorithm, hash_def::hash_func_for_name(hash_algorithm)))
 {
     if (outdir.size() == 0){
@@ -74,22 +75,24 @@ feature_recorder_set::feature_recorder_set(uint32_t flags_,const std::string has
     /* Now initialize the scanners */
 
     /* Create a disabled feature recorder if necessary */
-    if (flag_set(SET_DISABLED)){
+    if ( flags.disabled ){
         create_named_feature_recorder(DISABLED_RECORDER_NAME,false);
-        frm[DISABLED_RECORDER_NAME]->set_flag(feature_recorder::FLAG_DISABLED);
+        frm[DISABLED_RECORDER_NAME]->flags.disabled = true;
     }
 
     /* Create an alert recorder if necessary */
-    if (flag_notset(NO_ALERT)) {
+    if (!flags.no_alert) {
         create_named_feature_recorder(feature_recorder_set::ALERT_RECORDER_NAME,false); // make the alert recorder
     }
 
     //message_enabled_scanners(scanner_params::PHASE_INIT); // tell all enabled scanners to init
 
+#if 0
 #if defined(HAVE_SQLITE3_H) and defined(HAVE_LIBSQLITE3)
     if (flag_set(ENABLE_SQLITE3_RECORDERS)) {
         db_create();
     }
+#endif
 #endif
 
 #if 0
@@ -121,60 +124,6 @@ feature_recorder_set::~feature_recorder_set()
  */
 
 
-void    feature_recorder_set::set_flag(uint32_t f)
-{
-#if 0
-    if(f & MEM_HISTOGRAM){
-        if(flags & MEM_HISTOGRAM){
-            std::cerr << "MEM_HISTOGRAM flag cannot be set twice\n";
-            assert(0);
-        }
-        /* Create the in-memory histograms for all of the feature recorders */
-        for(feature_recorder_map::const_iterator it = frm.begin(); it!=frm.end(); it++){
-            feature_recorder *fr = it->second;
-            fr->enable_memory_histograms();
-        }
-    }
-#endif
-    flags |= f;
-}
-
-void    feature_recorder_set::unset_flag(uint32_t f)
-{
-#if 0
-    if(f & MEM_HISTOGRAM){
-        throw std::runtime_error("MEM_HISTOGRAM flag cannot be cleared");
-    }
-#endif
-    flags &= ~f;
-}
-
-
-
-#if 0
-/** Flush all of the feature recorder files.
- *  Typically done at the end of an sbuf.
- */
-void feature_recorder_set::flush_all()
-{
-    for ( auto it:frm){
-        it.second->flush();
-    }
-}
-#endif
-
-void feature_recorder_set::close_all()
-{
-    //for (auto it:frm){
-    //it.second->close();
-//}
-#if defined(HAVE_SQLITE3_H) and defined(HAVE_LIBSQLITE3)
-    if ( flag_set(feature_recorder_set::ENABLE_SQLITE3_RECORDERS )) {
-        db_transaction_commit();
-    }
-#endif
-}
-
 
 /****************************************************************
  *** adding and removing feature recorders
@@ -183,24 +132,27 @@ void feature_recorder_set::close_all()
 /*
  * Create a named feature recorder, any associated stoplist recorders, and open the files
  * stop recorders are basically a second feature paired with every feature recorder that records
- * things that were sent to the stop list.
+ * things that were sent to the stop list. Returns the feature recorder that is created.
+ *
  *
  * previously called create_name()
  */
-void feature_recorder_set::create_named_feature_recorder(const std::string &name,bool create_stop_recorder)
+feature_recorder *feature_recorder_set::create_named_feature_recorder(const std::string &name,bool create_stop_recorder)
 {
     if ( frm.contains(name) ){
         throw std::runtime_error(name);
-        return;
     }
 
     feature_recorder *fr = new feature_recorder(*this, name);
-    frm.insert(name, fr)
+    frm.insert(name, fr);
     if (create_stop_recorder){
         std::string name_stopped = name+"_stopped";
+#if 0
         frm[name_stopped] = new feature_recorder(*this, name_stopped);
         fr->set_stop_list_recorder( frm[name_stopped] );
+#endif
     }
+    return fr;
 }
 
 
@@ -210,16 +162,16 @@ void feature_recorder_set::create_named_feature_recorder(const std::string &name
 feature_recorder *feature_recorder_set::get_name(const std::string &name) const
 {
     const std::string *thename = &name;
-    if(flags & SET_DISABLED){           // if feature recorder set is disabled, return the disabled recorder.
+    if (flags.disabled){           // if feature recorder set is disabled, return the disabled recorder.
         thename = &feature_recorder_set::DISABLED_RECORDER_NAME;
     }
 
-    if(flags & ONLY_ALERT){
+    if (flags.only_alert){
         thename = &feature_recorder_set::ALERT_RECORDER_NAME;
     }
 
     auto it = frm.find(*thename);
-    if (it!=frm.end()) return it->second;
+    if ( it != frm.end() ) return it->second;
     return (0);                          // feature recorder does not exist
 }
 
@@ -227,15 +179,14 @@ feature_recorder *feature_recorder_set::get_name(const std::string &name) const
  * The alert recorder is special. It's provided for all of the feature recorders.
  * If one doesn't exist, create it.
  */
-feature_recorder *feature_recorder_set::get_alert_recorder() const
+feature_recorder *feature_recorder_set::get_alert_recorder()
 {
-    if (flag_set(NO_ALERT)) return 0;
+    if (flags.no_alert) return 0;
     feature_recorder *alert_recorder = get_name(feature_recorder_set::ALERT_RECORDER_NAME);
     if (alert_recorder) {
         return alert_recorder;
     }
-    create_named_feature_recorder(feature_recorder_set::ALERT_RECORDER_NAME, false);
-    return get_name(feature_recorder_set::ALERT_RECORDER_NAME);
+    return create_named_feature_recorder( feature_recorder_set::ALERT_RECORDER_NAME , false);
 }
 
 #if 0
@@ -301,7 +252,7 @@ void feature_recorder_set::dump_name_count_stats(dfxml_writer &writer) const
         writer.set_oneline(true);
         writer.push("feature_file");
         writer.xmlout("name",ij.second->name);
-        writer.xmlout("count",ij.second->count());
+        writer.xmlout("count",ij.second->features_written);
         writer.pop();
         writer.set_oneline(false);
     }
@@ -322,6 +273,7 @@ void feature_recorder_set::dump_name_count_stats(dfxml_writer &writer) const
  */
 
 
+#if 0
 size_t feature_recorder_set::count_histograms() const
 {
     /* Ask each feature recorder to count the number of histograms it can produce */
@@ -332,12 +284,15 @@ size_t feature_recorder_set::count_histograms() const
     }
     return count;
 }
+#endif
 
+#if 0
 void feature_recorder_set::add_histogram(const histogram_def &def)
 {
     feature_recorder *fr = get_name(def.feature);
     if(fr) fr->add_histogram(def);
 }
+#endif
 
 #if 0
 void feature_recorder_set::generate_histograms(void *user,feature_recorder::dump_callback_t cb,
@@ -363,13 +318,14 @@ void feature_recorder_set::generate_histograms()
 
 void feature_recorder_set::get_feature_file_list(std::vector<std::string> &ret)
 {
-    for(feature_recorder_map::const_iterator it = frm.begin(); it!=frm.end(); it++){
-        ret.push_back(it->first);
+    for( auto it: frm ){
+        ret.push_back(it.first);
     }
 }
 
 
-#if defined(HAVE_SQLITE3_H) and defined(HAVE_LIBSQLITE3)
+#if 0
+//#if defined(HAVE_SQLITE3_H) and defined(HAVE_LIBSQLITE3)
 
 /*** SQL Support ***/
 

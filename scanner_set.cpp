@@ -561,14 +561,16 @@ void scanner_set::process_sbuf(const class sbuf_t &sbuf)
             continue;                       //  not enabled
         }
 
-        if ( (it.second->scanner_flags.wants_ngrams)==0){
-            /* If the scanner does not want ngrams, don't run it if we have ngrams or duplicate data */
-            if (ngram_size > 0) continue;
-            if (seen_before)    continue;
+        if ( ngram_size>0  && it.second->scanner_flags.scan_ngram_buffer==false ){
+            continue;
         }
 
-        if ( sbuf.depth() > 0 && it.second->scanner_flags.depth_0)){
+        if ( sbuf.depth() > 0 && it.second->scanner_flags.depth_0) {
             // depth >0 and this scanner only run at depth 0
+            continue;
+        }
+
+        if ( seen_before && it.second->scanner_flags.scan_seen_before==false ){
             continue;
         }
 

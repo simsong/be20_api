@@ -62,7 +62,8 @@ struct scanner_params {
             bool  find_scanner {false}; //  this scanner uses the find_list
             bool  recurse {false}; //  this scanner will recurse
             bool  recurse_expand {false}; //  recurses AND result is >= original size
-            bool  wants_ngrams {false}; //  Scanner gets buffers that are constant n-grams
+            bool  scan_ngram_buffer {false}; //  Scanner can run even if the entire gets buffer is filled with constant n-grams
+            bool  scan_seen_before {false}; //  Scanner can run even if buffer has seen before
             bool  fast_find {false}; //  This scanner is a very fast FIND scanner
             bool  depth_0 {false}; //  scanner only runs at depth 0 by default
 
@@ -74,9 +75,10 @@ struct scanner_params {
                 if ( find_scanner )   ret += " FIND_SCANNER";
                 if ( recurse )        ret += " RECURSE";
                 if ( recurse_expand ) ret += " RECURSE_EXPAND";
-                if ( wants_ngrams )   ret += " WANTS_NGRAMS";
+                if ( scan_ngram_buffer )   ret += " SCAN_NGRAM_BUFFER";
+                if ( scan_seen_before )   ret += " SCAN_SEEN_BEFORE";
                 if ( fast_find )      ret += " FAST_FIND";
-                if ( depth_0 )        ret += " DEPTH0"
+                if ( depth_0 )        ret += " DEPTH_0";
                 return ret;
             }
         } scanner_flags;

@@ -46,7 +46,6 @@ class feature_recorder_set {
 
     friend class feature_recorder;
 
-    //uint32_t              flags {};       // how it was configured
     const std::string     input_fname {}; // input file; copy for convenience.
     const std::string     outdir {};      // where output goes; must know.
 
@@ -72,8 +71,11 @@ public:
      * a bunch of bools.
      */
     struct flags_t {
-        bool debug_utf8 {false};        // make sure that all features written are valid utf-8
+        bool disabled {false}; //              = 0x02;  // do not record anything! THis is is just used for a path-printer
+        bool pedantic {false};        // make sure that all features written are valid utf-8
         bool no_alert {false};                              // no alert recorder
+        bool only_alert {false};                                //  always return the alert recorder
+        bool create_stop_list_recorders {false}; // static const uint32_t CREATE_STOP_LIST_RECORDERS= 0x04;  //
     } flags;
 
     /** Constructor:
@@ -85,7 +87,7 @@ public:
      * This clearly needs work.
      */
     feature_recorder_set( const flags_t &flags_,
-                          const std::string hash_algorithm,
+                          const std::string &hash_algorithm,
                           const std::string &input_fname_,
                           const std::string &outdir_);
     virtual ~feature_recorder_set();
@@ -140,9 +142,6 @@ public:
 
     /* feature_recorder_set flags */
     /* Flags are now implemented as booleans per stroustrup 2013 */
-    bool flag_only_alert {false};                                //  always return the alert recorder
-    bool flag_set_disabled {false}; //              = 0x02;  // the set is effectively disabled; for path-printer
-    bool flag_create_stop_list_crecorders {false}; // static const uint32_t CREATE_STOP_LIST_RECORDERS= 0x04;  //
     //static const uint32_t MEM_HISTOGRAM             = 0x20;  // enable the in-memory histogram
     //static const uint32_t ENABLE_SQLITE3_RECORDERS  = 0x40;  // save features to an SQLITE3 databse
     //static const uint32_t DISABLE_FILE_RECORDERS    = 0x80;  // do not save features to file-based recorders
@@ -170,9 +169,9 @@ public:
     /* Previously called create_name().
      * functions must be virtual so they can be called by plug-in.
      */
-    virtual void create_named_feature_recorder(const std::string &name,bool create_stop_also);
+    virtual feature_recorder *create_named_feature_recorder(const std::string &name,bool create_stop_also);
     virtual feature_recorder *get_name(const std::string &name) const;
-    virtual feature_recorder *get_alert_recorder() const;
+    virtual feature_recorder *get_alert_recorder();
     virtual void get_feature_file_list(std::vector<std::string> &ret); // clears ret and fills with a list of feature file names
 
     void    add_stats(const std::string &bucket,double seconds);

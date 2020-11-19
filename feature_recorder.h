@@ -95,15 +95,7 @@ public:;
 
     /* State variables for this feature recorder */
     std::atomic<size_t>       context_window {0};      // context window for this feature recorder
-    //std::atomic<int64_t>      features_written {0};
-
-    /* Flag System no longer used; now we just use booleans */
-    //std::atomic<uint32_t>     flags {0};      // flags for this feature recorder
-    //virtual void   set_flag(uint32_t flags_);    // must be virtual so can be run by plugins.
-    //virtual void   unset_flag(uint32_t flags_);
-    //bool           flag_set(uint32_t f)    const {return flags & f;}
-    //bool           flag_notset(uint32_t f) const {return !(flags & f);}
-    //uint32_t       get_flags()             const {return flags;}
+    std::atomic<int64_t>      features_written {0};
 
     /**
      * \name Flags that control scanners
@@ -111,34 +103,38 @@ public:;
      * These flags control scanners.  Set them with flag_set().
      */
     /** Disable this recorder. */
-    static const int FLAG_DISABLED         = 0x01;      // feature recorder is Disabled
-    static const int FLAG_NO_CONTEXT       = 0x02;      // Do not write context.
-    static const int FLAG_NO_STOPLIST      = 0x04;      // Do not honor the stoplist/alertlist.
-    static const int FLAG_NO_ALERTLIST     = 0x08;      // Do not honor the stoplist/alertlist.
+    struct flags_t {
+        bool  disabled;           // feature recorder is Disabled
+        bool  no_context;         // Do not write context.
+        bool  no_stoplist; // Do not honor the stoplist/alertlist.
+        bool  no_alertlist; // Do not honor the stoplist/alertlist.
     /**
      * Normally feature recorders automatically quote non-UTF8 characters
      * with \x00 notation and quote "\" as \x5C. Specify FLAG_NO_QUOTE to
      * disable this behavior.
      */
-    static const int FLAG_NO_QUOTE         = 0x10;         // do not escape UTF8 codes
+        bool  no_quote;            // do not escape UTF8 codes
 
     /**
      * Use this flag the feature recorder is sending UTF-8 XML.
      * non-UTF8 will be quoted but "\" will not be escaped.
      */
-    static const int FLAG_XML              = 0x20;         // will be sending XML
+        bool  xml;                 // will be sending XML
 
     /**
      * histogram support.
      */
-    static const uint32_t FLAG_NO_FEATURES     = 0x40;  // do not record features (just memory histogram)
-    static const uint32_t FLAG_NO_FEATURES_SQL = 0x80;  // do not write features to SQL
+        bool no_features; // do not record features (just memory histogram)
 
+    } flags;
     /** @} */
     static constexpr int max_histogram_files = 10;  // don't make more than 10 files in low-memory conditions
 
-    static std::string MAX_DEPTH_REACHED_ERROR_FEATURE;
-    static std::string MAX_DEPTH_REACHED_ERROR_CONTEXT;
+    static const std::string MAX_DEPTH_REACHED_ERROR_FEATURE;
+    static const std::string MAX_DEPTH_REACHED_ERROR_CONTEXT;
+    static std::string quote_string(const std::string &feature); // turns unprintable characters to octal escape
+    static std::string unquote_string(const std::string &feature); // turns octal escape back to binary characters
+    static std::string extract_feature(const std::string &line); // remove the feature from a feature file line
 
     /* Support for hashing */
     //typedef      std::string (*hashing_function_t)( const sbuf_t &sbuf); // returns a hex value
@@ -149,7 +145,8 @@ public:;
     /* File management */
     // returns a feature recorder filename in the outdir with an optional suffix before the file extension.
     // The suffix is used for histograms.
-    std::string        fname_suffix(std::string suffix) const;
+    const std::string fname_suffix(std::string suffix) const;
+    const std::string fname_in_outdir(std::string suffix) const; // returns the name of a dir in the outdir
 
     // These must only be changed in the main thread at the start of program execution:
 
@@ -161,33 +158,35 @@ public:;
      */
 
     /**
-     * write() actually does the writing to the file.
+     * write0() actually does the writing to the file.
      * It must be threadsafe (either uses locks or goes to a DBMS)
      * Callers therefore do not need locks.
      */
-    virtual void write(const std::string &str);
+    virtual void write0(const std::string &str);
+    virtual void write0(const pos0_t &pos0,const std::string &feature,const std::string &context);
 
-    /**
-     * support for writing features
-     */
-
-    //void quote_if_necessary(std::string &feature,std::string &context);
-
-    // printf() prints to the feature file.
-    virtual void printf(const char *fmt_,...) __attribute__((format(printf, 2, 3)));
-    //
-    // write a feature and its context; the feature may be in the context, but doesn't need to be.
-    /****************************************************************
-     *** External entry points.
-     ****************************************************************/
-
-    // write a feature and its context; the feature may be in the context, but doesn't need to be.
+    // higher-level write a feature and its context; the feature may be in the context, but doesn't need to be.
     // entries processed by write below will be processed by histogram system
     virtual void write(const pos0_t &pos0,const std::string &feature,const std::string &context);
 
     // write a feature located at a given place within an sbuf.
     // Context is written automatically
-    virtual void write_buf(const sbuf_t &sbuf,size_t pos,size_t len); /* writes with context */
+    virtual void write_buf(const sbuf_t &sbuf, size_t pos, size_t len); /* writes with context */
+
+    /**
+     * support for writing features
+     */
+
+    // quote feature and context if they are not valid utf8 and if it is important to do so
+    void quote_if_necessary(std::string &feature,std::string &context);
+
+    // printf() prints to the feature file.
+    //virtual void printf(const char *fmt_,...) __attribute__((format(printf, 2, 3)));
+    //
+    // write a feature and its context; the feature may be in the context, but doesn't need to be.
+    /****************************************************************
+     *** External entry points.
+     ****************************************************************/
 
     /**
      * support for carving.
