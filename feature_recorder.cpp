@@ -8,6 +8,8 @@
 
 #include <cstdarg>
 #include <regex>
+#include <sstream>
+#include <fstream>
 
 #include "feature_recorder.h"
 #include "feature_recorder_set.h"
@@ -54,6 +56,15 @@ static inline int hexval(char ch)
     case 'f': case 'F': return 15;
     }
     return 0;
+}
+
+feature_recorder::feature_recorder(class feature_recorder_set &fs_, const std::string &name_):
+    fs(fs_),name(name_)
+{
+}
+
+feature_recorder::~feature_recorder()
+{
 }
 
 /**
@@ -146,6 +157,14 @@ void feature_recorder::quote_if_necessary(std::string &feature,std::string &cont
             context.resize(fs.opt_max_context_size);
         }
     }
+}
+
+void feature_recorder::write0(const std::string &str)
+{
+}
+
+void feature_recorder::write0(const pos0_t &pos0, const std::string &feature, const std::string &context)
+{
 }
 
 /**
@@ -351,10 +370,49 @@ std::string valid_dosname(std::string in)
 }
 
 /*
- write buffer to specified dirname/filename for writing data
+ * write buffer to specified dirname/filename for writing data.
+ * The name is {outdir}/{scanner}/{seq}/{pos0}.{ext}
+ * Where: {outdir} is the output directory of the feature recorder.
+ *        {scanner} is the name of the scanner
+ *        {seq} is 000 through 999.  (1000 files per directory)
+ *        {pos0} is where the feature was found.
+ *        {ext} is the provided extension.
  */
-std::string feature_recorder::carve_data(const sbuf_t &sbuf, const std::string &ext)
+std::string feature_recorder::carve_data(const sbuf_t &sbuf, const std::string &ext,
+                                         const time_t mtime,
+                                         const size_t offset,
+                                         const size_t len)
 {
+    /* Determine the directory and filename */
+
+    int64_t myfileNumber = carved_files++; // atomic operation
+    std::ostringstream seq;
+
+    seq << std::setw(3) << std::setfill('0') << int(myfileNumber/1000);
+
+    const std::string scannerDir {fs.get_outdir() + "/" + name};
+    const std::string seqDir {scannerDir + "/" + seq.str() };
+    const std::string fname  {seqDir + "/" + sbuf.pos0.str() + "." + ext};
+
+    /* Create the directory. If it exists, the call fails, but that's faster than checking to see if it exists and then creating the directory */
+    std::filesystem::create_directory( scannerDir );
+    std::filesystem::create_directory( seqDir );
+
+    /* Write the data
+     * TODO: Add error checking
+     */
+    std::ofstream os;
+    os.open( fname.c_str(), std::ios::out | std::ios::app | std::ios::binary | std::ios::trunc );
+    os.write( reinterpret_cast<const char *>(sbuf.buf), sbuf.bufsize );
+    os.close();
+
+    return fname;
+#if 0
+
+    int64_t mySeq = carved_files / 1000;
+
+
+
     std::string dirname1 = fs.get_outdir()  + "/" + name;
     std::stringstream ss;
     ss << dirname1;
@@ -394,22 +452,29 @@ std::string feature_recorder::carve_data(const sbuf_t &sbuf, const std::string &
     }
     ::close(fd);
     return fname;
+#endif
+}
+
+const std::string feature_recorder::hash(const sbuf_t &sbuf) const
+{
+    return (*fs.hasher.func)( reinterpret_cast<const uint8_t *>(sbuf.buf), sbuf.bufsize);
 }
 
 
 #include <iomanip>
+#if 0
 /**
  * @param sbuf   - the buffer to carve
  * @param pos    - offset in the buffer to carve
  * @param len    - how many bytes to carve
  *
  */
-std::string feature_recorder::carve(const sbuf_t &sbuf,size_t pos,size_t len, const std::string &ext)
+std::string feature_recorder::carve_data(const sbuf_t &sbuf, const std::string &ext, const time_t mtime, const size_t pos, const size_t len )
 {
-    if(flags & FLAG_DISABLED) return std::string();           // disabled
+    if (fs.disabled) return std::string();           // disabled
 
     /* If we are in the margin, ignore; it will be processed again */
-    if(pos >= sbuf.pagesize && pos < sbuf.bufsize){
+    if (pos >= sbuf.pagesize && pos < sbuf.bufsize){
         return std::string();
     }
     assert(pos < sbuf.bufsize);
@@ -515,13 +580,15 @@ std::string feature_recorder::carve(const sbuf_t &sbuf,size_t pos,size_t len, co
     ::close(fd);
     return fname;
 }
+#endif
 
 /*
  This is based on feature_recorder::carve and append carving record to specified filename
  */
-std::string feature_recorder::carve_records(const sbuf_t &sbuf, size_t pos, size_t len,
-                                            const std::string &filename)
+std::string feature_recorder::carve_records(const sbuf_t &sbuf,
+                                            size_t pos, size_t len, const std::string &filename)
 {
+#if 0
     if(flags & FLAG_DISABLED) return std::string();           // disabled
 
     if(pos >= sbuf.pagesize && pos < sbuf.bufsize){
@@ -590,8 +657,11 @@ std::string feature_recorder::carve_records(const sbuf_t &sbuf, size_t pos, size
     }
     ::close(fd);
     return fname;
+#endif
+    return std::string();
 }
 
+#if 0
 /**
  * Currently, we need strptime() and utimes() to set the time.
  */
@@ -611,3 +681,4 @@ void feature_recorder::set_carve_mtime(const std::string &fname, const std::stri
     }
 #endif
 }
+#endif

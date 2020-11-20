@@ -106,8 +106,8 @@ public:;
     struct flags_t {
         bool  disabled;           // feature recorder is Disabled
         bool  no_context;         // Do not write context.
-        bool  no_stoplist; // Do not honor the stoplist/alertlist.
-        bool  no_alertlist; // Do not honor the stoplist/alertlist.
+        bool  no_stoplist;        // Do not honor the stoplist/alertlist.
+        bool  no_alertlist;       // Do not honor the stoplist/alertlist.
     /**
      * Normally feature recorders automatically quote non-UTF8 characters
      * with \x00 notation and quote "\" as \x5C. Specify FLAG_NO_QUOTE to
@@ -138,14 +138,13 @@ public:;
 
     /* Support for hashing */
     //typedef      std::string (*hashing_function_t)( const sbuf_t &sbuf); // returns a hex value
-    std::string hash(const sbuf_t &sbuf); // hash an sbuf with the current hashing function and return it
-
-
+    // hash an sbuf with the current hashing function and return it
+    const std::string hash(const sbuf_t &sbuf) const;
 
     /* File management */
     // returns a feature recorder filename in the outdir with an optional suffix before the file extension.
     // The suffix is used for histograms.
-    const std::string fname_suffix(std::string suffix) const;
+    //const std::string fname_suffix(std::string suffix) const;
     const std::string fname_in_outdir(std::string suffix) const; // returns the name of a dir in the outdir
 
     // These must only be changed in the main thread at the start of program execution:
@@ -161,6 +160,7 @@ public:;
      * write0() actually does the writing to the file.
      * It must be threadsafe (either uses locks or goes to a DBMS)
      * Callers therefore do not need locks.
+     * It is only implemented in the subclasses.
      */
     virtual void write0(const std::string &str);
     virtual void write0(const pos0_t &pos0,const std::string &feature,const std::string &context);
@@ -200,19 +200,25 @@ public:;
         CARVE_ENCODED=1,
         CARVE_ALL=2};
 
-    std::atomic<int64_t>   carved_files {0};        // starts at 0; gets incremented by carve();
-    atomic_set<std::string>     carve_cache {}; // hashes of files that have been cached, so the same file is not carved twice
+    std::atomic<int64_t>       carved_files {0};        // starts at 0; gets incremented by carve();
+    atomic_set<std::string>    carve_cache {}; // hashes of files that have been cached, so the same file is not carved twice
     std::string  do_not_carve_encoding {};            // do not carve files with this encoding.
     static const std::string CARVE_MODE_DESCRIPTION;
     std::atomic<carve_mode_t> carve_mode { CARVE_ENCODED};
 
     // Carve data or a record to a file; returns filename of carved file or empty string if nothing carved
-    // if mtime!=0, set the file's mtime to be mtime
-    virtual std::string carve(const sbuf_t &sbuf, const std::string &ext, time_t mtime); // appended to forensic path
-    // Carve a record; returns filename of records file or empty string if nothing carved
-    //virtual std::string carve_records(const sbuf_t &sbuf, size_t pos, size_t len, const std::string &name);
+    // if mtime>0, set the file's mtime to be mtime
+    // if offset>0, start with that offset
+    // if offset>0, carve that many bytes, even into the margin (otherwise stop at the margin)
+    virtual std::string carve_data(const sbuf_t &sbuf, const std::string &ext,
+                                   const time_t mtime=0,
+                                   const size_t offset=0,
+                                   const size_t len=0 );
+    //virtual std::string carve_data(const sbuf_t &sbuf, size_t pos, size_t len, const std::string &ext, const time_t mtime);
+    // Carve a record; appends records to the specified record file, and returns the filename
+    virtual std::string carve_records(const sbuf_t &sbuf, size_t offset, size_t len, const std::string &name);
     // Write a data;
-    virtual std::string write_data(unsigned char *data, size_t len, const std::string &filename);
+    //virtual std::string write_data(unsigned char *data, size_t len, const std::string &filename);
 
     // Set the time of the carved file to iso8601 file
     //virtual void set_carve_mtime(const std::string &fname, const std::string &mtime_iso8601);

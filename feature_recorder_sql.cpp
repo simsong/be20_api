@@ -11,26 +11,34 @@
 #include <cstring>
 #include <unistd.h>
 
-#include "bulk_extractor_i.h"
-#include "histogram.h"
 #include "sbuf.h"
+#include "histogram.h"
+#include "feature_recorder_sql.h"
+#include "feature_recorder_set.h"
 
 feature_recorder_sql::feature_recorder_sql(class feature_recorder_set &fs_, const std::string &name_):
-    fs(fs_),name(name_)
+    feature_recorder(fs_,name_)
 {
     /*
      * If the feature recorder set is disabled, just return.
      */
-    if (fs.flag_set(feature_recorder_set::SET_DISABLED)) return;
+    if (fs.flags.disabled) return;
     /* write to a database? Create tables if necessary and create a prepared statement */
 
+#if 0
     char buf[1024];
     fs.db_create_table(name);
     snprintf( buf, sizeof(buf), db_insert_stmt,name.c_str() );
     bs = new besql_stmt( fs.db3, buf );
+#endif
+}
+
+feature_recorder_sql::~feature_recorder_sql()
+{
 }
 
 
+#if 0
 #define DB_INSERT_STMT "INSERT INTO f_%s (offset,path,feature_eutf8,feature_utf8,context_eutf8) VALUES (?1, ?2, ?3, ?4, ?5)"
 const char *feature_recorder::db_insert_stmt = DB_INSERT_STMT;
 
@@ -171,3 +179,4 @@ void feature_recorder::write(const pos0_t &pos0, const std::string &feature, con
         write0_sqlite3( pos0, feature, context);
     }
 }
+#endif

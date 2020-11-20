@@ -136,9 +136,9 @@ public:
      */
     //typedef std::set<std::string>feature_file_names_t;
     //void    init(const feature_file_names_t &feature_files);
-    void    flush_all();
-    void    close_all();
-    bool    has_name(std::string name) const;           /* does the named feature exist? */
+    //void    flush_all();
+    //void    close_all();
+    //bool    has_name(std::string name) const;           /* does the named feature exist? */
 
     /* feature_recorder_set flags */
     /* Flags are now implemented as booleans per stroustrup 2013 */
@@ -160,16 +160,18 @@ public:
 
     /* histogram support */
 
+#if 0
     typedef  void (*xml_notifier_t)(const std::string &xmlstring);
     void     add_histogram(const histogram_def &def); // adds it to a local set or to the specific feature recorder
     size_t   count_histograms() const;  // counts histograms in all feature recorders
     void     generate_histograms();     // make the histograms in the output directory (and optionally in the database)
+#endif
 
     /* support for creating and finding feature recorders */
     /* Previously called create_name().
      * functions must be virtual so they can be called by plug-in.
      */
-    virtual feature_recorder *create_named_feature_recorder(const std::string &name,bool create_stop_also);
+    virtual feature_recorder *create_named_feature_recorder(const std::string &name);
     virtual feature_recorder *get_name(const std::string &name) const;
     virtual feature_recorder *get_alert_recorder();
     virtual void get_feature_file_list(std::vector<std::string> &ret); // clears ret and fills with a list of feature file names
@@ -183,6 +185,7 @@ public:
      *** DB interface
      ****************************************************************/
 
+#if 0
 #if defined(HAVE_SQLITE3_H) and defined(HAVE_LIBSQLITE3)
     virtual  void db_send_sql(sqlite3 *db3,const char **stmts, ...) ;
     virtual  sqlite3 *db_create_empty(const std::string &name) ;
@@ -192,7 +195,7 @@ public:
     void     db_transaction_commit() ;               // commit current transaction
     void     db_close() ;                            //
 #endif
-
+#endif
     /****************************************************************
      *** External Functions
      ****************************************************************/

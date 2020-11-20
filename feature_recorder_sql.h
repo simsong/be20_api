@@ -21,7 +21,7 @@
 
 #include <sqlite3.h>
 
-class feature_recorder_sql : public feature_recorder_sql {
+class feature_recorder_sql : public feature_recorder {
     static void truncate_at(std::string &line, char ch) {
         size_t pos = line.find(ch);
         if(pos != std::string::npos) line.resize(pos);
@@ -42,6 +42,7 @@ class feature_recorder_sql : public feature_recorder_sql {
 #endif
 public:
     feature_recorder_sql(class feature_recorder_set &fs, const std::string &name);
-    virtual        ~feature_recorder_sql();
+    virtual ~feature_recorder_sql();
 
 };
+#endif

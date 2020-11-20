@@ -6,6 +6,8 @@
 #include "scanner_config.h"
 #include "histogram.h"
 #include "feature_recorder_set.h"
+#include "feature_recorder_file.h"
+
 #include "dfxml/src/dfxml_writer.h"
 #include "dfxml/src/hash_t.h"
 
@@ -76,13 +78,13 @@ feature_recorder_set::feature_recorder_set( const flags_t &flags_,
 
     /* Create a disabled feature recorder if necessary */
     if ( flags.disabled ){
-        create_named_feature_recorder(DISABLED_RECORDER_NAME,false);
+        create_named_feature_recorder(DISABLED_RECORDER_NAME);
         frm[DISABLED_RECORDER_NAME]->flags.disabled = true;
     }
 
     /* Create an alert recorder if necessary */
     if (!flags.no_alert) {
-        create_named_feature_recorder(feature_recorder_set::ALERT_RECORDER_NAME,false); // make the alert recorder
+        create_named_feature_recorder(feature_recorder_set::ALERT_RECORDER_NAME); // make the alert recorder
     }
 
     //message_enabled_scanners(scanner_params::PHASE_INIT); // tell all enabled scanners to init
@@ -110,8 +112,10 @@ feature_recorder_set::feature_recorder_set( const flags_t &flags_,
 feature_recorder_set::~feature_recorder_set()
 {
     frm.delete_all();
+#if 0
 #if defined(HAVE_SQLITE3_H) and defined(HAVE_LIBSQLITE3)
     db_close();
+#endif
 #endif
 }
 
@@ -130,27 +134,15 @@ feature_recorder_set::~feature_recorder_set()
  ****************************************************************/
 
 /*
- * Create a named feature recorder, any associated stoplist recorders, and open the files
- * stop recorders are basically a second feature paired with every feature recorder that records
- * things that were sent to the stop list. Returns the feature recorder that is created.
- *
- *
- * previously called create_name()
+ * Create a named feature recorder if it doesn't exist.
+ * Returns the named feature recorder
  */
-feature_recorder *feature_recorder_set::create_named_feature_recorder(const std::string &name,bool create_stop_recorder)
+feature_recorder *feature_recorder_set::create_named_feature_recorder(const std::string &name)
 {
-    if ( frm.contains(name) ){
-        throw std::runtime_error(name);
-    }
-
-    feature_recorder *fr = new feature_recorder(*this, name);
-    frm.insert(name, fr);
-    if (create_stop_recorder){
-        std::string name_stopped = name+"_stopped";
-#if 0
-        frm[name_stopped] = new feature_recorder(*this, name_stopped);
-        fr->set_stop_list_recorder( frm[name_stopped] );
-#endif
+    feature_recorder *fr = get_name(name);
+    if (fr==nullptr ){
+        fr = new feature_recorder_file(*this, name);
+        frm.insert(name, fr);
     }
     return fr;
 }
@@ -186,7 +178,7 @@ feature_recorder *feature_recorder_set::get_alert_recorder()
     if (alert_recorder) {
         return alert_recorder;
     }
-    return create_named_feature_recorder( feature_recorder_set::ALERT_RECORDER_NAME , false);
+    return create_named_feature_recorder( feature_recorder_set::ALERT_RECORDER_NAME);
 }
 
 #if 0
@@ -306,6 +298,7 @@ void feature_recorder_set::generate_histograms(void *user,feature_recorder::dump
 }
 #endif
 
+#if 0
 void feature_recorder_set::generate_histograms()
 {
     /* Ask each feature recorder to dump its histograms */
@@ -314,6 +307,7 @@ void feature_recorder_set::generate_histograms()
         std::cerr << "should dump histogram for " << it.first << "\n";
     }
 }
+#endif
 
 
 void feature_recorder_set::get_feature_file_list(std::vector<std::string> &ret)

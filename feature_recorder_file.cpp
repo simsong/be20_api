@@ -60,7 +60,7 @@ feature_recorder_file::feature_recorder_file(class feature_recorder_set &fs_, co
     /* Open the file recorder for output.
      * If the file exists, seek to the end and find the last complete line, and start there.
      */
-    std::string fname = fname_suffix("");
+    std::string fname = fname_in_outdir("");
     ios.open( fname.c_str(), std::ios_base::in|std::ios_base::out|std::ios_base::ate);
     if ( ios.is_open()){                  // opened existing file
         ios.seekg(0L,std::ios_base::end);
@@ -85,7 +85,7 @@ feature_recorder_file::feature_recorder_file(class feature_recorder_set &fs_, co
     /* Just open the stream for output */
     ios.open(fname.c_str(),std::ios_base::out);
     if (!ios.is_open()){
-        std::cerr << "*** feature_recorder::open CANNOT OPEN FEATURE FILE FOR WRITING "
+        std::cerr << "*** feature_recorder_file::open CANNOT OPEN FEATURE FILE FOR WRITING "
                   << fname << ":" << strerror(errno) << "\n";
         throw std::invalid_argument("cannot open feature file for writing");
     }
@@ -152,17 +152,6 @@ const std::string feature_recorder_file::feature_file_header("# Feature-File-Ver
 const std::string feature_recorder_file::histogram_file_header("# Histogram-File-Version: 1.1\n");
 const std::string feature_recorder_file::bulk_extractor_version_header("# " PACKAGE_NAME "-Version: " PACKAGE_VERSION " ($Rev: 10844 $)\n");
 
-#if 0
-void feature_recorder::set_flag(uint32_t flags_)
-{
-    flags|=flags_;
-}
-
-void feature_recorder::unset_flag(uint32_t flags_)
-{
-    flags &= (~flags_);
-}
-#endif
 
 #if 0
 // add a memory histogram; assume the position in the mhistograms is stable
@@ -227,10 +216,12 @@ public:
  */
 
 
+#if 0
 size_t feature_recorder::count_histograms() const
 {
     return histogram_defs.size();
 }
+#endif
 
 
 /** Dump a specific histogram */
@@ -428,6 +419,31 @@ void feature_recorder_file::write0(const std::string &str)
     }
 }
 
+
+/**
+ * Combine the pos0, feature and context into a single line and write it to the feature file.
+ *
+ * @param feature - The feature, which is valid UTF8 (but may not be exactly the bytes on the disk)
+ * @param context - The context, which is valid UTF8 (but may not be exactly the bytes on the disk)
+ *
+ * Interlocking is done in write().
+ */
+
+void feature_recorder_file::write0(const pos0_t &pos0, const std::string &feature, const std::string &context)
+{
+    if ( fs.flags.disabled ) {
+        return;
+    }
+    std::stringstream ss;
+    ss << pos0.shift( fs.offset_add).str() << '\t' << feature;
+    if ((flags.no_context == false) && ( context.size()>0 )) {
+        ss << '\t' << context;
+    }
+    this->write0( ss.str() );
+}
+
+
+
 #if 0
 void feature_recorder::printf(const char *fmt, ...)
 {
@@ -443,46 +459,6 @@ void feature_recorder::printf(const char *fmt, ...)
     this->write(p.buf);
 }
 #endif
-
-/**
- * Combine the pos0, feature and context into a single line and write it to the feature file.
- *
- * @param feature - The feature, which is valid UTF8 (but may not be exactly the bytes on the disk)
- * @param context - The context, which is valid UTF8 (but may not be exactly the bytes on the disk)
- *
- * Interlocking is done in write().
- */
-
-void feature_recorder::write0(const pos0_t &pos0, const std::string &feature, const std::string &context)
-{
-    if (fs.flags.disabled) {
-        return;
-    }
-    std::stringstream ss;
-    ss << pos0.shift( fs.offset_add).str() << '\t' << feature;
-    if ((flags.no_context == false) && ( context.size()>0 )) {
-        ss << '\t' << context;
-    }
-    this->write0( ss.str() );
-}
-
-
-
-
-
-//const feature_recorder::hash_def &feature_recorder::hasher()
-//{
-//    return fs.hasher;
-//}
-
-
-#if 0
-const std::string feature_recorder::hash(const unsigned char *buf, size_t buffsize)
-{
-    return (*fs.hasher.func)(buf,buffsize);
-}
-#endif
-
 
 
 #if 0

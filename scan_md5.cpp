@@ -22,8 +22,6 @@ void  scan_md5(struct scanner_params &sp)
 
     if(sp.phase==scanner_params::PHASE_INIT){
         static scanner_params::scanner_info info;
-        static bool initialized = false;
-        assert(initialized==false);
         info.scanner     = scan_md5;
         info.name        = "md5";
         info.author      = "Simson L. Garfinkel";
@@ -31,21 +29,23 @@ void  scan_md5(struct scanner_params &sp)
         info.url         = "https://digitalcorpora.org/bulk_extractor";
         info.scanner_version = "1.0.0";
         info.pathPrefix  = "MD5";
-        info.flags  = scanner_params::scanner_info::SCANNER_DEFAULT_DISABLED;
-        info.feature_names.insert("md5"); // the feature recorder does not need to be the same name as the scanner
+        //info.flags       = scanner_params::scanner_info::SCANNER_DEFAULT_DISABLED;
+        // specify the featur recorders we want.
+        // Note that the feature recorder does not need to be the same name as the scanner
+        info.feature_names.insert("md5_bufs");
 
-        static histogram_def hd("md5","^(.....)","",HistogramMaker::FLAG_LOWERCASE);
+        static histogram_def hd("md5","^(.....)","nope",HistogramMaker::FLAG_LOWERCASE);
         info.histogram_defs.insert(hd);
         sp.register_info(info);
-        initialized = true;
         return;
     }
 
     if(sp.phase==scanner_params::PHASE_SCAN){
         auto hexdigest = dfxml::md5_generator::hash_buf(sp.sbuf.buf,sp.sbuf.bufsize).hexdigest();
 
-        feature_recorder &md5_recorder = sp.get_name("md5");
-        md5_recorder.write(sp.sbuf.pos0, hexdigest, ""); // write the hash with no context
+        /* Perhaps we want to cache getting the recorders? */
+        feature_recorder *md5_recorder = sp.get_name("md5_bufs");
+        md5_recorder->write(sp.sbuf.pos0, hexdigest, ""); // write the hash with no context
 
 	static const std::string hash0("<hashdigest type='MD5'>");
 	static const std::string hash1("</hashdigest>");

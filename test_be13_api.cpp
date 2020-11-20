@@ -147,15 +147,15 @@ TEST_CASE("feature_recorder_set", "[frs]" ) {
 
         feature_recorder_set frs( flags, "md5", scanner_config::NO_INPUT, tempdir);
         //feature_recorder_set::feature_file_names_t feature_files;
-        frs.create_named_feature_recorder("test", false);
-        REQUIRE( frs.has_name("test") == true);
-        REQUIRE( frs.has_name("test_not") == false);
+        frs.create_named_feature_recorder("test");
+        REQUIRE( frs.get_name("test") != nullptr);
+        REQUIRE( frs.get_name("test_not") == nullptr);
         //frs.init(feature_files);
 
         feature_recorder *ft = frs.get_name("test");
         pos0_t p;
         ft->write(p, "feature", "context");
-        frs.close_all();
+        //frs.close_all();
     }
     std::cout << "check out: " << tempdir << "\n";
     /* get the last line of the test file and see if it is correct */
@@ -367,7 +367,7 @@ TEST_CASE("scanner", "[scanner]") {
  */
 #include "scanner_set.h"
 #include "scan_md5.h"
-TEST_CASE("scanner_set", "[scanner_set]") {
+TEST_CASE("enable/disable", "[scanner_set]") {
     scanner_config sc;
     sc.outdir = get_tempdir();
     sc.hash_alg = "md5";
@@ -377,43 +377,52 @@ TEST_CASE("scanner_set", "[scanner_set]") {
     ss.add_scanner(scan_md5);
 
 
-    /* Make sure that the scanner was added */
-    REQUIRE( ss.get_scanner_by_name("no_such_scanner") == nullptr );
-    REQUIRE( ss.get_scanner_by_name("md5") == scan_md5 );
+    SECTION(" Make sure that the scanner was added ") {
+        REQUIRE( ss.get_scanner_by_name("no_such_scanner") == nullptr );
+        REQUIRE( ss.get_scanner_by_name("md5") == scan_md5 );
+    }
 
     /* Enable the scanner */
     ss.set_scanner_enabled("md5", true);
 
-    /* Make sure that the md5 scanner is enabled and only the md5 scanner is enabled */
-    REQUIRE( ss.is_scanner_enabled("md5") == true );
-    REQUIRE( ss.is_find_scanner_enabled() == false); // only md5 scanner is enabled
+    SECTION("Make sure that the md5 scanner is enabled and only the md5 scanner is enabled") {
+        REQUIRE( ss.is_scanner_enabled("md5") == true );
+        REQUIRE( ss.is_find_scanner_enabled() == false); // only md5 scanner is enabled
+    }
 
-    /* Turn it off and make sure that it's disabled */
-    ss.set_scanner_enabled("md5", false);
-    REQUIRE( ss.is_scanner_enabled("md5") == false );
+    SECTION("Turn it off and make sure that it's disabled") {
+        ss.set_scanner_enabled("md5", false);
+        REQUIRE( ss.is_scanner_enabled("md5") == false );
+    }
 
-    /* Try enabling all */
-    ss.set_scanner_enabled(scanner_set::ALL_SCANNERS,true);
-    REQUIRE( ss.is_scanner_enabled("md5") == true );
+    SECTION("Try enabling all ") {
+        ss.set_scanner_enabled(scanner_set::ALL_SCANNERS,true);
+        REQUIRE( ss.is_scanner_enabled("md5") == true );
+    }
 
-    /* Try disabling all */
-    ss.set_scanner_enabled(scanner_set::ALL_SCANNERS,false);
-    REQUIRE( ss.is_scanner_enabled("md5") == false );
+    SECTION("  /* Try disabling all ") {
+        ss.set_scanner_enabled(scanner_set::ALL_SCANNERS,false);
+        REQUIRE( ss.is_scanner_enabled("md5") == false );
+    }
+}
 
-    /* Turn it back on */
-    ss.set_scanner_enabled("md5", true);
+TEST_CASE("run", "[scanner_set]") {
+    scanner_config sc;
+    sc.outdir = get_tempdir();
+    sc.hash_alg = "md5";
 
-    std::cout << "Scanner set info:\n";
-    ss.info_scanners(std::cout, true, true, 'e', 'd');
+    struct feature_recorder_set::flags_t f;
+    scanner_set ss(sc, f);
+    ss.add_scanner(scan_md5);
+    ss.set_scanner_enabled("md5", true); /* Turn it onn */
 
     /* Might as well use it! */
+    ss.phase_scan();                    // start the scanner phase
     ss.process_sbuf( hello_sbuf() );
     //ss.shutdown();                      // should process histograms
 
     /* The md5 scanner makes a single histogram. Make sure we got it. */
     //REQUIRE( ss.count_histograms() == 1);
-
-
 }
 
 

@@ -70,6 +70,10 @@ scanner_set::scanner_set(const scanner_config &sc_,
 void scanner_set::register_info(const scanner_params::scanner_info *si)
 {
     scanner_info_db[si->scanner] = si;
+    /* Create all of the requested feature recorders */
+    for (auto it: si->feature_names ){
+        fs.create_named_feature_recorder( it );
+    }
 }
 
 
@@ -359,11 +363,13 @@ void scanner_set::info_scanners(std::ostream &out,
 /* Add the histograms to the feature recorders for all of the enabled scanners */
 void scanner_set::add_enabled_scanner_histograms()
 {
+#if 0
     for (auto it: scanner_info_db ){
         for (auto hi: it.second->histogram_defs ){
             fs.add_histogram( hi );
         }
     }
+#endif
 }
 
 
@@ -423,18 +429,27 @@ const std::string & scanner_set::get_input_fname() const
 /****************************************************************
  *** PHASE_SCAN methods.
  ****************************************************************/
-
+void scanner_set::phase_scan()
+{
+    assert(current_phase == scanner_params::PHASE_INIT);
+    current_phase = scanner_params::PHASE_SCAN;
+}
 
 
 /****************************************************************
  *** PHASE_SHUTDOWN methods.
  ****************************************************************/
 
+#if 0
 size_t scanner_set::count_histograms() const
 {
+#if 0
     assert(current_phase == scanner_params::PHASE_SHUTDOWN);
     return fs.count_histograms();
+#endif
+    return 0;
 }
+#endif
 
 void scanner_set::shutdown()
 {
@@ -452,8 +467,10 @@ void scanner_set::shutdown()
     }
 
     /* Add the histograms */
+#if 0
     add_enabled_scanner_histograms();
     fs.generate_histograms();
+#endif
 }
 
 
@@ -636,7 +653,7 @@ void scanner_set::process_sbuf(const class sbuf_t &sbuf)
             if(alert_recorder) alert_recorder->write(sbuf.pos0,"scanner="+name,"<unknown_exception/>");
         }
     }
-    fs.flush_all();
+    //fs.flush_all();
 }
 
 

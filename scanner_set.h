@@ -202,10 +202,11 @@ public:;
 
     // returns the named scanner, or 0 if no scanner of that name
 
-
     // Scanners automatically get initted when they are loaded, so there is no scanners init or info phase
     // They are immediately ready to process sbufs and packets!
     // These trigger a move the PHASE_SCAN
+    void     phase_scan();              // start the scan phase
+
     void     process_sbuf(const sbuf_t &sbuf);                              /* process for feature extraction */
     void     process_packet(const be13::packet_info &pi);
     scanner_params::phase_t get_current_phase() const { return current_phase;};
@@ -215,7 +216,7 @@ public:;
 
     /* PHASE_SHUTDOWN */
 
-    size_t   count_histograms() const;
+    //size_t   count_histograms() const;
     void     shutdown();
 };
 

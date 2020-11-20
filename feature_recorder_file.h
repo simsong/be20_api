@@ -48,7 +48,7 @@ private:
     histogram_defs_t      histogram_defs {};
 
     mhistograms_t mhistograms {}; // the memory histograms, if we are using them
-    std::atomic<uint64_t>      mhistogram_limit {}; // how many we want (per feature recorder limit, rather than per histogram)
+    //std::atomic<uint64_t>      mhistogram_limit {}; // how many we want (per feature recorder limit, rather than per histogram)
     void   banner_stamp(std::ostream &os,const std::string &header) const; // stamp banner, and header
 #if 0
     uint64_t file_number_add(uint64_t i){
@@ -73,8 +73,9 @@ public:
     /* where stopped items (on stop_list or context_stop_list) get recorded:
      * Cannot be made inline becuase it accesses fs.
      */
-    virtual const std::string hash(const unsigned char *buf, size_t bufflen); // hash a block with the hasher
+    //virtual const std::string hash(const unsigned char *buf, size_t bufflen); // hash a block with the hasher
     virtual void write0(const std::string &str);
+    virtual void write0(const pos0_t &pos0, const std::string &feature, const std::string &context);
 
     /* feature file management */
     //virtual void open();
@@ -91,7 +92,7 @@ public:
 #endif
 
     //virtual void dump_histogram_file(const histogram_def &def,void *user,feature_recorder::dump_callback_t cb) const;
-    virtual size_t count_histograms() const;
+    //virtual size_t count_histograms() const;
     //virtual void dump_histogram(const histogram_def &def,void *user,feature_recorder::dump_callback_t cb) const;
     typedef void (*xml_notifier_t)(const std::string &xmlstring);
     //virtual void dump_histograms(void *user,feature_recorder::dump_callback_t cb, xml_notifier_t xml_error_notifier) const;

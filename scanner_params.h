@@ -154,7 +154,7 @@ struct scanner_params {
 
     /* User-servicable parts: */
     virtual void register_info(const scanner_info &si); // called by a scanner to register its info
-    virtual feature_recorder &get_name(const std::string &name); // returns a reference to a feature recorder
+    virtual feature_recorder *get_name(const std::string &name); // returns a reference to a feature recorder
     virtual ~scanner_params(){};
 
 #if 0
