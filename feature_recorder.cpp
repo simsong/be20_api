@@ -31,6 +31,8 @@ const std::string feature_recorder::MAX_DEPTH_REACHED_ERROR_CONTEXT {""};
 
 const std::string feature_recorder::CARVE_MODE_DESCRIPTION {"0=carve none; 1=carve encoded; 2=carve all"};
 
+const std::string feature_recorder::NO_CARVED_FILE {""};
+
 static inline bool isodigit(char c)
 {
     return c>='0' && c<='7';
@@ -272,9 +274,7 @@ void feature_recorder::write(const pos0_t &pos0,const std::string &feature_,cons
 #endif
 
     /* Finally write out the feature and the context */
-    if ( flags.no_features == false ){
-        this->write0(pos0,feature,context);
-    }
+    this->write0(pos0,feature,context);
     delete feature_utf8;
 }
 
@@ -391,9 +391,47 @@ std::string feature_recorder::carve_data(const sbuf_t &sbuf, const std::string &
                                          const size_t offset,
                                          const size_t len)
 {
-    /* Determine the directory and filename */
+    assert(offset < sbuf.bufsize);
 
-    int64_t myfileNumber = carved_files++; // atomic operation
+    /* Carving to a file depends on the carving mode.
+     *
+     * The purpose of CARVE_ENCODED is to allow us to carve JPEGs when
+     * they are embedded in, say, GZIP files, but not carve JPEGs that
+     * are bare.  The difficulty arises when you have a tool that can
+     * go into, say, ZIP files. In this case, we don't want to carve
+     * every ZIP file, just the (for example) XORed ZIP files. So the
+     * ZIP carver doesn't carve every ZIP file, just the ZIP files
+     * that are in HIBER files.  That is, we want to not carve a path
+     * of ZIP-234234 but we do want to carve a path of
+     * 1000-HIBER-33423-ZIP-2343.  This is implemented by having an
+     * do_not_carve_encoding. the ZIP carver sets it to ZIP so it
+     * won't carve things that are just found in a ZIP file. This
+     * means that it won't carve disembodied ZIP files found in
+     * unallocated space. You might want to do that.  If so, set ZIP's
+     * carve mode to CARVE_ALL.
+     */
+    switch(carve_mode){
+    case CARVE_NONE:
+        return NO_CARVED_FILE;                         // carve nothing
+    case CARVE_ENCODED:
+        if (sbuf.pos0.path.size() == 0 ) return NO_CARVED_FILE; // not encoded
+        if (sbuf.pos0.alphaPart() == do_not_carve_encoding) return std::string(); // ignore if it is just encoded with this
+        break;                                      // otherwise carve
+    case CARVE_ALL:
+        break;
+    }
+
+    /* Create the object that we are trying to carve */
+    sbuf_t cbuf(sbuf, offset, len);
+
+    /* See if we have previously carved this object, in which case do not carve it again */
+    std::string carved_hash_hexvalue = hash(cbuf);
+    if (carve_cache.check_for_presence_and_insert(carved_hash_hexvalue)){
+        return NO_CARVED_FILE;
+    }
+
+    /* Determine the directory and filename */
+    int64_t myfileNumber = carved_file_count++; // atomic operation
     std::ostringstream seq;
 
     seq << std::setw(3) << std::setfill('0') << int(myfileNumber/1000);
@@ -402,65 +440,34 @@ std::string feature_recorder::carve_data(const sbuf_t &sbuf, const std::string &
     const std::string seqDir {scannerDir + "/" + seq.str() };
     const std::string fname  {seqDir + "/" + sbuf.pos0.str() + "." + ext};
 
-    /* Create the directory. If it exists, the call fails, but that's faster than checking to see if it exists and then creating the directory */
+    /* Create the directory.
+     * If it exists, the call fails.
+     * (That's faster than checking to see if it exists and then creating the directory)
+     */
     std::filesystem::create_directory( scannerDir );
     std::filesystem::create_directory( seqDir );
 
-    /* Write the data
-     * TODO: Add error checking
-     */
+    /* Write the data */
     std::ofstream os;
     os.open( fname.c_str(), std::ios::out | std::ios::app | std::ios::binary | std::ios::trunc );
-    os.write( reinterpret_cast<const char *>(sbuf.buf), sbuf.bufsize );
-    os.close();
+    if (!os.is_open()) {
+        throw std::runtime_error("cannot open file "+fname);
+    }
+    else {
+        os.write( reinterpret_cast<const char *>(cbuf.buf), cbuf.bufsize );
+        if (os.bad()) {
+            throw std::runtime_error("error writing file "+fname);
+        }
+        os.close();
+    }
+
+    /* Set timestamp if necessary */
+    if (mtime>0) {
+        const struct timeval times[2] = {{mtime,0},{mtime,0}};
+        utimes(fname.c_str(),times);
+    }
 
     return fname;
-#if 0
-
-    int64_t mySeq = carved_files / 1000;
-
-
-
-    std::string dirname1 = fs.get_outdir()  + "/" + name;
-    std::stringstream ss;
-    ss << dirname1;
-    std::string dirname2 = ss.str();
-    std::string fname = dirname2 + std::string("/") + valid_dosname(filename);
-
-    /* Make the directory if it doesn't exist.  */
-    if (access(dirname2.c_str(),R_OK)!=0){
-#ifdef WIN32
-        mkdir(dirname1.c_str());
-        mkdir(dirname2.c_str());
-#else
-        mkdir(dirname1.c_str(),0777);
-        mkdir(dirname2.c_str(),0777);
-#endif
-    }
-
-    int oerrno = errno;                 // remember error number
-    if (access(dirname2.c_str(),R_OK)!=0){
-        std::cerr << "Could not make directory " << dirname2 << ": " << strerror(oerrno) << "\n";
-        return std::string();
-    }
-
-    // To control multiple thread writing
-    const std::lock_guard<std::mutex> lock(Mios);
-
-    /* Write the file into the directory */
-    int fd = ::open(fname.c_str(),O_CREAT|O_BINARY|O_RDWR,0666);
-    if(fd<0){
-        std::cerr << "*** carve: Cannot create " << fname << ": " << strerror(errno) << "\n";
-        return std::string();
-    }
-
-    ssize_t ret = ::write(fd,data,len);
-    if(ret<0){
-        std::cerr << "*** carve: Cannot write geneated header "<< fname << ": " << strerror(errno) << "\n";
-    }
-    ::close(fd);
-    return fname;
-#endif
 }
 
 const std::string feature_recorder::hash(const sbuf_t &sbuf) const
@@ -477,7 +484,8 @@ const std::string feature_recorder::hash(const sbuf_t &sbuf) const
  * @param len    - how many bytes to carve
  *
  */
-std::string feature_recorder::carve_data(const sbuf_t &sbuf, const std::string &ext, const time_t mtime, const size_t pos, const size_t len )
+std::string feature_recorder::carve_data(const sbuf_t &sbuf, const std::string &ext,
+                                         const time_t mtime, const size_t pos, const size_t len )
 {
     if (fs.disabled) return std::string();           // disabled
 
@@ -487,33 +495,6 @@ std::string feature_recorder::carve_data(const sbuf_t &sbuf, const std::string &
     }
     assert(pos < sbuf.bufsize);
 
-    /* Carve to a file depending on the carving mode.  The purpose
-     * of CARVE_ENCODED is to allow us to carve JPEGs when they are
-     * embedded in, say, GZIP files, but not carve JPEGs that are
-     * bare.  The difficulty arises when you have a tool that can go
-     * into, say, ZIP files. In this case, we don't want to carve
-     * every ZIP file, just the (for example) XORed ZIP files. So the
-     * ZIP carver doesn't carve every ZIP file, just the ZIP files
-     * that are in HIBER files.  That is, we want to not carve a path
-     * of ZIP-234234 but we do want to carve a path of
-     * 1000-HIBER-33423-ZIP-2343.  This is implemented by having an
-     * do_not_carve_encoding. the ZIP carver sets it to ZIP so it won't
-     * carve things that are just found in a ZIP file. This means that
-     * it won't carve disembodied ZIP files found in unallocated
-     * space. You might want to do that.  If so, set ZIP's carve mode
-     * to CARVE_ALL.
-     */
-    switch(carve_mode){
-    case CARVE_NONE:
-        return std::string();                         // carve nothing
-    case CARVE_ENCODED:
-        if (sbuf.pos0.path.size() == 0 ) return std::string(); // not encoded
-        if (sbuf.pos0.alphaPart() == do_not_carve_encoding) return std::string(); // ignore if it is just encoded with this
-        break;                                      // otherwise carve
-    case CARVE_ALL:
-        break;
-    }
-
     /* If the directory doesn't exist, make it.
      * If two threads try to make the directory,
      * that's okay, because the second one will fail.
@@ -521,9 +502,6 @@ std::string feature_recorder::carve_data(const sbuf_t &sbuf, const std::string &
 
     sbuf_t cbuf(sbuf,pos,len);          // the buf we are going to carve
     std::string carved_hash_hexvalue = hash(cbuf);
-
-    /* See if this is in the cache */
-    bool in_cache = carve_cache.check_for_presence_and_insert(carved_hash_hexvalue);
 
 
     uint64_t this_file_number = file_number_add(in_cache ? 0 : 1); // increment if we are not in the cache

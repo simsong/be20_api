@@ -108,6 +108,7 @@ public:;
         bool  no_context;         // Do not write context.
         bool  no_stoplist;        // Do not honor the stoplist/alertlist.
         bool  no_alertlist;       // Do not honor the stoplist/alertlist.
+        bool  no_features;         // do not record features (used for in-memory histogram recorder)
     /**
      * Normally feature recorders automatically quote non-UTF8 characters
      * with \x00 notation and quote "\" as \x5C. Specify FLAG_NO_QUOTE to
@@ -121,40 +122,29 @@ public:;
      */
         bool  xml;                 // will be sending XML
 
-    /**
-     * histogram support.
-     */
-        bool no_features; // do not record features (just memory histogram)
-
     } flags {};
     /** @} */
-    static constexpr int max_histogram_files = 10;  // don't make more than 10 files in low-memory conditions
 
+    /* Special flags written into the file */
     static const std::string MAX_DEPTH_REACHED_ERROR_FEATURE;
     static const std::string MAX_DEPTH_REACHED_ERROR_CONTEXT;
+
+    /* quoting functions */
     static std::string quote_string(const std::string &feature); // turns unprintable characters to octal escape
     static std::string unquote_string(const std::string &feature); // turns octal escape back to binary characters
     static std::string extract_feature(const std::string &line); // remove the feature from a feature file line
 
     /* Support for hashing */
-    //typedef      std::string (*hashing_function_t)( const sbuf_t &sbuf); // returns a hex value
-    // hash an sbuf with the current hashing function and return it
     const std::string hash(const sbuf_t &sbuf) const;
 
     /* File management */
-    // returns a feature recorder filename in the outdir with an optional suffix before the file extension.
-    // The suffix is used for histograms.
-    //const std::string fname_suffix(std::string suffix) const;
-    const std::string fname_in_outdir(std::string suffix) const; // returns the name of a dir in the outdir
 
-    // These must only be changed in the main thread at the start of program execution:
-
-    /* Methods to write.
-     * write() is the basic write - you say where, and it does it.
-     * write_buf() writes from a position within the buffer, with context.
-     *             It won't write a feature that starts in the margin.
-     * pos0 gives the location and prefix for the beginning of the buffer
+    /* fname_in_outdir():
+     * returns a filename in the outdir with an optional suffix before the file extension.
+     * Guarenteed not to exist.
      */
+
+    const std::string fname_in_outdir(std::string suffix) const; // returns the name of a dir in the outdir
 
     /**
      * write0() actually does the writing to the file.
@@ -165,28 +155,28 @@ public:;
     virtual void write0(const std::string &str);
     virtual void write0(const pos0_t &pos0,const std::string &feature,const std::string &context);
 
-    // higher-level write a feature and its context; the feature may be in the context, but doesn't need to be.
-    // entries processed by write below will be processed by histogram system
+    /* Methods used by scanners to write.
+     * write() is the basic write - you say where, and it does it.
+     * write_buf() writes from a position within the buffer, with context.
+     *             It won't write a feature that starts in the margin.
+     * pos0 gives the location and prefix for the beginning of the buffer
+     *
+     * higher-level write a feature and its context; the feature may be in the context, but doesn't need to be.
+     * entries processed by write below will be processed by histogram system
+     */
     virtual void write(const pos0_t &pos0,const std::string &feature,const std::string &context);
 
-    // write a feature located at a given place within an sbuf.
-    // Context is written automatically
+    /* write_buf():
+     * write a feature located at a given place within an sbuf.
+     * Context is written automatically
+     */
     virtual void write_buf(const sbuf_t &sbuf, size_t pos, size_t len); /* writes with context */
 
-    /**
-     * support for writing features
+    /*
+     * quote feature and context if they are not valid utf8 and if it is important to do so based on flags above.
+     * note - modifies arguments!
      */
-
-    // quote feature and context if they are not valid utf8 and if it is important to do so
     void quote_if_necessary(std::string &feature,std::string &context);
-
-    // printf() prints to the feature file.
-    //virtual void printf(const char *fmt_,...) __attribute__((format(printf, 2, 3)));
-    //
-    // write a feature and its context; the feature may be in the context, but doesn't need to be.
-    /****************************************************************
-     *** External entry points.
-     ****************************************************************/
 
     /**
      * support for carving.
@@ -198,12 +188,14 @@ public:;
     enum carve_mode_t {
         CARVE_NONE=0,
         CARVE_ENCODED=1,
-        CARVE_ALL=2};
+        CARVE_ALL=2
+    };
 
-    std::atomic<int64_t>       carved_files {0};        // starts at 0; gets incremented by carve();
+    std::atomic<int64_t>       carved_file_count {0};        // starts at 0; gets incremented by carve();
     atomic_set<std::string>    carve_cache {}; // hashes of files that have been cached, so the same file is not carved twice
     std::string  do_not_carve_encoding {};            // do not carve files with this encoding.
     static const std::string CARVE_MODE_DESCRIPTION;
+    static const std::string NO_CARVED_FILE;
     std::atomic<carve_mode_t> carve_mode { CARVE_ENCODED};
 
     // Carve data or a record to a file; returns filename of carved file or empty string if nothing carved

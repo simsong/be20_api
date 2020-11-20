@@ -8,16 +8,31 @@ The Bulk_Extractor API is a plug-in API for bulk_extractor "scanners." Scanners 
 as `extern "C"` functions which are called from the bulk_extractor C++ framework. All bulk_extractor
 scanners are implemented using the API. Scanners can either be compiled into the bulk_extractor executable, or they can be loaded at run-time from the plug-ins directory. The directory contains zero or more shared libraries (on Unix/Linux/MacOS) or DLLs (on Windows).
 
-There is no differnece in functionality between scanners that are compiled into bulk_extractor and those that are loaded at runtime.
+There is no differnece in functionality between scanners that are
+compiled into the program (e.g. bulk_extractor or tcpflow) and those that are loaded at runtime.
 
 The API defines functions for:
 
-1. Initializing the scanner.
-2. Scanning an `sbuf`.
-3. Recording features that are discovered in `sbuf`s.
-4. Creating new `sbuf`s with data from the current `sbuf`.
-5. Requesting scans of the newly created `sbuf`s.
-6. Shutting down.
+1. Creating a `scanner_set`.  This creates the scanner_set's `feature_recorder_set`.
+
+2. Loading scanners into a scanner set.  When each scanner is loaded:
+
+  2.1 Any feature recorders that it specifies will be created and
+  added to the `feature_recorder_set` if they do not already exist.
+
+3. Entering the scanning phase.
+
+4. Scanning one or more `sbuf`s, which may cause scanners to create child sbufs
+   and recursively scan them.
+
+5. Exiting the scanning phase and running the histogram phase, which
+   causes the scanner_set to collect from the scanner all of the
+   specified histograms (by `feature_recorder` name and regular
+   expression). Each feature recorder is then asked to make its
+   histograms (this process can be parallelized too, and will be
+   parallelized in the future!)
+
+6. Finally, the `scanner_set` shuts down and everything is de-allocated.
 
 ## Working with this repo
 This repo can used in three ways:
@@ -34,33 +49,9 @@ Use the  `bootstrap.sh` program in *this* repo to compile the test programs.
 
 Git submodules are complicated. Basically, the parent module is linked to a paritcular commit point, and not to a particular branch. This isolates parent modules from changes in the submodule until the parent module wants to accept the change.
 
-Here are some things to help you understand this:
-
-References:
-  * http://stackoverflow.com/questions/7259535/git-setting-up-a-remote-origin
-  * http://stackoverflow.com/questions/5828324/update-git-submodule
-
 Update to this repository to master:
 
-    git pull origin master
-
-Push changes in this repository to master:
-
-    git push origin master
-
-If you get this error:
-
-    error: failed to push some refs to 'git@github.com:simsong/be13_api.git'
-    hint: Updates were rejected because a pushed branch tip is behind its remote
-    hint: counterpart. If you did not intend to push that branch, you may want to
-    hint: specify branches to push or set the 'push.default' configuration
-    hint: variable to 'current' or 'upstream' to push only the current branch.
-    $
-
-Do this:
-
-    $ git checkout -b tmp  ; git fetch ; git checkout -b $USER-dev ; git merge master ; git merge tmp ; git push origin $USER-dev
-
+    (cd be13_api; git pull origin master)
 
 # Major changes with BE13 v. 2.0:
 * `scanner_set` now controls the recursive scanning process. Scanner
