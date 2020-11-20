@@ -164,16 +164,13 @@ TEST_CASE("feature_recorder_set", "[frs]" ) {
         flags.no_alert = true;
 
         feature_recorder_set frs( flags, "sha1", scanner_config::NO_INPUT, tempdir);
-        //feature_recorder_set::feature_file_names_t feature_files;
         frs.create_named_feature_recorder("test");
         REQUIRE( frs.get_name("test") != nullptr);
         REQUIRE( frs.get_name("test_not") == nullptr);
-        //frs.init(feature_files);
 
         feature_recorder *ft = frs.get_name("test");
         pos0_t p;
         ft->write(p, "feature", "context");
-        //frs.close_all();
     }
     /* get the last line of the test file and see if it is correct */
     std::string expected_lastline {"0\tfeature\tcontext\n"};
@@ -208,6 +205,7 @@ TEST_CASE( "histogram.h", "[be13_api]") {
     REQUIRE( c.range_G_Z == 0);
     REQUIRE( c.range_0_9 == 1);
 }
+
 /****************************************************************
  *
  * pos0.h:
@@ -249,7 +247,7 @@ TEST_CASE( "test regex_vector", "[vector]" ) {
     rv.push_back("this.*");
     rv.push_back("check[1-9]");
     rv.push_back("thing");
-    //std::cout << rv;
+
     REQUIRE( rv.size() == 3);
 
     std::string found;
@@ -399,7 +397,7 @@ TEST_CASE("run", "[scanner_set]") {
     ss.phase_scan();                    // start the scanner phase
     ss.process_sbuf( hello_sbuf() );
     ss.process_histograms();
-    ss.shutdown();
+    ss.shutdown(nullptr);
     /* The sha1 scanner makes a single histogram. Make sure we got it. */
     //REQUIRE( ss.count_histograms() == 1);
 }

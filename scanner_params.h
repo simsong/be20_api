@@ -94,8 +94,8 @@ struct scanner_params {
         std::string       scanner_version {};     //   version for the scanner
         std::string       pathPrefix{};           //   this scanner's path prefix for recursive scanners. e.g. "GZIP"
         uint64_t          flags {};               //   flags
-        std::set<std::string> feature_names {};   //   feature files that this scanner needs.
-        histogram_defs_t  histogram_defs {};      //   histogram definition info
+        std::set<std::string>    feature_names {};   //   feature files that this scanner needs.
+        std::set<histogram_def>  histogram_defs {};      //   histogram definition info
         //void              *packet_user {};        //   data for network callback
         //be13::packet_callback_t *packet_cb {};    //   callback for processing network packets, or NULL
     };

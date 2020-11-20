@@ -18,6 +18,7 @@
 #include "scanner_config.h"
 #include "scanner_set.h"
 #include "dfxml/src/hash_t.h"
+#include "dfxml/src/dfxml_writer.h"
 #include "aftimer.h"
 
 
@@ -96,10 +97,9 @@ void scanner_set::add_scanner(scanner_t scanner)
     const sbuf_t sbuf;
     scanner_params::PrintOptions po;
     scanner_params sp(*this, scanner_params::PHASE_INIT, sbuf, po);
-    //recursion_control_block rcb(0,"");
 
-    //std::cerr << "register_info: " << register_info << "\n";
-    // Initialize the scanner, which adds it to the database
+    // Send the scanner the PHASE_INIT message, which will cause it to call
+    // register_info above, which will add the scanner's scanner_info to the database.
     (*scanner)(sp);
 
     if (scanner_info_db.find(scanner) == scanner_info_db.end()){
@@ -281,13 +281,18 @@ bool scanner_set::is_find_scanner_enabled()
 }
 
 
-/** Name of feature files that should be histogramed.
- * The histogram should be done in the plug-in
- */
-
 /****************************************************************
  *** scanner plugin loading
  ****************************************************************/
+const std::string scanner_set::get_scanner_name(scanner_t scanner) const
+{
+    auto it = scanner_info_db.find(scanner);
+    if (it != scanner_info_db.end()){
+        return it->second->name;
+    }
+    return "";
+}
+
 scanner_t *scanner_set::get_scanner_by_name(const std::string &search_name) const
 {
     for (auto it: scanner_info_db) {
@@ -360,18 +365,6 @@ void scanner_set::info_scanners(std::ostream &out,
 }
 
 
-/* Add the histograms to the feature recorders for all of the enabled scanners */
-void scanner_set::add_enabled_scanner_histograms()
-{
-#if 0
-    for (auto it: scanner_info_db ){
-        for (auto hi: it.second->histogram_defs ){
-            fs.add_histogram( hi );
-        }
-    }
-#endif
-}
-
 
 #if 0
 /****************************************************************
@@ -429,9 +422,14 @@ const std::string & scanner_set::get_input_fname() const
 /****************************************************************
  *** PHASE_SCAN methods.
  ****************************************************************/
+
+
+/* Transition to the scanning phase */
 void scanner_set::phase_scan()
 {
-    assert(current_phase == scanner_params::PHASE_INIT);
+    if (current_phase != scanner_params::PHASE_INIT){
+        throw std::runtime_error("start_scan can only be run in scanner_params::PHASE_INIT");
+    }
     current_phase = scanner_params::PHASE_SCAN;
 }
 
@@ -442,6 +440,17 @@ void scanner_set::phase_scan()
 
 void scanner_set::process_histograms()
 {
+    /* Go through the scanners, get all of the histograms, and */
+
+    std::set<histogram_def *>hset;              // place to hold the histograms
+
+    // loop through all scanners and all histograms and find all of the defs
+    // This doesn't dedupe yet. It should.
+    for (auto it: scanner_info_db ){
+        for (auto hi: it.second->histogram_defs ){
+            hset.insert( &hi );
+        }
+    }
 }
 
 
@@ -450,7 +459,7 @@ void scanner_set::process_histograms()
  *** PHASE_SHUTDOWN methods.
  ****************************************************************/
 
-void scanner_set::shutdown()
+void scanner_set::shutdown(dfxml_writer *writer)
 {
     if (current_phase != scanner_params::PHASE_SCAN){
         throw std::runtime_error("shutdown can only be called in scanner_params::PHASE_SCAN");
@@ -464,8 +473,23 @@ void scanner_set::shutdown()
     for ( auto it: enabled_scanners ){
         (*it)(sp);
     }
-}
 
+    process_histograms();
+
+    /* Output the scanner stats */
+    if (writer) {
+        writer->push("scanner_stats");
+        for( auto it: scanner_stats ){
+            writer->set_oneline("true");
+            writer->push("scanner");
+            writer->xmlout("name", get_scanner_name(it.first));
+            writer->xmlout("ns", it.second->ns);
+            writer->xmlout("calls", it.second->calls);
+            writer->pop();
+        }
+        writer->pop();
+    }
+}
 
 // https://stackoverflow.com/questions/16190078/how-to-atomically-update-a-maximum-value
 template<typename T>
@@ -478,14 +502,7 @@ void update_maximum(std::atomic<T>& maximum_value, T const& value) noexcept
 }
 
 
-/* Transition to the scanning phase */
-void scanner_set::start_scan()
-{
-    if (current_phase != scanner_params::PHASE_INIT){
-        throw std::runtime_error("start_scan can only be run in scanner_params::PHASE_INIT");
-    }
-}
-
+/* Process an sbuf! */
 void scanner_set::process_sbuf(const class sbuf_t &sbuf)
 {
     /* If we  have not transitioned to PHASE::SCAN, error */
@@ -597,7 +614,7 @@ void scanner_set::process_sbuf(const class sbuf_t &sbuf)
                               << name << " t=" << t.elapsed_seconds() << "\n";
                 }
 #endif
-                fs.add_stats(epath,t.elapsed_seconds());
+                // fs.add_stats(epath,t.elapsed_seconds());
             }
 
         }
@@ -621,7 +638,6 @@ void scanner_set::process_sbuf(const class sbuf_t &sbuf)
             if(alert_recorder) alert_recorder->write(sbuf.pos0,"scanner="+name,"<unknown_exception/>");
         }
     }
-    //fs.flush_all();
 }
 
 

@@ -12,6 +12,7 @@
 #include "scanner_params.h"
 #include "scanner_config.h"
 #include "sbuf.h"
+#include "atomic_set_map.h"
 
 /**
  * \file
@@ -85,44 +86,46 @@ class scanner_set {
     scanner_commands_t scanner_commands {};
     void    process_scanner_commands(const std::vector<scanner_command> &scanner_commands); // process the commands
 
-    /* These vectors keep track of the scanners that have been registered, enabled, and information about each scanner. */
-    //typedef std::vector<scanner_t *> scanner_vector_t;
-    //scanner_vector_t all_scanners;        // all of the scanners in the set
-    //scanner_vector_t enabled_scanners;    // the scanners that are enabled
+    /* The scanners that are registered and enabled */
 
-    typedef std::set<scanner_t *> scanner_set_set_t;
-    scanner_set_set_t enabled_scanners {};    // the scanners that are enabled
+    // Map the scanner name to the scanner pointer
+    std::map<scanner_t *, const struct scanner_params::scanner_info *>scanner_info_db {};
+    std::set<scanner_t *> enabled_scanners {};    // the scanners that are enabled
+
+    // scanner_stats
+    struct stats {
+        std::atomic<uint64_t> ns    {0};    // nanoseconds
+        std::atomic<uint64_t> calls {0}; // calls
+    };
+    atomic_map<scanner_t *,struct stats *> scanner_stats {}; // maps scanner name to performance stats
+
 
     // a pointer to every scanner info in all of the scanners.
     // This provides all_scanners
-    std::map<scanner_t *, const struct scanner_params::scanner_info *>scanner_info_db {};
 
     // The scanner_set's configuration for all the scanners that are loaded.
     const  scanner_config sc;
 
     /* The feature recorder set where the scanners outputs are stored */
-    class    feature_recorder_set fs;
+    class  feature_recorder_set fs;
 
     /* Run-time configuration for all of the scanners (per-scanner configuration is stored in sc)
      * Default values are hard-coded below.
      */
 
-    uint32_t max_depth             {7};       // maximum depth for recursive scans
-    //uint32_t max_depth_seen        {0};       // maximum depth for recursive scans
-    //mutable std::mutex max_depth_seenM     {};
-    std::atomic<uint32_t> max_depth_seen {0};
-
+    unsigned int max_depth                   {7};       // maximum depth for recursive scans
+    std::atomic<unsigned int> max_depth_seen {0};
     std::atomic<uint64_t> sbuf_seen {0}; // number of seen sbufs.
 
     uint32_t max_ngram             {10};      // maximum ngram size to scan for
-    bool     dup_data_alerts       {false};  // notify when duplicate data is not processed
+    bool     dup_data_alerts       {false};   // notify when duplicate data is not processed
     std::atomic<uint64_t> dup_bytes_encountered  {0}; // amount of dup data encountered
-    std::ostream *sxml            {nullptr}; // if provided, a place to put XML tags when scanning
-    //void     message_enabled_scanners(scanner_params::phase_t phase);
+    std::ostream *sxml             {nullptr}; // if provided, a place to put XML tags when scanning
+
     scanner_params::phase_t     current_phase {scanner_params::PHASE_INIT};
 
-    /* Implementation of transition from the init phase to the first scanning phase */
-    void     add_enabled_scanner_histograms(); // called when switching from PHASE_INIT to PHASE_SCAN
+
+
 
 public:;
     /* constructor and destructor */
@@ -171,6 +174,7 @@ public:;
     bool    is_find_scanner_enabled(); // return true if a find scanner is enabled
 
     /* These functions must be virtual so they can be called by dynamically loaded plugins */
+    const std::string get_scanner_name(scanner_t scanner) const; // returns the name of the scanner
     virtual scanner_t *get_scanner_by_name(const std::string &name) const;
     virtual feature_recorder *get_feature_recorder_by_name(const std::string &name) const;
 
@@ -183,8 +187,6 @@ public:;
     const std::string & get_input_fname() const;
 
     /* PHASE SCAN */
-    void start_scan();
-    uint32_t get_max_depth_seen() const;
 
     /* Managing scanners */
     // TK - should this be an sbuf function?
@@ -193,11 +195,7 @@ public:;
     //void  get_scanner_feature_file_names(feature_file_names_t &feature_file_names);
 
     // enabling and disabling of scanners
-    //void scanners_disable_all();                    // saves a command to disable all
-    //void scanners_enable_all();                    // enable all of them
     static std::string ALL_SCANNERS;
-    //void scanner_enable(const std::string &name); // saves a command to enable this scanner
-    //void scanner_disable(const std::string &name); // saves a command to disable this scanner
 
     // returns the named scanner, or 0 if no scanner of that name
 
@@ -213,12 +211,13 @@ public:;
     // sxml is where to put XML from scanners that shutdown
     // the sxml should go to the constructor
 
+    uint32_t get_max_depth_seen() const;
+
+    /* PROCESS HISTOGRAMS */
     void     process_histograms();
-    void     shutdown();
 
     /* PHASE_SHUTDOWN */
-
-    //size_t   count_histograms() const;
+    void     shutdown(class dfxml_writer *);
 };
 
 #endif

@@ -48,10 +48,6 @@ struct histogram_def {
  * 2 - Do not make historam_def const!  It breaks some compilers.
  */
 
-typedef  std::set<histogram_def> histogram_defs_t; // a set of histogram definitions
-
-
-
 /**
  * \class CharClass
  * Examine a block of text and count the number of characters

@@ -109,6 +109,7 @@ template <class T1,class T2 > class atomic_map {
     std::map<T1, T2>mymap {};
 public:
     atomic_map(){}
+    ~atomic_map(){}
     T2 operator [](const T1 &key){
         const std::lock_guard<std::mutex> lock(M);
         return mymap[key];

@@ -29,37 +29,15 @@ public:;
     feature_recorder_file(class feature_recorder_set &fs, const std::string &name);
     virtual        ~feature_recorder_file();
 
-
-    //void           enable_memory_histograms();              // only called from feature_recorder_set
-    //static std::thread::id main_thread_id;
-
-    //typedef int (dump_callback_t)(void *user,const feature_recorder &fr,const histogram_def &def,
-    //const std::string &feature,const uint64_t &count);
-    //static  void set_debug( uint32_t ndebug ){ debug=ndebug; }
-    //typedef std::string offset_t;
-
 private:
     std::mutex   Mios {};                        // mutex for IOS
     std::fstream ios {};                        // where features are written
 
-    /*
-     * histograms for this feature_recorder, populated by the scanners.
-     */
-    histogram_defs_t      histogram_defs {};
-
-    mhistograms_t mhistograms {}; // the memory histograms, if we are using them
-    //std::atomic<uint64_t>      mhistogram_limit {}; // how many we want (per feature recorder limit, rather than per histogram)
     void   banner_stamp(std::ostream &os,const std::string &header) const; // stamp banner, and header
-#if 0
-    uint64_t file_number_add(uint64_t i){
-        return file_number_.fetch_add(i) + i;
-    }
-#endif
 
     static const std::string histogram_file_header;
     static const std::string feature_file_header;
     static const std::string bulk_extractor_version_header;
-
 
 public:
     /* these are not threadsafe and should only be called in startup */

@@ -218,37 +218,19 @@ bool feature_recorder_set::check_previously_processed(const sbuf_t &sbuf)
  *** Stats
  ****************************************************************/
 
-void feature_recorder_set::add_stats(const std::string &bucket,double seconds)
+void feature_recorder_set::dump_name_count_stats(dfxml_writer *writer) const
 {
-    const std::lock_guard<std::mutex> lock(Mscanner_stats);
-    struct pstats &p = scanner_stats[bucket]; // get the location of the stats
-    p.seconds += seconds;
-    p.calls ++;
-}
-
-/*
- * Send the stats to a callback; if the callback returns less than 0, abort.
- */
-void feature_recorder_set::get_stats(void *user,stat_callback_t stat_callback) const
-{
-    for(scanner_stats_map::const_iterator it = scanner_stats.begin();it!=scanner_stats.end();it++){
-        if((*stat_callback)(user,(*it).first,(*it).second.calls,(*it).second.seconds)<0){
-            break;
+    if (writer) {
+        writer->push("feature_files");
+        for (auto ij: frm) {
+            writer->set_oneline(true);
+            writer->push("feature_file");
+            writer->xmlout("name",ij.second->name);
+            writer->xmlout("count",ij.second->features_written);
+            writer->pop();
+            writer->set_oneline(false);
         }
-    }
-}
-
-void feature_recorder_set::dump_name_count_stats(dfxml_writer &writer) const
-{
-    const std::lock_guard<std::mutex> lock(Mscanner_stats);
-    writer.push("feature_files");
-    for (auto ij: frm) {
-        writer.set_oneline(true);
-        writer.push("feature_file");
-        writer.xmlout("name",ij.second->name);
-        writer.xmlout("count",ij.second->features_written);
-        writer.pop();
-        writer.set_oneline(false);
+        writer->pop();
     }
 }
 

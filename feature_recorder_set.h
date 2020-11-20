@@ -9,7 +9,6 @@
 #include "sbuf.h"
 #include "feature_recorder.h"
 #include "histogram.h"
-#include "dfxml/src/dfxml_writer.h"
 
 /** \addtogroup internal_interfaces
  * @{
@@ -57,13 +56,10 @@ class feature_recorder_set {
     // TK-replace with an atomic_set:
     atomic_map<std::string, class feature_recorder *> frm {};
     //feature_recorder_map  frm {};              // map of feature recorders, name->feature recorder, by name
-    mutable std::mutex    Mscanner_stats {};   // locks frm and scanner_stats_map
     feature_recorder      *stop_list_recorder {nullptr}; // where stopped features get written (if there is one)
-    //histogram_defs_t      histogram_defs {};   // histograms that are to be created.
-    //mutable std::mutex    Min_transaction {};
-    //bool                  in_transaction {};
 #if defined(HAVE_SQLITE3_H) and defined(HAVE_LIBSQLITE3)
-    sqlite3               *db3 {};              // databse handle opened in SQLITE_OPEN_FULLMUTEX mode
+    /* If we are compiled with SQLite3, this is the handle to the open database */
+    sqlite3               *db3 {};
 #endif
 
 public:
@@ -106,16 +102,8 @@ public:
         static hash_func_t hash_func_for_name(const std::string &name);
     };
 
-    // performance Statistics for each scanner*/
-    struct pstats {
-        double seconds {};
-        uint64_t calls {};
-    };
-    typedef std::map<std::string,struct pstats> scanner_stats_map; // maps scanner name to performance stats
-
     const word_and_context_list *alert_list {};		/* shold be flagged */
     const word_and_context_list *stop_list {};		/* should be ignored */
-    scanner_stats_map      scanner_stats {};
 
     /** hashing system */
     const  hash_def       hasher;                    // name and function that perform hashing; set by allocator
@@ -134,23 +122,9 @@ public:
      * init() is called after all of the scanners have been loaded. It
      * tells each feature file about its histograms (among other things)
      */
-    //typedef std::set<std::string>feature_file_names_t;
-    //void    init(const feature_file_names_t &feature_files);
-    //void    flush_all();
-    //void    close_all();
-    //bool    has_name(std::string name) const;           /* does the named feature exist? */
 
     /* feature_recorder_set flags */
     /* Flags are now implemented as booleans per stroustrup 2013 */
-    //static const uint32_t MEM_HISTOGRAM             = 0x20;  // enable the in-memory histogram
-    //static const uint32_t ENABLE_SQLITE3_RECORDERS  = 0x40;  // save features to an SQLITE3 databse
-    //static const uint32_t DISABLE_FILE_RECORDERS    = 0x80;  // do not save features to file-based recorders
-    //static const uint32_t NO_ALERT                  = 0x100; // no alert recorder
-    //void     set_flag(uint32_t f);
-    //void     unset_flag(uint32_t f);
-    //bool     flag_set(uint32_t f)     const { return flags & f; }
-    //bool     flag_notset(uint32_t f)  const { return !(flags & f); }
-    //uint32_t get_flags()              const { return flags; }
 
     /* These used to be static variables in the feature recorder class. They are more properly here */
     uint32_t    opt_max_context_size {64};
@@ -176,10 +150,7 @@ public:
     virtual feature_recorder *get_alert_recorder();
     virtual void get_feature_file_list(std::vector<std::string> &ret); // clears ret and fills with a list of feature file names
 
-    void    add_stats(const std::string &bucket,double seconds);
-    typedef int (*stat_callback_t)(void *user,const std::string &name,uint64_t calls,double seconds);
-    void    get_stats(void *user,stat_callback_t stat_callback) const;
-    void    dump_name_count_stats(dfxml_writer &writer) const;
+    void    dump_name_count_stats(class dfxml_writer *writer) const;
 
     /****************************************************************
      *** DB interface
