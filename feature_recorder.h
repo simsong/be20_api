@@ -126,7 +126,7 @@ public:;
      */
         bool no_features; // do not record features (just memory histogram)
 
-    } flags;
+    } flags {};
     /** @} */
     static constexpr int max_histogram_files = 10;  // don't make more than 10 files in low-memory conditions
 

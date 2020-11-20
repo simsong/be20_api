@@ -123,9 +123,30 @@ std::string get_tempdir()
         tempdir += '/';
     }
     tempdir += random_string(8);
-    std::cout << "tempdir: " << tempdir << "\n";
     std::filesystem::create_directory(tempdir);
     return tempdir;
+}
+
+/****************************************************************
+ * feature_recorder.h
+ */
+#include "scanner_config.h"
+#include "feature_recorder.h"
+#include "feature_recorder_set.h"
+TEST_CASE("quote_if_necessary", "[feature_recorder]") {
+    std::string f1("feature");
+    std::string c1("context");
+
+    feature_recorder_set::flags_t flags;
+    flags.no_alert = true;
+
+    feature_recorder_set frs( flags, "md5", scanner_config::NO_INPUT, scanner_config::NO_OUTDIR);
+    frs.create_named_feature_recorder("test");
+    feature_recorder *ft = frs.get_name("test");
+    REQUIRE( ft!=nullptr );
+    ft->quote_if_necessary(f1,c1);
+    REQUIRE( f1=="feature" );
+    REQUIRE( c1=="context" );
 }
 
 /****************************************************************
@@ -133,9 +154,6 @@ std::string get_tempdir()
  *
  * Create a simple set and write a feature.
  */
-#include "feature_recorder.h"
-#include "scanner_config.h"
-#include "feature_recorder_set.h"
 //static feature_recorder_set::hash_def my_hasher(hash_name,hash_func);
 TEST_CASE("feature_recorder_set", "[frs]" ) {
 
@@ -157,7 +175,6 @@ TEST_CASE("feature_recorder_set", "[frs]" ) {
         ft->write(p, "feature", "context");
         //frs.close_all();
     }
-    std::cout << "check out: " << tempdir << "\n";
     /* get the last line of the test file and see if it is correct */
     std::string expected_lastline {"0\tfeature\tcontext\n"};
     std::string found_lastline;
@@ -450,4 +467,18 @@ TEST_CASE("unicode_escape", "[unicode]") {
     REQUIRE( utf8cont( U1F601[1] ) == true);  // the second is
     REQUIRE( utf8cont( U1F601[2] ) == true);  // the third is
     REQUIRE( utf8cont( U1F601[3] ) == true);  // the fourth is
+
+    REQUIRE( valid_utf8codepoint(0x01) == true);
+    REQUIRE( valid_utf8codepoint(0xffff) == false);
+
+    std::string hellos("hello");
+    /* Try all combinations with valid UTF8 */
+    for(int a=0;a<2;a++){
+        for(int b=0;b<2;b++){
+            for(int c=0;c<2;c++) {
+                REQUIRE( validateOrEscapeUTF8(hellos, a, b, c) == hellos);
+            }
+        }
+    }
+    REQUIRE( validateOrEscapeUTF8("backslash=\\", false, true, false) == "backslash=\\x5C");
 }

@@ -1,6 +1,3 @@
-#ifndef FEATURE_RECORDER_SQL_H
-#define FEATURE_RECORDER_SQL_H
-
 #include <cinttypes>
 #include <cassert>
 
@@ -19,7 +16,9 @@
 #include "sbuf.h"
 #include "histogram.h"
 
+#ifdef HAVE_SQLITE3_H
 #include <sqlite3.h>
+#endif
 
 class feature_recorder_sql : public feature_recorder {
     static void truncate_at(std::string &line, char ch) {
@@ -45,4 +44,5 @@ public:
     virtual ~feature_recorder_sql();
 
 };
+#endif
 #endif

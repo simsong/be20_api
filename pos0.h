@@ -4,6 +4,7 @@
 #include <cinttypes>
 #include <sstream>
 #include <string>
+#include <algorithm>
 
 /****************************************************************
  *** pos0_t

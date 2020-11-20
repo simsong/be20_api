@@ -6,6 +6,8 @@
 
 #include "config.h"
 
+#ifdef HAVE_SQLITE3_H
+
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -179,4 +181,5 @@ void feature_recorder::write(const pos0_t &pos0, const std::string &feature, con
         write0_sqlite3( pos0, feature, context);
     }
 }
+#endif
 #endif

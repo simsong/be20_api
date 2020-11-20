@@ -2,7 +2,6 @@
 
 #include "config.h"
 
-//#include "bulk_extractor_i.h"
 #include "scanner_config.h"
 #include "histogram.h"
 #include "feature_recorder_set.h"
@@ -71,10 +70,13 @@ feature_recorder_set::feature_recorder_set( const flags_t &flags_,
     }
 
     /* Make sure we can write to the outdir if one is provided */
-    if ((outdir != scanner_config::NO_OUTDIR) && (access(outdir.c_str(),W_OK)!=0)) {
-        throw std::invalid_argument("output directory not writable");
+    if (outdir == scanner_config::NO_OUTDIR){
+        flags.disabled = true;
+    } else {
+        if (access(outdir.c_str(),W_OK)!=0) {
+            throw std::invalid_argument("output directory not writable");
+        }
     }
-    /* Now initialize the scanners */
 
     /* Create a disabled feature recorder if necessary */
     if ( flags.disabled ){

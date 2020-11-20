@@ -51,10 +51,12 @@
 feature_recorder_file::feature_recorder_file(class feature_recorder_set &fs_, const std::string &name_):
     feature_recorder(fs_,name_)
 {
-    /*
-     * If the feature recorder set is disabled, just return.
-     */
+    /* If the feature recorder set is disabled, just return. */
     if ( fs.flags.disabled ) return;
+
+    /* If there is no output directory, just return */
+    //if ( fs.get_outdir() == scanner_config::NO_OUTDIR ) return;
+
     //if ( fs.flag_set(feature_recorder_set::DISABLE_FILE_RECORDERS)) return;
 
     /* Open the file recorder for output.

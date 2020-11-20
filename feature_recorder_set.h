@@ -83,7 +83,7 @@ public:
      * @param flags_ = config flags
      * @param hash_algorithm - which algorithm to use for de-duplication
      * @param input_fname_ = where input comes from
-     * @param outdir_ = output directory (passed to feature recorders).
+     * @param outdir_ = output directory (passed to feature recorders). "" if disabled.
      * This clearly needs work.
      */
     feature_recorder_set( const flags_t &flags_,
@@ -153,10 +153,10 @@ public:
     //uint32_t get_flags()              const { return flags; }
 
     /* These used to be static variables in the feature recorder class. They are more properly here */
-    uint32_t    opt_max_context_size;
-    uint32_t    opt_max_feature_size;
-    int64_t     offset_add;          // added to every reported offset, for use with hadoop
-    std::string banner_filename;         // banner for top of every file
+    uint32_t    opt_max_context_size {64};
+    uint32_t    opt_max_feature_size {64};
+    int64_t     offset_add {0};          // added to every reported offset, for use with hadoop
+    std::string banner_filename {};         // banner for top of every file
 
     /* histogram support */
 

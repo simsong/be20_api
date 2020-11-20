@@ -81,7 +81,7 @@ struct scanner_params {
                 if ( depth_0 )        ret += " DEPTH_0";
                 return ret;
             }
-        } scanner_flags;
+        } scanner_flags {};
 
         scanner_info(){};
         /* PASSED FROM SCANNER to API: */

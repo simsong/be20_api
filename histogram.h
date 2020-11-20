@@ -138,7 +138,7 @@ private:
      */
     typedef std::map<std::string,histogramTally> HistogramMap;
     HistogramMap h;			// holds the histogram
-    uint32_t     flags;			// see above
+    uint32_t     flags {};              // see above
 public:
 
     /**

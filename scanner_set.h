@@ -144,7 +144,7 @@ public:;
         bool debug_info {false};        // print extra info
         bool debug_exit_early {false};  // just print the size of the volume and exit
         bool debug_allocate_512MiB;     // allocate 512MiB but don't set any flags
-    } debug_flags;
+    } debug_flags {};
 
     /* Scanners can be compiled in (which are passed to the constructor), loaded one-by-one from meory,
      * or loaded from a file, a directory, or a set of directories.

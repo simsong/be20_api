@@ -10,6 +10,8 @@
 #include <regex>
 #include <sstream>
 #include <fstream>
+#include <iomanip>
+#include <filesystem>
 
 #include "feature_recorder.h"
 #include "feature_recorder_set.h"
@@ -120,7 +122,8 @@ const std::string &feature_recorder::get_outdir() const // cannot be inline becu
  */
 const std::string feature_recorder::fname_in_outdir(std::string suffix) const
 {
-    return fs.get_outdir() + "/" + this->name + (suffix.size()>0 ? (std::string("_") + suffix) : "") + ".txt";
+    return fs.get_outdir() + "/" + this->name
+        + (suffix.size()>0 ? (std::string("_") + suffix) : "") + ".txt";
 }
 
 
@@ -147,12 +150,17 @@ void feature_recorder::quote_if_necessary(std::string &feature,std::string &cont
         escape_backslash = false;
     }
 
-    feature = validateOrEscapeUTF8(feature, escape_bad_utf8, escape_backslash, validateOrEscapeUTF8_validate);
+    feature = validateOrEscapeUTF8(feature,
+                                   escape_bad_utf8, escape_backslash,
+                                   validateOrEscapeUTF8_validate);
+
     if (feature.size() > fs.opt_max_feature_size) {
         feature.resize(fs.opt_max_feature_size);
     }
+
     if ( flags.no_context == false) {
-        context = validateOrEscapeUTF8(context, escape_bad_utf8, escape_backslash, validateOrEscapeUTF8_validate);
+        context = validateOrEscapeUTF8(context, escape_bad_utf8,
+                                       escape_backslash, validateOrEscapeUTF8_validate);
         if (context.size() > fs.opt_max_context_size) {
             context.resize(fs.opt_max_context_size);
         }
