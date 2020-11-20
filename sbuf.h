@@ -107,7 +107,7 @@ private:
     const sbuf_t  *parent;              // parent sbuf references data in another.
 public:
     mutable int   children;             // number of child sbufs; can get increment in copy
-    size_t depth() const { return pos0.depth; }
+    const unsigned int depth() const { return pos0.depth; }
 #ifdef PRIVATE_SBUF_BUF
 private:               // one day
 #else

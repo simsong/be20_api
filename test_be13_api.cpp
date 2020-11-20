@@ -95,7 +95,7 @@ TEST_CASE( "test atomic_histogram", "[vector]" ){
  * hash_t.h
  */
 #include "dfxml/src/hash_t.h"
-static std::string hash_name("md5");
+static std::string hash_name("sha1");
 static std::string hash_func(const uint8_t *buf,size_t bufsize)
 {
     if(hash_name=="md5" || hash_name=="MD5"){
@@ -111,9 +111,10 @@ static std::string hash_func(const uint8_t *buf,size_t bufsize)
     std::cerr << "This version of bulk_extractor only supports MD5, SHA1, and SHA256\n";
     exit(1);
 }
-TEST_CASE("hash_func", "[md5]") {
+
+TEST_CASE("hash_func", "[sha1]") {
     const char *hello="hello";
-    REQUIRE( hash_func(reinterpret_cast<const uint8_t *>(hello),strlen(hello))=="5d41402abc4b2a76b9719d911017c592");
+    REQUIRE( hash_func(reinterpret_cast<const uint8_t *>(hello), strlen(hello))=="aaf4c61ddcc5e8a2dabede0f3b482cd9aea9434d");
 }
 
 std::string get_tempdir()
@@ -140,7 +141,7 @@ TEST_CASE("quote_if_necessary", "[feature_recorder]") {
     feature_recorder_set::flags_t flags;
     flags.no_alert = true;
 
-    feature_recorder_set frs( flags, "md5", scanner_config::NO_INPUT, scanner_config::NO_OUTDIR);
+    feature_recorder_set frs( flags, "sha1", scanner_config::NO_INPUT, scanner_config::NO_OUTDIR);
     frs.create_named_feature_recorder("test");
     feature_recorder *ft = frs.get_name("test");
     REQUIRE( ft!=nullptr );
@@ -154,7 +155,6 @@ TEST_CASE("quote_if_necessary", "[feature_recorder]") {
  *
  * Create a simple set and write a feature.
  */
-//static feature_recorder_set::hash_def my_hasher(hash_name,hash_func);
 TEST_CASE("feature_recorder_set", "[frs]" ) {
 
     // Create a random directory for the output of the feature recorder
@@ -163,7 +163,7 @@ TEST_CASE("feature_recorder_set", "[frs]" ) {
         feature_recorder_set::flags_t flags;
         flags.no_alert = true;
 
-        feature_recorder_set frs( flags, "md5", scanner_config::NO_INPUT, tempdir);
+        feature_recorder_set frs( flags, "sha1", scanner_config::NO_INPUT, tempdir);
         //feature_recorder_set::feature_file_names_t feature_files;
         frs.create_named_feature_recorder("test");
         REQUIRE( frs.get_name("test") != nullptr);
@@ -189,42 +189,6 @@ TEST_CASE("feature_recorder_set", "[frs]" ) {
     REQUIRE( line == found_lastline);
 }
 
-#if 0
-
-#if defined(HAVE_SQLITE3_H) and defined(HAVE_LIBSQLITE3)
-    fs.db_transaction_begin();
-#endif
-
-    //fs.db_create();
-
-    /* Create an email table */
-    //fs.db_create_table("mail_test");
-
-    /* Lets some  features into the table as a test */
-    //sqlite3_exec(db,"BEGIN TRANSACTION",NULL,NULL,&errmsg);
-    //beapi_sql_stmt s(db,"email");
-    for(int i=0;i<10;i++){
-        pos0_t p;
-        pos0_t p1 = p+i;
-
-        char feature[64];
-        snprintf(feature,sizeof(feature),"user%d@company.com",i);
-        char context[64];
-        snprintf(context,sizeof(context),"this is the context user%d@company.com yes it is!",i);
-        fr.write(p1, feature, context);
-        //insert_statement(stmt,p1,feature,context);
-    }
-#if defined(HAVE_SQLITE3_H) and defined(HAVE_LIBSQLITE3)
-    fs.db_transaction_commit();
-#endif
-    //sqlite3_exec(db,"COMMIT TRANSACTION",NULL,NULL,&errmsg);
-    //fs.db_close();
-
-    /* Now verify that they are there */
-}
-#endif
-
-
 /****************************************************************
  * histogram.h
  */
@@ -243,9 +207,6 @@ TEST_CASE( "histogram.h", "[be13_api]") {
     REQUIRE( c.range_g_z == 0);
     REQUIRE( c.range_G_Z == 0);
     REQUIRE( c.range_0_9 == 1);
-
-
-
 }
 /****************************************************************
  *
@@ -346,7 +307,7 @@ TEST_CASE("sbuf.h","[sbuf]") {
  * holds the feature recorders. THey are called with the default values.
  */
 #include "scanner_config.h"
-TEST_CASE("scanner_config", "[sc]") {
+TEST_CASE("scanner_config", "[scanner_config]") {
     std::string help_string {"   -S first-day=sunday    value for first-day (first-day)\n"
                              "   -S age=0    age in years (age)\n"};
     scanner_config sc;
@@ -372,7 +333,7 @@ TEST_CASE("scanner_config", "[sc]") {
  * The interface used by scanners.
  */
 #include "scanner_params.h"
-TEST_CASE("scanner", "[scanner]") {
+TEST_CASE("scanner", "[scanner_params]") {
     /* check that scanner params made from an existing scanner params are deeper */
 }
 
@@ -383,62 +344,63 @@ TEST_CASE("scanner", "[scanner]") {
  * scan_null, the null scanner, which writes metadata into a version.txt feature file.
  */
 #include "scanner_set.h"
-#include "scan_md5.h"
+#include "scan_sha1.h"
 TEST_CASE("enable/disable", "[scanner_set]") {
     scanner_config sc;
     sc.outdir = get_tempdir();
-    sc.hash_alg = "md5";
+    sc.hash_alg = "sha1";
 
     struct feature_recorder_set::flags_t f;
     scanner_set ss(sc, f);
-    ss.add_scanner(scan_md5);
+    ss.add_scanner(scan_sha1);
 
 
     SECTION(" Make sure that the scanner was added ") {
         REQUIRE( ss.get_scanner_by_name("no_such_scanner") == nullptr );
-        REQUIRE( ss.get_scanner_by_name("md5") == scan_md5 );
+        REQUIRE( ss.get_scanner_by_name("sha1") == scan_sha1 );
     }
 
     /* Enable the scanner */
-    ss.set_scanner_enabled("md5", true);
+    ss.set_scanner_enabled("sha1", true);
 
-    SECTION("Make sure that the md5 scanner is enabled and only the md5 scanner is enabled") {
-        REQUIRE( ss.is_scanner_enabled("md5") == true );
-        REQUIRE( ss.is_find_scanner_enabled() == false); // only md5 scanner is enabled
+    SECTION("Make sure that the sha1 scanner is enabled and only the sha1 scanner is enabled") {
+        REQUIRE( ss.is_scanner_enabled("sha1") == true );
+        REQUIRE( ss.is_find_scanner_enabled() == false); // only sha1 scanner is enabled
     }
 
     SECTION("Turn it off and make sure that it's disabled") {
-        ss.set_scanner_enabled("md5", false);
-        REQUIRE( ss.is_scanner_enabled("md5") == false );
+        ss.set_scanner_enabled("sha1", false);
+        REQUIRE( ss.is_scanner_enabled("sha1") == false );
     }
 
     SECTION("Try enabling all ") {
         ss.set_scanner_enabled(scanner_set::ALL_SCANNERS,true);
-        REQUIRE( ss.is_scanner_enabled("md5") == true );
+        REQUIRE( ss.is_scanner_enabled("sha1") == true );
     }
 
     SECTION("  /* Try disabling all ") {
         ss.set_scanner_enabled(scanner_set::ALL_SCANNERS,false);
-        REQUIRE( ss.is_scanner_enabled("md5") == false );
+        REQUIRE( ss.is_scanner_enabled("sha1") == false );
     }
 }
 
+/* This test runs a scan on the hello_sbuf() with the sha1 scanner. */
 TEST_CASE("run", "[scanner_set]") {
     scanner_config sc;
     sc.outdir = get_tempdir();
-    sc.hash_alg = "md5";
+    sc.hash_alg = "sha1";               // it's faster than SHA1!
 
     struct feature_recorder_set::flags_t f;
     scanner_set ss(sc, f);
-    ss.add_scanner(scan_md5);
-    ss.set_scanner_enabled("md5", true); /* Turn it onn */
+    ss.add_scanner(scan_sha1);
+    ss.set_scanner_enabled("sha1", true); /* Turn it onn */
 
     /* Might as well use it! */
     ss.phase_scan();                    // start the scanner phase
     ss.process_sbuf( hello_sbuf() );
-    //ss.shutdown();                      // should process histograms
-
-    /* The md5 scanner makes a single histogram. Make sure we got it. */
+    ss.process_histograms();
+    ss.shutdown();
+    /* The sha1 scanner makes a single histogram. Make sure we got it. */
     //REQUIRE( ss.count_histograms() == 1);
 }
 

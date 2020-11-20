@@ -210,8 +210,8 @@ void feature_recorder_set::message_enabled_scanners(scanner_params::phase_t phas
  */
 bool feature_recorder_set::check_previously_processed(const sbuf_t &sbuf)
 {
-    std::string md5 = dfxml::md5_generator::hash_buf(sbuf.buf,sbuf.bufsize).hexdigest();
-    return seen_set.check_for_presence_and_insert(md5);
+    std::string sha1 = dfxml::sha1_generator::hash_buf(sbuf.buf,sbuf.bufsize).hexdigest();
+    return seen_set.check_for_presence_and_insert(sha1);
 }
 
 /****************************************************************

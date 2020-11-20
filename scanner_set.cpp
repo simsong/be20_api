@@ -437,19 +437,18 @@ void scanner_set::phase_scan()
 
 
 /****************************************************************
- *** PHASE_SHUTDOWN methods.
+ *** PROCESS HISTOGRAM
  ****************************************************************/
 
-#if 0
-size_t scanner_set::count_histograms() const
+void scanner_set::process_histograms()
 {
-#if 0
-    assert(current_phase == scanner_params::PHASE_SHUTDOWN);
-    return fs.count_histograms();
-#endif
-    return 0;
 }
-#endif
+
+
+
+/****************************************************************
+ *** PHASE_SHUTDOWN methods.
+ ****************************************************************/
 
 void scanner_set::shutdown()
 {
@@ -459,49 +458,23 @@ void scanner_set::shutdown()
     current_phase = scanner_params::PHASE_SHUTDOWN;
 
     /* Tell the scanners we are shutting down */
-    const sbuf_t sbuf;              // empty sbuf
+    const sbuf_t sbuf;               // empty sbuf
     scanner_params::PrintOptions po; // empty po
     scanner_params sp(*this, scanner_params::PHASE_SHUTDOWN, sbuf, po);
     for ( auto it: enabled_scanners ){
         (*it)(sp);
     }
-
-    /* Add the histograms */
-#if 0
-    add_enabled_scanner_histograms();
-    fs.generate_histograms();
-#endif
 }
 
 
-/** process_sbuf is the main workhorse. It is calls each scanner on the sbuf,
- * And the scanners can recursively call the scanner set.
- * @param sp    - the scanner params, including the sbuf to process
- * We now track depth through pos0_t of sbuf_t.
- */
-
-#if 0
-static std::string upperstr(const std::string &str)
+// https://stackoverflow.com/questions/16190078/how-to-atomically-update-a-maximum-value
+template<typename T>
+void update_maximum(std::atomic<T>& maximum_value, T const& value) noexcept
 {
-    std::string ret;
-    for(std::string::const_iterator i=str.begin();i!=str.end();i++){
-        ret.push_back(toupper(*i));
+    T prev_value = maximum_value;
+    while(prev_value < value &&
+          !maximum_value.compare_exchange_weak(prev_value, value)){
     }
-    return ret;
-}
-#endif
-
-
-void scanner_set::set_max_depth_seen(uint32_t max_depth_seen_)
-{
-    //const std::lock_guard<std::mutex> lock(max_depth_seenM);
-    max_depth_seen = max_depth_seen_;
-}
-
-uint32_t scanner_set::get_max_depth_seen() const
-{
-    //const std::lock_guard<std::mutex> lock(max_depth_seenM);
-    return max_depth_seen;
 }
 
 
@@ -526,10 +499,6 @@ void scanner_set::process_sbuf(const class sbuf_t &sbuf)
 
     const pos0_t &pos0 = sbuf.pos0;
 
-    if (sbuf.depth() > get_max_depth_seen()) {
-        set_max_depth_seen( sbuf.depth() );
-    }
-
     /* If we are too deep, error out */
     if (sbuf.depth() >= max_depth ) {
         feature_recorder *fr = fs.get_alert_recorder();
@@ -539,20 +508,19 @@ void scanner_set::process_sbuf(const class sbuf_t &sbuf)
         return;
     }
 
+    update_maximum<unsigned int>(max_depth_seen, sbuf.depth() );
+
     /* Determine if we have seen this buffer before */
     bool seen_before = fs.check_previously_processed(sbuf);
     if (seen_before) {
-        dfxml::md5_t md5 = dfxml::md5_generator::hash_buf(sbuf.buf, sbuf.bufsize);
+        dfxml::sha1_t sha1 = dfxml::sha1_generator::hash_buf(sbuf.buf, sbuf.bufsize);
         feature_recorder *alert_recorder = fs.get_alert_recorder();
         std::stringstream ss;
         ss << "<buflen>" << sbuf.bufsize  << "</buflen>";
         if(alert_recorder && dup_data_alerts) {
-            alert_recorder->write(sbuf.pos0,"DUP SBUF "+md5.hexdigest(),ss.str());
+            alert_recorder->write(sbuf.pos0,"DUP SBUF "+sha1.hexdigest(),ss.str());
         }
-#ifdef HAVE__SYNC_ADD_AND_FETCH
-        // TODO - replace with std::atomic<
-        __sync_add_and_fetch(&dup_data_encountered,sp.sbuf.bufsize);
-#endif
+        dup_bytes_encountered += sbuf.bufsize;
     }
 
     /* Determine if the sbuf consists of a repeating ngram. If so,

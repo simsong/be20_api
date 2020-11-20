@@ -128,10 +128,9 @@ struct scanner_params {
     // phase_t specifies when the scanner is being called.
     // the scans are implemented in the scanner set
     enum phase_t {
-        PHASE_INIT     ,            // called in main thread when scanner loads
-        PHASE_THREAD_BEFORE_SCAN4,  // called in worker thread for every ENABLED scanner before first scan
-        PHASE_SCAN     ,            // called in worker thread for every ENABLED scanner to scan an sbuf
-        PHASE_SHUTDOWN             // called in main thread for every ENABLED scanner when scanner is shutdown
+        PHASE_INIT,    // called in main thread when scanner loads
+        PHASE_SCAN,    // called in worker thread for every ENABLED scanner to scan an sbuf
+        PHASE_SHUTDOWN // called in main thread for every ENABLED scanner when scanner is shutting down. Allows XML closing.
     };
 
     /*
