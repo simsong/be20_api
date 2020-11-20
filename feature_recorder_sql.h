@@ -44,5 +44,3 @@ public:
     virtual ~feature_recorder_sql();
 
 };
-#endif
-#endif
