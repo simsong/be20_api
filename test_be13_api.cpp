@@ -46,6 +46,20 @@ std::string random_string(std::size_t length)
 
     return random_string;
 }
+
+std::string get_tempdir()
+{
+    std::string tempdir = std::filesystem::temp_directory_path().string();
+    if (tempdir.back()!='/'){
+        tempdir += '/';
+    }
+    tempdir += random_string(8);
+    std::filesystem::create_directory(tempdir);
+    return tempdir;
+}
+
+
+
 /****************************************************************
  * aftimer.h
  */
@@ -117,17 +131,6 @@ TEST_CASE("hash_func", "[sha1]") {
     REQUIRE( hash_func(reinterpret_cast<const uint8_t *>(hello), strlen(hello))=="aaf4c61ddcc5e8a2dabede0f3b482cd9aea9434d");
 }
 
-std::string get_tempdir()
-{
-    std::string tempdir = std::filesystem::temp_directory_path().string();
-    if (tempdir.back()!='/'){
-        tempdir += '/';
-    }
-    tempdir += random_string(8);
-    std::filesystem::create_directory(tempdir);
-    return tempdir;
-}
-
 /****************************************************************
  * feature_recorder.h
  */
@@ -150,12 +153,32 @@ TEST_CASE("quote_if_necessary", "[feature_recorder]") {
     REQUIRE( c1=="context" );
 }
 
+/* Read all of the lines of a file and return them as a vector */
+std::vector<std::string> getLines(const std::string &filename)
+{
+    std::vector<std::string> lines;
+    std::string line;
+    std::ifstream inFile;
+    std::cerr << "filename: " << filename << "\n";
+    inFile.open(filename.c_str());
+    if (!inFile.is_open()) {
+        throw std::runtime_error("Cannot open file: "+filename);
+    }
+    while (std::getline(inFile, line)){
+        if (line.size()>0){
+            lines.push_back(line);
+            std::cerr << "push: " << line << "\n";
+        }
+    }
+    return lines;
+}
+
 /****************************************************************
  * feature_recorder_set.h
  *
- * Create a simple set and write a feature.
+ * Create a simple set and write two features and make a histogram.
  */
-TEST_CASE("feature_recorder_set", "[frs]" ) {
+TEST_CASE("write_features", "[feature_recorder_set]" ) {
 
     // Create a random directory for the output of the feature recorder
     std::string tempdir = get_tempdir();
@@ -170,20 +193,15 @@ TEST_CASE("feature_recorder_set", "[frs]" ) {
 
         feature_recorder *ft = frs.get_name("test");
         pos0_t p;
-        ft->write(p, "feature", "context");
+        ft->write(p, "one", "context");
     }
     /* get the last line of the test file and see if it is correct */
-    std::string expected_lastline {"0\tfeature\tcontext\n"};
-    std::string found_lastline;
-    std::string line;
-    std::ifstream inFile;
-    inFile.open(tempdir+"test.txt");
-    while (std::getline(inFile, line)){
-        if (line.size()>0){
-            found_lastline = line;
-        }
-    }
-    REQUIRE( line == found_lastline);
+    std::string expected_lastline {"0\tone\tcontext"};
+    std::cerr << "tempdir: " << tempdir << "\n";
+    std::vector<std::string> lines = getLines(tempdir+"/test.txt");
+    std::cerr << "total lines: " << lines.size() << "\n";
+
+    REQUIRE( lines.back() == expected_lastline);
 }
 
 /****************************************************************
@@ -281,7 +299,7 @@ sbuf_t hello_sbuf() {
     return sbuf_t(p0, hello_buf, strlen(hello), strlen(hello), 0, false, false, false);
 }
 
-TEST_CASE("sbuf.h","[sbuf]") {
+TEST_CASE("hello_sbuf","[sbuf]") {
     sbuf_t sb1 = hello_sbuf();
     REQUIRE( sb1.size()==strlen(hello));
     REQUIRE( sb1.offset(&hello_buf[2]) == 2);
@@ -293,6 +311,29 @@ TEST_CASE("sbuf.h","[sbuf]") {
     std::string s;
     sb1.getUTF8(6, 5, s);
     REQUIRE(s == "world");
+}
+
+TEST_CASE("map_file","[sbuf]") {
+    std::string tempdir = get_tempdir();
+    std::ofstream os;
+    std::string fname = tempdir+"/hello.txt";
+
+    os.open( fname );
+    REQUIRE( os.is_open() );
+    os << hello;
+    os.close();
+
+
+    sbuf_t *sb0 = sbuf_t::map_file(fname);
+    REQUIRE(sb0 != nullptr);
+    sbuf_t &sb1 = *sb0;
+    REQUIRE( sb1.bufsize == strlen(hello));
+    REQUIRE( sb1.bufsize == sb1.pagesize);
+    for(int i=0;hello[i];i++){
+        REQUIRE( hello[i] == sb1[i] );
+    }
+    REQUIRE( sb1[-1] == '\000' );
+    REQUIRE( sb1[1000] == '\000' );
 }
 
 
