@@ -34,7 +34,6 @@ tests/Makefile
 *.gcda
 *.gcno
 out/
-codecov.yml
 test_be13api_catch2
 ar-lib
 test-driver
