@@ -3,6 +3,7 @@
 #ifndef SBUF_H
 #define SBUF_H
 
+#include <iostream>
 
 /*
  * sbuf.h:
@@ -26,6 +27,7 @@
 #include <string>
 #include <fstream>
 #include <exception>
+#include <atomic>
 
 #include <sys/mman.h>
 #include <unistd.h>
@@ -47,7 +49,7 @@
  */
 
 //Don't turn this on; it currently makes scan_net crash.
-//#define SBUF_TRACK
+#define SBUF_TRACK
 
 
 /**
@@ -98,15 +100,15 @@ class sbuf_t {
     }
     int    fd;                          /* file this came from if mmapped file */
 public:;
-    const bool should_unmap;                /* munmap buffer when done */
-    const bool should_free;                 /* should buf be freed when this sbuf is deleted? */
-    const bool should_close;                /* close(fd) when done. */
-    const uint64_t page_number;        /* from iterator when sbuf is created */
-    const pos0_t  pos0;                 /* the path of buf[0] */
+    const bool should_unmap {false};                /* munmap buffer when done */
+    const bool should_free  {false};                 /* should buf be freed when this sbuf is deleted? */
+    const bool should_close {false};                /* close(fd) when done. */
+    const uint64_t page_number {0};        /* from iterator when sbuf is created */
+    const pos0_t  pos0       {};                 /* the path of buf[0] */
 private:
-    const sbuf_t  *parent;              // parent sbuf references data in another.
+    const sbuf_t  *parent    {nullptr};              // parent sbuf references data in another.
 public:
-    mutable int   children;             // number of child sbufs; can get increment in copy
+    mutable std::atomic<int>   children {0}; // number of child sbufs; can get increment in copy
     const unsigned int depth() const { return pos0.depth; }
 #ifdef PRIVATE_SBUF_BUF
 private:               // one day
@@ -117,10 +119,10 @@ public:
      * \deprecated
      * This field will be private in a future release of \b bulk_extractor.
      */
-    const uint8_t *buf;         /* start of the buffer */
+    const uint8_t *buf {nullptr};         /* start of the buffer */
 public:
-    const size_t  bufsize;           /* size of the buffer */
-    const size_t  pagesize;          /* page data; the rest is the 'margin'. pagesize <= bufsize */
+    const size_t  bufsize {0};           /* size of the buffer */
+    const size_t  pagesize {0};          /* page data; the rest is the 'margin'. pagesize <= bufsize */
 
 private:
     void release();                     // release allocated storage
@@ -128,10 +130,7 @@ private:
 public:
     /** Make an empty sbuf.
         It's used for situations where an sbuf is needed but not referenced */
-    explicit sbuf_t():fd(0),should_unmap(false),should_free(false),should_close(false),
-             page_number(0),pos0(),parent(0),
-             children(0),buf(0),bufsize(0),pagesize(0){
-    }
+    explicit sbuf_t(){ }
 
     /****************************************************************
      *** Child allocators --- allocate an sbuf from another sbuf
@@ -142,10 +141,9 @@ public:
      * note: don't add an 'explicit' --- it causes problems.
      */
     sbuf_t(const sbuf_t &that):
-             fd(0),should_unmap(false),should_free(false),should_close(false),
-             page_number(that.page_number),pos0(that.pos0),
-             parent(that.highest_parent()),
-             children(0),buf(that.buf),bufsize(that.bufsize),pagesize(that.pagesize){
+        page_number(that.page_number),pos0(that.pos0),
+        parent(that.highest_parent()),
+        buf(that.buf),bufsize(that.bufsize),pagesize(that.pagesize){
         parent->add_child(*this);
     }
 
@@ -153,9 +151,8 @@ public:
      * Make an sbuf from a parent but with a different path.
      */
     explicit sbuf_t(const pos0_t &that_pos0, const sbuf_t &that_sbuf ):
-        fd(0),should_unmap(false),should_free(false),should_close(false),
         page_number(that_sbuf.page_number),pos0(that_pos0),
-        parent(that_sbuf.highest_parent()),children(0),
+        parent(that_sbuf.highest_parent()),
         buf(that_sbuf.buf),bufsize(that_sbuf.bufsize),pagesize(that_sbuf.pagesize){
         parent->add_child(*this);
     }
@@ -164,9 +161,8 @@ public:
      * make an sbuf from a parent but with an indent.
      */
     sbuf_t(const sbuf_t &that_sbuf,size_t off):
-        fd(0),should_unmap(false),should_free(false),should_close(false),
         page_number(that_sbuf.page_number),pos0(that_sbuf.pos0+off),
-        parent(that_sbuf.highest_parent()),children(0),
+        parent(that_sbuf.highest_parent()),
         buf(that_sbuf.buf+off),
         bufsize(that_sbuf.bufsize > off ? that_sbuf.bufsize-off : 0),
         pagesize(that_sbuf.pagesize > off ? that_sbuf.pagesize-off : 0){
@@ -176,10 +172,9 @@ public:
      * The allocated buf MUST be freed before the source, since no copy is made...
      */
     explicit sbuf_t(const sbuf_t &sbuf,size_t off,size_t len):
-        fd(0), should_unmap(false), should_free(false), should_close(false),
         page_number(sbuf.page_number),pos0(sbuf.pos0+off),
         parent(sbuf.highest_parent()),
-        children(0), buf(sbuf.buf+off),
+        buf(sbuf.buf+off),
         bufsize(off+len<sbuf.bufsize ? len : sbuf.bufsize-off),
         pagesize(off+len<sbuf.bufsize ? len : sbuf.bufsize-off){
         parent->add_child(*this);
@@ -201,8 +196,7 @@ public:
                     int fd_, bool should_unmap_,bool should_free_,bool should_close_):
         fd(fd_), should_unmap(should_unmap_), should_free(should_free_),
         should_close(should_close_),
-        page_number(0),pos0(pos0_),parent(0),children(0),buf(buf_),bufsize(bufsize_),
-        pagesize(min(pagesize_,bufsize_)){
+        pos0(pos0_),buf(buf_),bufsize(bufsize_), pagesize(min(pagesize_,bufsize_)){
     };
 
     /* Similar to above, but with no fd.
@@ -214,8 +208,7 @@ public:
                     size_t pagesize_,
                     uint64_t page_number_,
                     bool should_free_):
-        fd(0), should_unmap(false), should_free(should_free_), should_close(false),
-        page_number(page_number_),pos0(pos0_),parent(0),children(0),buf(buf_),bufsize(bufsize_),
+        should_free(should_free_), page_number(page_number_),pos0(pos0_),buf(buf_),bufsize(bufsize_),
         pagesize(min(pagesize_,bufsize_)){
     };
 
@@ -250,16 +243,12 @@ public:
 
     const sbuf_t *highest_parent() const; // returns the parent of the parent...
     void add_child(const sbuf_t &child) const {
-#if defined(HAVE___SYNC_ADD_AND_FETCH) && defined(SBUF_TRACK)
-        __sync_fetch_and_add(&children,1);
-        std::cerr << "add_child(" << this << ")="<<children << "\n";
-#endif
+        children += 1;
     }
     void del_child(const sbuf_t &child) const {
-#if defined(HAVE___SYNC_ADD_AND_FETCH) && defined(SBUF_TRACK)
-        __sync_fetch_and_add(&children,-1);
-        std::cerr << "del_child(" << this << ")="<<children << "\n";
-        assert(__sync_fetch_and_add(&children,0)>=0);
+        children -= 1;
+#if defined(SBUF_TRACK)
+        assert( children >= 0);
 #endif
     }
 
@@ -309,7 +298,7 @@ public:
      *
      * These should be used instead of buf[i]
      */
-    uint8_t  get8u(size_t i) const;
+    uint8_t   get8u(size_t i) const;
     uint16_t get16u(size_t i) const;
     uint32_t get32u(size_t i) const;
     uint64_t get64u(size_t i) const;
@@ -321,7 +310,7 @@ public:
      * these get functions safely return an unsigned integer value for the offset of i,
      * in Motorola (big-endian) byte order or else throw sbuf_range_exception if out of range.
      */
-    uint8_t  get8uBE(size_t i) const;
+    uint8_t   get8uBE(size_t i) const;
     uint16_t get16uBE(size_t i) const;
     uint32_t get32uBE(size_t i) const;
     uint64_t get64uBE(size_t i) const;
@@ -333,7 +322,7 @@ public:
      * these get functions safely return a signed integer value for the offset of i,
      * in Intel (little-endian) byte order or else throw sbuf_range_exception if out of range.
      */
-    int8_t  get8i(size_t i) const;
+    int8_t   get8i(size_t i) const;
     int16_t get16i(size_t i) const;
     int32_t get32i(size_t i) const;
     int64_t get64i(size_t i) const;
@@ -345,7 +334,7 @@ public:
      * these get functions safely return a signed integer value for the offset of i,
      * in Motorola (big-endian) byte order or else throw sbuf_range_exception if out of range.
      */
-    int8_t  get8iBE(size_t i) const;
+    int8_t   get8iBE(size_t i) const;
     int16_t get16iBE(size_t i) const;
     int32_t get32iBE(size_t i) const;
     int64_t get64iBE(size_t i) const;
@@ -362,7 +351,7 @@ public:
      * these get functions safely return an unsigned integer value for the offset of i,
      * in the byte order of your choice or else throw sbuf_range_exception if out of range.
      */
-    uint8_t  get8u(size_t i,byte_order_t bo) const;
+    uint8_t   get8u(size_t i,byte_order_t bo) const;
     uint16_t get16u(size_t i,byte_order_t bo) const;
     uint32_t get32u(size_t i,byte_order_t bo) const;
     uint64_t get64u(size_t i,byte_order_t bo) const;
@@ -374,7 +363,7 @@ public:
      * these get functions safely return a signed integer value for the offset of i,
      * in the byte order of your choice or else throw sbuf_range_exception if out of range.
      */
-    int8_t  get8i(size_t i,byte_order_t bo) const;
+    int8_t   get8i(size_t i,byte_order_t bo) const;
     int16_t get16i(size_t i,byte_order_t bo) const;
     int32_t get32i(size_t i,byte_order_t bo) const;
     int64_t get64i(size_t i,byte_order_t bo) const;
@@ -443,7 +432,7 @@ public:
         return -1;
     }
 
-    std::string substr(size_t loc,size_t len) const; /* make a substring */
+    const std::string substr(size_t loc,size_t len) const; /* make a substring */
     bool is_constant(size_t loc,size_t len,uint8_t ch) const; // verify that it's constant
     bool is_constant(uint8_t ch) const { return is_constant(0,this->pagesize,ch); }
 
@@ -470,8 +459,10 @@ public:
     ssize_t  write(FILE *f,size_t loc,size_t len) const; /* write to a file descriptor, returns # bytes written */
 
     virtual ~sbuf_t() {
-#if defined(SBUF_TRACK) && defined(HAVE___SYNC_ADD_AND_FETCH)
-        assert(__sync_fetch_and_add(&children,0)==0);
+#if defined(SBUF_TRACK)
+        if (children != 0 ){
+            std::cerr << "error: sbuf children=" << children << "\n";
+        }
 #endif
         if(parent) parent->del_child(*this);
 
@@ -492,5 +483,4 @@ public:
 std::ostream & operator <<(std::ostream &os,const sbuf_t &sbuf);
 
 #include "sbuf_private.h"
-
 #endif

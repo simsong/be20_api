@@ -167,7 +167,6 @@ std::vector<std::string> getLines(const std::string &filename)
     while (std::getline(inFile, line)){
         if (line.size()>0){
             lines.push_back(line);
-            std::cerr << "push: " << line << "\n";
         }
     }
     return lines;
@@ -194,12 +193,12 @@ TEST_CASE("write_features", "[feature_recorder_set]" ) {
         feature_recorder *ft = frs.get_name("test");
         pos0_t p;
         ft->write(p, "one", "context");
+        ft->write(p+5, "one", "context");
+        ft->write(p+10, "two", "context");
     }
     /* get the last line of the test file and see if it is correct */
-    std::string expected_lastline {"0\tone\tcontext"};
-    std::cerr << "tempdir: " << tempdir << "\n";
+    std::string expected_lastline {"10\ttwo\tcontext"};
     std::vector<std::string> lines = getLines(tempdir+"/test.txt");
-    std::cerr << "total lines: " << lines.size() << "\n";
 
     REQUIRE( lines.back() == expected_lastline);
 }

@@ -99,11 +99,11 @@ inline uint64_t sbuf_t::get64u(size_t i,sbuf_t::byte_order_t bo) const {
  * Signed get interfaces simply call the unsigned interfaces and
  * the return gets cast.
  */
-inline int8_t sbuf_t::get8i(size_t i)   const { return get8u(i);}
-inline int16_t sbuf_t::get16i(size_t i) const { return get16u(i);}
-inline int32_t sbuf_t::get32i(size_t i) const { return get32u(i);}
-inline int64_t sbuf_t::get64i(size_t i) const { return get64u(i);}
-inline int8_t sbuf_t::get8iBE(size_t i) const { return get8uBE(i);}
+inline  int8_t sbuf_t::get8i(size_t i)    const { return get8u(i);}
+inline int16_t sbuf_t::get16i(size_t i)   const { return get16u(i);}
+inline int32_t sbuf_t::get32i(size_t i)   const { return get32u(i);}
+inline int64_t sbuf_t::get64i(size_t i)   const { return get64u(i);}
+inline  int8_t sbuf_t::get8iBE(size_t i)  const { return get8uBE(i);}
 inline int16_t sbuf_t::get16iBE(size_t i) const { return get16uBE(i);}
 inline int32_t sbuf_t::get32iBE(size_t i) const { return get32uBE(i);}
 inline int64_t sbuf_t::get64iBE(size_t i) const { return get64uBE(i);}

@@ -170,7 +170,7 @@ ssize_t sbuf_t::write(FILE *f,size_t loc,size_t len) const
 }
 
 /* Return a substring */
-std::string sbuf_t::substr(size_t loc,size_t len) const
+const std::string sbuf_t::substr(size_t loc,size_t len) const
 {
     if(loc>=bufsize) return std::string("");            // cannot write
     if(loc+len>bufsize) len=bufsize-loc; // clip at the end
