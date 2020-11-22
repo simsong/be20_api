@@ -34,7 +34,7 @@ The API defines functions for:
 
 6. Finally, the `scanner_set` shuts down and everything is de-allocated.
 
-## Working with this repo
+## Working with this repo.
 This repo can used in three ways:
 
 1. As a stand-alone repo for testing the API modules.
