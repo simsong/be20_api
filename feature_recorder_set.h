@@ -8,7 +8,7 @@
 
 #include "sbuf.h"
 #include "feature_recorder.h"
-#include "histogram.h"
+//#include "histogram.h"
 
 /** \addtogroup internal_interfaces
  * @{

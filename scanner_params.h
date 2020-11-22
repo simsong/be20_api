@@ -14,7 +14,7 @@
 #include <ostream>
 
 
-#include "histogram.h"
+#include "histogram_def.h"
 #include "packet_info.h"
 #include "sbuf.h"
 #include "scanner_config.h"

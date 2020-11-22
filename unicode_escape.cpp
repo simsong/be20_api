@@ -2,7 +2,7 @@
 /**
  * unicode_escape.cpp:
  * Escape unicode that is not valid.
- * 
+ *
  * References:
  * http://www.ietf.org/rfc/rfc3987.txt
  * http://en.wikipedia.org/wiki/UTF-8
@@ -73,16 +73,16 @@ bool valid_utf8codepoint(uint32_t unichar)
     if(unichar > 0x13fff && unichar < 0x16000) return false;
     if(unichar > 0x16fff && unichar < 0x1b000) return false;
     if(unichar > 0x1bfff && unichar < 0x1d000) return false;
-        
+
     // Plane 2
     if(unichar > 0x2bfff && unichar < 0x2f000) return false;
-    
+
     // Planes 3--13 are unassigned
     if(unichar >= 0x30000 && unichar < 0xdffff) return false;
 
     // Above Plane 16 is invalid
     if(unichar > 0x10FFFF) return false;        // above plane 16?
-    
+
     return true;                        // must be valid
 }
 
@@ -93,7 +93,7 @@ bool valid_utf8codepoint(uint32_t unichar)
  * Note:
  *    - if not escaping but an invalid encoding is present and DEBUG_PEDANTIC is set, then assert() is called.
  *    - DO NOT USE wchar_t because it is 16-bits on Windows and 32-bits on Unix.
- * Output: 
+ * Output:
  *   - UTF8 string.  If do_escape is set, then corruptions are escaped in \xFF notation where FF is a hex character.
  */
 
@@ -108,12 +108,12 @@ std::string validateOrEscapeUTF8(const std::string &input,
         && !validateOrEscapeUTF8_validate){
         return input;
     }
-        
+
     // validate or escape input
     std::string output;
     for(std::string::size_type i = 0; i< input.length(); ) {
         uint8_t ch = (uint8_t)input.at(i);
-        
+
         // utf8 1 byte prefix (0xxx xxxx)
         if((ch & 0x80)==0x00){          // 00 .. 0x7f
             if(ch=='\\' && escape_backslash){   // escape the escape character as \x92
@@ -141,13 +141,13 @@ std::string validateOrEscapeUTF8(const std::string &input,
             // check for valid 2-byte encoding
             if(valid_utf8codepoint(unichar)
                && ((uint8_t)input.at(i)!=0xc0)
-               && (unichar >= 0x80)){ 
+               && (unichar >= 0x80)){
                 output += (uint8_t)input.at(i++);       // byte1
                 output += (uint8_t)input.at(i++);       // byte2
                 continue;
             }
         }
-                
+
         // utf8 3 bytes (1110 xxxx prefix)
         if(((ch & 0xf0) == 0xe0)
            && (i+2 < input.length())
@@ -156,17 +156,17 @@ std::string validateOrEscapeUTF8(const std::string &input,
             uint32_t unichar = (((uint8_t)input.at(i) & 0x0f) << 12)
                 | (((uint8_t)input.at(i+1) & 0x3f) << 6)
                 | (((uint8_t)input.at(i+2) & 0x3f));
-            
+
             // check for a valid 3-byte code point
             if(valid_utf8codepoint(unichar)
-               && unichar>=0x800){                     
+               && unichar>=0x800){
                 output += (uint8_t)input.at(i++);       // byte1
                 output += (uint8_t)input.at(i++);       // byte2
                 output += (uint8_t)input.at(i++);       // byte3
                 continue;
             }
         }
-            
+
         // utf8 4 bytes (1111 0xxx prefix)
         if((( ch & 0xf8) == 0xf0)
            && (i+3 < input.length())
@@ -206,3 +206,81 @@ std::string validateOrEscapeUTF8(const std::string &input,
     return output;
 }
 
+/* static */
+bool looks_like_utf16(const std::string &str,bool &little_endian)
+{
+    if((uint8_t)str[0]==0xff && (uint8_t)str[1]==0xfe){
+	little_endian = true;
+	return true; // begins with FFFE
+    }
+    if((uint8_t)str[0]==0xfe && (uint8_t)str[1]==0xff){
+	little_endian = false;
+	return true; // begins with FFFE
+    }
+    /* If none of the even characters are NULL and some of the odd characters are NULL, it's UTF-16 */
+    uint32_t even_null_count = 0;
+    uint32_t odd_null_count = 0;
+    for(size_t i=0;i+1<str.size();i+=2){
+	if(str[i]==0) even_null_count++;
+	if(str[i+1]==0) odd_null_count++;
+    }
+    if(even_null_count==0 && odd_null_count>1){
+	little_endian = true;
+	return true;
+    }
+    if(odd_null_count==0 && even_null_count>1){
+	little_endian = false;
+	return true;
+    }
+    return false;
+}
+
+/**
+ * Converts a utf16 with a byte order to utf8, returning an ALLOCATED STRING if conversion is
+ * successful, and returning 0 if it is not.
+ */
+/* static */
+std::string *convert_utf16_to_utf8(const std::string &key,bool little_endian)
+{
+    /* re-image this string as UTF16*/
+    std::wstring utf16;
+    for(size_t i=0;i<key.size();i+=2){
+        if(little_endian) utf16.push_back(key[i] | (key[i+1]<<8));
+        else utf16.push_back(key[i]<<8 | (key[i+1]));
+    }
+    /* Now convert it to a UTF-8;
+     * set tempKey to be the utf-8 string that will be erased.
+     */
+    std::string *tempKey = new std::string;
+    try {
+        utf8::utf16to8(utf16.begin(),utf16.end(),std::back_inserter(*tempKey));
+        /* Erase any nulls if present */
+        while(tempKey->size()>0) {
+            size_t nullpos = tempKey->find('\000');
+            if (nullpos==std::string::npos) break;
+            tempKey->erase(nullpos,1);
+        }
+    } catch (const utf8::invalid_utf16 &){
+        /* Exception; bad UTF16 encoding */
+        delete tempKey;
+        tempKey = 0;		// give up on temp key; otherwise its invalidated below
+        return 0;
+    }
+    return tempKey;
+}
+
+std::string *convert_utf16_to_utf8(const std::string &key)
+{
+    bool little_endian=false;
+    if(looks_like_utf16(key,little_endian)){
+        return convert_utf16_to_utf8(key,little_endian);
+    }
+    return 0;
+}
+
+std::string *make_utf8(const std::string &key)
+{
+    std::string *utf8 = convert_utf16_to_utf8(key);
+    if(utf8==0) utf8 = new std::string(key);
+    return utf8;
+}

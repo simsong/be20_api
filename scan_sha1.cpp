@@ -34,7 +34,8 @@ void  scan_sha1(struct scanner_params &sp)
         // Note that the feature recorder does not need to be the same name as the scanner
         info.feature_names.insert("sha1_bufs");
 
-        static histogram_def hd("sha1","^(.....)","nope",HistogramMaker::FLAG_LOWERCASE);
+        histogram_def hd("sha1","^(.....)","nope",histogram_def::flags_t(true,false));
+
         info.histogram_defs.insert(hd);
         sp.register_info(info);
         return;

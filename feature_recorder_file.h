@@ -17,7 +17,7 @@
 #include "atomic_set_map.h"
 #include "pos0.h"
 #include "sbuf.h"
-#include "histogram.h"
+//#include "histogram.h"
 
 class feature_recorder_file : public feature_recorder {
     static void truncate_at(std::string &line, char ch) {
@@ -58,7 +58,7 @@ public:
     /* feature file management */
     //virtual void open();
     //virtual void close();
-    //virtual void flush();
+    virtual void flush();
 #if 0
     static  int  dump_callback_test(void *user,const feature_recorder &fr,
                                     const std::string &str,const uint64_t &count); // test callback for you to use!

@@ -14,7 +14,7 @@
 #include <unistd.h>
 
 #include "sbuf.h"
-#include "histogram.h"
+//#include "histogram.h"
 #include "feature_recorder_sql.h"
 #include "feature_recorder_set.h"
 

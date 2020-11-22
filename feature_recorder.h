@@ -138,6 +138,7 @@ public:;
     const std::string hash(const sbuf_t &sbuf) const;
 
     /* File management */
+    virtual void flush();               // flush any files
 
     /* fname_in_outdir():
      * returns a filename in the outdir with an optional suffix before the file extension.

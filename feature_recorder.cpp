@@ -17,7 +17,7 @@
 #include "feature_recorder_set.h"
 #include "word_and_context_list.h"
 #include "unicode_escape.h"
-#include "histogram.h"
+//#include "histogram.h"
 #include "utils.h"
 
 //int64_t feature_recorder::offset_add   = 0;
@@ -197,7 +197,7 @@ void feature_recorder::write(const pos0_t &pos0,const std::string &feature_,cons
 
     std::string feature = feature_;
     std::string context = flags.no_context ? "" : context_;
-    std::string *feature_utf8 = HistogramMaker::make_utf8(feature); // a utf8 feature
+    std::string *feature_utf8 = make_utf8(feature); // a utf8 feature
 
     quote_if_necessary(feature,context);
 
@@ -475,6 +475,11 @@ const std::string feature_recorder::hash(const sbuf_t &sbuf) const
     return (*fs.hasher.func)( reinterpret_cast<const uint8_t *>(sbuf.buf), sbuf.bufsize);
 }
 
+
+void feature_recorder::flush()
+{
+    // nothing here!
+}
 
 #include <iomanip>
 #if 0

@@ -3,7 +3,7 @@
 #include "config.h"
 
 #include "scanner_config.h"
-#include "histogram.h"
+//#include "histogram.h"
 #include "feature_recorder_set.h"
 #include "feature_recorder_file.h"
 

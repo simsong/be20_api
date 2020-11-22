@@ -13,7 +13,7 @@
 #include "feature_recorder_set.h"
 #include "word_and_context_list.h"
 #include "unicode_escape.h"
-#include "histogram.h"
+//#include "histogram.h"
 #include "utils.h"
 
 #ifndef MAXPATHLEN
@@ -139,14 +139,12 @@ void feature_recorder_file::banner_stamp(std::ostream &os,const std::string &hea
 
 
 
-#if 0
 /* I'm not sure that this is needed */
-void feature_recorder::flush()
+void feature_recorder_file::flush()
 {
-    const std::lock_guard<std::mutex> lock(Mf);            // get the lock; released when object is deallocated.
+    const std::lock_guard<std::mutex> lock(Mios);            // get the lock; released when object is deallocated.
     ios.flush();
 }
-#endif
 
 
 /* statics */

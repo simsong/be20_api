@@ -98,7 +98,7 @@ class sbuf_t {
     static size_t min(size_t a,size_t b){
         return a<b ? a : b;
     }
-    int    fd;                          /* file this came from if mmapped file */
+    int    fd {0};           /* file this came from if mmapped file */
 public:;
     const bool should_unmap {false};                /* munmap buffer when done */
     const bool should_free  {false};                 /* should buf be freed when this sbuf is deleted? */

@@ -9,12 +9,13 @@
 
 #include "config.h"
 #include "unicode_escape.h"
-#include "histogram.h"
+//#include "histogram.h"
 #include "utf8.h"
 
 #include <fstream>
 #include <iostream>
 
+#if 0
 std::ostream & operator << (std::ostream &os, const HistogramMaker::FrequencyReportVector &rep){
     for(HistogramMaker::FrequencyReportVector::const_iterator i = rep.begin(); i!=rep.end();i++){
         const HistogramMaker::ReportElement &r = *(*i);
@@ -53,85 +54,6 @@ HistogramMaker::FrequencyReportVector *HistogramMaker::makeReport(int topN) cons
     return r2;
 }
 
-/* static */
-bool HistogramMaker::looks_like_utf16(const std::string &str,bool &little_endian)
-{
-    if((uint8_t)str[0]==0xff && (uint8_t)str[1]==0xfe){
-	little_endian = true;
-	return true; // begins with FFFE
-    }
-    if((uint8_t)str[0]==0xfe && (uint8_t)str[1]==0xff){
-	little_endian = false;
-	return true; // begins with FFFE
-    }
-    /* If none of the even characters are NULL and some of the odd characters are NULL, it's UTF-16 */
-    uint32_t even_null_count = 0;
-    uint32_t odd_null_count = 0;
-    for(size_t i=0;i+1<str.size();i+=2){
-	if(str[i]==0) even_null_count++;
-	if(str[i+1]==0) odd_null_count++;
-    }
-    if(even_null_count==0 && odd_null_count>1){
-	little_endian = true;
-	return true;
-    }
-    if(odd_null_count==0 && even_null_count>1){
-	little_endian = false;
-	return true;
-    }
-    return false;
-}
-
-/**
- * Converts a utf16 with a byte order to utf8, returning an ALLOCATED STRING if conversion is
- * successful, and returning 0 if it is not.
- */
-/* static */
-std::string *HistogramMaker::convert_utf16_to_utf8(const std::string &key,bool little_endian)
-{
-    /* re-image this string as UTF16*/
-    std::wstring utf16;
-    for(size_t i=0;i<key.size();i+=2){
-        if(little_endian) utf16.push_back(key[i] | (key[i+1]<<8));
-        else utf16.push_back(key[i]<<8 | (key[i+1]));
-    }
-    /* Now convert it to a UTF-8;
-     * set tempKey to be the utf-8 string that will be erased.
-     */
-    std::string *tempKey = new std::string;
-    try {
-        utf8::utf16to8(utf16.begin(),utf16.end(),std::back_inserter(*tempKey));
-        /* Erase any nulls if present */
-        while(tempKey->size()>0) {
-            size_t nullpos = tempKey->find('\000');
-            if (nullpos==std::string::npos) break;
-            tempKey->erase(nullpos,1);
-        }
-    } catch (const utf8::invalid_utf16 &){
-        /* Exception; bad UTF16 encoding */
-        delete tempKey;
-        tempKey = 0;		// give up on temp key; otherwise its invalidated below
-        return 0;
-    }
-    return tempKey;
-}
-
-std::string *HistogramMaker::convert_utf16_to_utf8(const std::string &key)
-{
-    bool little_endian=false;
-    if(looks_like_utf16(key,little_endian)){
-        return convert_utf16_to_utf8(key,little_endian);
-    }
-    return 0;
-}
-
-std::string *HistogramMaker::make_utf8(const std::string &key)
-{
-    std::string *utf8 = convert_utf16_to_utf8(key);
-    if(utf8==0) utf8 = new std::string(key);
-    return utf8;
-}
-
 /**
  * Takes a string (the key) and adds it to the histogram.
  * automatically determines if the key is UTF-16 and converts
@@ -166,7 +88,7 @@ void HistogramMaker::add(const std::string &key)
     /* If any conversion is necessary AND we have not converted key from UTF-16 to UTF-8,
      * then the original key is still in 'key'. Allocate tempKey and copy key to tempKey.
      */
-    if(flags & (FLAG_LOWERCASE |FLAG_NUMERIC)){
+    if ( flags.lowercase || flags.numeric ){
 	if(tempKey==0){
 	    tempKey = new std::string(key);
 	    keyToAdd = tempKey;
@@ -176,7 +98,7 @@ void HistogramMaker::add(const std::string &key)
 
     /* Apply the flags */
     // See: http://stackoverflow.com/questions/1081456/wchar-t-vs-wint-t
-    if(flags & FLAG_LOWERCASE){
+    if ( flags.lowercase ){
 	/* keyToAdd is UTF-8; convert to UTF-16, downcase, and convert back to UTF-8 */
 	try{
 	    std::wstring utf16key;
@@ -194,7 +116,7 @@ void HistogramMaker::add(const std::string &key)
 	     */
 	}
     }
-    if(flags & FLAG_NUMERIC){
+    if ( flags.numeric ){
 	/* keyToAdd is UTF-8; convert to UTF-16, extract digits, and convert back to UTF-8 */
 	std::string originalTempKey(*tempKey);
 	try{
@@ -237,3 +159,4 @@ void HistogramMaker::add(const std::string &key)
 	delete tempKey;
     }
 }
+#endif

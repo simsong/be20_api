@@ -190,24 +190,30 @@ TEST_CASE("write_features", "[feature_recorder_set]" ) {
         REQUIRE( frs.get_name("test") != nullptr);
         REQUIRE( frs.get_name("test_not") == nullptr);
 
-        feature_recorder *ft = frs.get_name("test");
+        feature_recorder *fr = frs.get_name("test");
         pos0_t p;
-        ft->write(p, "one", "context");
-        ft->write(p+5, "one", "context");
-        ft->write(p+10, "two", "context");
+        fr->write(p, "one", "context");
+        fr->write(p+5, "one", "context");
+        fr->write(p+10, "two", "context");
+
+        /* Ask the feature recorder to create a histogram */
+
+
     }
     /* get the last line of the test file and see if it is correct */
     std::string expected_lastline {"10\ttwo\tcontext"};
     std::vector<std::string> lines = getLines(tempdir+"/test.txt");
 
     REQUIRE( lines.back() == expected_lastline);
+
+
 }
 
 /****************************************************************
- * histogram.h
+ * char_class.h
  */
-#include "histogram.h"
-TEST_CASE( "histogram.h", "[be13_api]") {
+#include "char_class.h"
+TEST_CASE( "char_class", "[char_class]") {
     CharClass c;
     c.add('a');
     c.add('0');
@@ -221,6 +227,19 @@ TEST_CASE( "histogram.h", "[be13_api]") {
     REQUIRE( c.range_g_z == 0);
     REQUIRE( c.range_G_Z == 0);
     REQUIRE( c.range_0_9 == 1);
+}
+
+/****************************************************************
+ * histogram_def.h
+ */
+#include "histogram_def.h"
+TEST_CASE( "histogram_def", "[histogram_def]" ){
+    histogram_def h1("feature1","pattern1","suffix1",histogram_def::flags_t());
+    histogram_def h2("feature2","pattern2","suffix2",histogram_def::flags_t());
+
+    REQUIRE( h1 == h1);
+    REQUIRE( h1 != h2);
+    REQUIRE( h1 < h2);
 }
 
 /****************************************************************
