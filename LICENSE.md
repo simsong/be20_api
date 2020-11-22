@@ -9,7 +9,7 @@ and continued to work on **bulk_extractor** in his personal
 capacity. Those modifications are covered under the MIT license. Other
 components are licensed as noted.
 
-## MIT License
+## MIT License.
 
 Copyright (c) 2020, Simson L. Garfinkel {{ organization }}
 
