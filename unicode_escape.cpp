@@ -240,7 +240,7 @@ bool looks_like_utf16(const std::string &str,bool &little_endian)
  * successful, and returning 0 if it is not.
  */
 /* static */
-std::string *convert_utf16_to_utf8(const std::string &key,bool little_endian)
+std::string convert_utf16_to_utf8(const std::string &key,bool little_endian)
 {
     /* re-image this string as UTF16*/
     std::wstring utf16;
@@ -251,36 +251,32 @@ std::string *convert_utf16_to_utf8(const std::string &key,bool little_endian)
     /* Now convert it to a UTF-8;
      * set tempKey to be the utf-8 string that will be erased.
      */
-    std::string *tempKey = new std::string;
-    try {
-        utf8::utf16to8(utf16.begin(),utf16.end(),std::back_inserter(*tempKey));
-        /* Erase any nulls if present */
-        while(tempKey->size()>0) {
-            size_t nullpos = tempKey->find('\000');
-            if (nullpos==std::string::npos) break;
-            tempKey->erase(nullpos,1);
-        }
-    } catch (const utf8::invalid_utf16 &){
-        /* Exception; bad UTF16 encoding */
-        delete tempKey;
-        tempKey = 0;		// give up on temp key; otherwise its invalidated below
-        return 0;
+    std::string tempKey = new std::string;
+    utf8::utf16to8(utf16.begin(),utf16.end(),std::back_inserter(*tempKey));
+    /* Erase any nulls if present */
+    while(tempKey.size()>0) {
+        size_t nullpos = tempKey.find('\000');
+        if (nullpos==std::string::npos) break;
+        tempKey.erase(nullpos,1);
     }
     return tempKey;
 }
 
-std::string *convert_utf16_to_utf8(const std::string &key)
+std::string convert_utf16_to_utf8(const std::string &key)
 {
     bool little_endian=false;
     if(looks_like_utf16(key,little_endian)){
-        return convert_utf16_to_utf8(key,little_endian);
+        return convert_utf16_to_utf8(key, little_endian);
     }
-    return 0;
+    throw utf8::invalid_utf16();
 }
 
+#if 0
 std::string *make_utf8(const std::string &key)
 {
     std::string *utf8 = convert_utf16_to_utf8(key);
     if(utf8==0) utf8 = new std::string(key);
     return utf8;
 }
+#endif
+

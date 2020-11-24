@@ -52,7 +52,8 @@ test_be13_api_SOURCES = $(DFXML_WRITER) test_be13_api.cpp catch.hpp \
 	scanner_set.h scanner_set.cpp \
 	scanner_params.h scanner_params.cpp \
 	packet_info.h pcap_fake.h \
-	histogram.h histogram.cpp \
+	histogram_def.h  \
+	histogram_maker.h histogram_maker.cpp \
 	feature_recorder_sql.h feature_recorder_sql.cpp \
 	feature_recorder_file.h feature_recorder_file.cpp \
 	feature_recorder_set.h 	feature_recorder_set.cpp \

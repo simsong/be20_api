@@ -5,30 +5,25 @@
  */
 
 class HistogramMaker  {
-    typedef std::map<std::string, struct histogramTally> HistogramMap;
-    HistogramMap h {};			// holds the histogram
-    struct histogram_def def;
-
-public:
-    static uint32_t debug_histogram_malloc_fail_frequency;    // for debugging, make malloc fail sometimes
 
     /** The ReportElement is used for creating the report of histogram frequencies.
      * It can be thought of as the histogram bin.
      */
-    struct histogramTally {
-	uint32_t count;		// total strings seen
-	uint32_t count16;	// total utf16 strings seen
-	histogramTally():count(0),count16(0){};
-	virtual ~histogramTally(){};
+    struct HistogramTally {
+	uint32_t count      {0};		// total strings seen
+	uint32_t count16    {0};	// total utf16 strings seen
+	HistogramTally(){};
+	virtual ~HistogramTally(){};
     };
 
     /** The ReportElement is used for creating the report of histogram frequencies.
      * It can be thought of as the histogram bin.
      */
     struct ReportElement {
-	ReportElement(std::string aValue,histogramTally aTally):value(aValue),tally(aTally){ }
-	std::string   value;		// UTF-8
-	histogramTally      tally;
+        ReportElement(){}
+	ReportElement(std::string aValue,HistogramTally aTally):value(aValue),tally(aTally){ }
+	std::string         value {};		// UTF-8
+	HistogramTally      tally {};
 	static bool compare_ref(const ReportElement &e1,const ReportElement &e2) {
 	    if (e1.tally.count > e2.tally.count) return true;
 	    if (e1.tally.count < e2.tally.count) return false;
@@ -42,19 +37,17 @@ public:
 	virtual ~ReportElement(){};
     };
 
-    /**
-     * Determine if a string probably has utf16.
-     */
-    static bool looks_like_utf16(const std::string &str,bool &little_endian);
+    std::map<std::string, struct histogramTally> h {}; // the histogram 
+    const struct histogram_def &def;                          // the definition we are making
 
-    /* These all allocate a string that must be freed */
+    uint32_t debug_histogram_malloc_fail_frequency {};    // for debugging, make malloc fail sometimes
 
     static std::string *convert_utf16_to_utf8(const std::string &str);
     static std::string *convert_utf16_to_utf8(const std::string &str,bool little_endian);
     static std::string *make_utf8(const std::string &key);
 
-    HistogramMaker(){}
-    void clear(){h.clear();}
+    HistogramMaker(const struct histogram_def &def_):def(def_){}
+    void clear(){ h.clear(); }        // 
     void add(const std::string &key);	// adds a string to the histogram count
 
     /** A FrequencyReportVector is a vector of report elements when the report is generated.
@@ -63,8 +56,7 @@ public:
     /** makeReport() makes a report and returns a
      * FrequencyReportVector.
      */
-    FrequencyReportVector *makeReport() const;	// return a report with all of them
-    FrequencyReportVector *makeReport(int topN) const; // returns just the topN
+    FrequencyReportVector *makeReport(int topN=0) const; // returns just the topN; 0 means all
     virtual ~HistogramMaker(){};
 };
 
