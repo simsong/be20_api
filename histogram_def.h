@@ -94,7 +94,7 @@ struct histogram_def {
 
     /**
      * @param feature- the feature file to histogram (no .txt)
-     * @param re     - the regular expression to extract
+     * @param re     - the regular expression to extract. 
      * @param require- require this string on the line (usually in context)
      * @param suffix - the suffix to add to the histogram file after feature name before .txt
      * @param flags  - any flags (see above)
@@ -121,7 +121,7 @@ struct histogram_def {
     std::string suffix {};
 
     /* the compiled regular expression. Since it is compiled, it need not be used in comparisions */
-    std::regex  reg {};
+    mutable std::regex  reg {};
 
     /* flags */
     struct flags_t flags {};

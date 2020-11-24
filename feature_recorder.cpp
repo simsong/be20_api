@@ -673,3 +673,8 @@ void feature_recorder::set_carve_mtime(const std::string &fname, const std::stri
 #endif
 }
 #endif
+
+
+void feature_recorder::generate_histogram(ostream &os, const struct histogram_def &def)
+{
+}

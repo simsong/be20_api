@@ -1,6 +1,10 @@
+#ifndef HISTOGRAM_MAKER_H
+#define HISTOGRAM_MAKER_H
+
+/** A simple class for making histograms of strings.
+ */
+
 class HistogramMaker  {
-    /** A HistogramMap holds the histogram while it is being computed.
-     */
     typedef std::map<std::string, struct histogramTally> HistogramMap;
     HistogramMap h {};			// holds the histogram
     struct histogram_def def;
@@ -63,3 +67,5 @@ public:
     FrequencyReportVector *makeReport(int topN) const; // returns just the topN
     virtual ~HistogramMaker(){};
 };
+
+#endif

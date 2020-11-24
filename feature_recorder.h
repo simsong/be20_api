@@ -20,6 +20,7 @@
 #include "pos0.h"
 #include "sbuf.h"
 #include "atomic_set_map.h"
+#include "histogram_def.h"
 
 /**
  * \addtogroup bulk_extractor_APIs
@@ -215,6 +216,10 @@ public:;
 
     // Set the time of the carved file to iso8601 file
     //virtual void set_carve_mtime(const std::string &fname, const std::string &mtime_iso8601);
+
+    // After the feature recorder runs, we can ask for a histogram to be created
+    virtual void generate_histogram(ostream &os, const struct histogram_def &def);
+
 };
 
 #endif

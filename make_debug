@@ -1,3 +1,4 @@
-./configure CFLAGS="-g -O0" CXXFLAGS="-g -O0"
 make clean
-make apitest
+./configure CFLAGS="-g -O0" CXXFLAGS="-g -O0"
+make test_be13_api
+

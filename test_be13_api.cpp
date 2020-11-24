@@ -197,7 +197,7 @@ TEST_CASE("write_features", "[feature_recorder_set]" ) {
         fr->write(p+10, "two", "context");
 
         /* Ask the feature recorder to create a histogram */
-
+        
 
     }
     /* get the last line of the test file and see if it is correct */

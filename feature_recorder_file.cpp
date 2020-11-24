@@ -13,7 +13,6 @@
 #include "feature_recorder_set.h"
 #include "word_and_context_list.h"
 #include "unicode_escape.h"
-//#include "histogram.h"
 #include "utils.h"
 
 #ifndef MAXPATHLEN
@@ -203,10 +202,6 @@ public:
     }
 };
 
-/****************************************************************
- *** PHASE HISTOGRAM (formerly phase 3): Create the histograms
- ****************************************************************/
-
 /**
  * We now have three kinds of histograms:
  * 1 - Traditional post-processing histograms specified by the histogram library
@@ -222,6 +217,128 @@ size_t feature_recorder::count_histograms() const
     return histogram_defs.size();
 }
 #endif
+
+
+/****************************************************************
+ *** WRITING SUPPORT
+ ****************************************************************/
+
+/* write to the file.
+ * this is the only place where writing happens.
+ * so it's an easy place to do utf-8 validation in debug mode.
+ */
+void feature_recorder_file::write0(const std::string &str)
+{
+    if (fs.flags.pedantic && (utf8::find_invalid(str.begin(),str.end()) != str.end())) {
+        std::cerr << "******************************************\n";
+        std::cerr << "feature recorder: " << name << "\n";
+        std::cerr << "invalid utf-8 in write: " << str << "\n";
+        throw std::runtime_error("Invalid utf-8 in write");
+    }
+
+    /* this is where the writing happens. lock the output and write */
+    if (fs.flags.disabled) {
+        return;
+    }
+
+    const std::lock_guard<std::mutex> lock(Mios);
+    if(ios.is_open()){
+        /* If there is no banner, add it */
+        if (ios.tellg()==0){
+            banner_stamp(ios, feature_file_header);
+        }
+
+        /* Output the feature */
+        ios << str << '\n';
+        if (ios.fail()){
+            throw std::runtime_error("Disk full. Free up space and re-restart.");
+        }
+        features_written += 1;
+    }
+}
+
+
+/**
+ * Combine the pos0, feature and context into a single line and write it to the feature file.
+ *
+ * @param feature - The feature, which is valid UTF8 (but may not be exactly the bytes on the disk)
+ * @param context - The context, which is valid UTF8 (but may not be exactly the bytes on the disk)
+ *
+ * Interlocking is done in write().
+ */
+
+void feature_recorder_file::write0(const pos0_t &pos0, const std::string &feature, const std::string &context)
+{
+    if ( fs.flags.disabled ) {
+        return;
+    }
+    std::stringstream ss;
+    ss << pos0.shift( fs.offset_add).str() << '\t' << feature;
+    if ((flags.no_context == false) && ( context.size()>0 )) {
+        ss << '\t' << context;
+    }
+    this->write0( ss.str() );
+}
+
+
+
+#if 0
+void feature_recorder::printf(const char *fmt, ...)
+{
+    const int maxsize = 65536;
+    managed_malloc<char>p(maxsize);
+
+    if(p.buf==0) return;
+
+    va_list ap;
+    va_start(ap,fmt);
+    vsnprintf(p.buf,maxsize,fmt,ap);
+    va_end(ap);
+    this->write(p.buf);
+}
+#endif
+
+
+#if 0
+/* Hook for writing histogram
+ */
+static int callback_counter(void *param, int argc, char **argv, char **azColName)
+{
+    int *counter = reinterpret_cast<int *>(param);
+    (*counter)++;
+    return 0;
+}
+#endif
+
+#if 0
+static void dump_hist(sqlite3_context *ctx,int argc,sqlite3_value**argv)
+{
+    const histogram_def *def = reinterpret_cast<const histogram_def *>(sqlite3_user_data(ctx));
+
+#ifdef DEBUG
+    std::cerr << "behist feature=" << def->feature << "  suffix="
+              << def->suffix << "  argc=" << argc << "value = " << sqlite3_value_text(argv[0]) << "\n";
+#endif
+    std::string new_feature(reinterpret_cast<const char *>(sqlite3_value_text(argv[0])));
+    std::smatch sm;
+    std::regex_search( new_feature, sm, def->reg);
+    if (sm.size() > 0){
+        new_feature = sm.str();
+        sqlite3_result_text(ctx,new_feature.c_str(),new_feature.size(),SQLITE_TRANSIENT);
+    }
+}
+#endif
+
+/****************************************************************
+ *** FILE-BASED HISOTGRAMS
+ ****************************************************************/
+
+
+void feature_recorder_file::generate_histogram(ostream &os, const struct histogram_def &def)
+{
+    os << histogram_file_header;
+    
+}
 
 
 /** Dump a specific histogram */
@@ -381,112 +498,3 @@ void feature_recorder::add_histogram(const histogram_def &def)
 #endif
 
 
-/****************************************************************
- *** WRITING SUPPORT
- ****************************************************************/
-
-/* write to the file.
- * this is the only place where writing happens.
- * so it's an easy place to do utf-8 validation in debug mode.
- */
-void feature_recorder_file::write0(const std::string &str)
-{
-    if (fs.flags.pedantic && (utf8::find_invalid(str.begin(),str.end()) != str.end())) {
-        std::cerr << "******************************************\n";
-        std::cerr << "feature recorder: " << name << "\n";
-        std::cerr << "invalid utf-8 in write: " << str << "\n";
-        throw std::runtime_error("Invalid utf-8 in write");
-    }
-
-    /* this is where the writing happens. lock the output and write */
-    if (fs.flags.disabled) {
-        return;
-    }
-
-    const std::lock_guard<std::mutex> lock(Mios);
-    if(ios.is_open()){
-        /* If there is no banner, add it */
-        if (ios.tellg()==0){
-            banner_stamp(ios, feature_file_header);
-        }
-
-        /* Output the feature */
-        ios << str << '\n';
-        if (ios.fail()){
-            throw std::runtime_error("Disk full. Free up space and re-restart.");
-        }
-        features_written += 1;
-    }
-}
-
-
-/**
- * Combine the pos0, feature and context into a single line and write it to the feature file.
- *
- * @param feature - The feature, which is valid UTF8 (but may not be exactly the bytes on the disk)
- * @param context - The context, which is valid UTF8 (but may not be exactly the bytes on the disk)
- *
- * Interlocking is done in write().
- */
-
-void feature_recorder_file::write0(const pos0_t &pos0, const std::string &feature, const std::string &context)
-{
-    if ( fs.flags.disabled ) {
-        return;
-    }
-    std::stringstream ss;
-    ss << pos0.shift( fs.offset_add).str() << '\t' << feature;
-    if ((flags.no_context == false) && ( context.size()>0 )) {
-        ss << '\t' << context;
-    }
-    this->write0( ss.str() );
-}
-
-
-
-#if 0
-void feature_recorder::printf(const char *fmt, ...)
-{
-    const int maxsize = 65536;
-    managed_malloc<char>p(maxsize);
-
-    if(p.buf==0) return;
-
-    va_list ap;
-    va_start(ap,fmt);
-    vsnprintf(p.buf,maxsize,fmt,ap);
-    va_end(ap);
-    this->write(p.buf);
-}
-#endif
-
-
-#if 0
-/* Hook for writing histogram
- */
-static int callback_counter(void *param, int argc, char **argv, char **azColName)
-{
-    int *counter = reinterpret_cast<int *>(param);
-    (*counter)++;
-    return 0;
-}
-#endif
-
-#if 0
-static void dump_hist(sqlite3_context *ctx,int argc,sqlite3_value**argv)
-{
-    const histogram_def *def = reinterpret_cast<const histogram_def *>(sqlite3_user_data(ctx));
-
-#ifdef DEBUG
-    std::cerr << "behist feature=" << def->feature << "  suffix="
-              << def->suffix << "  argc=" << argc << "value = " << sqlite3_value_text(argv[0]) << "\n";
-#endif
-    std::string new_feature(reinterpret_cast<const char *>(sqlite3_value_text(argv[0])));
-    std::smatch sm;
-    std::regex_search( new_feature, sm, def->reg);
-    if (sm.size() > 0){
-        new_feature = sm.str();
-        sqlite3_result_text(ctx,new_feature.c_str(),new_feature.size(),SQLITE_TRANSIENT);
-    }
-}
-#endif

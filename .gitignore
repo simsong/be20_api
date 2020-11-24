@@ -40,3 +40,4 @@ test-driver
 config.guess
 config.sub
 test_be13_api
+*.d
