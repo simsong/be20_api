@@ -76,7 +76,7 @@ struct histogram_def {
     }
 
     /* comparator, so we can have a functioning map and set classes.'
-     * ignores regex at the moment
+     * ignores reg.
      */
     bool operator<(const histogram_def &a) const {
         if (this->feature < a.feature) return true;
@@ -109,22 +109,22 @@ struct histogram_def {
     }
 
     /* feature file name */
-    std::string feature;
+    std::string feature {};
 
     /* regular expression used to extract feature substring from feature. "" means use the entire feature*/
-    std::string pattern;
+    std::string pattern {};
 
     /* text required somewhere on the feature line. Sort of like grep. used for IP histograms */
-    std::string require;
+    std::string require {};
 
     /* suffix to append to histogram report name */
-    std::string suffix;
+    std::string suffix {};
 
-    /* the compiled regular expression. */
-    std::regex  reg;
+    /* the compiled regular expression. Since it is compiled, it need not be used in comparisions */
+    std::regex  reg {};
 
     /* flags */
-    struct flags_t flags;
+    struct flags_t flags {};
 };
 
 #endif
