@@ -25,7 +25,7 @@ clean-local:
 clean-gcov:
 	rm -f *.gcov *.gcda *.gcno
 
-#DFXML_SRC_DIR=dfxml/src/
+DFXML_SRC_DIR=dfxml/src/
 #include dfxml/src/Makefile.defs
 
 DFXML_WRITER = dfxml/src/dfxml_writer.cpp \
