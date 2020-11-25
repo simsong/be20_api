@@ -197,7 +197,7 @@ TEST_CASE("write_features", "[feature_recorder_set]" ) {
         fr->write(p+10, "two", "context");
 
         /* Ask the feature recorder to create a histogram */
-        
+
 
     }
     /* get the last line of the test file and see if it is correct */
@@ -246,6 +246,19 @@ TEST_CASE( "histogram_def", "[histogram_def]" ){
  * histogram_maker.h
  */
 #include "histogram_maker.h"
+TEST_CASE( "histogram_maker", "[histogram_maker]") {
+    HistogramMaker::ReportElement e1("hello");
+    HistogramMaker::ReportElement e2("world");
+
+    REQUIRE( e1 == e1 );
+    REQUIRE( e1 != e2);
+    REQUIRE( e1 < e2);
+
+    histogram_def h1("p","([0-9]+)","phones",histogram_def::flags_t());
+    HistogramMaker hm(h1);
+
+}
+
 
 /****************************************************************
  *
