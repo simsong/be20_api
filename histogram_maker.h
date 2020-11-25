@@ -37,7 +37,7 @@ class HistogramMaker  {
 	virtual ~ReportElement(){};
     };
 
-    std::map<std::string, struct histogramTally> h {}; // the histogram 
+    std::map<std::string, struct HistogramTally> h {}; // the histogram
     const struct histogram_def &def;                          // the definition we are making
 
     uint32_t debug_histogram_malloc_fail_frequency {};    // for debugging, make malloc fail sometimes
@@ -47,7 +47,7 @@ class HistogramMaker  {
     static std::string *make_utf8(const std::string &key);
 
     HistogramMaker(const struct histogram_def &def_):def(def_){}
-    void clear(){ h.clear(); }        // 
+    void clear(){ h.clear(); }        //
     void add(const std::string &key);	// adds a string to the histogram count
 
     /** A FrequencyReportVector is a vector of report elements when the report is generated.

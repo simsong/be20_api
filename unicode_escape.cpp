@@ -251,8 +251,8 @@ std::string convert_utf16_to_utf8(const std::string &key,bool little_endian)
     /* Now convert it to a UTF-8;
      * set tempKey to be the utf-8 string that will be erased.
      */
-    std::string tempKey = new std::string;
-    utf8::utf16to8(utf16.begin(),utf16.end(),std::back_inserter(*tempKey));
+    std::string tempKey;
+    utf8::utf16to8(utf16.begin(),utf16.end(),std::back_inserter(tempKey));
     /* Erase any nulls if present */
     while(tempKey.size()>0) {
         size_t nullpos = tempKey.find('\000');
@@ -268,15 +268,15 @@ std::string convert_utf16_to_utf8(const std::string &key)
     if(looks_like_utf16(key,little_endian)){
         return convert_utf16_to_utf8(key, little_endian);
     }
-    throw utf8::invalid_utf16();
+    throw utf8::invalid_utf16(0);
 }
 
-#if 0
-std::string *make_utf8(const std::string &key)
+std::string make_utf8(const std::string &str)
 {
-    std::string *utf8 = convert_utf16_to_utf8(key);
-    if(utf8==0) utf8 = new std::string(key);
-    return utf8;
+    try {
+        return convert_utf16_to_utf8(str);
+    }
+    catch (const utf8::invalid_utf16 &){
+        return str;
+    }
 }
-#endif
-

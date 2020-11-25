@@ -195,9 +195,9 @@ void feature_recorder::write(const pos0_t &pos0,const std::string &feature_,cons
         }
     }
 
-    std::string feature = feature_;
-    std::string context = flags.no_context ? "" : context_;
-    std::string *feature_utf8 = make_utf8(feature); // a utf8 feature
+    std::string feature      = feature_;
+    std::string context      = flags.no_context ? "" : context_;
+    std::string feature_utf8 = make_utf8(feature);
 
     quote_if_necessary(feature,context);
 
@@ -227,9 +227,8 @@ void feature_recorder::write(const pos0_t &pos0,const std::string &feature_,cons
     if (flags.no_stoplist==false
         && fs.stop_list
         && fs.stop_list_recorder
-        && fs.stop_list->check_feature_context(*feature_utf8,context)) {
+        && fs.stop_list->check_feature_context(feature_utf8,context)) {
         fs.stop_list_recorder->write(pos0,feature,context);
-        delete feature_utf8;
         return;
     }
 
@@ -275,7 +274,6 @@ void feature_recorder::write(const pos0_t &pos0,const std::string &feature_,cons
 
     /* Finally write out the feature and the context */
     this->write0(pos0,feature,context);
-    delete feature_utf8;
 }
 
 /**
@@ -675,6 +673,6 @@ void feature_recorder::set_carve_mtime(const std::string &fname, const std::stri
 #endif
 
 
-void feature_recorder::generate_histogram(ostream &os, const struct histogram_def &def)
+void feature_recorder::generate_histogram(std::ostream &os, const struct histogram_def &def)
 {
 }

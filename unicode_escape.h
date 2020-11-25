@@ -25,14 +25,15 @@ std::string validateOrEscapeUTF8(const std::string &input,
 
 bool looks_like_utf16(const std::string &str,bool &little_endian);
 
-/* These return the string. If no conversion is possible, 
+/* These return the string. If no conversion is possible,
  * they throw const utf8::invalid_utf16.
  * catch with 'catch (const utf8::invalid_utf16 &)'
  */
 
-std::string convert_utf16_to_utf8(const std::string &key,bool little_endian); // request specific conversion
-std::string convert_utf16_to_utf8(const std::string &key); // guess for best
+std::string convert_utf16_to_utf8(const std::string &str,bool little_endian); // request specific conversion
+std::string convert_utf16_to_utf8(const std::string &str); // guess for best
 
-//std::string make_utf8(const std::string &key);
+/* returns a utf8 for a utf8 or a utf16 */
+std::string make_utf8(const std::string &str);
 
 #endif

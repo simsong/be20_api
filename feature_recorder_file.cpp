@@ -201,6 +201,7 @@ public:
         return ((mhistogram_callback *)(ptr))->do_callback(str,tally);
     }
 };
+#endif
 
 /**
  * We now have three kinds of histograms:
@@ -334,13 +335,14 @@ static void dump_hist(sqlite3_context *ctx,int argc,sqlite3_value**argv)
  ****************************************************************/
 
 
-void feature_recorder_file::generate_histogram(ostream &os, const struct histogram_def &def)
+void feature_recorder_file::generate_histogram(std::ostream &os, const struct histogram_def &def)
 {
     os << histogram_file_header;
-    
+
 }
 
 
+#if 0
 /** Dump a specific histogram */
 void feature_recorder::dump_histogram_file(const histogram_def &def,
                                            void *user,
@@ -496,5 +498,3 @@ void feature_recorder::add_histogram(const histogram_def &def)
     histogram_defs.insert(def);
 }
 #endif
-
-

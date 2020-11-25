@@ -77,7 +77,7 @@ public:
 
     /* Methods to get info */
     //uint64_t count() const { return count_; }
-    virtual void generate_histogram(ostream &os, const struct histogram_def &def);
+    virtual void generate_histogram(std::ostream &os, const struct histogram_def &def);
 
 };
 
