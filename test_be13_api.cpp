@@ -360,9 +360,7 @@ TEST_CASE("map_file","[sbuf]") {
     os.close();
 
 
-    sbuf_t *sb0 = sbuf_t::map_file(fname);
-    REQUIRE(sb0 != nullptr);
-    sbuf_t &sb1 = *sb0;
+    sbuf_t sb1 = sbuf_t::map_file(fname);
     REQUIRE( sb1.bufsize == strlen(hello));
     REQUIRE( sb1.bufsize == sb1.pagesize);
     for(int i=0;hello[i];i++){
@@ -518,4 +516,40 @@ TEST_CASE("unicode_escape", "[unicode]") {
         }
     }
     REQUIRE( validateOrEscapeUTF8("backslash=\\", false, true, false) == "backslash=\\x5C");
+}
+
+#ifdef HAVE_MACH_O_DYLD_H
+#include <mach-o/dyld.h>
+#endif
+
+std::string get_exe()
+{
+    char rpath[PATH_MAX];
+#ifdef HAVE_MACH_O_DYLD_H
+    char path[PATH_MAX];
+    uint32_t size = sizeof(path);
+    if (_NSGetExecutablePath(path, &size) ==0){
+        realpath(path, rpath);
+    } else {
+        throw std::runtime_error("bufsize too small");
+    }
+#else
+    readlink("/proc/self/exe",rpath, sizeof(rpath));
+#endif
+    return std::string(rpath);
+}
+
+std::string tests_dir()
+{
+    std::filesystem::path p( get_exe() );
+    return  p.parent_path().string() + "/tests";
+}
+
+TEST_CASE("unicode_detection", "[unicode]") {
+    sbuf_t sb16 = sbuf_t::map_file(tests_dir() + "/unilang.htm");
+    sbuf_t sb8 = sbuf_t::map_file(tests_dir() + "/unilang8.htm");
+    bool little_endian=false;
+    if (looks_like_utf16(sb16.asString(), little_endian)){
+        std::cerr << "yes! " << (little_endian ? "little" : "big") << "\n";
+    }
 }

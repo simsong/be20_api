@@ -231,8 +231,8 @@ public:
     }
 
     /* Allocate a sbuf from a file mapped into memory */
-    static sbuf_t *map_file(const std::string &fname);
-    static sbuf_t *map_file(const std::string &fname, int fd, bool should_close); // if file is already opened
+    static const sbuf_t map_file(const std::string &fname); // map a sbuf from a file, or throw exception
+    static const sbuf_t map_file(const std::string &fname, int fd, bool should_close); // if file is already opened
     static const std::string U10001C;         // default delimeter character in bulk_extractor
     static std::string map_file_delimiter; // character placed
     static void set_map_file_delimiter(const std::string &new_delim){

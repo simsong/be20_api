@@ -3,6 +3,7 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <stdio.h>
+#include <filesystem>
 
 #include "bulk_extractor_i.h"
 #include "unicode_escape.h"
@@ -23,12 +24,13 @@
  */
 const std::string sbuf_t::U10001C("\xf4\x80\x80\x9c");
 std::string sbuf_t::map_file_delimiter(sbuf_t::U10001C);
-sbuf_t *sbuf_t::map_file(const std::string &fname)
+const sbuf_t sbuf_t::map_file(const std::string &fname)
 {
     int fd = open(fname.c_str(),O_RDONLY|O_BINARY,0);
-    if (fd<0) return 0;          /* cannot open file */
-    sbuf_t *sbuf = sbuf_t::map_file(fname, fd, true);
-    return sbuf;
+    if (fd<0){
+        throw std::filesystem::filesystem_error(fname, std::error_code(errno, std::generic_category()));
+    }
+    return sbuf_t::map_file(fname, fd, true);
 }
 
 /* Map a file when we are given an open fd.
@@ -36,12 +38,12 @@ sbuf_t *sbuf_t::map_file(const std::string &fname)
  * If there is no mmap, just allocate space and read the file
  */
 
-sbuf_t *sbuf_t::map_file(const std::string &fname, int fd, bool should_close)
+const sbuf_t sbuf_t::map_file(const std::string &fname, int fd, bool should_close)
 {
     struct stat st;
     if(fstat(fd,&st)){
         close(fd);
-        return 0; /* cannot stat */
+        throw std::filesystem::filesystem_error("fstat", std::error_code(errno, std::generic_category()));
     }
 
 #ifdef HAVE_MMAP
@@ -64,15 +66,14 @@ sbuf_t *sbuf_t::map_file(const std::string &fname, int fd, bool should_close)
     bool should_free = true;
     bool should_unmap = false;
 #endif
-    sbuf_t *sbuf = new sbuf_t(pos0_t(fname+sbuf_t::map_file_delimiter),
-                              buf,
-                              st.st_size, // bufsize
-                              st.st_size, // pagesize
-                              fd,         // fd
-                              should_unmap,
-                              should_free,
-                              should_close);
-    return sbuf;
+    return sbuf_t(pos0_t(fname+sbuf_t::map_file_delimiter),
+                  buf,
+                  st.st_size, // bufsize
+                  st.st_size, // pagesize
+                  fd,         // fd
+                  should_unmap,
+                  should_free,
+                  should_close);
 }
 
 /*
