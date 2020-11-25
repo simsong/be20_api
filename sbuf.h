@@ -24,6 +24,7 @@
  */
 
 #include "pos0.h"
+#include <cassert>
 #include <string>
 #include <fstream>
 #include <exception>
