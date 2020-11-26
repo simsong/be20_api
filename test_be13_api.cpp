@@ -63,6 +63,9 @@ std::string get_tempdir()
 #ifdef HAVE_MACH_O_DYLD_H
 #include <mach-o/dyld.h>
 #endif
+#ifdef HAVE_LIMITS_H
+#include <limits.h>
+#endif
 
 std::string get_exe()
 {
