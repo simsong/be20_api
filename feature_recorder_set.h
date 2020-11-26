@@ -63,15 +63,16 @@ class feature_recorder_set {
 #endif
 
 public:
-    /* Debug for feature recorders. This used to be a flag, but Stroustrup (2013) recommends just having
+    /* Flags for feature recorders. This used to be a bitmask, but Stroustrup (2013) recommends just having
      * a bunch of bools.
      */
     struct flags_t {
-        bool disabled {false}; //              = 0x02;  // do not record anything! THis is is just used for a path-printer
+        bool disabled {false}; // do not record anything! THis is is just used for a path-printer
         bool pedantic {false};        // make sure that all features written are valid utf-8
         bool no_alert {false};                              // no alert recorder
         bool only_alert {false};                                //  always return the alert recorder
         bool create_stop_list_recorders {false}; // static const uint32_t CREATE_STOP_LIST_RECORDERS= 0x04;  //
+        bool debug {false};                      // enable debug printing
     } flags;
 
     /** Constructor:

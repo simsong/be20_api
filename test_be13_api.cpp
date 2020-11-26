@@ -28,6 +28,8 @@
 #include <iostream>
 #include <filesystem>
 
+#include "sbuf.h"
+
 // https://inversepalindrome.com/blog/how-to-create-a-random-string-in-cpp
 std::string random_string(std::size_t length)
 {
@@ -58,6 +60,48 @@ std::string get_tempdir()
     return tempdir;
 }
 
+#ifdef HAVE_MACH_O_DYLD_H
+#include <mach-o/dyld.h>
+#endif
+
+std::string get_exe()
+{
+    char rpath[PATH_MAX];
+#ifdef HAVE_MACH_O_DYLD_H
+    char path[PATH_MAX];
+    uint32_t size = sizeof(path);
+    if (_NSGetExecutablePath(path, &size) ==0){
+        realpath(path, rpath);
+    } else {
+        throw std::runtime_error("bufsize too small");
+    }
+#else
+    readlink("/proc/self/exe",rpath, sizeof(rpath));
+#endif
+    return std::string(rpath);
+}
+
+std::string tests_dir()
+{
+    std::filesystem::path p( get_exe() );
+    return  p.parent_path().string() + "/tests";
+}
+
+
+const char *hello="Hello world!";
+const char *hello_sha1="d3486ae9136e7856bc42212385ea797094475802";
+const uint8_t *hello_buf = reinterpret_cast<const uint8_t *>(hello);
+const sbuf_t hello_sbuf() {
+    pos0_t p0("hello");
+    return sbuf_t(p0, hello_buf, strlen(hello), strlen(hello), 0, false, false, false);
+}
+
+const char *hello16="H\000e\000l\000l\000o\000 \000w\000o\000r\000l\000d\000!\000";
+const uint8_t *hello16_buf = reinterpret_cast<const uint8_t *>(hello16);
+const sbuf_t hello16_sbuf() {
+    pos0_t p0("hello16");
+    return sbuf_t(p0, hello16_buf, strlen(hello)*2, strlen(hello)*2, 0, false, false, false);
+}
 
 
 /****************************************************************
@@ -71,7 +115,7 @@ TEST_CASE("aftimer", "[utils]") {
 
 
 /****************************************************************
- * atomic_set_map.h
+ * atomic_histogram.h
  */
 #include "atomic_set_map.h"
 int dump_cb(void *user, const std::string &val, const int &count){
@@ -92,7 +136,8 @@ int dump_cb(void *user, const std::string &val, const int &count){
     return 0;
 }
 
-TEST_CASE( "test atomic_histogram", "[vector]" ){
+#include "atomic_histogram.h"
+TEST_CASE( "atomic_histogram", "[atomic]" ){
     atomic_histogram<std::string, int> ahist;
     ahist.add("foo", 1);
     ahist.add("foo", 2);
@@ -126,9 +171,8 @@ static std::string hash_func(const uint8_t *buf,size_t bufsize)
     exit(1);
 }
 
-TEST_CASE("hash_func", "[sha1]") {
-    const char *hello="hello";
-    REQUIRE( hash_func(reinterpret_cast<const uint8_t *>(hello), strlen(hello))=="aaf4c61ddcc5e8a2dabede0f3b482cd9aea9434d");
+TEST_CASE("sha1", "[hash]") {
+    REQUIRE( hash_func(reinterpret_cast<const uint8_t *>(hello), strlen(hello))==hello_sha1);
 }
 
 /****************************************************************
@@ -184,6 +228,7 @@ TEST_CASE("write_features", "[feature_recorder_set]" ) {
     {
         feature_recorder_set::flags_t flags;
         flags.no_alert = true;
+        flags.debug    = true;
 
         feature_recorder_set frs( flags, "sha1", scanner_config::NO_INPUT, tempdir);
         frs.create_named_feature_recorder("test");
@@ -192,16 +237,24 @@ TEST_CASE("write_features", "[feature_recorder_set]" ) {
 
         feature_recorder *fr = frs.get_name("test");
         pos0_t p;
-        fr->write(p, "one", "context");
-        fr->write(p+5, "one", "context");
+        fr->write(p,    "one", "context");
+        fr->write(p+5,  "one", "context");
         fr->write(p+10, "two", "context");
+
+
+        sbuf_t sb16 = hello16_sbuf();
+        REQUIRE( sb16.size() == strlen(hello)*2 );
+
+        fr->write_buf(sb16, 0, 64); // write the entire buffer as a single feature, no context
 
         /* Ask the feature recorder to create a histogram */
 
 
     }
     /* get the last line of the test file and see if it is correct */
-    std::string expected_lastline {"10\ttwo\tcontext"};
+    std::string expected_lastline {"hello16-0\t"
+        "H\\x00e\\x00l\\x00l\\x00o\\x00 \\x00w\\x00o\\x00r\\x00l\\x00d\\x00!\\x00"
+        "\tH\\x00e\\x00l\\x00l\\x00o\\x00 \\x00w\\x00o\\x00r\\x00l\\x00d\\x00!\\x00"};
     std::vector<std::string> lines = getLines(tempdir+"/test.txt");
 
     REQUIRE( lines.back() == expected_lastline);
@@ -326,14 +379,7 @@ TEST_CASE( "test atomic_set_map", "[vector]" ){
  *
  * sbuf.h
  */
-#include "sbuf.h"
 
-const char *hello="Hello world!";
-const uint8_t *hello_buf = reinterpret_cast<const uint8_t *>(hello);
-sbuf_t hello_sbuf() {
-    pos0_t p0("hello");
-    return sbuf_t(p0, hello_buf, strlen(hello), strlen(hello), 0, false, false, false);
-}
 
 TEST_CASE("hello_sbuf","[sbuf]") {
     sbuf_t sb1 = hello_sbuf();
@@ -516,33 +562,6 @@ TEST_CASE("unicode_escape", "[unicode]") {
         }
     }
     REQUIRE( validateOrEscapeUTF8("backslash=\\", false, true, false) == "backslash=\\x5C");
-}
-
-#ifdef HAVE_MACH_O_DYLD_H
-#include <mach-o/dyld.h>
-#endif
-
-std::string get_exe()
-{
-    char rpath[PATH_MAX];
-#ifdef HAVE_MACH_O_DYLD_H
-    char path[PATH_MAX];
-    uint32_t size = sizeof(path);
-    if (_NSGetExecutablePath(path, &size) ==0){
-        realpath(path, rpath);
-    } else {
-        throw std::runtime_error("bufsize too small");
-    }
-#else
-    readlink("/proc/self/exe",rpath, sizeof(rpath));
-#endif
-    return std::string(rpath);
-}
-
-std::string tests_dir()
-{
-    std::filesystem::path p( get_exe() );
-    return  p.parent_path().string() + "/tests";
 }
 
 TEST_CASE("unicode_detection", "[unicode]") {

@@ -181,7 +181,7 @@ void feature_recorder::write0(const pos0_t &pos0, const std::string &feature, co
  * write() is the main entry point for writing a feature at a given position with context.
  * write() checks the stoplist and escapes non-UTF8 characters, then calls write0().
  */
-void feature_recorder::write(const pos0_t &pos0,const std::string &feature_,const std::string &context_)
+void feature_recorder::write(const pos0_t &pos0, const std::string &feature_, const std::string &context_)
 {
     if (fs.flags.disabled) return;           // disabled
     if (fs.flags.pedantic){
@@ -209,14 +209,14 @@ void feature_recorder::write(const pos0_t &pos0,const std::string &feature_,cons
     if ( fs.flags.pedantic ){
         /* Check for tabs or newlines in feature and and context */
         for(size_t i=0;i<feature.size();i++){
-            if(feature[i]=='\t') assert(0);
-            if(feature[i]=='\n') assert(0);
-            if(feature[i]=='\r') assert(0);
+            if (feature[i]=='\t') assert(0);
+            if (feature[i]=='\n') assert(0);
+            if (feature[i]=='\r') assert(0);
         }
         for(size_t i=0;i<context.size();i++){
-            if(context[i]=='\t') assert(0);
-            if(context[i]=='\n') assert(0);
-            if(context[i]=='\r') assert(0);
+            if (context[i]=='\t') assert(0);
+            if (context[i]=='\n') assert(0);
+            if (context[i]=='\r') assert(0);
         }
     }
 
@@ -273,7 +273,7 @@ void feature_recorder::write(const pos0_t &pos0,const std::string &feature_,cons
 #endif
 
     /* Finally write out the feature and the context */
-    this->write0(pos0,feature,context);
+    this->write0(pos0, feature, context);
 }
 
 /**
@@ -284,8 +284,7 @@ void feature_recorder::write(const pos0_t &pos0,const std::string &feature_,cons
 
 void feature_recorder::write_buf(const sbuf_t &sbuf,size_t pos,size_t len)
 {
-#ifdef DEBUG_SCANNER
-    if(debug & DEBUG_SCANNER){
+    if (fs.flags.debug){
         std::cerr << "*** write_buf " << name << " sbuf=" << sbuf << " pos=" << pos << " len=" << len << "\n";
         // for debugging, print Imagine that when pos= the location where the crash is happening.
         // then set a breakpoint at std::cerr.
@@ -293,7 +292,6 @@ void feature_recorder::write_buf(const sbuf_t &sbuf,size_t pos,size_t len)
             std::cerr << "Imagine that\n";
         }
     }
-#endif
 
     /* If we are in the margin, ignore; it will be processed again */
     if(pos >= sbuf.pagesize && pos < sbuf.bufsize){
@@ -301,14 +299,11 @@ void feature_recorder::write_buf(const sbuf_t &sbuf,size_t pos,size_t len)
     }
 
     if(pos >= sbuf.bufsize){    /* Sanity checks */
-        std::cerr << "*** write_buf: WRITE OUTSIDE BUFFER. "
-                  << " pos="  << pos
-                  << " sbuf=" << sbuf << "\n";
-        return;
+        throw std::runtime_error(std::string("*** write_buf: WRITE OUTSIDE BUFFER. pos=")  + itos(pos) + " sbuf=");
     }
 
     /* Asked to write beyond bufsize; bring it in */
-    if(pos+len > sbuf.bufsize){
+    if (pos+len > sbuf.bufsize){
         len = sbuf.bufsize - pos;
     }
 
@@ -320,11 +315,11 @@ void feature_recorder::write_buf(const sbuf_t &sbuf,size_t pos,size_t len)
         size_t p0 = context_window < pos ? pos-context_window : 0;
         size_t p1 = pos+len+context_window;
 
-        if(p1>sbuf.bufsize) p1 = sbuf.bufsize;
-        assert(p0<=p1);
+        if (p1>sbuf.bufsize) p1 = sbuf.bufsize;
+        assert( p0<=p1 );
         context = sbuf.substr(p0,p1-p0);
     }
-    this->write(sbuf.pos0+pos,feature,context);
+    this->write(sbuf.pos0+pos, feature, context);
 #ifdef DEBUG_SCANNER
     if(debug & DEBUG_SCANNER){
         std::cerr << ".\n";

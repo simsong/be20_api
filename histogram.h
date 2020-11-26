@@ -38,9 +38,6 @@
  */
 
 
-/* in-memory histograms */
-typedef atomic_histogram<std::string,uint64_t> mhistogram_t;             // memory histogram
-typedef std::map<histogram_def,mhistogram_t *> mhistograms_t;
 
 //std::ostream & operator <<(std::ostream &os,const HistogramMaker::FrequencyReportVector &rep);
 
@@ -54,8 +51,8 @@ inline bool operator <(const histogram_def &h1,const histogram_def &h2)  {
     return false;                       /* equal */
 };
 
-inline bool operator !=(const histogram_def &h1,const histogram_def &h2)  {
-    return h1.feature!=h2.feature || h1.pattern!=h2.pattern || h1.suffix!=h2.suffix;
-};
+//inline bool operator !=(const histogram_def &h1,const histogram_def &h2)  {
+//    return h1.feature!=h2.feature || h1.pattern!=h2.pattern || h1.suffix!=h2.suffix;
+//};
 
 #endif
