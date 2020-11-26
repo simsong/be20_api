@@ -547,9 +547,13 @@ std::string tests_dir()
 
 TEST_CASE("unicode_detection", "[unicode]") {
     sbuf_t sb16 = sbuf_t::map_file(tests_dir() + "/unilang.htm");
+
+    bool little_endian = false;
+    bool t16 = looks_like_utf16(sb16.asString(), little_endian);
+    REQUIRE( t16 == true);
+    REQUIRE( little_endian == true);
+
     sbuf_t sb8 = sbuf_t::map_file(tests_dir() + "/unilang8.htm");
-    bool little_endian=false;
-    if (looks_like_utf16(sb16.asString(), little_endian)){
-        std::cerr << "yes! " << (little_endian ? "little" : "big") << "\n";
-    }
+    bool t8 = looks_like_utf16(sb8.asString(), little_endian);
+    REQUIRE( t8 == false);
 }
