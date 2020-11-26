@@ -1,5 +1,7 @@
 # be13_api
 
+[![codecov](https://codecov.io/gh/simsong/be13_api/branch/master/graph/badge.svg?token=Nj8q8eo3Ji)](https://codecov.io/gh/simsong/be13_api)
+
 This is the framework for the [bulk_extractor](https://github.com/simsong/bulk_extractor)  plug-in API.
 It is called *be13_api* because the API was developed for Bulk_Extractor version 1.3. The API has been
 used without change in Bulk_Extractor versions 1.4 and 1.5, and will be used without change in Bulk_Extractor version 2.0
