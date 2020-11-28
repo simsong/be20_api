@@ -1,7 +1,12 @@
 #ifndef HISTOGRAM_MAKER_H
 #define HISTOGRAM_MAKER_H
 
-/** A simple class for making histograms of strings.
+/** A simple class for making histograms of strings. Strings are analyzed to see if they contain UTF16 and, if they do, that is separately tallied as thei UTF-8 component.
+ * Histogram maker implement:
+ * - Counting
+ * - Determining how much memory is in use by histogram.
+ * - Writing histogram to a stream (for example, when memory is filled.)
+ * - Merging multiple histogram files to a single file.
  */
 
 class HistogramMaker  {
@@ -23,7 +28,7 @@ public:;
             return (this->count < a.count) ||
                 ((this->count == a.count && (this->count16 < a.count16)));
         }
-
+        size_t bytes() const { return sizeof(*this);}
     };
 
     /** The ReportElement is used for creating the report of histogram frequencies.
@@ -32,7 +37,7 @@ public:;
     struct ReportElement {
 
 	ReportElement(std::string aValue):value(aValue){ };
-	std::string         value;		// UTF-8
+	std::string                value;		// UTF-8
 	struct HistogramTally      tally {};
 
         bool operator==(const ReportElement &a) const {
@@ -52,6 +57,9 @@ public:;
             return e1 < e2;
 	}
 	virtual ~ReportElement(){};
+        size_t bytes() const{
+            return sizeof(*this) + value.size();
+        }                 // number of bytes used by object
     };
 
     std::map<std::string, struct HistogramTally> h {}; // the histogram
@@ -61,6 +69,16 @@ public:;
     HistogramMaker(const struct histogram_def &def_):def(def_){}
     void clear(){ h.clear(); }        //
     void add(const std::string &key);	// adds a string to the histogram count
+    static size_t addSizes(const ReportElement &a, const ReportElement b){
+        return a.bytes() + b.bytes();
+    }
+    size_t bytes(){            // returns the total number of bytes of the histogram,.
+        size_t count = sizeof(*this);
+        for(auto it:h){
+            count += sizeof(it.first) + it.first.size() + it.second.bytes();
+        }
+        return count;
+    }
 
     /** A FrequencyReportVector is a vector of report elements when the report is generated.
      */

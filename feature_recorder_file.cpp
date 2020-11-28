@@ -61,7 +61,8 @@ feature_recorder_file::feature_recorder_file(class feature_recorder_set &fs_, co
     /* Open the file recorder for output.
      * If the file exists, seek to the end and find the last complete line, and start there.
      */
-    std::string fname = fname_in_outdir("");
+    const std::lock_guard<std::mutex> lock(Mios);
+    fname = fname_in_outdir("",NO_COUNT);
     ios.open( fname.c_str(), std::ios_base::in|std::ios_base::out|std::ios_base::ate);
     if ( ios.is_open()){                  // opened existing file
         ios.seekg(0L,std::ios_base::end);
@@ -136,14 +137,6 @@ void feature_recorder_file::banner_stamp(std::ostream &os,const std::string &hea
     os << header;
 }
 
-
-
-/* I'm not sure that this is needed */
-void feature_recorder_file::flush()
-{
-    const std::lock_guard<std::mutex> lock(Mios);            // get the lock; released when object is deallocated.
-    ios.flush();
-}
 
 
 /* statics */
@@ -335,25 +328,18 @@ static void dump_hist(sqlite3_context *ctx,int argc,sqlite3_value**argv)
  ****************************************************************/
 
 
+
 void feature_recorder_file::generate_histogram(std::ostream &os, const struct histogram_def &def)
 {
+#if 0
+    const std::lock_guard<std::mutex> lock(Mios);
+    ios.flush();
     os << histogram_file_header;
 
-}
-
-
-#if 0
-/** Dump a specific histogram */
-void feature_recorder::dump_histogram_file(const histogram_def &def,
-                                           void *user,
-                                           feature_recorder::dump_callback_t cb) const
-{
     /* This is a file based histogram. We will be reading from one file and writing to another */
-    std::string ifname = fname_suffix("");  // source of features
-    std::ifstream f(ifname.c_str());
+    std::ifstream f(fname.c_str());
     if(!f.is_open()){
-        std::cerr << "Cannot open histogram input file: " << ifname << "\n";
-        return;
+        throw std::invalid_argument("Cannot open histogram input file: " + ifname);
     }
 
     /* Read each line of the feature file and add it to the histogram.
@@ -365,21 +351,22 @@ void feature_recorder::dump_histogram_file(const histogram_def &def,
         HistogramMaker h(def.flags);            /* of seen features, created in pass two */
         try {
             std::string line;
-            while(getline(f,line)){
-                if(line.size()==0) continue; // empty line
-                if(line[0]=='#') continue;   // comment line
+            while (getline(f,line)){
+                if (line.size()==0) continue; // empty line
+                if (line[0]=='#') continue;   // comment line
                 truncate_at(line,'\r');      // truncate at a \r if there is one.
 
                 /** If there is a string required in the line and it isn't present, don't use this line */
-                if(def.require.size()){
+                if (def.require.size()){
                     if(line.find_first_of(def.require)==std::string::npos){
                         continue;
                     }
                 }
 
                 std::string feature = extract_feature(line);
+                // Unquote string if it has anything quoted
                 if (feature.find('\\')!=std::string::npos){
-                    feature = unquote_string(feature);  // reverse \xxx encoding
+                    feature = unquote_string(feature);
                 }
                 /** If there is a pattern to use to prune down the feature, use it */
                 if (def.pattern.size()){
@@ -392,15 +379,18 @@ void feature_recorder::dump_histogram_file(const histogram_def &def,
 
                 /* Remove what follows after \t if this is a context file */
                 size_t tab=feature.find('\t');
-                if(tab!=std::string::npos) feature.erase(tab); // erase from tab to end
+                if (tab!=std::string::npos) feature.erase(tab); // erase from tab to end
+
+                /* Add the feature! */
                 h.add(feature);
             }
             f.close();
         }
         catch (const std::exception &e) {
-            std::cerr << "ERROR: " << e.what() << " generating histogram "
-                      << name << "\n";
+            std::cerr << "ERROR: " << e.what() << " generating histogram " << name << "\n";
         }
+
+*Simson is here
 
         /* Output what we have to a new file ofname */
         std::stringstream real_suffix;
@@ -434,9 +424,11 @@ void feature_recorder::dump_histogram_file(const histogram_def &def,
     }
     std::cerr << "Looped " << max_histogram_files
               << " times on histogram; something seems wrong\n";
+#endif
 }
 
 
+#if 0
 void feature_recorder::dump_histogram(const histogram_def &def,void *user,feature_recorder::dump_callback_t cb) const
 {
     /* Inform that we are dumping this histogram */
@@ -460,11 +452,13 @@ void feature_recorder::dump_histogram(const histogram_def &def,void *user,featur
         dump_histogram_file(def,user,cb);
     }
 }
+#endif
 
 
 /* Dump all of this feature recorders histograms */
 
 
+#if 0
 void feature_recorder::dump_histograms(void *user,feature_recorder::dump_callback_t cb,
                                            feature_recorder_set::xml_notifier_t xml_error_notifier) const
 {
@@ -491,8 +485,10 @@ void feature_recorder::dump_histograms(void *user,feature_recorder::dump_callbac
         }
     }
 }
+#endif
 
 
+#if 0
 void feature_recorder::add_histogram(const histogram_def &def)
 {
     histogram_defs.insert(def);

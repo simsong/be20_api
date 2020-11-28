@@ -200,6 +200,26 @@ TEST_CASE("quote_if_necessary", "[feature_recorder]") {
     REQUIRE( c1=="context" );
 }
 
+TEST_CASE("fname_in_outdir", "[feature_recorder]") {
+    feature_recorder_set::flags_t flags;
+    flags.no_alert = true;
+    feature_recorder_set frs( flags, "sha1", scanner_config::NO_INPUT, get_tempdir());
+    frs.create_named_feature_recorder("test");
+    feature_recorder *ft = frs.get_name("test");
+
+    const std::string n = ft->fname_in_outdir("foo", feature_recorder::NO_COUNT);
+    std::filesystem::path p(n);
+    REQUIRE( p.filename()=="test_foo.txt");
+
+    const std::string n1 = ft->fname_in_outdir("bar", feature_recorder::NEXT_COUNT);
+    std::filesystem::path p1(n1);
+    REQUIRE( p1.filename()=="test_bar_1.txt");
+
+    const std::string n2 = ft->fname_in_outdir("bar", feature_recorder::NEXT_COUNT);
+    std::filesystem::path p2(n2);
+    REQUIRE( p2.filename()=="test_bar_2.txt");
+}
+
 /* Read all of the lines of a file and return them as a vector */
 std::vector<std::string> getLines(const std::string &filename)
 {
@@ -233,12 +253,12 @@ TEST_CASE("write_features", "[feature_recorder_set]" ) {
         flags.no_alert = true;
         flags.debug    = true;
 
-        feature_recorder_set frs( flags, "sha1", scanner_config::NO_INPUT, tempdir);
-        frs.create_named_feature_recorder("test");
-        REQUIRE( frs.get_name("test") != nullptr);
-        REQUIRE( frs.get_name("test_not") == nullptr);
+        feature_recorder_set fs( flags, "sha1", scanner_config::NO_INPUT, tempdir);
+        fs.create_named_feature_recorder("test");
+        REQUIRE( fs.get_name("test") != nullptr);
+        REQUIRE( fs.get_name("test_not") == nullptr);
 
-        feature_recorder *fr = frs.get_name("test");
+        feature_recorder *fr = fs.get_name("test");
         pos0_t p;
         fr->write(p,    "one", "context");
         fr->write(p+5,  "one", "context");
@@ -251,7 +271,9 @@ TEST_CASE("write_features", "[feature_recorder_set]" ) {
         fr->write_buf(sb16, 0, 64); // write the entire buffer as a single feature, no context
 
         /* Ask the feature recorder to create a histogram */
-
+        histogram_def h1("name","([0-9]+)","suffix1",histogram_def::flags_t());
+        std::ofstream o(fs.get_outdir() + "/histogram1.txt");
+        //fr->generate_histogram(o, h1);
 
     }
     /* get the last line of the test file and see if it is correct */

@@ -30,8 +30,9 @@ public:;
     virtual        ~feature_recorder_file();
 
 private:
-    std::mutex   Mios {};                        // mutex for IOS
-    std::fstream ios {};                        // where features are written
+    std::string  fname;                 // feature filename
+    std::mutex   Mios {};               // mutex for IOS
+    std::fstream ios {};                // where features are written
 
     void   banner_stamp(std::ostream &os,const std::string &header) const; // stamp banner, and header
 
@@ -58,7 +59,7 @@ public:
     /* feature file management */
     //virtual void open();
     //virtual void close();
-    virtual void flush();
+    //virtual void flush();
 #if 0
     static  int  dump_callback_test(void *user,const feature_recorder &fr,
                                     const std::string &str,const uint64_t &count); // test callback for you to use!

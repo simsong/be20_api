@@ -122,11 +122,28 @@ const std::string &feature_recorder::get_outdir() const // cannot be inline becu
 /*
  * Returns a filename for this feature recorder with a specific suffix.
  */
-const std::string feature_recorder::fname_in_outdir(std::string suffix) const
+const std::string feature_recorder::fname_in_outdir(std::string suffix, int count) const
 {
-    return fs.get_outdir() + "/" + this->name
-        + (suffix.size()>0 ? (std::string("_") + suffix) : "") + ".txt";
+    std::string base_name = fs.get_outdir() + "/" + this->name;
+    if (suffix.size()){
+        base_name += "_"+suffix;
+    }
+    if (count==NO_COUNT) return base_name+".txt";
+    if (count!=NEXT_COUNT){
+        return base_name+"_"+itos(count)+".txt";
+    }
+    for(int i=1;i<1000000;i++){
+        std::string fname = base_name+"_"+itos(i)+".txt";
+        int fd = open(fname.c_str(), O_WRONLY | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR);
+        if (fd>=0){
+            /* Created the file. close it. and return.*/
+            close(fd);
+            return fname;
+        }
+    }
+    throw std::runtime_error("it is unlikely that there are a million files, so this is probably a logic error.");
 }
+
 
 
 
@@ -136,7 +153,7 @@ const std::string feature_recorder::fname_in_outdir(std::string suffix) const
  * processes the stop list
  */
 
-void feature_recorder::quote_if_necessary(std::string &feature,std::string &context)
+void feature_recorder::quote_if_necessary(std::string &feature,std::string &context) const
 {
     /* By default quote string that is not UTF-8, and quote backslashes. */
     bool escape_bad_utf8  = true;
@@ -469,11 +486,6 @@ const std::string feature_recorder::hash(const sbuf_t &sbuf) const
 }
 
 
-void feature_recorder::flush()
-{
-    // nothing here!
-}
-
 #include <iomanip>
 #if 0
 /**
@@ -668,6 +680,29 @@ void feature_recorder::set_carve_mtime(const std::string &fname, const std::stri
 #endif
 
 
+#if 0
 void feature_recorder::generate_histogram(std::ostream &os, const struct histogram_def &def)
+{
+}
+#endif
+
+void feature_recorder::histogram_add(const struct histogram_def &def)
+{
+}
+
+bool feature_recorder::histogram_flush()
+{
+    return false;
+}
+
+bool feature_recorder::histogram_flush_all()
+{
+    return false;
+}
+void feature_recorder::histogram_merge(const struct histogram_def &def)
+{
+}
+
+void feature_recorder::histogram_merge_all()
 {
 }

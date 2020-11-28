@@ -89,6 +89,10 @@ public:
                           const std::string &outdir_);
     virtual ~feature_recorder_set();
 
+    /* File management */
+    std::string   get_input_fname()           const { return input_fname;}
+    virtual const std::string &get_outdir()   const { return outdir;}
+
     /* the feature recorder set automatically hashes all of the sbuf's that it processes. */
     typedef std::string (*hash_func_t)(const uint8_t *buf,const size_t bufsize);
     struct hash_def {
@@ -112,8 +116,6 @@ public:
     static const std::string   ALERT_RECORDER_NAME;  // the name of the alert recorder
     static const std::string   DISABLED_RECORDER_NAME; // the fake disabled feature recorder
 
-    std::string   get_input_fname()           const { return input_fname;}
-    virtual const std::string &get_outdir()   const { return outdir;}
     void          set_stop_list(const word_and_context_list *alist){stop_list=alist;}
     void          set_alert_list(const word_and_context_list *alist){alert_list=alist;}
 

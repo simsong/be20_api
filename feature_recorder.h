@@ -1,7 +1,3 @@
-/*
- * abstract feature recorder
- */
-
 #ifndef FEATURE_RECORDER_H
 #define FEATURE_RECORDER_H
 
@@ -32,24 +28,28 @@
  *
  * System for recording features from the scanners into the feature files.
  *
+ * feature_recorder_set - holds active feature recorders and shared state.
+ *
  * There is one feature_recorder per feature file. It is used both to record
- * the features and to perform the histogram calculation.
- * (That should probably be moved to a different class.) It also also previously
- * had the ability to do a merge sort, but we took that out because it was
- * not necessary.
+ * the features and to perform the in-memory histogram calculation.
  *
- * The feature recorders can also check the global alert_list to see
+ * Global Alert List - The feature recorders can also check the global alert_list to see
  * if the feature should be written to the alert file. It's opened on
- * demand and immediately flushed and closed.  A special mutex is used
- * to protect it.
+ * demand and immediately flushed and closed, so that changes are
+ * immediately reflected in the file, even under windows.  A special
+ * mutex is used to protect it.
  *
- * Finally, the feature recorder supports the global stop_list, which
- * is a list of features that are not written to the main file but are
- * written to a stop list.  That is implemented with a second
- * feature_recorder.
+ * Global Stop List - Each the feature recorder supports the global
+ * stop_list, which is a list of features that are not written to the
+ * main file but are written to a stop list.  That is implemented with
+ * a second feature_recorder.
  *
- * There is one feature_recorder_set per process.
- * The file assumes that bulk_extractor.h is being included.
+ * Histogram - New in BE2.0, the histograms are built on-the-fly as features are recorded.
+ * If memory runs below the LOW_MEMORY_THRESHOLD defined in the feature_recorder_sert,
+ * the largest feature recorder is written to disk and a new feature_recorder histogram is started.
+ *
+ * When the feature_recorder_set shuts down, all remaining histograms are written to the disk.
+ * Then, if there is any case where multiple histogram files were written, a merge-sort is performed.
  */
 
 
@@ -80,6 +80,11 @@ class feature_recorder {
     feature_recorder(const feature_recorder &)=delete;
     feature_recorder &operator=(const feature_recorder &)=delete;
 
+    /* Instance variables available to subclasses: */
+protected:
+    class  feature_recorder_set &fs; // the set in which this feature_recorder resides
+    virtual const std::string &get_outdir() const;      // cannot be inline because it accesses fs
+
 public:;
     /* The main public interface:
      * Note that feature_recorders exist in a feature_recorder_set and have a name.
@@ -87,12 +92,8 @@ public:;
     feature_recorder(class feature_recorder_set &fs, const std::string &name);
     virtual        ~feature_recorder();
 
-    /* Main state variables */
-    class  feature_recorder_set &fs; // the set in which this feature_recorder resides
     const  std::string name {};      // name of this feature recorder.
     bool   validateOrEscapeUTF8_validate { true };     // should we validate or escape UTF8?
-
-    virtual const std::string &get_outdir() const;      // cannot be inline becuase it accesses fs
 
     /* State variables for this feature recorder */
     std::atomic<size_t>       context_window {0};      // context window for this feature recorder
@@ -135,18 +136,30 @@ public:;
     static std::string unquote_string(const std::string &feature); // turns octal escape back to binary characters
     static std::string extract_feature(const std::string &line); // remove the feature from a feature file line
 
-    /* Support for hashing */
+    /* Hash an SBuf using the current hasher. If we want to hash less than a sbuf, make a child sbuf */
     const std::string hash(const sbuf_t &sbuf) const;
 
-    /* File management */
-    virtual void flush();               // flush any files
+    /* quote feature and context if they are not valid utf8 and if it is important to do so based on flags above.
+     * note - modifies arguments!
+     */
+    void quote_if_necessary(std::string &feature,std::string &context) const;
 
-    /* fname_in_outdir():
-     * returns a filename in the outdir with an optional suffix before the file extension.
-     * Guarenteed not to exist.
+
+    /* File management */
+
+    /* fname_in_outdir(suffix, count):
+     * returns a filename in the outdir in the format {feature_recorder}_{suffix}{count}.txt,
+     * If count==NO_COUNT, count is omitted.
+     * If count==NEXT_COUNT, create a zero-length file and return that file's name (we use the file system for atomic locks)
      */
 
-    const std::string fname_in_outdir(std::string suffix) const; // returns the name of a dir in the outdir
+    const std::string fname_in_outdir(std::string suffix, int count) const; // returns the name of a dir in the outdir
+    enum count_mode_t {
+        NO_COUNT=0,
+        NEXT_COUNT = -1
+    };
+
+    /* Writing features */
 
     /**
      * write0() actually does the writing to the file.
@@ -174,12 +187,6 @@ public:;
      */
     virtual void write_buf(const sbuf_t &sbuf, size_t pos, size_t len); /* writes with context */
 
-    /*
-     * quote feature and context if they are not valid utf8 and if it is important to do so based on flags above.
-     * note - modifies arguments!
-     */
-    void quote_if_necessary(std::string &feature,std::string &context);
-
     /**
      * support for carving.
      * Carving writes the filename to the feature file; the context is the file's hash using the provided function.
@@ -193,12 +200,12 @@ public:;
         CARVE_ALL=2
     };
 
-    std::atomic<int64_t>       carved_file_count {0};        // starts at 0; gets incremented by carve();
-    atomic_set<std::string>    carve_cache {}; // hashes of files that have been cached, so the same file is not carved twice
+    std::atomic<carve_mode_t>  carve_mode { CARVE_ENCODED};
+    std::atomic<int64_t>       carved_file_count {0}; // starts at 0; gets incremented by carve();
+    atomic_set<std::string>    carve_cache {};        // hashes of files that have been cached, so the same file is not carved twice
     std::string  do_not_carve_encoding {};            // do not carve files with this encoding.
-    static const std::string CARVE_MODE_DESCRIPTION;
-    static const std::string NO_CARVED_FILE;
-    std::atomic<carve_mode_t> carve_mode { CARVE_ENCODED};
+    static const std::string   CARVE_MODE_DESCRIPTION;
+    static const std::string   NO_CARVED_FILE;
 
     // Carve data or a record to a file; returns filename of carved file or empty string if nothing carved
     // if mtime>0, set the file's mtime to be mtime
@@ -208,17 +215,17 @@ public:;
                                    const time_t mtime=0,
                                    const size_t offset=0,
                                    const size_t len=0 );
-    //virtual std::string carve_data(const sbuf_t &sbuf, size_t pos, size_t len, const std::string &ext, const time_t mtime);
-    // Carve a record; appends records to the specified record file, and returns the filename
     virtual std::string carve_records(const sbuf_t &sbuf, size_t offset, size_t len, const std::string &name);
-    // Write a data;
-    //virtual std::string write_data(unsigned char *data, size_t len, const std::string &filename);
 
-    // Set the time of the carved file to iso8601 file
-    //virtual void set_carve_mtime(const std::string &fname, const std::string &mtime_iso8601);
-
-    // After the feature recorder runs, we can ask for a histogram to be created
-    virtual void generate_histogram(std::ostream &os, const struct histogram_def &def);
+    /*
+     * Histogram control.
+     */
+    size_t histogram_largest() const;   // returns the memory size of the largest histogram
+    virtual void histogram_add(const struct histogram_def &def);
+    virtual bool histogram_flush();     // flushes largest histogram. returns false if no histogram could be flushed.
+    virtual bool histogram_flush_all(); // flushes all histograms
+    virtual void histogram_merge(const struct histogram_def &def); // merge sort on this histogram
+    virtual void histogram_merge_all();                            // merge sort on all histograms
 
 };
 
