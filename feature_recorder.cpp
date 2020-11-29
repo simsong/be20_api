@@ -691,6 +691,7 @@ void feature_recorder::histogram_add(const struct histogram_def &def)
     if (features_written != 0 ){
         throw std::runtime_error("Cannot add histograms after features have been written.");
     }
+    histograms.push_back(&def);
 }
 
 bool feature_recorder::histogram_flush()

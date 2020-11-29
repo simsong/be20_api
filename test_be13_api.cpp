@@ -192,8 +192,8 @@ TEST_CASE("quote_if_necessary", "[feature_recorder]") {
     flags.no_alert = true;
 
     feature_recorder_set frs( flags, "sha1", scanner_config::NO_INPUT, scanner_config::NO_OUTDIR);
-    frs.create_named_feature_recorder("test");
-    feature_recorder &ft = frs.get_feature_recorder_by_name("test");
+    frs.named_feature_recorder("test", true);
+    feature_recorder &ft = frs.named_feature_recorder("test");
     ft.quote_if_necessary(f1,c1);
     REQUIRE( f1=="feature" );
     REQUIRE( c1=="context" );
@@ -203,8 +203,8 @@ TEST_CASE("fname_in_outdir", "[feature_recorder]") {
     feature_recorder_set::flags_t flags;
     flags.no_alert = true;
     feature_recorder_set frs( flags, "sha1", scanner_config::NO_INPUT, get_tempdir());
-    frs.create_named_feature_recorder("test");
-    feature_recorder &ft = frs.get_feature_recorder_by_name("test");
+    frs.named_feature_recorder("test", true);
+    feature_recorder &ft = frs.named_feature_recorder("test");
 
     const std::string n = ft.fname_in_outdir("foo", feature_recorder::NO_COUNT);
     std::filesystem::path p(n);
@@ -253,12 +253,11 @@ TEST_CASE("write_features", "[feature_recorder_set]" ) {
         flags.debug    = true;
 
         feature_recorder_set fs( flags, "sha1", scanner_config::NO_INPUT, tempdir);
-        feature_recorder &fr = fs.get_feature_recorder_by_name("test");
+        feature_recorder &fr = fs.named_feature_recorder("test", true);
 
-#if 0
         /* Make sure requesting a valid name does not generate an exception and an invalid name generates an exception */
-        REQUIRE_NOTHROW( fs.get_feature_recorder_by_name("test") );
-        REQUIRE_THROWS_AS( fs.get_feature_recorder_by_name("test_not"), feature_recorder_set::NoSuchFeatureRecorder);
+        REQUIRE_NOTHROW( fs.named_feature_recorder("test") );
+        REQUIRE_THROWS_AS( fs.named_feature_recorder("test_not"), feature_recorder_set::NoSuchFeatureRecorder);
 
         /* Ask the feature recorder to create a histogram */
         histogram_def h1("name","([0-9]+)","suffix1",histogram_def::flags_t());
@@ -278,7 +277,6 @@ TEST_CASE("write_features", "[feature_recorder_set]" ) {
         fr.write_buf(sb16, 0, 64); // write the entire buffer as a single feature, no context
 
         std::ofstream o(fs.get_outdir() + "/histogram1.txt");
-#endif
         //fr.generate_histogram(o, h1);
 
     }

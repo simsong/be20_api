@@ -30,7 +30,7 @@ public:;
     virtual        ~feature_recorder_file();
 
 private:
-    std::string  fname;                 // feature filename
+    std::string  fname {};              // feature filename
     std::mutex   Mios {};               // mutex for IOS
     std::fstream ios {};                // where features are written
 

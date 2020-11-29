@@ -73,7 +73,7 @@ void scanner_set::register_info(const scanner_params::scanner_info *si)
     scanner_info_db[si->scanner] = si;
     /* Create all of the requested feature recorders */
     for (auto it: si->feature_names ){
-        fs.create_named_feature_recorder( it );
+        fs.named_feature_recorder( it, true );
     }
 }
 
@@ -303,9 +303,10 @@ scanner_t &scanner_set::get_scanner_by_name(const std::string &search_name)
     throw NoSuchScanner(search_name);
 }
 
-feature_recorder &scanner_set::get_feature_recorder_by_name(const std::string &name)
+/* This interface creates if we are in init phase, doesn't if we are in scan phase */
+feature_recorder &scanner_set::named_feature_recorder(const std::string &name)
 {
-    return fs.get_feature_recorder_by_name(name);
+    return fs.named_feature_recorder(name, current_phase==scanner_params::PHASE_INIT);
 }
 
 /**

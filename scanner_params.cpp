@@ -11,9 +11,10 @@ void scanner_params::register_info(const scanner_info &si)
 }
 
 
-feature_recorder &scanner_params::get_feature_recorder_by_name(const std::string &feature_recorder_name)
+/* This interface creates if we are in init phase, doesn't if we are in scan phase */
+feature_recorder &scanner_params::named_feature_recorder(const std::string &feature_recorder_name)
 {
-    return ss.get_feature_recorder_by_name(feature_recorder_name);
+    return ss.named_feature_recorder(feature_recorder_name);
 }
 
 

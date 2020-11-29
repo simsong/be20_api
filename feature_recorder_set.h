@@ -162,8 +162,7 @@ public:
         const char *what() const noexcept override {return m_error.c_str();}
     };
 
-    virtual feature_recorder &create_named_feature_recorder(const std::string &name);
-    virtual feature_recorder &get_feature_recorder_by_name(const std::string &name) ;
+    virtual feature_recorder &named_feature_recorder(const std::string &name, bool create=false);
     virtual feature_recorder &get_alert_recorder() ;
     virtual void get_feature_file_list(std::vector<std::string> &ret); // clears ret and fills with a list of feature file names
 

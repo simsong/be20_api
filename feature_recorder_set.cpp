@@ -79,13 +79,12 @@ feature_recorder_set::feature_recorder_set( const flags_t &flags_,
 
     /* Create a disabled feature recorder if necessary */
     if ( flags.disabled ){
-        create_named_feature_recorder(DISABLED_RECORDER_NAME);
-        frm[DISABLED_RECORDER_NAME]->flags.disabled = true;
+        named_feature_recorder(DISABLED_RECORDER_NAME, true).flags.disabled=true;
     }
 
     /* Create an alert recorder if necessary */
     if (!flags.no_alert) {
-        create_named_feature_recorder(feature_recorder_set::ALERT_RECORDER_NAME); // make the alert recorder
+        named_feature_recorder(feature_recorder_set::ALERT_RECORDER_NAME, true); // make the alert recorder
     }
 
     //message_enabled_scanners(scanner_params::PHASE_INIT); // tell all enabled scanners to init
@@ -135,26 +134,11 @@ feature_recorder_set::~feature_recorder_set()
  ****************************************************************/
 
 /*
- * Create a named feature recorder if it doesn't exist.
- * Returns the named feature recorder
+ * Get the named feature recorder.
+ * If the feature recorder doesn't exist and create is true, create it.
+ * Otherwise raise an exception.
  */
-feature_recorder &feature_recorder_set::create_named_feature_recorder(const std::string &name)
-{
-    try {
-        return get_feature_recorder_by_name(name);
-    }
-    catch (NoSuchFeatureRecorder &e) {
-        feature_recorder *fr = new feature_recorder_file(*this, name);
-        frm.insert(name, fr);
-        return *fr;
-    }
-}
-
-
-/*
- * Gets a feature_recorder from the set.
- */
-feature_recorder &feature_recorder_set::get_feature_recorder_by_name(const std::string &name)
+feature_recorder &feature_recorder_set::named_feature_recorder(const std::string &name, bool create)
 {
     const std::string *thename = &name;
     if (flags.disabled){           // if feature recorder set is disabled, return the disabled recorder.
@@ -167,7 +151,15 @@ feature_recorder &feature_recorder_set::get_feature_recorder_by_name(const std::
 
     auto it = frm.find(*thename);
     if ( it != frm.end() ) return *it->second;
-    throw NoSuchFeatureRecorder {name};
+
+    if (create) {
+        feature_recorder *fr = new feature_recorder_file(*this, name);
+        frm.insert(name, fr);
+        return *fr;
+    }
+    else {
+        throw NoSuchFeatureRecorder {std::string("No such feature recorder: ")+name};
+    }
 }
 
 /*
@@ -176,10 +168,7 @@ feature_recorder &feature_recorder_set::get_feature_recorder_by_name(const std::
  */
 feature_recorder &feature_recorder_set::get_alert_recorder()
 {
-    if (flags.no_alert){
-        throw NoSuchFeatureRecorder("alert recorder");
-    }
-    return create_named_feature_recorder(feature_recorder_set::ALERT_RECORDER_NAME);
+    return named_feature_recorder(feature_recorder_set::ALERT_RECORDER_NAME, false);
 }
 
 #if 0
@@ -250,7 +239,7 @@ void feature_recorder_set::dump_name_count_stats(dfxml_writer *writer) const
 
 void feature_recorder_set::histogram_add(const histogram_def &def)
 {
-    get_feature_recorder_by_name(def.feature).histogram_add(def);
+    named_feature_recorder(def.feature, true).histogram_add(def);
 }
 
 size_t feature_recorder_set::histogram_count() const
