@@ -174,9 +174,17 @@ public:;
     bool    is_find_scanner_enabled(); // return true if a find scanner is enabled
 
     /* These functions must be virtual so they can be called by dynamically loaded plugins */
+    /* They throw a ScannerNotFound exception if no scanner exists */
+
+    class NoSuchScanner : public std::exception {
+        std::string m_error{};
+    public:
+        NoSuchScanner(std::string_view error):m_error(error){}
+        const char *what() const noexcept override {return m_error.c_str();}
+    };
     const std::string get_scanner_name(scanner_t scanner) const; // returns the name of the scanner
-    virtual scanner_t *get_scanner_by_name(const std::string &name) const;
-    virtual feature_recorder *get_feature_recorder_by_name(const std::string &name) const;
+    virtual scanner_t &get_scanner_by_name(const std::string &name) ;
+    virtual feature_recorder &get_feature_recorder_by_name(const std::string &name);
 
     // report on the loaded scanners
     void     info_scanners(std::ostream &out,

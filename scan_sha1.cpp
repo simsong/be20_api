@@ -45,8 +45,8 @@ void  scan_sha1(struct scanner_params &sp)
         auto hexdigest = dfxml::sha1_generator::hash_buf(sp.sbuf.buf,sp.sbuf.bufsize).hexdigest();
 
         /* Perhaps we want to cache getting the recorders? */
-        feature_recorder *sha1_recorder = sp.get_name("sha1_bufs");
-        sha1_recorder->write(sp.sbuf.pos0, hexdigest, ""); // write the hash with no context
+        feature_recorder &sha1_recorder = sp.get_feature_recorder_by_name("sha1_bufs");
+        sha1_recorder.write(sp.sbuf.pos0, hexdigest, ""); // write the hash with no context
 
 	static const std::string hash0("<hashdigest type='SHA1'>");
 	static const std::string hash1("</hashdigest>");

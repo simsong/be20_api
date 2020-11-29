@@ -2,6 +2,8 @@
 #ifndef FEATURE_RECORDER_SET_H
 #define FEATURE_RECORDER_SET_H
 
+#include <exception>
+
 #if defined(HAVE_SQLITE3_H)
 #include <sqlite3.h>
 #endif
@@ -136,21 +138,33 @@ public:
     std::string banner_filename {};         // banner for top of every file
 
     /* histogram support */
+    void     histogram_add(const histogram_def &def); // adds it to a local set or to the specific feature recorder
+    size_t   histogram_count() const;  // counts histograms in all feature recorders
+
+private:
+    // called automatically when feature_recorder_set is deleted:
+    void     histograms_generate();     // make the histograms in the output directory (and optionally in the database)
+public:
 
 #if 0
     typedef  void (*xml_notifier_t)(const std::string &xmlstring);
-    void     add_histogram(const histogram_def &def); // adds it to a local set or to the specific feature recorder
-    size_t   count_histograms() const;  // counts histograms in all feature recorders
-    void     generate_histograms();     // make the histograms in the output directory (and optionally in the database)
 #endif
 
-    /* support for creating and finding feature recorders */
-    /* Previously called create_name().
+    /* support for creating and finding feature recorders
+     * Previously called create_name().
      * functions must be virtual so they can be called by plug-in.
+     * All return a reference to the named (or created) feature recorder, or else throw exception indicated
      */
-    virtual feature_recorder *create_named_feature_recorder(const std::string &name);
-    virtual feature_recorder *get_name(const std::string &name) const;
-    virtual feature_recorder *get_alert_recorder();
+    class NoSuchFeatureRecorder : public std::exception {
+        std::string m_error{};
+    public:
+        NoSuchFeatureRecorder(std::string_view error):m_error(error){}
+        const char *what() const noexcept override {return m_error.c_str();}
+    };
+
+    virtual feature_recorder &create_named_feature_recorder(const std::string &name);
+    virtual feature_recorder &get_feature_recorder_by_name(const std::string &name) ;
+    virtual feature_recorder &get_alert_recorder() ;
     virtual void get_feature_file_list(std::vector<std::string> &ret); // clears ret and fills with a list of feature file names
 
     void    dump_name_count_stats(class dfxml_writer *writer) const;

@@ -293,19 +293,19 @@ const std::string scanner_set::get_scanner_name(scanner_t scanner) const
     return "";
 }
 
-scanner_t *scanner_set::get_scanner_by_name(const std::string &search_name) const
+scanner_t &scanner_set::get_scanner_by_name(const std::string &search_name)
 {
     for (auto it: scanner_info_db) {
         if ( it.second->name == search_name) {
-            return it.first;
+            return *it.first;
         }
     }
-    return nullptr;
+    throw NoSuchScanner(search_name);
 }
 
-feature_recorder *scanner_set::get_feature_recorder_by_name(const std::string &name) const
+feature_recorder &scanner_set::get_feature_recorder_by_name(const std::string &name)
 {
-    return fs.get_name(name);
+    return fs.get_feature_recorder_by_name(name);
 }
 
 /**
@@ -518,10 +518,9 @@ void scanner_set::process_sbuf(const class sbuf_t &sbuf)
 
     /* If we are too deep, error out */
     if (sbuf.depth() >= max_depth ) {
-        feature_recorder *fr = fs.get_alert_recorder();
-        if(fr) fr->write(pos0,
-                         feature_recorder::MAX_DEPTH_REACHED_ERROR_FEATURE,
-                         feature_recorder::MAX_DEPTH_REACHED_ERROR_CONTEXT );
+        fs.get_alert_recorder().write(pos0,
+                                      feature_recorder::MAX_DEPTH_REACHED_ERROR_FEATURE,
+                                      feature_recorder::MAX_DEPTH_REACHED_ERROR_CONTEXT );
         return;
     }
 
@@ -531,11 +530,10 @@ void scanner_set::process_sbuf(const class sbuf_t &sbuf)
     bool seen_before = fs.check_previously_processed(sbuf);
     if (seen_before) {
         dfxml::sha1_t sha1 = dfxml::sha1_generator::hash_buf(sbuf.buf, sbuf.bufsize);
-        feature_recorder *alert_recorder = fs.get_alert_recorder();
         std::stringstream ss;
         ss << "<buflen>" << sbuf.bufsize  << "</buflen>";
-        if(alert_recorder && dup_data_alerts) {
-            alert_recorder->write(sbuf.pos0,"DUP SBUF "+sha1.hexdigest(),ss.str());
+        if(dup_data_alerts) {
+            fs.get_alert_recorder().write(sbuf.pos0,"DUP SBUF "+sha1.hexdigest(),ss.str());
         }
         dup_bytes_encountered += sbuf.bufsize;
     }
@@ -624,9 +622,12 @@ void scanner_set::process_sbuf(const class sbuf_t &sbuf)
                << " Exception: " << e.what()
                << " sbuf.pos0: " << sbuf.pos0 << " bufsize=" << sbuf.bufsize << "\n";
             std::cerr << ss.str();
-            feature_recorder *alert_recorder = fs.get_alert_recorder();
-            if(alert_recorder) alert_recorder->write(sbuf.pos0,"scanner="+name,
-                                                     std::string("<exception>")+e.what()+"</exception>");
+            try {
+                fs.get_alert_recorder().write(sbuf.pos0,"scanner="+name,
+                                              std::string("<exception>")+e.what()+"</exception>");
+            }
+            catch (feature_recorder_set::NoSuchFeatureRecorder &e){
+            }
         }
         catch (...) {
             std::stringstream ss;
@@ -634,12 +635,15 @@ void scanner_set::process_sbuf(const class sbuf_t &sbuf)
                << " Unknown Exception "
                << " sbuf.pos0: " << sbuf.pos0 << " bufsize=" << sbuf.bufsize << "\n";
             std::cerr << ss.str();
-            feature_recorder *alert_recorder = fs.get_alert_recorder();
-            if(alert_recorder) alert_recorder->write(sbuf.pos0,"scanner="+name,"<unknown_exception/>");
+            try {
+                fs.get_alert_recorder().write(sbuf.pos0,"scanner="+name,
+                                              std::string("<unknown_exception></unknown_exception>"));
+            }
+            catch (feature_recorder_set::NoSuchFeatureRecorder &e){
+            }
         }
     }
 }
-
 
 
 /**

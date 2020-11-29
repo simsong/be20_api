@@ -220,10 +220,12 @@ public:;
     /*
      * Histogram control.
      */
+    std::vector<const struct histogram_def *> histograms;
     size_t histogram_largest() const;   // returns the memory size of the largest histogram
     virtual void histogram_add(const struct histogram_def &def);
     virtual bool histogram_flush();     // flushes largest histogram. returns false if no histogram could be flushed.
     virtual bool histogram_flush_all(); // flushes all histograms
+    virtual size_t histogram_count() { return histograms.size();}     // how many histograms it has
     virtual void histogram_merge(const struct histogram_def &def); // merge sort on this histogram
     virtual void histogram_merge_all();                            // merge sort on all histograms
 

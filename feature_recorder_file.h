@@ -53,8 +53,8 @@ public:
      * Cannot be made inline becuase it accesses fs.
      */
     //virtual const std::string hash(const unsigned char *buf, size_t bufflen); // hash a block with the hasher
-    virtual void write0(const std::string &str);
-    virtual void write0(const pos0_t &pos0, const std::string &feature, const std::string &context);
+    virtual void write0(const std::string &str) override;
+    virtual void write0(const pos0_t &pos0, const std::string &feature, const std::string &context) override;
 
     /* feature file management */
     //virtual void open();

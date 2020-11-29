@@ -247,13 +247,14 @@ void feature_recorder_file::write0(const std::string &str)
         if (ios.fail()){
             throw std::runtime_error("Disk full. Free up space and re-restart.");
         }
-        features_written += 1;
+        feature_recorder::write0(str);  // call super class
     }
 }
 
 
 /**
  * Combine the pos0, feature and context into a single line and write it to the feature file.
+ * This must be called for every feature
  *
  * @param feature - The feature, which is valid UTF8 (but may not be exactly the bytes on the disk)
  * @param context - The context, which is valid UTF8 (but may not be exactly the bytes on the disk)
@@ -271,7 +272,8 @@ void feature_recorder_file::write0(const pos0_t &pos0, const std::string &featur
     if ((flags.no_context == false) && ( context.size()>0 )) {
         ss << '\t' << context;
     }
-    this->write0( ss.str() );
+    feature_recorder::write0(pos0, feature, context); // call super
+    write0( ss.str() );                               // and do the actual write
 }
 
 

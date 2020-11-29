@@ -186,12 +186,19 @@ void feature_recorder::quote_if_necessary(std::string &feature,std::string &cont
     }
 }
 
+/*
+ * write0:
+ */
 void feature_recorder::write0(const std::string &str)
 {
 }
 
+/*
+ * Write: keep track of count of features written.
+ */
 void feature_recorder::write0(const pos0_t &pos0, const std::string &feature, const std::string &context)
 {
+    features_written += 1;
 }
 
 /**
@@ -679,15 +686,11 @@ void feature_recorder::set_carve_mtime(const std::string &fname, const std::stri
 }
 #endif
 
-
-#if 0
-void feature_recorder::generate_histogram(std::ostream &os, const struct histogram_def &def)
-{
-}
-#endif
-
 void feature_recorder::histogram_add(const struct histogram_def &def)
 {
+    if (features_written != 0 ){
+        throw std::runtime_error("Cannot add histograms after features have been written.");
+    }
 }
 
 bool feature_recorder::histogram_flush()
@@ -699,6 +702,13 @@ bool feature_recorder::histogram_flush_all()
 {
     return false;
 }
+
+/*
+ * histogram_merge:
+ * If possible, read all histogram files into memory and write them
+ * out as a single histogram file. If we run out of memory during the process, fail.
+ *
+ */
 void feature_recorder::histogram_merge(const struct histogram_def &def)
 {
 }

@@ -151,10 +151,11 @@ struct scanner_params {
                    PrintOptions print_options_, std::stringstream *xmladd=nullptr ):
         ss(ss_),phase(phase_),sbuf(sbuf_),print_options(print_options_),sxml(xmladd){ }
 
-    /* User-servicable parts: */
+    /* User-servicable parts; these are here for scanners */
     virtual void register_info(const scanner_info &si); // called by a scanner to register its info
-    virtual feature_recorder *get_name(const std::string &name); // returns a reference to a feature recorder
     virtual ~scanner_params(){};
+    virtual feature_recorder &get_feature_recorder_by_name(const std::string &feature_recorder_name);
+
 
 #if 0
     /* A scanner params with no print options */
