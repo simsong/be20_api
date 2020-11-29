@@ -10,6 +10,7 @@
  */
 
 #include <atomic>
+#include "atomic_set_map.h"
 
 class HistogramMaker  {
 public:;
@@ -76,8 +77,9 @@ public:;
 
 private:
     /* The histogram: */
-    std::map<std::string, struct HistogramMaker::HistogramTally> h {}; // the histogram
-    mutable std::mutex Mh;                            // protecting mutex
+    //std::map<std::string, struct HistogramMaker::HistogramTally> h {}; // the histogram
+    //mutable std::mutex Mh;                            // protecting mutex
+    atomic_map<std::string, struct HistogramMaker::HistogramTally> h {}; // the histogram
     const struct histogram_def &def;                   // the definition we are making
     uint32_t debug_histogram_malloc_fail_frequency {}; // for debugging, make malloc fail sometimes
 

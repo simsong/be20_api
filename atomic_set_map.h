@@ -1,8 +1,10 @@
 /* -*- mode: C++; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 
 /**
- * defines atomic_map and atomic_set
- * 2020-07-06 - slg - start upgrade to C++14
+ * defines atomic_map and atomic_set.
+ * This is a nice lightweight atomic set when not much else is needed.
+ *
+ * 2020-07-06 - slg - Upgraded to to C++17.
  */
 
 #ifndef ATOMIC_SET_MAP_H
@@ -60,10 +62,15 @@ public:
         return mymap.end();
     }
     void delete_all() {
+        /* deletes all of the values!  Values must be pointers. This might be better done with unique_ptr()*/
         const std::lock_guard<std::mutex> lock(M);
         for (auto it: mymap) {
             delete it.second;
         }
+    }
+    void clear() {
+        const std::lock_guard<std::mutex> lock(M);
+        mymap.clear();
     }
     bool contains(T1 key) const {
         const std::lock_guard<std::mutex> lock(M);
