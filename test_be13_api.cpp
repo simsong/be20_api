@@ -28,7 +28,7 @@
 #include <iostream>
 #include <filesystem>
 
-#include "histogram_maker.h"
+#include "atomic_unicode_histogram.h"
 #include "sbuf.h"
 
 // https://inversepalindrome.com/blog/how-to-create-a-random-string-in-cpp
@@ -328,19 +328,19 @@ TEST_CASE( "histogram_def", "[histogram]" ){
 }
 
 /****************************************************************
- * histogram_maker.h
+ * atomic_unicode_histogram.h
  */
-#include "histogram_maker.h"
-TEST_CASE( "histogram_maker", "[histogram]") {
-    HistogramMaker::ReportElement e1("hello");
-    HistogramMaker::ReportElement e2("world");
+#include "atomic_unicode_histogram.h"
+TEST_CASE( "atomic_unicode_histogram", "[histogram]") {
+    AtomicUnicodeHistogram::ReportElement e1("hello");
+    AtomicUnicodeHistogram::ReportElement e2("world");
 
     REQUIRE( e1 == e1 );
     REQUIRE( e1 != e2);
     REQUIRE( e1 < e2);
 
     histogram_def h1("p","([0-9]+)","phones",histogram_def::flags_t());
-    HistogramMaker hm(h1);
+    AtomicUnicodeHistogram hm(h1);
 
     /* Let's try it out! */
 

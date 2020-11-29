@@ -350,7 +350,7 @@ void feature_recorder_file::generate_histogram(std::ostream &os, const struct hi
      */
     for(int histogram_counter = 0;histogram_counter<max_histogram_files;histogram_counter++){
 
-        HistogramMaker h(def.flags);            /* of seen features, created in pass two */
+        AtomicUnicodeHistogram h(def.flags);            /* of seen features, created in pass two */
         try {
             std::string line;
             while (getline(f,line)){
@@ -408,7 +408,7 @@ void feature_recorder_file::generate_histogram(std::ostream &os, const struct hi
             return;
         }
 
-        HistogramMaker::FrequencyReportVector *fr = h.makeReport();
+        AtomicUnicodeHistogram::FrequencyReportVector *fr = h.makeReport();
         if(fr->size()>0){
             banner_stamp(o,histogram_file_header);
             o << *fr;                   // sends the entire histogram

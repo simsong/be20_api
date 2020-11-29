@@ -20,7 +20,7 @@ void feature_recorder::write(const pos0_t &pos0,const std::string &feature_,cons
 
     std::string feature = feature_;
     std::string context = flags.no_context ? "" : context_;
-    std::string *feature_utf8 = HistogramMaker::make_utf8(feature); // a utf8 feature
+    std::string *feature_utf8 = AtomicUnicodeHistogram::make_utf8(feature); // a utf8 feature
 
     quote_if_necessary(feature,context);
 

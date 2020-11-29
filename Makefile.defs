@@ -3,6 +3,8 @@ BE13_API_SRC= \
         $(BE13_API_DIR)aftimer.h \
         $(BE13_API_DIR)atomic_histogram.h \
         $(BE13_API_DIR)atomic_set_map.h \
+        $(BE13_API_DIR)atomic_unicode_histogram.cpp \
+        $(BE13_API_DIR)atomic_unicode_histogram.h \
         $(BE13_API_DIR)bulk_extractor_i.h \
         $(BE13_API_DIR)feature_recorder.cpp \
         $(BE13_API_DIR)feature_recorder.h \
@@ -11,13 +13,11 @@ BE13_API_SRC= \
         $(BE13_API_DIR)fpos0.h \
         $(BE13_API_DIR)histogram_defs.cpp \
         $(BE13_API_DIR)histogram_defs.h \
-        $(BE13_API_DIR)histogram_maker.cpp \
-        $(BE13_API_DIR)histogram_maker.h \
         $(BE13_API_DIR)net_ethernet.h \
         $(BE13_API_DIR)pcap_fake.cpp \
         $(BE13_API_DIR)pcap_fake.h \
-        $(BE13_API_DIR)plugin.h \
         $(BE13_API_DIR)plugin.cpp \
+        $(BE13_API_DIR)plugin.h \
         $(BE13_API_DIR)regex_vector.cpp \
         $(BE13_API_DIR)regex_vector.h \
         $(BE13_API_DIR)sbuf.cpp \
@@ -25,8 +25,8 @@ BE13_API_SRC= \
         $(BE13_API_DIR)sbuf_private.h \
         $(BE13_API_DIR)sbuf_stream.cpp \
         $(BE13_API_DIR)sbuf_stream.h \
-        $(BE13_API_DIR)scanner_set.h \
         $(BE13_API_DIR)scanner_set.cpp \
+        $(BE13_API_DIR)scanner_set.h \
         $(BE13_API_DIR)unicode_escape.cpp \
         $(BE13_API_DIR)unicode_escape.h \
         $(BE13_API_DIR)utf8.h \

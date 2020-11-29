@@ -1,5 +1,5 @@
 /**
- * histogram.cpp:
+ * atomic_unicode_histogram.cpp:
  * Maintain a histogram for Unicode strings provided as UTF-8 and UTF-16 encodings.
  * Track number of each coding provided.
  *
@@ -15,9 +15,9 @@
 #include <iostream>
 
 #if 0
-std::ostream & operator << (std::ostream &os, const HistogramMaker::FrequencyReportVector &rep){
-    for(HistogramMaker::FrequencyReportVector::const_iterator i = rep.begin(); i!=rep.end();i++){
-        const HistogramMaker::ReportElement &r = *(*i);
+std::ostream & operator << (std::ostream &os, const AtomicUnicodeHistogram::FrequencyReportVector &rep){
+    for(AtomicUnicodeHistogram::FrequencyReportVector::const_iterator i = rep.begin(); i!=rep.end();i++){
+        const AtomicUnicodeHistogram::ReportElement &r = *(*i);
 	os << "n=" << r.tally.count << "\t" << validateOrEscapeUTF8(r.value, true, true, true);
 	if(r.tally.count16>0) os << "\t(utf16=" << r.tally.count16<<")";
 	os << "\n";
@@ -25,7 +25,7 @@ std::ostream & operator << (std::ostream &os, const HistogramMaker::FrequencyRep
     return os;
 }
 
-HistogramMaker::FrequencyReportVector HistogramMaker::makeReport()  const
+AtomicUnicodeHistogram::FrequencyReportVector AtomicUnicodeHistogram::makeReport()  const
 {
     const std::lock_guard<std::mutex> lock(Mh);
     FrequencyReportVector rep;
@@ -37,17 +37,17 @@ HistogramMaker::FrequencyReportVector HistogramMaker::makeReport()  const
 }
 
 /* This would be better done with a priority queue */
-HistogramMaker::FrequencyReportVector *HistogramMaker::makeReport(int topN) const
+AtomicUnicodeHistogram::FrequencyReportVector *AtomicUnicodeHistogram::makeReport(int topN) const
 {
-    HistogramMaker::FrequencyReportVector         *r2 = makeReport();	// gets a new report
-    HistogramMaker::FrequencyReportVector::iterator i = r2->begin();
+    AtomicUnicodeHistogram::FrequencyReportVector         *r2 = makeReport();	// gets a new report
+    AtomicUnicodeHistogram::FrequencyReportVector::iterator i = r2->begin();
     while(topN>0 && i!=r2->end()){	// iterate through the first set
 	i++;
 	topN--;
     }
 
     /* Delete the elements we won't use */
-    for(HistogramMaker::FrequencyReportVector::iterator j=i;j!=r2->end();j++){
+    for(AtomicUnicodeHistogram::FrequencyReportVector::iterator j=i;j!=r2->end();j++){
         delete (*j);
     }
     r2->erase(i,r2->end());
@@ -60,8 +60,8 @@ HistogramMaker::FrequencyReportVector *HistogramMaker::makeReport(int topN) cons
  * it to UTF8 if so.
  */
 
-uint32_t HistogramMaker::debug_histogram_malloc_fail_frequency = 0;
-void HistogramMaker::add(const std::string &key)
+uint32_t AtomicUnicodeHistogram::debug_histogram_malloc_fail_frequency = 0;
+void AtomicUnicodeHistogram::add(const std::string &key)
 {
     if(key.size()==0) return;		// don't deal with zero-length keys
 

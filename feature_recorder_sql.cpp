@@ -83,7 +83,7 @@ void feature_recorder::write0_sqlite3(const pos0_t &pos0,const std::string &feat
      * Note: this is not very efficient, passing through a quoted feature and then unquoting it.
      * We could make this more efficient.
      */
-    std::string *feature8 = HistogramMaker::convert_utf16_to_utf8(feature_recorder::unquote_string(feature));
+    std::string *feature8 = AtomicUnicodeHistogram::convert_utf16_to_utf8(feature_recorder::unquote_string(feature));
     assert(bs!=0);
     bs->insert_feature(pos0,feature,
                          feature8 ? *feature8 : feature,

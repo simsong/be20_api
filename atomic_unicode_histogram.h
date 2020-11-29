@@ -1,5 +1,5 @@
-#ifndef HISTOGRAM_MAKER_H
-#define HISTOGRAM_MAKER_H
+#ifndef ATOMIC_UNICODE_HISTOGRAM_H
+#define ATOMIC_UNICODE_HISTOGRAM_H
 
 /** A simple class for making histograms of strings. Strings are analyzed to see if they contain UTF16 and, if they do, that is separately tallied as thei UTF-8 component.
  * Histogram maker implement:
@@ -12,7 +12,7 @@
 #include <atomic>
 #include "atomic_set_map.h"
 
-class HistogramMaker  {
+class AtomicUnicodeHistogram  {
 public:;
     struct HistogramTally {
         HistogramTally(const HistogramTally &a){
@@ -49,7 +49,7 @@ public:;
     struct ReportElement {
 	ReportElement(std::string aValue):value(aValue){ };
 	std::string                value {};		// UTF-8
-	struct HistogramMaker::HistogramTally      tally {};
+	struct AtomicUnicodeHistogram::HistogramTally      tally {};
 
         bool operator==(const ReportElement &a) const {
             return (this->value == a.value) && (this->tally == a.tally);
@@ -77,15 +77,15 @@ public:;
 
 private:
     /* The histogram: */
-    //std::map<std::string, struct HistogramMaker::HistogramTally> h {}; // the histogram
+    //std::map<std::string, struct AtomicUnicodeHistogram::HistogramTally> h {}; // the histogram
     //mutable std::mutex Mh;                            // protecting mutex
-    atomic_map<std::string, struct HistogramMaker::HistogramTally> h {}; // the histogram
+    atomic_map<std::string, struct AtomicUnicodeHistogram::HistogramTally> h {}; // the histogram
     const struct histogram_def &def;                   // the definition we are making
     uint32_t debug_histogram_malloc_fail_frequency {}; // for debugging, make malloc fail sometimes
 
 public:
 
-    HistogramMaker(const struct histogram_def &def_):def(def_){}
+    AtomicUnicodeHistogram(const struct histogram_def &def_):def(def_){}
     void clear(){ h.clear(); }        //
     void add(const std::string &key);	// adds a string to the histogram count
     static size_t addSizes(const ReportElement &a, const ReportElement b){
@@ -103,7 +103,7 @@ public:
      * FrequencyReportVector.
      */
     FrequencyReportVector *makeReport(int topN=0) const; // returns just the topN; 0 means all
-    virtual ~HistogramMaker(){};
+    virtual ~AtomicUnicodeHistogram(){};
 };
 
 #endif
