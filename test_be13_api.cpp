@@ -28,6 +28,7 @@
 #include <iostream>
 #include <filesystem>
 
+#include "histogram_maker.h"
 #include "sbuf.h"
 
 // https://inversepalindrome.com/blog/how-to-create-a-random-string-in-cpp
@@ -117,6 +118,7 @@ TEST_CASE("aftimer", "[utils]") {
 }
 
 
+#if 0
 /****************************************************************
  * atomic_histogram.h
  */
@@ -152,6 +154,7 @@ TEST_CASE( "atomic_histogram", "[atomic]" ){
     ahist.dump_sorted( &called, dump_cb );
     REQUIRE( called == 2);
 }
+#endif
 
 /****************************************************************
  * hash_t.h
@@ -315,7 +318,7 @@ TEST_CASE( "char_class", "[char_class]") {
  * histogram_def.h
  */
 #include "histogram_def.h"
-TEST_CASE( "histogram_def", "[histogram_def]" ){
+TEST_CASE( "histogram_def", "[histogram]" ){
     histogram_def h1("feature1","pattern1","suffix1",histogram_def::flags_t());
     histogram_def h2("feature2","pattern2","suffix2",histogram_def::flags_t());
 
@@ -328,7 +331,7 @@ TEST_CASE( "histogram_def", "[histogram_def]" ){
  * histogram_maker.h
  */
 #include "histogram_maker.h"
-TEST_CASE( "histogram_maker", "[histogram_maker]") {
+TEST_CASE( "histogram_maker", "[histogram]") {
     HistogramMaker::ReportElement e1("hello");
     HistogramMaker::ReportElement e2("world");
 
@@ -338,6 +341,8 @@ TEST_CASE( "histogram_maker", "[histogram_maker]") {
 
     histogram_def h1("p","([0-9]+)","phones",histogram_def::flags_t());
     HistogramMaker hm(h1);
+
+    /* Let's try it out! */
 
 }
 
@@ -550,7 +555,7 @@ TEST_CASE("run", "[scanner_set]") {
     ss.process_histograms();
     ss.shutdown(nullptr);
     /* The sha1 scanner makes a single histogram. Make sure we got it. */
-    //REQUIRE( ss.count_histograms() == 1);
+    //REQUIRE( ss.histogram_count() == 1);
 }
 
 
@@ -578,7 +583,6 @@ TEST_CASE("unicode_escape", "[unicode]") {
     REQUIRE( utf8cont( U1F601[1] ) == true);  // the second is
     REQUIRE( utf8cont( U1F601[2] ) == true);  // the third is
     REQUIRE( utf8cont( U1F601[3] ) == true);  // the fourth is
-
     REQUIRE( valid_utf8codepoint(0x01) == true);
     REQUIRE( valid_utf8codepoint(0xffff) == false);
 

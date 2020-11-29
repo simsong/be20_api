@@ -9,12 +9,23 @@
  * - Merging multiple histogram files to a single file.
  */
 
+#include <atomic>
+
 class HistogramMaker  {
 public:;
-
     struct HistogramTally {
-        uint32_t count      {0};    // total strings seen
-        uint32_t count16    {0};	// total utf16 strings seen
+        HistogramTally(const HistogramTally &a){
+            this->count   = a.count;
+            this->count16 = a.count16;
+        }
+        HistogramTally &operator=(const HistogramTally &a){
+            this->count   = a.count;
+            this->count16 = a.count16;
+            return *this;
+        }
+
+        uint32_t count      {0}; // total strings seen
+        uint32_t count16    {0}; // total utf16 strings seen
         HistogramTally(){};
         virtual ~HistogramTally(){};
 
@@ -35,10 +46,9 @@ public:;
      * It can be thought of as the histogram bin.
      */
     struct ReportElement {
-
 	ReportElement(std::string aValue):value(aValue){ };
-	std::string                value;		// UTF-8
-	struct HistogramTally      tally {};
+	std::string                value {};		// UTF-8
+	struct HistogramMaker::HistogramTally      tally {};
 
         bool operator==(const ReportElement &a) const {
             return (this->value == a.value) && (this->tally == a.tally);
@@ -61,10 +71,17 @@ public:;
             return sizeof(*this) + value.size();
         }                 // number of bytes used by object
     };
+    /* A FrequencyReportVector is a vector of report elements when the report is generated.*/
+    typedef std::vector<ReportElement *> FrequencyReportVector;
 
-    std::map<std::string, struct HistogramTally> h {}; // the histogram
-    const struct histogram_def &def;                          // the definition we are making
-    uint32_t debug_histogram_malloc_fail_frequency {};    // for debugging, make malloc fail sometimes
+private:
+    /* The histogram: */
+    std::map<std::string, struct HistogramMaker::HistogramTally> h {}; // the histogram
+    mutable std::mutex Mh;                            // protecting mutex
+    const struct histogram_def &def;                   // the definition we are making
+    uint32_t debug_histogram_malloc_fail_frequency {}; // for debugging, make malloc fail sometimes
+
+public:
 
     HistogramMaker(const struct histogram_def &def_):def(def_){}
     void clear(){ h.clear(); }        //
@@ -80,9 +97,6 @@ public:;
         return count;
     }
 
-    /** A FrequencyReportVector is a vector of report elements when the report is generated.
-     */
-    typedef std::vector<ReportElement *> FrequencyReportVector;
     /** makeReport() makes a report and returns a
      * FrequencyReportVector.
      */

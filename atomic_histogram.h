@@ -11,7 +11,7 @@
 template <class TYPE,class CTYPE> class atomic_histogram {
     typedef std::unordered_map<TYPE,CTYPE> hmap_t ;
     hmap_t  amap {};                      // the locked atomic map
-    std::mutex M {};                      // my lock
+    mutable std::mutex M {};                      // my lock
 public:
     atomic_histogram(){};
 

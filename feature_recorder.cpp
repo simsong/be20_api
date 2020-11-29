@@ -17,7 +17,6 @@
 #include "feature_recorder_set.h"
 #include "word_and_context_list.h"
 #include "unicode_escape.h"
-//#include "histogram.h"
 #include "utils.h"
 
 //int64_t feature_recorder::offset_add   = 0;

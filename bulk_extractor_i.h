@@ -86,7 +86,6 @@
  * @{
  */
 
-//#include "histogram.h"
 #include "dfxml/src/dfxml_writer.h"
 #include "dfxml/src/hash_t.h"
 #include "aftimer.h"

@@ -14,7 +14,6 @@
 #include "atomic_set_map.h"
 #include "pos0.h"
 #include "sbuf.h"
-//#include "histogram.h"
 
 #ifdef HAVE_SQLITE3_H
 #include <sqlite3.h>

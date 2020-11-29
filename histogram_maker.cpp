@@ -9,7 +9,6 @@
 
 #include "config.h"
 #include "unicode_escape.h"
-//#include "histogram.h"
 #include "utf8.h"
 
 #include <fstream>
@@ -26,13 +25,14 @@ std::ostream & operator << (std::ostream &os, const HistogramMaker::FrequencyRep
     return os;
 }
 
-HistogramMaker::FrequencyReportVector *HistogramMaker::makeReport()  const
+HistogramMaker::FrequencyReportVector HistogramMaker::makeReport()  const
 {
-    FrequencyReportVector *rep = new FrequencyReportVector();
-    for(HistogramMap::const_iterator it = h.begin(); it != h.end(); it++){
+    const std::lock_guard<std::mutex> lock(Mh);
+    FrequencyReportVector rep;
+    for(auto it: h){
 	rep->push_back(new ReportElement(it->first,it->second));
     }
-    sort(rep->begin(),rep->end(),ReportElement::compare);
+    sort(rep.begin(),rep.end(),ReportElement::compare);
     return rep;
 }
 
@@ -144,17 +144,20 @@ void HistogramMaker::add(const std::string &key)
 	}
     }
 
-    /* For debugging low-memory handling logic,
-     * specify DEBUG_MALLOC_FAIL to make malloc occasionally fail
-     */
-    if(debug_histogram_malloc_fail_frequency){
-	if((h.size() % debug_histogram_malloc_fail_frequency)==(debug_histogram_malloc_fail_frequency-1)){
-	    throw std::bad_alloc();
-	}
+    {
+        const std::lock_guard<std::mutex> lock(Mh);
+        /* For debugging low-memory handling logic,
+         * specify DEBUG_MALLOC_FAIL to make malloc occasionally fail
+         */
+        if(debug_histogram_malloc_fail_frequency){
+            if((h.size() % debug_histogram_malloc_fail_frequency)==(debug_histogram_malloc_fail_frequency-1)){
+                throw std::bad_alloc();
+            }
+        }
+        h[*keyToAdd].count++;
+        if(found_utf16) h[*keyToAdd].count16++;  // track how many UTF16s were converted
     }
 
-    h[*keyToAdd].count++;
-    if(found_utf16) h[*keyToAdd].count16++;  // track how many UTF16s were converted
     if(tempKey){			     // if we allocated tempKey, free it
 	delete tempKey;
     }

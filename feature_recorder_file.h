@@ -17,7 +17,6 @@
 #include "atomic_set_map.h"
 #include "pos0.h"
 #include "sbuf.h"
-//#include "histogram.h"
 
 class feature_recorder_file : public feature_recorder {
     static void truncate_at(std::string &line, char ch) {
