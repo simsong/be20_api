@@ -118,43 +118,56 @@ TEST_CASE("aftimer", "[utils]") {
 }
 
 
-#if 0
 /****************************************************************
- * atomic_histogram.h
+ * atomic_set_map.h
  */
-#include "atomic_set_map.h"
-int dump_cb(void *user, const std::string &val, const int &count){
-    int *called = (int *)user;
-    switch (*called) {
-    case 0:
-        REQUIRE( val == "bar" );
-        REQUIRE( count == 10 );
-        break;
-    case 1:
-        REQUIRE( val == "foo" );
-        REQUIRE( count == 6 );
-        break;
-    default:
-        REQUIRE( false );
-    }
-    (*called) += 1;
-    return 0;
+TEST_CASE( "atomic_set", "[histogram]" ){
+    atomic_set<std::string> as;
+    //REQUIRE( as.size() == 0);
+    as.insert("one");
+    as.insert("two");
+    as.insert("three");
+    REQUIRE( as.contains("one") == true );
+    REQUIRE( as.contains("four") == false );
+    //REQUIRE( as.size() == 3);
 }
 
-#include "atomic_histogram.h"
-TEST_CASE( "atomic_histogram", "[atomic]" ){
-    atomic_histogram<std::string, int> ahist;
-    ahist.add("foo", 1);
-    ahist.add("foo", 2);
-    ahist.add("foo", 3);
-    ahist.add("bar", 10);
+TEST_CASE( "atomic_map", "[histogram]" ){
+    atomic_map<std::string,int> am;
+    am.insert("one",1);
+    am.insert("two",2);
+    am.insert("three",3);
+    am.insertIfNotContains("three",30);
+    am.insertIfNotContains("four",4);
+    REQUIRE( am.contains("one") == true );
+    REQUIRE( am.contains("two") == true );
+    REQUIRE( am.contains("three") == true );
+    REQUIRE( am.contains("four") == true );
+    REQUIRE( am.contains("five") == false );
+    REQUIRE( am["one"]==1 );
+    REQUIRE( am["three"]==3 );
+}
+
+/****************************************************************
+ * atomic_unicode_histogram.h
+ */
+#include "atomic_unicode_histogram.h"
+#include "histogram_def.h"
+TEST_CASE( "atomic_histogram", "[histogram]" ){
+    histogram_def d1("name","(.*)","suffix1",histogram_def::flags_t());
+    AtomicUnicodeHistogram h(d1);
+    h.add("foo");
+    h.add("foo");
+    h.add("foo");
+    h.add("bar");
 
     /* Now make sure things were added in the right order, and the right counts */
-    int called = 0;
-    ahist.dump_sorted( &called, dump_cb );
-    REQUIRE( called == 2);
+    //AtomicUnicodeHistogram::FrequencyReportVector f = h.makeReport();
+    //REQUIRE( f.at(0)->value=="foo");
+    //REQUIRE( f.at(0)->tally.count==3);
+    //REQUIRE( f.at(0)->tally.count16==0);
 }
-#endif
+
 
 /****************************************************************
  * hash_t.h
@@ -398,15 +411,6 @@ TEST_CASE( "test regex_vector", "[vector]" ) {
 
     REQUIRE(rv.search_all("before check2 after", &found) == true);
     REQUIRE(found == "check2");
-}
-
-TEST_CASE( "test atomic_set_map", "[vector]" ){
-    atomic_set<std::string> as;
-    as.insert("one");
-    as.insert("two");
-    as.insert("three");
-    REQUIRE( as.contains("one") == true );
-    REQUIRE( as.contains("four") == false );
 }
 
 /****************************************************************

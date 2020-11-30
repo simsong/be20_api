@@ -11,8 +11,10 @@
 
 #include <atomic>
 #include "atomic_set_map.h"
+#include "histogram_def.h"
 
 class AtomicUnicodeHistogram  {
+    static uint32_t debug_histogram_malloc_fail_frequency; // for debugging, make malloc fail sometimes
 public:;
     struct HistogramTally {
         HistogramTally(const HistogramTally &a){
@@ -73,21 +75,21 @@ public:;
         }                 // number of bytes used by object
     };
     /* A FrequencyReportVector is a vector of report elements when the report is generated.*/
-    typedef std::vector<ReportElement *> FrequencyReportVector;
+    typedef std::vector<ReportElement> FrequencyReportVector;
+    typedef atomic_map<std::string, struct AtomicUnicodeHistogram::HistogramTally> auh_t;
 
 private:
     /* The histogram: */
     //std::map<std::string, struct AtomicUnicodeHistogram::HistogramTally> h {}; // the histogram
     //mutable std::mutex Mh;                            // protecting mutex
-    atomic_map<std::string, struct AtomicUnicodeHistogram::HistogramTally> h {}; // the histogram
+    auh_t h {}; // the histogram
     const struct histogram_def &def;                   // the definition we are making
-    uint32_t debug_histogram_malloc_fail_frequency {}; // for debugging, make malloc fail sometimes
 
 public:
 
     AtomicUnicodeHistogram(const struct histogram_def &def_):def(def_){}
     void clear(){ h.clear(); }        //
-    void add(const std::string &key);	// adds a string to the histogram count
+    void add(std::string key);	// adds a string to the histogram count
     static size_t addSizes(const ReportElement &a, const ReportElement b){
         return a.bytes() + b.bytes();
     }
@@ -102,7 +104,7 @@ public:
     /** makeReport() makes a report and returns a
      * FrequencyReportVector.
      */
-    FrequencyReportVector *makeReport(int topN=0) const; // returns just the topN; 0 means all
+    auh_t::report makeReport(int topN=0) const; // returns just the topN; 0 means all
     virtual ~AtomicUnicodeHistogram(){};
 };
 

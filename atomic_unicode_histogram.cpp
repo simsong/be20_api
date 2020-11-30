@@ -13,55 +13,45 @@
 
 #include <fstream>
 #include <iostream>
+#include <cwctype>
 
-#if 0
+#include "atomic_unicode_histogram.h"
+
 std::ostream & operator << (std::ostream &os, const AtomicUnicodeHistogram::FrequencyReportVector &rep){
-    for(AtomicUnicodeHistogram::FrequencyReportVector::const_iterator i = rep.begin(); i!=rep.end();i++){
-        const AtomicUnicodeHistogram::ReportElement &r = *(*i);
-	os << "n=" << r.tally.count << "\t" << validateOrEscapeUTF8(r.value, true, true, true);
-	if(r.tally.count16>0) os << "\t(utf16=" << r.tally.count16<<")";
+    for(auto it:rep){
+	os << "n=" << it.tally.count << "\t" << validateOrEscapeUTF8(it.value, true, true, true);
+	if(it.tally.count16>0) os << "\t(utf16=" << it.tally.count16<<")";
 	os << "\n";
     }
     return os;
 }
 
-AtomicUnicodeHistogram::FrequencyReportVector AtomicUnicodeHistogram::makeReport()  const
+/* Create a histogram report.
+ * @param topN - if >0, return only this many.
+ * Return only the topN.
+ */
+AtomicUnicodeHistogram::auh_t::report AtomicUnicodeHistogram::makeReport(int topN) const
 {
-    const std::lock_guard<std::mutex> lock(Mh);
-    FrequencyReportVector rep;
-    for(auto it: h){
-	rep->push_back(new ReportElement(it->first,it->second));
+    auh_t::report rep = h.dump( true );
+
+    /* If we only want some of them, delete the extra */
+    if ( (topN > 0)  && (topN < rep.size()) ){
+        rep.resize( topN );
     }
-    sort(rep.begin(),rep.end(),ReportElement::compare);
     return rep;
-}
-
-/* This would be better done with a priority queue */
-AtomicUnicodeHistogram::FrequencyReportVector *AtomicUnicodeHistogram::makeReport(int topN) const
-{
-    AtomicUnicodeHistogram::FrequencyReportVector         *r2 = makeReport();	// gets a new report
-    AtomicUnicodeHistogram::FrequencyReportVector::iterator i = r2->begin();
-    while(topN>0 && i!=r2->end()){	// iterate through the first set
-	i++;
-	topN--;
-    }
-
-    /* Delete the elements we won't use */
-    for(AtomicUnicodeHistogram::FrequencyReportVector::iterator j=i;j!=r2->end();j++){
-        delete (*j);
-    }
-    r2->erase(i,r2->end());
-    return r2;
 }
 
 /**
  * Takes a string (the key) and adds it to the histogram.
- * automatically determines if the key is UTF-16 and converts
- * it to UTF8 if so.
+ * @param - key - either a UTF8 or UTF16 string.
+ * If the string appears to be UTF16, convert it to UTF-8 and note that it was converted.
+ *
+ * def.flags.digits - extract the digits first and throw away the rest.
+ * def.flags.lower  - also convert to lowercase using Unicode rules.
  */
 
 uint32_t AtomicUnicodeHistogram::debug_histogram_malloc_fail_frequency = 0;
-void AtomicUnicodeHistogram::add(const std::string &key)
+void AtomicUnicodeHistogram::add(std::string key)
 {
     if(key.size()==0) return;		// don't deal with zero-length keys
 
@@ -73,42 +63,36 @@ void AtomicUnicodeHistogram::add(const std::string &key)
      * if we need to make a copy.
      */
 
-    const std::string *keyToAdd = &key;	// should be a reference, but that doesn't work
-    std::string *tempKey = 0;		// place to hold UTF8 key
-    bool found_utf16 = false;
-    bool little_endian=false;
-    if(looks_like_utf16(*keyToAdd,little_endian)){
-        tempKey = convert_utf16_to_utf8(*keyToAdd,little_endian);
-        if(tempKey){
-            keyToAdd = tempKey;
-            found_utf16 = true;
-        }
+    bool found_utf16 = false;           // did we find a utf16?
+    bool little_endian=false;           // was it little_endian?
+    if (looks_like_utf16(key,little_endian)){
+        key = convert_utf16_to_utf8(key, little_endian);
+        found_utf16 = true;
     }
 
-    /* If any conversion is necessary AND we have not converted key from UTF-16 to UTF-8,
-     * then the original key is still in 'key'. Allocate tempKey and copy key to tempKey.
+    /* At this point we have UTF-8
+     * This is a bit of a kludge:
+     * If we are told to lowercase the string, convert it to wchar, lowercase, then turn it back to utf8.
+     * Ideally this would be done with ICU, but we do not want to assume we have ICU.
+     * https://stackoverflow.com/questions/34433380/lowercase-of-unicode-character
+     * https://stackoverflow.com/questions/313970/how-to-convert-stdstring-to-lower-case/24063783
+     * https://en.cppreference.com/w/cpp/string/wide/towlower
+     * See: http://stackoverflow.com/questions/1081456/wchar-t-vs-wint-t
      */
-    if ( flags.lowercase || flags.numeric ){
-	if(tempKey==0){
-	    tempKey = new std::string(key);
-	    keyToAdd = tempKey;
-	}
-    }
 
-
-    /* Apply the flags */
-    // See: http://stackoverflow.com/questions/1081456/wchar-t-vs-wint-t
-    if ( flags.lowercase ){
-	/* keyToAdd is UTF-8; convert to UTF-16, downcase, and convert back to UTF-8 */
-	try{
-	    std::wstring utf16key;
-	    utf8::utf8to16(tempKey->begin(),tempKey->end(),std::back_inserter(utf16key));
-	    for(std::wstring::iterator it = utf16key.begin();it!=utf16key.end();it++){
-		*it = towlower(*it);
+    if ( def.flags.lowercase ){
+        /* If we cannot do a clean utf8->utf16->utf8 conversion, abort and keep original string */
+	try {
+	    std::wstring key_utf16;
+            /* convert utf8->utf16 */
+	    utf8::utf8to16( key.begin(), key.end(), std::back_inserter( key_utf16));
+            /* lowercase */
+	    for (auto it:key_utf16){
+		it = std::towlower(it);
 	    }
-	    /* erase tempKey and copy the utf16 back into tempKey as utf8 */
-	    tempKey->clear();		// erase the characters
-	    utf8::utf16to8(utf16key.begin(),utf16key.end(),std::back_inserter(*tempKey));
+            /* put back */
+	    key.clear();
+	    utf8::utf16to8(key_utf16.begin(), key_utf16.end(), std::back_inserter( key));
 	} catch(const utf8::exception &){
 	    /* Exception thrown during utf8 or 16 conversions.
 	     * So the string we thought was valid utf8 wasn't valid utf8 afterall.
@@ -116,50 +100,47 @@ void AtomicUnicodeHistogram::add(const std::string &key)
 	     */
 	}
     }
-    if ( flags.numeric ){
-	/* keyToAdd is UTF-8; convert to UTF-16, extract digits, and convert back to UTF-8 */
-	std::string originalTempKey(*tempKey);
+
+    if ( def.flags.numeric ){
+	/* Similar to above, but extract the digits and the plus sign */
 	try{
-	    std::wstring utf16key;
-	    std::wstring utf16digits;
-	    utf8::utf8to16(tempKey->begin(),tempKey->end(),std::back_inserter(utf16key));
-	    for(std::wstring::iterator it = utf16key.begin();it!=utf16key.end();it++){
-		if(iswdigit(*it) || *it==static_cast<uint16_t>('+')){
-		    utf16digits.push_back(*it);
+	    std::wstring key_utf16;
+	    std::wstring digits_utf16;
+
+	    utf8::utf8to16( key.begin(), key.end(),std::back_inserter(key_utf16));
+	    for (auto it: key_utf16){
+		if (std::iswdigit(it) || it==static_cast<uint16_t>('+')){
+		    digits_utf16.push_back(it);
 		}
 	    }
 	    /* convert it back */
-	    tempKey->clear();		// erase the characters
-	    utf8::utf16to8(utf16digits.begin(),utf16digits.end(),std::back_inserter(*tempKey));
+	    key.clear();		// erase the characters
+	    utf8::utf16to8(digits_utf16.begin(), digits_utf16.end(),std::back_inserter(key));
 	} catch(const utf8::exception &){
 	    /* Exception during utf8 or 16 conversions*.
 	     * So the string wasn't utf8.  Fall back to just extracting the digits
 	     */
-	    tempKey->clear();
-	    for(std::string::iterator it = originalTempKey.begin(); it!=originalTempKey.end(); it++){
-		if(isdigit(*it)){
-		    tempKey->push_back(*it);
+            std::string digits;
+	    for (auto it:key){
+		if (isdigit(it)){
+		    digits.push_back(it);
 		}
 	    }
+            key = digits;
 	}
     }
 
-    {
-        const std::lock_guard<std::mutex> lock(Mh);
-        /* For debugging low-memory handling logic,
-         * specify DEBUG_MALLOC_FAIL to make malloc occasionally fail
-         */
-        if(debug_histogram_malloc_fail_frequency){
-            if((h.size() % debug_histogram_malloc_fail_frequency)==(debug_histogram_malloc_fail_frequency-1)){
-                throw std::bad_alloc();
-            }
+    /* For debugging low-memory handling logic,
+     * specify DEBUG_MALLOC_FAIL to make malloc occasionally fail
+     */
+    if (debug_histogram_malloc_fail_frequency){
+        if ((h.size() % debug_histogram_malloc_fail_frequency)==(debug_histogram_malloc_fail_frequency-1)){
+            throw std::bad_alloc();
         }
-        h[*keyToAdd].count++;
-        if(found_utf16) h[*keyToAdd].count16++;  // track how many UTF16s were converted
     }
 
-    if(tempKey){			     // if we allocated tempKey, free it
-	delete tempKey;
-    }
+    /* Add the key to the histogram. Note that this is threadsafe */
+    h.insertIfNotContains(key, HistogramTally());
+    h[key].count++;
+    if (found_utf16) h[key].count16++;  // track how many UTF16s were converted
 }
-#endif

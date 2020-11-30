@@ -236,8 +236,8 @@ bool looks_like_utf16(const std::string &str,bool &little_endian)
 }
 
 /**
- * Converts a utf16 with a byte order to utf8, returning an ALLOCATED STRING if conversion is
- * successful, and returning 0 if it is not.
+ * Converts a utf16 with a byte order to utf8.
+ *
  */
 /* static */
 std::string convert_utf16_to_utf8(const std::string &key,bool little_endian)
