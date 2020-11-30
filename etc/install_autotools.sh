@@ -19,6 +19,7 @@ mkdir -p $build
 AUTOCONF="autoconf-2.69"
 cd $build
 curl -k -OL https://ftpmirror.gnu.org/autoconf/$AUTOCONF.tar.gz || exit 1
+ls -l $AUTOCONF.tar.gz
 tar xzf $AUTOCONF.tar.gz  || exit 1
 cd $AUTOCONF
 ./configure --prefix=/usr/local || exit 1
@@ -29,9 +30,10 @@ sudo make install || exit 1
 # Automake
 # https://ftpmirror.gnu.org/automake
 
-AUTOMAKE="automake-1.16.2"
+AUTOMAKE="automake-1.16.3"
 cd $build
 curl -k -OL https://ftpmirror.gnu.org/automake/$AUTOMAKE.tar.gz || exit 1
+ls -l $AUTOMAKE.tar.gz
 tar xzf $AUTOMAKE.tar.gz
 cd $AUTOMAKE
 ./configure --prefix=/usr/local
@@ -42,10 +44,12 @@ sudo make install
 # Libtool
 # https://ftpmirror.gnu.org/libtool
 
+LIBTOOL=libtool-2.4.6
 cd $build
-curl -k -OL https://ftpmirror.gnu.org/libtool/libtool-2.4.6.tar.gz || exit 1
-tar xzf libtool-2.4.6.tar.gz
-cd libtool-2.4.6
+curl -k -OL https://ftpmirror.gnu.org/libtool/$LIBTOOL.tar.gz || exit 1
+ls -l $LIBTOOL.tar.gz
+tar xzf $LIBTOOL.tar.gz
+cd $LIBTOOL
 ./configure --prefix=/usr/local
 make
 sudo make install
