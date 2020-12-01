@@ -627,7 +627,7 @@ void scanner_set::process_sbuf(const class sbuf_t &sbuf)
                 fs.get_alert_recorder().write(sbuf.pos0,"scanner="+name,
                                               std::string("<exception>")+e.what()+"</exception>");
             }
-            catch (feature_recorder_set::NoSuchFeatureRecorder &e){
+            catch (feature_recorder_set::NoSuchFeatureRecorder &e2){
             }
         }
         catch (...) {

@@ -11,7 +11,7 @@
 #include <atomic>
 
 #include "feature_recorder.h"
-#include "atomic_set_map.h"
+//#include "atomic_set_map.h"
 #include "pos0.h"
 #include "sbuf.h"
 

@@ -10,8 +10,9 @@
  */
 
 #include <atomic>
-#include "atomic_set_map.h"
+#include "atomic_map.h"
 #include "histogram_def.h"
+#include "unicode_escape.h"
 
 class AtomicUnicodeHistogram  {
     static uint32_t debug_histogram_malloc_fail_frequency; // for debugging, make malloc fail sometimes
@@ -45,6 +46,7 @@ public:;
         size_t bytes() const { return sizeof(*this);}
     };
 
+#if 0
     /** The ReportElement is used for creating the report of histogram frequencies.
      * It can be thought of as the histogram bin.
      */
@@ -73,10 +75,12 @@ public:;
         size_t bytes() const{
             return sizeof(*this) + value.size();
         }                 // number of bytes used by object
+
     };
+#endif
     /* A FrequencyReportVector is a vector of report elements when the report is generated.*/
-    typedef std::vector<ReportElement> FrequencyReportVector;
     typedef atomic_map<std::string, struct AtomicUnicodeHistogram::HistogramTally> auh_t;
+    typedef std::vector<auh_t::AMReportElement> FrequencyReportVector;
 
 private:
     /* The histogram: */
@@ -86,13 +90,14 @@ private:
     const struct histogram_def &def;                   // the definition we are making
 
 public:
-
     AtomicUnicodeHistogram(const struct histogram_def &def_):def(def_){}
-    void clear(){ h.clear(); }        //
+    void clear(){ h.clear(); }   //
     void add(std::string key);	// adds a string to the histogram count
+#if 0
     static size_t addSizes(const ReportElement &a, const ReportElement b){
         return a.bytes() + b.bytes();
     }
+#endif
     size_t bytes(){            // returns the total number of bytes of the histogram,.
         size_t count = sizeof(*this);
         for(auto it:h){
@@ -104,8 +109,19 @@ public:
     /** makeReport() makes a report and returns a
      * FrequencyReportVector.
      */
-    auh_t::report makeReport(int topN=0) const; // returns just the topN; 0 means all
+    auh_t::report makeReport(size_t topN=0) const; // returns just the topN; 0 means all
     virtual ~AtomicUnicodeHistogram(){};
 };
+
+inline std::ostream & operator << (std::ostream &os, const AtomicUnicodeHistogram::FrequencyReportVector &rep) {
+    for(auto it:rep){
+	os << "n=" << it.value.count << "\t" << validateOrEscapeUTF8(it.key, true, true, true);
+	if(it.value.count16>0) os << "\t(utf16=" << it.value.count16<<")";
+	os << "\n";
+    }
+    return os;
+}
+
+
 
 #endif

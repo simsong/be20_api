@@ -5,7 +5,8 @@
 #include <stdio.h>
 #include <filesystem>
 
-#include "bulk_extractor_i.h"
+#include "sbuf.h"
+//#include "bulk_extractor_i.h"
 #include "unicode_escape.h"
 
 /****************************************************************

@@ -345,18 +345,55 @@ TEST_CASE( "histogram_def", "[histogram]" ){
  */
 #include "atomic_unicode_histogram.h"
 TEST_CASE( "atomic_unicode_histogram", "[histogram]") {
-    AtomicUnicodeHistogram::ReportElement e1("hello");
-    AtomicUnicodeHistogram::ReportElement e2("world");
+    /* Make sure that the histogram elements work */
+    AtomicUnicodeHistogram::auh_t::AMReportElement e1("hello");
+    AtomicUnicodeHistogram::auh_t::AMReportElement e2("world");
 
     REQUIRE( e1 == e1 );
     REQUIRE( e1 != e2);
     REQUIRE( e1 < e2);
 
-    histogram_def h1("p","([0-9]+)","phones",histogram_def::flags_t());
+    /* Try a simple histogram with just numbers */
+    histogram_def::flags_t flags;
+    flags.numeric = true;
+    histogram_def h1("p","([0-9]+)","phones",flags);
     AtomicUnicodeHistogram hm(h1);
 
-    /* Let's try it out! */
+    hm.add("100");
+    hm.add("200");
+    hm.add("300");
+    hm.add("200");
+    hm.add("300");
+    hm.add("foo 300 bar");
 
+    AtomicUnicodeHistogram::auh_t::report r = hm.makeReport(0);
+    std::cerr << "histogram:\n";
+    std::cerr << r << "\n";
+    std::cerr << "======\n";
+    REQUIRE( r.size() == 3);
+    REQUIRE( r.at(0).key == "100");
+    REQUIRE( r.at(0).value.count == 1);
+    REQUIRE( r.at(0).value.count16 == 0);
+
+    REQUIRE( r.at(1).key == "200");
+    REQUIRE( r.at(1).value.count == 2);
+    REQUIRE( r.at(1).value.count16 == 0);
+
+    REQUIRE( r.at(2).key == "300");
+    REQUIRE( r.at(2).value.count == 3);
+    REQUIRE( r.at(2).value.count16 == 0);
+
+    char buf300[6] {'\000','3','\000','0','\000','0'};
+    std::string b300(buf300,6);
+    hm.add(b300);
+    r = hm.makeReport(0);
+    std::cerr << "histogram:\n";
+    std::cerr << r << "\n";
+    std::cerr << "======\n";
+
+    REQUIRE( r.at(2).key == "300");
+    REQUIRE( r.at(2).value.count == 4);
+    REQUIRE( r.at(2).value.count16 == 1);
 }
 
 

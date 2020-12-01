@@ -12,7 +12,7 @@
 #include "scanner_params.h"
 #include "scanner_config.h"
 #include "sbuf.h"
-#include "atomic_set_map.h"
+#include "atomic_map.h"
 
 /**
  * \file

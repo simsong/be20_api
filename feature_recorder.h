@@ -15,7 +15,7 @@
 
 #include "pos0.h"
 #include "sbuf.h"
-#include "atomic_set_map.h"
+#include "atomic_set.h"
 #include "histogram_def.h"
 
 /**
