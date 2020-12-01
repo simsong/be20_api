@@ -17,6 +17,27 @@
 
 #include "atomic_unicode_histogram.h"
 
+std::ostream & operator << (std::ostream &os, const AtomicUnicodeHistogram::FrequencyReportVector &rep)
+{
+    for(auto it:rep){
+        os << rep;
+    }
+    return os;
+}
+
+
+
+/* Output is in UTF-8 */
+std::ostream & operator << (std::ostream &os, const AtomicUnicodeHistogram::auh_t::AMReportElement &e)
+{
+    os << "n=" << e.value.count << "\t" << validateOrEscapeUTF8(e.key, true, false, false);
+    if (e.value.count16>0) os << "\t(utf16=" << e.value.count16<<")";
+    os << "\n";
+    return os;
+}
+
+
+
 /* Create a histogram report.
  * @param topN - if >0, return only this many.
  * Return only the topN.
@@ -41,6 +62,8 @@ AtomicUnicodeHistogram::auh_t::report AtomicUnicodeHistogram::makeReport(size_t 
  * def.flags.lower  - also convert to lowercase using Unicode rules.
  */
 
+// https://stackoverflow.com/questions/37989081/how-to-use-unicode-range-in-c-regex
+
 uint32_t AtomicUnicodeHistogram::debug_histogram_malloc_fail_frequency = 0;
 void AtomicUnicodeHistogram::add(std::string key)
 {
@@ -56,11 +79,10 @@ void AtomicUnicodeHistogram::add(std::string key)
 
     bool found_utf16 = false;           // did we find a utf16?
     bool little_endian=false;           // was it little_endian?
+
     if (looks_like_utf16(key,little_endian)){
-        std::cerr << "looks like utf16\n";
         key = convert_utf16_to_utf8(key, little_endian);
         found_utf16 = true;
-        std::cerr << "key=" << key << "\n";
     }
 
     /* At this point we have UTF-8
@@ -100,8 +122,6 @@ void AtomicUnicodeHistogram::add(std::string key)
 	    std::wstring key_utf16;
 	    std::wstring digits_utf16;
 
-            std::cerr <<"a.key=" << key << "\n";
-
 	    utf8::utf8to16( key.begin(), key.end(),std::back_inserter(key_utf16));
 	    for (auto it: key_utf16){
 		if (std::iswdigit(it) || it==static_cast<uint16_t>('+')){
@@ -111,12 +131,10 @@ void AtomicUnicodeHistogram::add(std::string key)
 	    /* convert it back */
 	    key.clear();		// erase the characters
 	    utf8::utf16to8(digits_utf16.begin(), digits_utf16.end(),std::back_inserter(key));
-            std::cerr <<"b.key=" << key << "\n";
 	} catch(const utf8::exception &){
 	    /* Exception during utf8 or 16 conversions*.
 	     * So the string wasn't utf8.  Fall back to just extracting the digits
 	     */
-            std::cerr <<"0.key=" << key << "\n";
             std::string digits;
 	    for (auto it:key){
 		if (isdigit(it)){
@@ -124,7 +142,6 @@ void AtomicUnicodeHistogram::add(std::string key)
 		}
 	    }
             key = digits;
-            std::cerr <<"1.key=" << key << "\n";
 	}
     }
 
@@ -142,6 +159,5 @@ void AtomicUnicodeHistogram::add(std::string key)
     h[key].count++;
     if (found_utf16){
         h[key].count16++;  // track how many UTF16s were converted
-        std::cerr << "found_utf16. count=" << h[key].count16 << "\n";
     }
 }

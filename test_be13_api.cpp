@@ -241,7 +241,6 @@ std::vector<std::string> getLines(const std::string &filename)
     std::vector<std::string> lines;
     std::string line;
     std::ifstream inFile;
-    std::cerr << "filename: " << filename << "\n";
     inFile.open(filename.c_str());
     if (!inFile.is_open()) {
         throw std::runtime_error("Cannot open file: "+filename);
@@ -367,9 +366,6 @@ TEST_CASE( "atomic_unicode_histogram", "[histogram]") {
     hm.add("foo 300 bar");
 
     AtomicUnicodeHistogram::auh_t::report r = hm.makeReport(0);
-    std::cerr << "histogram:\n";
-    std::cerr << r << "\n";
-    std::cerr << "======\n";
     REQUIRE( r.size() == 3);
     REQUIRE( r.at(0).key == "100");
     REQUIRE( r.at(0).value.count == 1);
@@ -387,10 +383,6 @@ TEST_CASE( "atomic_unicode_histogram", "[histogram]") {
     std::string b300(buf300,6);
     hm.add(b300);
     r = hm.makeReport(0);
-    std::cerr << "histogram:\n";
-    std::cerr << r << "\n";
-    std::cerr << "======\n";
-
     REQUIRE( r.at(2).key == "300");
     REQUIRE( r.at(2).value.count == 4);
     REQUIRE( r.at(2).value.count16 == 1);
@@ -614,6 +606,7 @@ TEST_CASE("word_and_context_list", "[vector]") {
 /****************************************************************
  * unicode_escape.h
  * unicode_escape.cpp
+ * Our test suite for the utf8 package and our uses of it.
  */
 #include "unicode_escape.h"
 TEST_CASE("unicode_escape", "[unicode]") {

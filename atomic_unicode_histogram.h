@@ -1,7 +1,12 @@
 #ifndef ATOMIC_UNICODE_HISTOGRAM_H
 #define ATOMIC_UNICODE_HISTOGRAM_H
 
-/** A simple class for making histograms of strings. Strings are analyzed to see if they contain UTF16 and, if they do, that is separately tallied as thei UTF-8 component.
+/** A simple class for making histograms of strings.
+ * Histograms are kept in printable UTF-8 representation, not in UTF32 internally.
+ * In part this us due to the legacy code base.
+ * This part this allows the scanners to determine what the printout should look like, rather than having
+ * to pass presentation flags.
+ *
  * Histogram maker implement:
  * - Counting
  * - Determining how much memory is in use by histogram.
@@ -14,10 +19,11 @@
 #include "histogram_def.h"
 #include "unicode_escape.h"
 
-class AtomicUnicodeHistogram  {
+struct AtomicUnicodeHistogram  {
     static uint32_t debug_histogram_malloc_fail_frequency; // for debugging, make malloc fail sometimes
-public:;
     struct HistogramTally {
+        uint32_t count      {0}; // total strings seen
+        uint32_t count16    {0}; // total utf16 strings seen
         HistogramTally(const HistogramTally &a){
             this->count   = a.count;
             this->count16 = a.count16;
@@ -28,8 +34,6 @@ public:;
             return *this;
         }
 
-        uint32_t count      {0}; // total strings seen
-        uint32_t count16    {0}; // total utf16 strings seen
         HistogramTally(){};
         virtual ~HistogramTally(){};
 
@@ -46,59 +50,16 @@ public:;
         size_t bytes() const { return sizeof(*this);}
     };
 
-#if 0
-    /** The ReportElement is used for creating the report of histogram frequencies.
-     * It can be thought of as the histogram bin.
-     */
-    struct ReportElement {
-	ReportElement(std::string aValue):value(aValue){ };
-	std::string                value {};		// UTF-8
-	struct AtomicUnicodeHistogram::HistogramTally      tally {};
-
-        bool operator==(const ReportElement &a) const {
-            return (this->value == a.value) && (this->tally == a.tally);
-        }
-        bool operator!=(const ReportElement &a) const {
-            return !(*this == a);
-        }
-        bool operator<(const ReportElement &a) const {
-            if (this->value < a.value) return true;
-            if ((this->value == a.value) &&
-                (this->tally < a.tally)) return true;
-            return false;
-        }
-
-	static bool compare(const ReportElement &e1,const ReportElement &e2) {
-            return e1 < e2;
-	}
-	virtual ~ReportElement(){};
-        size_t bytes() const{
-            return sizeof(*this) + value.size();
-        }                 // number of bytes used by object
-
-    };
-#endif
     /* A FrequencyReportVector is a vector of report elements when the report is generated.*/
     typedef atomic_map<std::string, struct AtomicUnicodeHistogram::HistogramTally> auh_t;
     typedef std::vector<auh_t::AMReportElement> FrequencyReportVector;
 
-private:
-    /* The histogram: */
-    //std::map<std::string, struct AtomicUnicodeHistogram::HistogramTally> h {}; // the histogram
-    //mutable std::mutex Mh;                            // protecting mutex
-    auh_t h {}; // the histogram
-    const struct histogram_def &def;                   // the definition we are making
-
-public:
     AtomicUnicodeHistogram(const struct histogram_def &def_):def(def_){}
-    void clear(){ h.clear(); }   //
-    void add(std::string key);	// adds a string to the histogram count
-#if 0
-    static size_t addSizes(const ReportElement &a, const ReportElement b){
-        return a.bytes() + b.bytes();
-    }
-#endif
-    size_t bytes(){            // returns the total number of bytes of the histogram,.
+    virtual ~AtomicUnicodeHistogram(){};
+
+    void clear(){ h.clear(); }    //
+    void add(std::string key);  // adds Unicode string to the histogram count
+    size_t bytes(){               // returns the total number of bytes of the histogram,.
         size_t count = sizeof(*this);
         for(auto it:h){
             count += sizeof(it.first) + it.first.size() + it.second.bytes();
@@ -110,18 +71,14 @@ public:
      * FrequencyReportVector.
      */
     auh_t::report makeReport(size_t topN=0) const; // returns just the topN; 0 means all
-    virtual ~AtomicUnicodeHistogram(){};
+    const struct histogram_def &def;   // the definition we are making
+
+private:
+    auh_t h {};                        // the histogram
 };
 
-inline std::ostream & operator << (std::ostream &os, const AtomicUnicodeHistogram::FrequencyReportVector &rep) {
-    for(auto it:rep){
-	os << "n=" << it.value.count << "\t" << validateOrEscapeUTF8(it.key, true, true, true);
-	if(it.value.count16>0) os << "\t(utf16=" << it.value.count16<<")";
-	os << "\n";
-    }
-    return os;
-}
-
+std::ostream & operator << (std::ostream &os, const AtomicUnicodeHistogram::FrequencyReportVector &rep);
+std::ostream & operator << (std::ostream &os, const AtomicUnicodeHistogram::auh_t::AMReportElement &e);
 
 
 #endif

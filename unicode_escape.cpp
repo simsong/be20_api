@@ -103,9 +103,7 @@ std::string validateOrEscapeUTF8(const std::string &input,
                                  bool validateOrEscapeUTF8_validate)
 {
     // skip the validation if not escaping and not DEBUG_PEDANTIC
-    if (escape_bad_utf8==false
-        && escape_backslash==false
-        && !validateOrEscapeUTF8_validate){
+    if (escape_bad_utf8==false && escape_backslash==false && validateOrEscapeUTF8_validate==false){
         return input;
     }
 
@@ -198,8 +196,7 @@ std::string validateOrEscapeUTF8(const std::string &input,
                 std::ofstream os("bad_unicode.txt");
                 os << input << "\n";
                 os.close();
-                std::cerr << "INTERNAL ERROR: bad unicode stored in bad_unicode.txt\n";
-                assert(0);
+                throw std::runtime_error("INTERNAL ERROR: bad unicode stored in bad_unicode.txt\n");
             }
         }
     }
@@ -277,6 +274,6 @@ std::string make_utf8(const std::string &str)
         return convert_utf16_to_utf8(str);
     }
     catch (const utf8::invalid_utf16 &){
-        return str;
+        return validateOrEscapeUTF8(str, true, true, true);
     }
 }
