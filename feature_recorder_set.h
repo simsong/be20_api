@@ -10,6 +10,8 @@
 
 #include "sbuf.h"
 #include "feature_recorder.h"
+#include "atomic_set.h"
+#include "atomic_map.h"
 
 /** \addtogroup internal_interfaces
  * @{

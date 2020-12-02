@@ -121,17 +121,19 @@ TEST_CASE("aftimer", "[utils]") {
 /****************************************************************
  * atomic_set_map.h
  */
+#include "atomic_set.h"
 TEST_CASE( "atomic_set", "[histogram]" ){
     atomic_set<std::string> as;
-    //REQUIRE( as.size() == 0);
+    REQUIRE( as.size() == 0);
     as.insert("one");
     as.insert("two");
     as.insert("three");
     REQUIRE( as.contains("one") == true );
     REQUIRE( as.contains("four") == false );
-    //REQUIRE( as.size() == 3);
+    REQUIRE( as.size() == 3);
 }
 
+#include "atomic_map.h"
 TEST_CASE( "atomic_map", "[histogram]" ){
     atomic_map<std::string,int> am;
     am.insert("one",1);
@@ -292,18 +294,18 @@ TEST_CASE("write_features", "[feature_recorder_set]" ) {
         fr.write_buf(sb16, 0, 64); // write the entire buffer as a single feature, no context
 
         std::ofstream o(fs.get_outdir() + "/histogram1.txt");
-        //fr.generate_histogram(o, h1);
-
     }
-#if 0
+    std::vector<std::string> lines = getLines(tempdir+"/name_suffix1.txt");
+    std::cerr << "here is the histogram:\n";
+    for (auto line: lines){
+        std::cerr << line << "\n";
+    }
     /* get the last line of the test file and see if it is correct */
     std::string expected_lastline {"hello16-0\t"
         "H\\x00e\\x00l\\x00l\\x00o\\x00 \\x00w\\x00o\\x00r\\x00l\\x00d\\x00!\\x00"
         "\tH\\x00e\\x00l\\x00l\\x00o\\x00 \\x00w\\x00o\\x00r\\x00l\\x00d\\x00!\\x00"};
-    std::vector<std::string> lines = getLines(tempdir+"/test.txt");
 
     REQUIRE( lines.back() == expected_lastline);
-#endif
 }
 
 /****************************************************************

@@ -17,6 +17,7 @@
 #include "sbuf.h"
 #include "atomic_set.h"
 #include "histogram_def.h"
+#include "atomic_unicode_histogram.h"
 
 /**
  * \addtogroup bulk_extractor_APIs
@@ -220,7 +221,7 @@ public:;
     /*
      * Histogram control.
      */
-    std::vector<const struct histogram_def *> histograms {};
+    std::vector<AtomicUnicodeHistogram *> histograms {};
     size_t histogram_largest() const;   // returns the memory size of the largest histogram
     virtual void histogram_add(const struct histogram_def &def);
     virtual bool histogram_flush();     // flushes largest histogram. returns false if no histogram could be flushed.

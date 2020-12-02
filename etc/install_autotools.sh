@@ -20,7 +20,7 @@ AUTOCONF="autoconf-2.69"
 cd $build
 curl -k -OL https://ftpmirror.gnu.org/autoconf/$AUTOCONF.tar.gz || exit 1
 ls -l $AUTOCONF.tar.gz
-tar xzf $AUTOCONF.tar.gz  || exit 1
+tar xzf $AUTOCONF.tar.gz  || xxd $AUTOCONF.tar.gz || exit 1
 cd $AUTOCONF
 ./configure --prefix=/usr/local || exit 1
 make || exit 1

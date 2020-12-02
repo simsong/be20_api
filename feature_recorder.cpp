@@ -207,6 +207,7 @@ void feature_recorder::write0(const pos0_t &pos0, const std::string &feature, co
 void feature_recorder::write(const pos0_t &pos0, const std::string &feature_, const std::string &context_)
 {
     if (fs.flags.disabled) return;           // disabled
+
     if (fs.flags.pedantic){
         if (feature_.size() > fs.opt_max_feature_size){
             std::cerr << "feature_recorder::write : feature_.size()=" << feature_.size() << "\n";
@@ -217,6 +218,8 @@ void feature_recorder::write(const pos0_t &pos0, const std::string &feature_, co
             assert(0);
         }
     }
+
+    /* TODO: This needs to be change to do all processing in utf32 and not utf8 */
 
     std::string feature      = feature_;
     std::string context      = flags.no_context ? "" : context_;
@@ -271,11 +274,13 @@ void feature_recorder::write(const pos0_t &pos0, const std::string &feature_, co
     }
 #endif
 
+    /* add the feature to any histograms; the regex is applied in the histogram */
+    for (auto it: histograms ){
+        it->add(feature);               // add the original feature
+    }
+
 #if 0
-    /* Support in-memory histograms */
-    for (auto it:mhistograms ){
-        const histogram_def &def = it.first;
-        mhistogram_t *m = it.second;
+    // move this to the histogram itself
         std::string new_feature = *feature_utf8;
         if (def.require.size()==0 || new_feature.find_first_of(def.require)!=std::string::npos){
             /* If there is a pattern to use, use it to simplify the feature */
@@ -305,14 +310,18 @@ void feature_recorder::write(const pos0_t &pos0, const std::string &feature_, co
  * for writing from within the lexical analyzers.
  */
 
+
+/* for debugging, halt at this position */
+const pos0_t debug_halt_pos0("",9999999);
+const size_t debug_halt_pos(9999999);
 void feature_recorder::write_buf(const sbuf_t &sbuf,size_t pos,size_t len)
 {
     if (fs.flags.debug){
         std::cerr << "*** write_buf " << name << " sbuf=" << sbuf << " pos=" << pos << " len=" << len << "\n";
-        // for debugging, print Imagine that when pos= the location where the crash is happening.
+        // for debugging, set print Imagine that when pos= the location where the crash is happening.
         // then set a breakpoint at std::cerr.
-        if(pos==9999999){
-            std::cerr << "Imagine that\n";
+        if (sbuf.pos0==debug_halt_pos0 || pos==debug_halt_pos) {
+            std::cerr << "Breakpoint Reached.\n";
         }
     }
 
@@ -690,7 +699,7 @@ void feature_recorder::histogram_add(const struct histogram_def &def)
     if (features_written != 0 ){
         throw std::runtime_error("Cannot add histograms after features have been written.");
     }
-    histograms.push_back(&def);
+    histograms.push_back(new AtomicUnicodeHistogram( def ));
 }
 
 bool feature_recorder::histogram_flush()
