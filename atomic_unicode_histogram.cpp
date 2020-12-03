@@ -69,6 +69,28 @@ void AtomicUnicodeHistogram::add(std::string key)
 {
     if(key.size()==0) return;		// don't deal with zero-length keys
 
+#if 0
+    // move this to the histogram itself
+        std::string new_feature = *feature_utf8;
+        if (def.require.size()==0 || new_feature.find_first_of(def.require)!=std::string::npos){
+            /* If there is a pattern to use, use it to simplify the feature */
+            if (def.pattern.size()){
+                std::smatch sm;
+                std::regex_search( new_feature, sm, def.reg);
+                if (sm.size() == 0){
+                    // no search match; avoid this feature
+                    new_feature = "";
+                }
+                else {
+                    new_feature = sm.str();
+                }
+            }
+            if(new_feature.size()) m->add(new_feature,1);
+        }
+    }
+#endif
+
+
     /**
      * "key" passed in is a const reference.
      * But we might want to change it. So keyToAdd points to what will be added.

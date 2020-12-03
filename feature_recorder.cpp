@@ -275,30 +275,8 @@ void feature_recorder::write(const pos0_t &pos0, const std::string &feature_, co
 #endif
 
     /* add the feature to any histograms; the regex is applied in the histogram */
-    for (auto it: histograms ){
-        it->add(feature);               // add the original feature
-    }
+    this->histograms_add_feature(feature);
 
-#if 0
-    // move this to the histogram itself
-        std::string new_feature = *feature_utf8;
-        if (def.require.size()==0 || new_feature.find_first_of(def.require)!=std::string::npos){
-            /* If there is a pattern to use, use it to simplify the feature */
-            if (def.pattern.size()){
-                std::smatch sm;
-                std::regex_search( new_feature, sm, def.reg);
-                if (sm.size() == 0){
-                    // no search match; avoid this feature
-                    new_feature = "";
-                }
-                else {
-                    new_feature = sm.str();
-                }
-            }
-            if(new_feature.size()) m->add(new_feature,1);
-        }
-    }
-#endif
 
     /* Finally write out the feature and the context */
     this->write0(pos0, feature, context);
@@ -694,15 +672,21 @@ void feature_recorder::set_carve_mtime(const std::string &fname, const std::stri
 }
 #endif
 
+/****************************************************************
+ ** Histogram Support
+ ****************************************************************/
+
+
+
 void feature_recorder::histogram_add(const struct histogram_def &def)
 {
     if (features_written != 0 ){
         throw std::runtime_error("Cannot add histograms after features have been written.");
     }
-    histograms.push_back(new AtomicUnicodeHistogram( def ));
+    histograms.push_back(std::make_unique<AtomicUnicodeHistogram>( def ));
 }
 
-bool feature_recorder::histogram_flush()
+bool feature_recorder::histogram_flush_largest()
 {
     return false;
 }
@@ -710,6 +694,17 @@ bool feature_recorder::histogram_flush()
 bool feature_recorder::histogram_flush_all()
 {
     return false;
+}
+
+void feature_recorder::histogram_flush(AtomicUnicodeHistogram *)
+{
+}
+
+void feature_recorder::histograms_add_feature(const std::string &feature)
+{
+    for (auto &it: histograms ){
+        it->add(feature);               // add the original feature
+    }
 }
 
 /*

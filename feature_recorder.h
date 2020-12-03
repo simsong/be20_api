@@ -12,6 +12,7 @@
 #include <iostream>
 #include <fstream>
 #include <atomic>
+#include <memory>
 
 #include "pos0.h"
 #include "sbuf.h"
@@ -221,10 +222,13 @@ public:;
     /*
      * Histogram control.
      */
-    std::vector<AtomicUnicodeHistogram *> histograms {};
+    // this works:
+    std::vector<std::unique_ptr<AtomicUnicodeHistogram>> histograms {};
     size_t histogram_largest() const;   // returns the memory size of the largest histogram
     virtual void histogram_add(const struct histogram_def &def);
-    virtual bool histogram_flush();     // flushes largest histogram. returns false if no histogram could be flushed.
+    virtual void histograms_add_feature(const std::string &feature);
+    virtual bool histogram_flush_largest();     // flushes largest histogram. returns false if no histogram could be flushed.
+    virtual void histogram_flush(AtomicUnicodeHistogram *); // flush a specific histogram
     virtual bool histogram_flush_all(); // flushes all histograms
     virtual size_t histogram_count() { return histograms.size();}     // how many histograms it has
     virtual void histogram_merge(const struct histogram_def &def); // merge sort on this histogram
