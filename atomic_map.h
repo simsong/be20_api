@@ -19,8 +19,10 @@
 #include <unordered_set>
 
 template <class T1,class T2 > class atomic_map {
-    mutable std::mutex M {};            // allow modification in const methods
     std::map<T1, T2>mymap {};
+    // Mutex M protects mymap.
+    // It is mutable to allow modification in const methods
+    mutable std::mutex M {};
 public:
     atomic_map(){}
     ~atomic_map(){}
@@ -106,12 +108,15 @@ public:
         }                 // number of bytes used by object
     };
     typedef std::vector<AMReportElement> report;
-    report dump(bool sorted=false) const {
+    report dump(bool sorted=false, bool clearMap=false) const {
         report r;
         {
             const std::lock_guard<std::mutex> lock(M);
             for(auto it: mymap){
                 r.push_back(AMReportElement(it.first,it.second));
+            }
+            if(clearMap){
+                r.clear();
             }
         }
         if (sorted) {

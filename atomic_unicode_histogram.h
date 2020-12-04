@@ -70,7 +70,7 @@ struct AtomicUnicodeHistogram  {
     /** makeReport() makes a report and returns a
      * FrequencyReportVector.
      */
-    auh_t::report makeReport(size_t topN=0) const; // returns just the topN; 0 means all
+    auh_t::report makeReport(size_t topN=0, bool clearMap=false); // returns just the topN; 0 means all
     const struct histogram_def &def;   // the definition we are making
 
 private:

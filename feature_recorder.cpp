@@ -696,8 +696,17 @@ bool feature_recorder::histogram_flush_all()
     return false;
 }
 
-void feature_recorder::histogram_flush(AtomicUnicodeHistogram *)
+void feature_recorder::histogram_flush(AtomicUnicodeHistogram &h)
 {
+    /* Get the next filename */
+    std::string fname = fname_in_outdir(h.def.suffix, NEXT_COUNT);
+    std::fstream hfile;
+    hfile.open( fname.c_str(), std::ios_base::out);
+    if (!hfile.is_open()){
+        throw std::runtime_error("Cannot open feature histogram file "+fname);
+    }
+    hfile << h.makeReport(0, true); // sorted and clear
+    hfile.close();
 }
 
 void feature_recorder::histograms_add_feature(const std::string &feature)

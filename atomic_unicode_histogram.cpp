@@ -19,8 +19,8 @@
 
 std::ostream & operator << (std::ostream &os, const AtomicUnicodeHistogram::FrequencyReportVector &rep)
 {
-    for(auto it:rep){
-        os << rep;
+    for(const auto &it:rep){
+        os << it;
     }
     return os;
 }
@@ -42,9 +42,9 @@ std::ostream & operator << (std::ostream &os, const AtomicUnicodeHistogram::auh_
  * @param topN - if >0, return only this many.
  * Return only the topN.
  */
-AtomicUnicodeHistogram::auh_t::report AtomicUnicodeHistogram::makeReport(size_t topN) const
+AtomicUnicodeHistogram::auh_t::report AtomicUnicodeHistogram::makeReport(size_t topN, bool clearMap)
 {
-    auh_t::report rep = h.dump( true );
+    auh_t::report rep = h.dump( true, clearMap );
 
     /* If we only want some of them, delete the extra */
     if ( (topN > 0)  && ( topN < rep.size()) ){
