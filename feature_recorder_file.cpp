@@ -142,7 +142,7 @@ void feature_recorder_file::banner_stamp(std::ostream &os,const std::string &hea
 /* statics */
 const std::string feature_recorder_file::feature_file_header("# Feature-File-Version: 1.1\n");
 const std::string feature_recorder_file::histogram_file_header("# Histogram-File-Version: 1.1\n");
-const std::string feature_recorder_file::bulk_extractor_version_header("# " PACKAGE_NAME "-Version: " PACKAGE_VERSION " ($Rev: 10844 $)\n");
+const std::string feature_recorder_file::bulk_extractor_version_header("# " PACKAGE_NAME "-Version: " PACKAGE_VERSION "\n");
 
 
 #if 0

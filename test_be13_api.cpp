@@ -22,6 +22,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cstdlib>
 #include <cstring>
 #include <functional>
 #include <random>
@@ -52,14 +53,20 @@ std::string random_string(std::size_t length)
     return random_string;
 }
 
+// A single tempdir for testing
 std::string get_tempdir()
 {
-    std::string tempdir = std::filesystem::temp_directory_path().string();
-    if (tempdir.back()!='/'){
-        tempdir += '/';
+    static std::string tempdir;
+
+    if (tempdir==""){
+        tempdir = std::filesystem::temp_directory_path().string();
+        if (tempdir.back()!='/'){
+            tempdir += '/';
+        }
+        tempdir += random_string(8);
+        std::filesystem::create_directory(tempdir);
+        std::cerr << "Test results in: " << tempdir << "\n";
     }
-    tempdir += random_string(8);
-    std::filesystem::create_directory(tempdir);
     return tempdir;
 }
 
@@ -275,8 +282,8 @@ TEST_CASE("write_features", "[feature_recorder_set]" ) {
         feature_recorder &fr = fs.named_feature_recorder("test", true);
 
         /* Make sure requesting a valid name does not generate an exception and an invalid name generates an exception */
-        //REQUIRE_NOTHROW( fs.named_feature_recorder("test") );
-        //REQUIRE_THROWS_AS( fs.named_feature_recorder("test_not"), feature_recorder_set::NoSuchFeatureRecorder);
+        REQUIRE_NOTHROW( fs.named_feature_recorder("test") );
+        REQUIRE_THROWS_AS( fs.named_feature_recorder("test_not"), feature_recorder_set::NoSuchFeatureRecorder);
 
         /* Ask the feature recorder to create a histogram */
         histogram_def h1("name","([0-9]+)","suffix1",histogram_def::flags_t());
@@ -396,7 +403,6 @@ TEST_CASE( "atomic_unicode_histogram", "[histogram]") {
         o << r;
         o.close();
     }
-    std::cerr << "wrote histogram to " << fname << "\n";
 }
 
 
@@ -654,4 +660,9 @@ TEST_CASE("unicode_detection", "[unicode]") {
     sbuf_t sb8 = sbuf_t::map_file(tests_dir() + "/unilang8.htm");
     bool t8 = looks_like_utf16(sb8.asString(), little_endian);
     REQUIRE( t8 == false);
+}
+
+TEST_CASE("finished", "[zz]") {
+    std::string cmd = "ls -l "+get_tempdir();
+    system(cmd.c_str());
 }
