@@ -55,8 +55,8 @@ std::string scanner_set::ALL_SCANNERS {"all"};
  */
 scanner_set::scanner_set(const scanner_config &sc_,
                          const feature_recorder_set::flags_t &f,
-                         std::ostream *sxml_):
-    sc(sc_),fs(f,sc_.hash_alg, sc_.input_fname, sc_.outdir), sxml(sxml_)
+                         class dfxml_writer *writer_):
+    sc(sc_),fs(f,sc_.hash_alg, sc_.input_fname, sc_.outdir), writer(writer_)
 {
 }
 
@@ -70,10 +70,23 @@ scanner_set::scanner_set(const scanner_config &sc_,
 /* Callback for a scanner to register its info with the scanner set. */
 void scanner_set::register_info(const scanner_params::scanner_info *si)
 {
+    if (scanner_info_db.find( si->scanner) != scanner_info_db.end()){
+        throw std::runtime_error("A scanner tried to register itself that is already registered");
+    }
     scanner_info_db[si->scanner] = si;
-    /* Create all of the requested feature recorders */
+
+    /* Create all of the requested feature recorders.
+     * Multiple scanners may request the same feature recorder without generating an error.
+     */
     for (auto it: si->feature_names ){
         fs.named_feature_recorder( it, true );
+    }
+
+    /* Create all of the requested histograms
+     * Multiple scanners may request the same histograms without generating an error.
+     */
+    for (auto it: si->histogram_defs ){
+        fs.named_feature_recorder( it.feature, true ).histogram_add( it );
     }
 }
 
@@ -435,32 +448,12 @@ void scanner_set::phase_scan()
 }
 
 
-/****************************************************************
- *** PROCESS HISTOGRAM
- ****************************************************************/
-
-void scanner_set::process_histograms()
-{
-    /* Go through the scanners, get all of the histograms, and */
-
-    std::set<histogram_def *>hset;              // place to hold the histograms
-
-    // loop through all scanners and all histograms and find all of the defs
-    // This doesn't dedupe yet. It should.
-    for (auto it: scanner_info_db ){
-        for (auto hi: it.second->histogram_defs ){
-            hset.insert( &hi );
-        }
-    }
-}
-
-
 
 /****************************************************************
  *** PHASE_SHUTDOWN methods.
  ****************************************************************/
 
-void scanner_set::shutdown(dfxml_writer *writer)
+void scanner_set::shutdown()
 {
     if (current_phase != scanner_params::PHASE_SCAN){
         throw std::runtime_error("shutdown can only be called in scanner_params::PHASE_SCAN");
@@ -475,7 +468,7 @@ void scanner_set::shutdown(dfxml_writer *writer)
         (*it)(sp);
     }
 
-    process_histograms();
+    /* Tell every feature recorder to flush all of its histograms */
 
     /* Output the scanner stats */
     if (writer) {

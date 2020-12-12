@@ -12,6 +12,9 @@
  * - Determining how much memory is in use by histogram.
  * - Writing histogram to a stream (for example, when memory is filled.)
  * - Merging multiple histogram files to a single file.
+ *
+ * Note - case transitions and text extraction is performed in UTF-32.
+ *      - regular expression are then run on the UTF-8. (Not the best, but it works for now.)
  */
 
 #include <atomic>
@@ -58,7 +61,7 @@ struct AtomicUnicodeHistogram  {
     virtual ~AtomicUnicodeHistogram(){};
 
     void clear(){ h.clear(); }    //
-    void add(std::string key);  // adds Unicode string to the histogram count
+    void add(const std::string &key);  // adds Unicode string to the histogram count
     size_t bytes(){               // returns the total number of bytes of the histogram,.
         size_t count = sizeof(*this);
         for(auto it:h){

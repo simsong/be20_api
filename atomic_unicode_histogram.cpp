@@ -3,8 +3,9 @@
  * Maintain a histogram for Unicode strings provided as UTF-8 and UTF-16 encodings.
  * Track number of each coding provided.
  *
- * TK: Reimplement top-n with a priority queue.
- *  http://www.cplusplus.com/reference/queue/priority_queue/
+ *
+ * Perhaps I really should just keep everything as UTF-8.
+ * https://www.moria.us/articles/wchar-is-a-historical-accident/?
  */
 
 #include "config.h"
@@ -14,6 +15,8 @@
 #include <fstream>
 #include <iostream>
 #include <cwctype>
+#include <regex>
+#include <string>
 
 #include "atomic_unicode_histogram.h"
 
@@ -26,16 +29,15 @@ std::ostream & operator << (std::ostream &os, const AtomicUnicodeHistogram::Freq
 }
 
 
-
 /* Output is in UTF-8 */
 std::ostream & operator << (std::ostream &os, const AtomicUnicodeHistogram::auh_t::AMReportElement &e)
 {
-    os << "n=" << e.value.count << "\t" << validateOrEscapeUTF8(e.key, true, false, false);
+    os << "n=" << e.value.count << "\t" << validateOrEscapeUTF8( e.key, true, false, false);
+    //os << "n=" << e.value.count << "\t" << validateOrEscapeUTF8( convert_utf32_to_utf8(e.key), true, false, false);
     if (e.value.count16>0) os << "\t(utf16=" << e.value.count16<<")";
     os << "\n";
     return os;
 }
-
 
 
 /* Create a histogram report.
@@ -54,7 +56,10 @@ AtomicUnicodeHistogram::auh_t::report AtomicUnicodeHistogram::makeReport(size_t 
 }
 
 /**
- * Takes a string (the key) and adds it to the histogram.
+ * Takes a string (the key) passed in, figure out what it is, and add it to a unicode histogram.
+ * Typically it is going to be UTF16 or UTF8.
+ * Regular expressions are applied, if requested, in the UTF32 world.
+ *
  * @param - key - either a UTF8 or UTF16 string.
  * If the string appears to be UTF16, convert it to UTF-8 and note that it was converted.
  *
@@ -62,54 +67,34 @@ AtomicUnicodeHistogram::auh_t::report AtomicUnicodeHistogram::makeReport(size_t 
  * def.flags.lower  - also convert to lowercase using Unicode rules.
  */
 
+
+
 // https://stackoverflow.com/questions/37989081/how-to-use-unicode-range-in-c-regex
 
 uint32_t AtomicUnicodeHistogram::debug_histogram_malloc_fail_frequency = 0;
-void AtomicUnicodeHistogram::add(std::string key)
+void AtomicUnicodeHistogram::add(const std::string &key_unknown_encoding)
 {
-    if(key.size()==0) return;		// don't deal with zero-length keys
+    if (key_unknown_encoding.size()==0) return;		// don't deal with zero-length keys
 
-#if 0
-    // move this to the histogram itself
-        std::string new_feature = *feature_utf8;
-        if (def.require.size()==0 || new_feature.find_first_of(def.require)!=std::string::npos){
-            /* If there is a pattern to use, use it to simplify the feature */
-            if (def.pattern.size()){
-                std::smatch sm;
-                std::regex_search( new_feature, sm, def.reg);
-                if (sm.size() == 0){
-                    // no search match; avoid this feature
-                    new_feature = "";
-                }
-                else {
-                    new_feature = sm.str();
-                }
-            }
-            if(new_feature.size()) m->add(new_feature,1);
-        }
-    }
-#endif
+    /* On input, the key may be UTF8 or UTF16. See if we can figure it out */
+    bool found_utf16   = false;         // did we find a utf16?
+    bool little_endian = false;         // was it little_endian?
+    std::u32string u32key;              // u32key. Doesn't matter if LE or BE, because we never write it out.
 
-
-    /**
-     * "key" passed in is a const reference.
-     * But we might want to change it. So keyToAdd points to what will be added.
-     * If we need to change key, we allocate more memory, and make keyToAdd
-     * point to the memory that was allocated. This way we only make a copy
-     * if we need to make a copy.
-     */
-
-    bool found_utf16 = false;           // did we find a utf16?
-    bool little_endian=false;           // was it little_endian?
-
-    if (looks_like_utf16(key,little_endian)){
-        key = convert_utf16_to_utf8(key, little_endian);
+    if (looks_like_utf16( key_unknown_encoding, little_endian)){
+        // We have an endian-guessing implementation that converts from 16 to 8, so convert from 16 to 8
+        // and then convert it to utf32
+        u32key = convert_utf8_to_utf32( convert_utf16_to_utf8(key_unknown_encoding, little_endian));
         found_utf16 = true;
+    } else {
+        u32key = convert_utf8_to_utf32( key_unknown_encoding );
     }
 
-    /* At this point we have UTF-8
-     * This is a bit of a kludge:
-     * If we are told to lowercase the string, convert it to wchar, lowercase, then turn it back to utf8.
+
+    /* At this point we have UTF-32, which we treat as raw unicode characters.
+     * (It's almost the same.)
+     *
+     * Process lowercase, numeric and regular expressions in utf32 world.
      * Ideally this would be done with ICU, but we do not want to assume we have ICU.
      * https://stackoverflow.com/questions/34433380/lowercase-of-unicode-character
      * https://stackoverflow.com/questions/313970/how-to-convert-stdstring-to-lower-case/24063783
@@ -117,69 +102,28 @@ void AtomicUnicodeHistogram::add(std::string key)
      * See: http://stackoverflow.com/questions/1081456/wchar-t-vs-wint-t
      */
 
-    if ( def.flags.lowercase ){
-        /* If we cannot do a clean utf8->utf16->utf8 conversion, abort and keep original string */
-	try {
-	    std::wstring key_utf16;
-            /* convert utf8->utf16 */
-	    utf8::utf8to16( key.begin(), key.end(), std::back_inserter( key_utf16));
-            /* lowercase */
-	    for (auto it:key_utf16){
-		it = std::towlower(it);
-	    }
-            /* put back */
-	    key.clear();
-	    utf8::utf16to8(key_utf16.begin(), key_utf16.end(), std::back_inserter( key));
-	} catch(const utf8::exception &){
-	    /* Exception thrown during utf8 or 16 conversions.
-	     * So the string we thought was valid utf8 wasn't valid utf8 afterall.
-	     * tempKey will remain unchanged.
-	     */
-	}
-    }
+    /* Perform the regular expressions in utf16 space, which is provided by c++ */
+    std::string displayString;
+    if (def.match( u32key, &displayString )){
 
-    if ( def.flags.numeric ){
-	/* Similar to above, but extract the digits and the plus sign */
-	try{
-	    std::wstring key_utf16;
-	    std::wstring digits_utf16;
+        /* Escape */
+        displayString = validateOrEscapeUTF8( displayString, true, true, false);
 
-	    utf8::utf8to16( key.begin(), key.end(),std::back_inserter(key_utf16));
-	    for (auto it: key_utf16){
-		if (std::iswdigit(it) || it==static_cast<uint16_t>('+')){
-		    digits_utf16.push_back(it);
-		}
-	    }
-	    /* convert it back */
-	    key.clear();		// erase the characters
-	    utf8::utf16to8(digits_utf16.begin(), digits_utf16.end(),std::back_inserter(key));
-	} catch(const utf8::exception &){
-	    /* Exception during utf8 or 16 conversions*.
-	     * So the string wasn't utf8.  Fall back to just extracting the digits
-	     */
-            std::string digits;
-	    for (auto it:key){
-		if (isdigit(it)){
-		    digits.push_back(it);
-		}
-	    }
-            key = digits;
-	}
-    }
 
-    /* For debugging low-memory handling logic,
-     * specify DEBUG_MALLOC_FAIL to make malloc occasionally fail
-     */
-    if (debug_histogram_malloc_fail_frequency){
-        if ((h.size() % debug_histogram_malloc_fail_frequency)==(debug_histogram_malloc_fail_frequency-1)){
-            throw std::bad_alloc();
+        /* For debugging low-memory handling logic,
+         * specify DEBUG_MALLOC_FAIL to make malloc occasionally fail
+         */
+        if (debug_histogram_malloc_fail_frequency){
+            if ((h.size() % debug_histogram_malloc_fail_frequency)==(debug_histogram_malloc_fail_frequency-1)){
+                throw std::bad_alloc();
+            }
         }
-    }
 
-    /* Add the key to the histogram. Note that this is threadsafe */
-    h.insertIfNotContains(key, HistogramTally());
-    h[key].count++;
-    if (found_utf16){
-        h[key].count16++;  // track how many UTF16s were converted
+        /* Add the key to the histogram. Note that this is threadsafe */
+        h.insertIfNotContains(displayString, HistogramTally());
+        h[displayString].count++;
+        if (found_utf16){
+            h[displayString].count16++;  // track how many UTF16s were converted
+        }
     }
 }

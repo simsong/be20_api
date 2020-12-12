@@ -2,7 +2,9 @@
  *
  * scan_sha1:
  * plug-in demonstration that shows how to write a simple plug-in scanner that calculates
- * the SHA1 of each sbuf. The hash is written to both the XML file and to the md5 feature file.
+ * the SHA1 of each sbuf. The hash is written to both the XML file and to the sha1 feature file.
+ *
+ * Don't use this in production systems! It has a histogram that isn't useful for most applications.
  */
 
 #include "config.h"
@@ -15,11 +17,8 @@
 #include "scanner_set.h"
 #include "dfxml/src/hash_t.h"
 
-
-
 void  scan_sha1(struct scanner_params &sp)
 {
-
     if(sp.phase==scanner_params::PHASE_INIT){
         static scanner_params::scanner_info info;
         info.scanner     = scan_sha1;
@@ -29,12 +28,13 @@ void  scan_sha1(struct scanner_params &sp)
         info.url         = "https://digitalcorpora.org/bulk_extractor";
         info.scanner_version = "1.0.0";
         info.pathPrefix  = "SHA1";
-        //info.flags       = scanner_params::scanner_info::SCANNER_DEFAULT_DISABLED;
-        // specify the featur recorders we want.
+
+        // specify the feature_records that the scanner wants.
         // Note that the feature recorder does not need to be the same name as the scanner
+        // scanners may specify any number of featur recorders.
         info.feature_names.insert("sha1_bufs");
 
-        histogram_def hd("sha1","^(.....)","nope",histogram_def::flags_t(true,false));
+        histogram_def hd("sha1","^(.....)","_first5",histogram_def::flags_t(true,false));
 
         info.histogram_defs.insert(hd);
         sp.register_info(info);

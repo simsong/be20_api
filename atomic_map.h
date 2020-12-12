@@ -120,7 +120,7 @@ public:
             }
         }
         if (sorted) {
-            std::sort(r.begin(), r.end(), AMReportElement::compare);
+            std::sort(r.rbegin(), r.rend(), AMReportElement::compare); // reverse sort
         }
         return r;
     }

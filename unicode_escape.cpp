@@ -29,11 +29,14 @@
 #include <iostream>
 #include <fstream>
 #include <cstdint>
+#include <iterator>
+
 
 #include "config.h"
 #include "unicode_escape.h"
 #include "utf8.h"
 
+/**************** BULK_EXTRACTOR 1.0 CODE ****************/
 std::string hexesc(unsigned char ch)
 {
     char buf[10];
@@ -206,20 +209,21 @@ std::string validateOrEscapeUTF8(const std::string &input,
 /* static */
 bool looks_like_utf16(const std::string &str,bool &little_endian)
 {
-    if((uint8_t)str[0]==0xff && (uint8_t)str[1]==0xfe){
+    if ((uint8_t)str[0]==0xff && (uint8_t)str[1]==0xfe){
 	little_endian = true;
 	return true; // begins with FFFE
     }
-    if((uint8_t)str[0]==0xfe && (uint8_t)str[1]==0xff){
+    if ((uint8_t)str[0]==0xfe && (uint8_t)str[1]==0xff){
 	little_endian = false;
-	return true; // begins with FFFE
+	return true; // begins with FEFF
     }
     /* If none of the even characters are NULL and some of the odd characters are NULL, it's UTF-16 */
     uint32_t even_null_count = 0;
     uint32_t odd_null_count = 0;
     for(size_t i=0;i+1<str.size();i+=2){
-	if(str[i]==0) even_null_count++;
-	if(str[i+1]==0) odd_null_count++;
+	if (str[i]==0) even_null_count++;
+	if (str[i+1]==0) odd_null_count++;
+        /* TODO: Should we look for FFFE or FEFF and act accordingly ? */
     }
     if(even_null_count==0 && odd_null_count>1){
 	little_endian = true;
@@ -240,9 +244,9 @@ bool looks_like_utf16(const std::string &str,bool &little_endian)
 std::string convert_utf16_to_utf8(const std::string &key,bool little_endian)
 {
     /* re-image this string as UTF16*/
-    std::wstring utf16;
+    std::u16string utf16;
     for(size_t i=0;i<key.size();i+=2){
-        if(little_endian) utf16.push_back(key[i] | (key[i+1]<<8));
+        if (little_endian) utf16.push_back(key[i] | (key[i+1]<<8));
         else utf16.push_back(key[i]<<8 | (key[i+1]));
     }
     /* Now convert it to a UTF-8;
@@ -258,6 +262,7 @@ std::string convert_utf16_to_utf8(const std::string &key,bool little_endian)
     }
     return tempKey;
 }
+
 
 std::string convert_utf16_to_utf8(const std::string &key)
 {
@@ -276,4 +281,65 @@ std::string make_utf8(const std::string &str)
     catch (const utf8::invalid_utf16 &){
         return validateOrEscapeUTF8(str, true, true, true);
     }
+}
+
+/*
+ * BULK_EXTRACTOR 2 code uses UTF32, but the utf8 package doesn't provide utf16 to utf32 conversion
+ */
+
+// https://stackoverflow.com/questions/23919515/how-to-convert-from-utf-16-to-utf-32-on-linux-with-std-library
+inline int is_surrogate(uint16_t uc)      { return (uc - 0xd800u) < 2048u; }
+inline int is_high_surrogate(uint16_t uc) { return (uc & 0xfffffc00) == 0xd800; }
+inline int is_low_surrogate(uint16_t uc)  { return (uc & 0xfffffc00) == 0xdc00; }
+
+inline uint32_t surrogate_to_utf32(uint16_t high, uint16_t low) {
+    return (high << 10) + low - 0x35fdc00;
+}
+
+
+std::u32string convert_utf16_to_utf32(const std::u16string &input)
+{
+    constexpr uint16_t REPLACEMENT_CHARACTER = 0xfffd;
+    std::u32string output;
+    for (int i=0; i<input.size(); i++){
+        uint16_t uc = input[i];
+        if (!is_surrogate(uc)) {
+            output.push_back( uc );
+            continue;
+        }
+        if (is_high_surrogate(uc) && (i+1) < input.size() && is_low_surrogate(input[i+1])){
+            output.push_back( surrogate_to_utf32( uc, input[++i] ) );
+            continue;
+        }
+        output.push_back(REPLACEMENT_CHARACTER);
+    }
+    return output;
+}
+
+/*
+ * https://stackoverflow.com/questions/42899410/convert-utf-32-wide-char-to-utf-16-wide-char-in-linux-for-supplementary-plane-ch
+ */
+std::u16string convert_utf32_to_utf16(const std::u32string &str)
+{
+    /* The conversion from UTF-32 to UTF-16 might possibly require surrogates.
+     * A surrogate pair suffices to represent all wide characters, because all
+     * characters outside the range will be mapped to the sentinel value
+     * U+FFFD.  Add one character for the terminating NUL.
+     */
+    std::u16string result;
+
+    for ( auto ch: str) {
+        if ( ch < 0 || ch > 0x10FFFF || (ch >= 0xD800 && ch <= 0xDFFF) ) {
+            // Invalid code point.  Replace with sentinel, per Unicode standard:
+            constexpr char16_t sentinel = u'\uFFFD';
+            result.push_back(sentinel);
+        } else if ( ch < 0x10000UL ) { // In the BMP.
+            result.push_back(static_cast<char16_t>(ch));
+        } else {
+            const char16_t leading = static_cast<char16_t>( ((ch-0x10000UL) / 0x400U) + 0xD800U );
+            const char16_t trailing = static_cast<char16_t>( ((ch-0x10000UL) % 0x400U) + 0xDC00U );
+            result.append({leading, trailing});
+        }
+    }
+    return result;
 }

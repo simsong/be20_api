@@ -120,16 +120,12 @@ class scanner_set {
     uint32_t max_ngram             {10};      // maximum ngram size to scan for
     bool     dup_data_alerts       {false};   // notify when duplicate data is not processed
     std::atomic<uint64_t> dup_bytes_encountered  {0}; // amount of dup data encountered
-    std::ostream *sxml             {nullptr}; // if provided, a place to put XML tags when scanning
-
+    class dfxml_writer *writer     {nullptr}; // if provided, a dfxml writer
     scanner_params::phase_t     current_phase {scanner_params::PHASE_INIT};
-
-
-
 
 public:;
     /* constructor and destructor */
-    scanner_set(const scanner_config &sc, const feature_recorder_set::flags_t &f, std::ostream *sxml=0);
+    scanner_set(const scanner_config &sc, const feature_recorder_set::flags_t &f, class dfxml_writer *writerl=0);
     virtual ~scanner_set(){};
 
     /* PHASE_INIT */
@@ -172,6 +168,7 @@ public:;
     bool    is_scanner_enabled(const std::string &name); // report if it is enabled or not
     void    get_enabled_scanners(std::vector<std::string> &svector); // put names of the enabled scanners into the vector
     bool    is_find_scanner_enabled(); // return true if a find scanner is enabled
+    static std::string ALL_SCANNERS;   // special flag for all scanners
 
     /* These functions must be virtual so they can be called by dynamically loaded plugins */
     /* They throw a ScannerNotFound exception if no scanner exists */
@@ -191,41 +188,27 @@ public:;
                            bool detailed_info,bool detailed_settings,
                            const char enable_opt,const char disable_opt);
 
-    /* Control the histograms set up during initialization phase */
-    const std::string & get_input_fname() const;
+    const std::string       &get_input_fname() const;
+    scanner_params::phase_t get_current_phase() const { return current_phase;};
+    size_t   histogram_count() const { return fs.histogram_count();};       // passthrough
+
+    // Scanners automatically get initted when they are loaded.
+    // They are immediately ready to process sbufs and packets!
+    // As soon as sbufs or packets are processed, no new scanners should be added to this scanner set.
 
     /* PHASE SCAN */
-
-    /* Managing scanners */
-    // TK - should this be an sbuf function?
-    size_t find_ngram_size(const sbuf_t &sbuf) const;
-
-    //void  get_scanner_feature_file_names(feature_file_names_t &feature_file_names);
-
-    // enabling and disabling of scanners
-    static std::string ALL_SCANNERS;
-
-    // returns the named scanner, or 0 if no scanner of that name
-
-    // Scanners automatically get initted when they are loaded, so there is no scanners init or info phase
-    // They are immediately ready to process sbufs and packets!
-    // These trigger a move the PHASE_SCAN
     void     phase_scan();              // start the scan phase
-
     void     process_sbuf(const sbuf_t &sbuf);                              /* process for feature extraction */
     void     process_packet(const be13::packet_info &pi);
-    scanner_params::phase_t get_current_phase() const { return current_phase;};
+
     // make the histograms
     // sxml is where to put XML from scanners that shutdown
     // the sxml should go to the constructor
 
     uint32_t get_max_depth_seen() const;
 
-    /* PROCESS HISTOGRAMS */
-    void     process_histograms();
-
     /* PHASE_SHUTDOWN */
-    void     shutdown(class dfxml_writer *);
+    void     shutdown(); // explicit shutdown, called automatically on delete if it hasn't be called
 };
 
 #endif

@@ -224,13 +224,13 @@ public:;
      */
     // this works:
     std::vector<std::unique_ptr<AtomicUnicodeHistogram>> histograms {};
-    size_t histogram_largest() const;   // returns the memory size of the largest histogram
-    virtual void histogram_add(const struct histogram_def &def);
-    virtual void histograms_add_feature(const std::string &feature);
+    //size_t histogram_largest() const;   // returns the memory size of the largest histogram
+    virtual size_t histogram_count() { return histograms.size();}     // how many histograms it has
+    virtual void histogram_add(const struct histogram_def &def); // add a new histogram
+    virtual void histograms_add_feature(const std::string &feature); // add a feature to all of the histograms
     virtual bool histogram_flush_largest();     // flushes largest histogram. returns false if no histogram could be flushed.
     virtual void histogram_flush(AtomicUnicodeHistogram &h); // flush a specific histogram
-    virtual bool histogram_flush_all(); // flushes all histograms
-    virtual size_t histogram_count() { return histograms.size();}     // how many histograms it has
+    virtual void histogram_flush_all(); // flushes all histograms
     virtual void histogram_merge(const struct histogram_def &def); // merge sort on this histogram
     virtual void histogram_merge_all();                            // merge sort on all histograms
 

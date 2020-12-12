@@ -678,6 +678,7 @@ void feature_recorder::set_carve_mtime(const std::string &fname, const std::stri
 
 
 
+// add a new histogram
 void feature_recorder::histogram_add(const struct histogram_def &def)
 {
     if (features_written != 0 ){
@@ -686,14 +687,25 @@ void feature_recorder::histogram_add(const struct histogram_def &def)
     histograms.push_back(std::make_unique<AtomicUnicodeHistogram>( def ));
 }
 
+// add a feature to all of the histograms
+void feature_recorder::histograms_add_feature(const std::string &feature)
+{
+    std::cerr << "add_feature( " << feature << " )\n";
+    for (auto &h: histograms ){
+        h->add(feature);               // add the original feature
+    }
+}
+
 bool feature_recorder::histogram_flush_largest()
 {
     return false;
 }
 
-bool feature_recorder::histogram_flush_all()
+void feature_recorder::histogram_flush_all()
 {
-    return false;
+    for (auto &h: histograms ) {
+        this->histogram_flush( *h );
+    }
 }
 
 void feature_recorder::histogram_flush(AtomicUnicodeHistogram &h)
@@ -707,13 +719,6 @@ void feature_recorder::histogram_flush(AtomicUnicodeHistogram &h)
     }
     hfile << h.makeReport(0, true); // sorted and clear
     hfile.close();
-}
-
-void feature_recorder::histograms_add_feature(const std::string &feature)
-{
-    for (auto &it: histograms ){
-        it->add(feature);               // add the original feature
-    }
 }
 
 /*

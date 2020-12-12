@@ -165,6 +165,7 @@ TEST_CASE( "atomic_map", "[histogram]" ){
 #include "atomic_unicode_histogram.h"
 #include "histogram_def.h"
 TEST_CASE( "atomic_histogram", "[histogram]" ){
+    /* Histogram that matches everything */
     histogram_def d1("name","(.*)","suffix1",histogram_def::flags_t());
     AtomicUnicodeHistogram h(d1);
     h.add("foo");
@@ -172,11 +173,14 @@ TEST_CASE( "atomic_histogram", "[histogram]" ){
     h.add("foo");
     h.add("bar");
 
-    /* Now make sure things were added in the right order, and the right counts */
-    //AtomicUnicodeHistogram::FrequencyReportVector f = h.makeReport();
-    //REQUIRE( f.at(0)->value=="foo");
-    //REQUIRE( f.at(0)->tally.count==3);
-    //REQUIRE( f.at(0)->tally.count16==0);
+    /* Now make sure things were added with the right counts */
+    AtomicUnicodeHistogram::FrequencyReportVector f = h.makeReport();
+    std::cerr << "f.at(0)=" << f.at(0) << "\n";
+    std::cerr << "f.at(1)=" << f.at(1) << "\n";
+
+    REQUIRE( f.at(0).key=="foo");
+    REQUIRE( f.at(0).value.count==3);
+    REQUIRE( f.at(0).value.count16==0);
 }
 
 
@@ -338,14 +342,32 @@ TEST_CASE( "char_class", "[char_class]") {
  * histogram_def.h
  */
 #include "histogram_def.h"
-TEST_CASE( "histogram_def", "[histogram]" ){
+TEST_CASE( "histogram_def", "[histogram_def]" ){
     histogram_def h1("feature1","pattern1","suffix1",histogram_def::flags_t());
     histogram_def h2("feature2","pattern2","suffix2",histogram_def::flags_t());
 
     REQUIRE( h1 == h1);
     REQUIRE( h1 != h2);
-    REQUIRE( h1 < h2);
+    REQUIRE( h1  < h2);
 }
+
+TEST_CASE( "match0" , "[histogram_def]") {
+    /* Regular expression that matches numbers */
+    histogram_def d0("numbers", "([0-9]+)", "s0", histogram_def::flags_t());
+    REQUIRE ( d0.match("123" ) == true);
+    REQUIRE ( d0.match("abc" ) == false);
+};
+
+TEST_CASE( "match1" , "[histogram_def]") {
+    /* Regular expression that matches numbers */
+    histogram_def d0("numbers", "([0-9]+)", "s0", histogram_def::flags_t());
+    std::string s1;
+    REQUIRE ( d0.match("abc123def", &s1) == true);
+    std::cerr << "s1=" << s1 << "\n";
+    REQUIRE ( s1 == "123" );
+};
+
+
 
 /****************************************************************
  * atomic_unicode_histogram.h
@@ -375,25 +397,28 @@ TEST_CASE( "atomic_unicode_histogram", "[histogram]") {
 
     AtomicUnicodeHistogram::auh_t::report r = hm.makeReport(0);
     REQUIRE( r.size() == 3);
-    REQUIRE( r.at(0).key == "100");
-    REQUIRE( r.at(0).value.count == 1);
+
+    /* reverse sort! */
+
+    REQUIRE( r.at(0).key == "300");
+    REQUIRE( r.at(0).value.count == 3);
     REQUIRE( r.at(0).value.count16 == 0);
 
     REQUIRE( r.at(1).key == "200");
     REQUIRE( r.at(1).value.count == 2);
     REQUIRE( r.at(1).value.count16 == 0);
 
-    REQUIRE( r.at(2).key == "300");
-    REQUIRE( r.at(2).value.count == 3);
+    REQUIRE( r.at(2).key == "100");
+    REQUIRE( r.at(2).value.count == 1);
     REQUIRE( r.at(2).value.count16 == 0);
 
     char buf300[6] {'\000','3','\000','0','\000','0'};
     std::string b300(buf300,6);
     hm.add(b300);
     r = hm.makeReport(0);
-    REQUIRE( r.at(2).key == "300");
-    REQUIRE( r.at(2).value.count == 4);
-    REQUIRE( r.at(2).value.count16 == 1);
+    REQUIRE( r.at(0).key == "300");
+    REQUIRE( r.at(0).value.count == 4);
+    REQUIRE( r.at(0).value.count16 == 1);
 
     /* Now write out the histogram */
     std::string tempdir = get_tempdir();
@@ -527,7 +552,6 @@ TEST_CASE("scanner_config", "[scanner_config]") {
     uint64_t ival {0};
     sc.get_config("age", &ival, "age in years");
     REQUIRE(ival == 5);
-
     REQUIRE(sc.help() == help_string);
 }
 
@@ -556,7 +580,6 @@ TEST_CASE("enable/disable", "[scanner_set]") {
     struct feature_recorder_set::flags_t f;
     scanner_set ss(sc, f);
     ss.add_scanner(scan_sha1);
-
 
     SECTION(" Make sure that the scanner was added ") {
         REQUIRE_NOTHROW( ss.get_scanner_by_name("sha1") );
@@ -602,10 +625,18 @@ TEST_CASE("run", "[scanner_set]") {
     /* Might as well use it! */
     ss.phase_scan();                    // start the scanner phase
     ss.process_sbuf( hello_sbuf() );
-    ss.process_histograms();
-    ss.shutdown(nullptr);
+    ss.shutdown();
+
+    /* Make sure that the feature recorder output was created */
+    std::vector<std::string> lines;
+    std::string fname_fr   = get_tempdir()+"/sha1_bufs.txt";
+    lines = getLines(fname_fr);
+
     /* The sha1 scanner makes a single histogram. Make sure we got it. */
     //REQUIRE( ss.histogram_count() == 1);
+    //std::string fname_hist = get_tempdir()+"/sha1_bufs_first5.txt";
+    //lines = getLines(fname_hist);
+
 }
 
 
@@ -647,6 +678,11 @@ TEST_CASE("unicode_escape", "[unicode]") {
         }
     }
     REQUIRE( validateOrEscapeUTF8("backslash=\\", false, true, false) == "backslash=\\x5C");
+
+    /* Try some round-trips */
+    std::u32string u32s = U"我想玩";
+    REQUIRE( convert_utf8_to_utf32(convert_utf32_to_utf8( u32s) ) == u32s );
+
 }
 
 TEST_CASE("unicode_detection", "[unicode]") {
