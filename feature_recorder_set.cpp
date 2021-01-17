@@ -252,28 +252,14 @@ size_t feature_recorder_set::histogram_count() const
     return count;
 }
 
-#if 0
-void feature_recorder_set::generate_histograms(void *user,feature_recorder::dump_callback_t cb,
-                                           feature_recorder_set::xml_notifier_t xml_error_notifier) const
-{
-    /* Ask each feature recorder to dump its histograms */
-    for (feature_recorder_map::const_iterator it = frm.begin(); it!=frm.end(); it++){
-        feature_recorder *fr = it->second;
-        fr->dump_histograms(user,cb,xml_error_notifier);
-    }
-}
-#endif
 
-#if 0
-void feature_recorder_set::generate_histograms()
+void feature_recorder_set::histograms_generate()
 {
     /* Ask each feature recorder to dump its histograms */
     for (auto it : frm ){
-        // it.second.dump_histograms(user,cb,xml_error_notifier);
-        std::cerr << "should dump histogram for " << it.first << "\n";
+        it.second->histogram_flush_all();
     }
 }
-#endif
 
 
 void feature_recorder_set::get_feature_file_list(std::vector<std::string> &ret)

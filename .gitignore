@@ -41,3 +41,5 @@ config.guess
 config.sub
 test_be13_api
 *.d
+*.zip
+x.cpp

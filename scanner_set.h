@@ -190,7 +190,7 @@ public:;
 
     const std::string       &get_input_fname() const;
     scanner_params::phase_t get_current_phase() const { return current_phase;};
-    size_t   histogram_count() const { return fs.histogram_count();};       // passthrough
+    size_t   histogram_count() const { return fs.histogram_count();};       // passthrough, mostly for debugging
 
     // Scanners automatically get initted when they are loaded.
     // They are immediately ready to process sbufs and packets!
@@ -200,15 +200,12 @@ public:;
     void     phase_scan();              // start the scan phase
     void     process_sbuf(const sbuf_t &sbuf);                              /* process for feature extraction */
     void     process_packet(const be13::packet_info &pi);
-
-    // make the histograms
-    // sxml is where to put XML from scanners that shutdown
-    // the sxml should go to the constructor
-
-    uint32_t get_max_depth_seen() const;
+    uint32_t get_max_depth_seen() const; // max seen during scan
 
     /* PHASE_SHUTDOWN */
-    void     shutdown(); // explicit shutdown, called automatically on delete if it hasn't be called
+    // explicit shutdown, called automatically on delete if it hasn't be called
+    // flushes all remaining histograms
+    void     shutdown();
 };
 
 #endif

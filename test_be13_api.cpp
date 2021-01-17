@@ -617,14 +617,22 @@ TEST_CASE("run", "[scanner_set]") {
     sc.outdir = get_tempdir();
     sc.hash_alg = "sha1";               // it's faster than SHA1!
 
+    std::cout << "outdir="<< sc.outdir <<"\n";
+    puts("point1");
     struct feature_recorder_set::flags_t f;
     scanner_set ss(sc, f);
     ss.add_scanner(scan_sha1);
+    puts("point2");
+
     ss.set_scanner_enabled("sha1", true); /* Turn it onn */
 
+    puts("point10");
     /* Might as well use it! */
     ss.phase_scan();                    // start the scanner phase
+    puts("point11");
+
     ss.process_sbuf( hello_sbuf() );
+    puts("calling ss.shutdown");
     ss.shutdown();
 
     /* Make sure that the feature recorder output was created */
@@ -633,10 +641,9 @@ TEST_CASE("run", "[scanner_set]") {
     lines = getLines(fname_fr);
 
     /* The sha1 scanner makes a single histogram. Make sure we got it. */
-    //REQUIRE( ss.histogram_count() == 1);
-    //std::string fname_hist = get_tempdir()+"/sha1_bufs_first5.txt";
-    //lines = getLines(fname_hist);
-
+    REQUIRE( ss.histogram_count() == 1);
+    std::string fname_hist = get_tempdir()+"/sha1_bufs_first5.txt";
+    lines = getLines(fname_hist);
 }
 
 

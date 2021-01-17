@@ -35,7 +35,6 @@ void  scan_sha1(struct scanner_params &sp)
         info.feature_names.insert("sha1_bufs");
 
         histogram_def hd("sha1","^(.....)","_first5",histogram_def::flags_t(true,false));
-
         info.histogram_defs.insert(hd);
         sp.register_info(info);
         return;

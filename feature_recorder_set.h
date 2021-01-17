@@ -142,8 +142,7 @@ public:
     void     histogram_add(const histogram_def &def); // adds it to a local set or to the specific feature recorder
     size_t   histogram_count() const;  // counts histograms in all feature recorders
 
-private:
-    // called automatically when feature_recorder_set is deleted:
+    // called when scanner_set shuts down:
     void     histograms_generate();     // make the histograms in the output directory (and optionally in the database)
 public:
 
