@@ -40,8 +40,6 @@
  * @param name         - the name of the feature being recorded.
  */
 
-
-
 /*
  * constructor. Not it is called with the feature_recorder_set to which it belongs.
  *

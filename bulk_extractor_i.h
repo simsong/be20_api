@@ -38,18 +38,13 @@
 #include <sstream>
 #include <string>
 #include <thread>
+#include <vector>
 
 #include <unistd.h>
-
-#include <vector>
-#include <set>
-#include <map>
 
 #ifdef HAVE_SYS_MMAN_H
 #include <sys/mman.h>
 #endif
-
-
 
 /* We need netinet/in.h or windowsx.h */
 #ifdef HAVE_NETINET_IN_H
@@ -103,7 +98,5 @@
 #include "unicode_escape.h"
 #include "utils.h"                      // for gmtime_r
 #include "utf8.h"
-
-
 
 #endif

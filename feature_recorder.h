@@ -5,7 +5,7 @@
 #include <cassert>
 
 #include <string>
-#include <regex>
+//#include <regex>
 #include <set>
 #include <map>
 #include <thread>
@@ -233,7 +233,6 @@ public:;
     virtual void histogram_flush_all(); // flushes all histograms
     virtual void histogram_merge(const struct histogram_def &def); // merge sort on this histogram
     virtual void histogram_merge_all();                            // merge sort on all histograms
-
 };
 
 #endif

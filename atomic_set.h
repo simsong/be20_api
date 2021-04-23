@@ -21,6 +21,8 @@
 template <class TYPE > class atomic_set {
     mutable std::mutex M {};
     std::unordered_set<TYPE>myset {};
+    // Mutex M protects myset.
+    // It is mutable to allow modification in const methods
 public:
     atomic_set(){}
     bool contains(const TYPE &s) const{

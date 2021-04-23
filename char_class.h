@@ -6,10 +6,10 @@
  */
 
 struct CharClass {
-    uint32_t range_0_9 {0};			// a range_0_9 character
+    uint32_t range_0_9 {0};             // a range_0_9 character
     uint32_t range_A_Fi {0};		// a-f or A-F
-    uint32_t range_g_z  {0};			// g-z
-    uint32_t range_G_Z  {0};			// G-Z
+    uint32_t range_g_z  {0};            // g-z
+    uint32_t range_G_Z  {0};            // G-Z
     CharClass(){}
     void add(const uint8_t ch){
 	if (ch>='a' && ch<='f') range_A_Fi++;

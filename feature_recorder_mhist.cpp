@@ -109,17 +109,6 @@ void feature_recorder::write(const pos0_t &pos0,const std::string &feature_,cons
 
 void feature_recorder::write_buf(const sbuf_t &sbuf,size_t pos,size_t len)
 {
-#ifdef DEBUG_SCANNER
-    if(debug & DEBUG_SCANNER){
-        std::cerr << "*** write_buf " << name << " sbuf=" << sbuf << " pos=" << pos << " len=" << len << "\n";
-        // for debugging, print Imagine that when pos= the location where the crash is happening.
-        // then set a breakpoint at std::cerr.
-        if(pos==9999999){
-            std::cerr << "Imagine that\n";
-        }
-    }
-#endif
-
     /* If we are in the margin, ignore; it will be processed again */
     if(pos >= sbuf.pagesize && pos < sbuf.bufsize){
         return;
@@ -150,9 +139,4 @@ void feature_recorder::write_buf(const sbuf_t &sbuf,size_t pos,size_t len)
         context = sbuf.substr(p0,p1-p0);
     }
     this->write(sbuf.pos0+pos,feature,context);
-#ifdef DEBUG_SCANNER
-    if(debug & DEBUG_SCANNER){
-        std::cerr << ".\n";
-    }
-#endif
 }

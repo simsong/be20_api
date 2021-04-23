@@ -1,3 +1,4 @@
 ignore:
   - "catch.hpp"
   - "utf8/*"
+  - "tests/regex_demo.cpp"

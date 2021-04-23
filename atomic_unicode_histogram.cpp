@@ -33,7 +33,6 @@ std::ostream & operator << (std::ostream &os, const AtomicUnicodeHistogram::Freq
 std::ostream & operator << (std::ostream &os, const AtomicUnicodeHistogram::auh_t::AMReportElement &e)
 {
     os << "n=" << e.value.count << "\t" << validateOrEscapeUTF8( e.key, true, false, false);
-    //os << "n=" << e.value.count << "\t" << validateOrEscapeUTF8( convert_utf32_to_utf8(e.key), true, false, false);
     if (e.value.count16>0) os << "\t(utf16=" << e.value.count16<<")";
     os << "\n";
     return os;
@@ -71,6 +70,7 @@ AtomicUnicodeHistogram::auh_t::report AtomicUnicodeHistogram::makeReport(size_t 
 
 // https://stackoverflow.com/questions/37989081/how-to-use-unicode-range-in-c-regex
 
+// debug_histogram_malloc_fail_frequency allows us to simulate low-memory situations for testing the code.
 uint32_t AtomicUnicodeHistogram::debug_histogram_malloc_fail_frequency = 0;
 void AtomicUnicodeHistogram::add(const std::string &key_unknown_encoding)
 {

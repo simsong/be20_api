@@ -42,9 +42,9 @@ class pos0_t {
     }
 
 public:
-    const std::string path   {};                     /* forensic path of decoders*/
-    const uint64_t    offset {0};                   /* location of buf[0] */
-    const unsigned int  depth  {0};
+    const std::string  path   {};       /* forensic path of decoders*/
+    const uint64_t     offset {0};      /* location of buf[0] */
+    const unsigned int depth  {0};
 
     explicit pos0_t(){} // the beginning of a nothing
     pos0_t(std::string s,uint64_t o=0):path(s),offset(o),depth( calc_depth(s)){ } // a specific offset in a place
@@ -91,7 +91,6 @@ public:
         return offset;
     }
 
-
     /**
      * Return a new position that's been shifted by an offset
      */
@@ -133,15 +132,15 @@ inline class pos0_t operator +(pos0_t pos,int64_t delta) {
 /** \name Comparision operations
  * @{
  */
-inline bool operator <(const class pos0_t &pos0,const class pos0_t & pos1)  {
-    if(pos0.path.size()==0 && pos1.path.size()==0) return pos0.offset < pos1.offset;
-    if(pos0.path == pos1.path) return pos0.offset < pos1.offset;
+inline bool operator < (const class pos0_t &pos0,const class pos0_t & pos1)  {
+    if (pos0.path.size()==0 && pos1.path.size()==0) return pos0.offset < pos1.offset;
+    if (pos0.path == pos1.path) return pos0.offset < pos1.offset;
     return pos0.path < pos1.path;
 };
 
-inline bool operator >(const class pos0_t & pos0,const class pos0_t &pos1)  {
-    if(pos0.path.size()==0 && pos1.path.size()==0) return pos0.offset > pos1.offset;
-    if(pos0.path == pos1.path) return pos0.offset > pos1.offset;
+inline bool operator > (const class pos0_t & pos0,const class pos0_t &pos1)  {
+    if (pos0.path.size()==0 && pos1.path.size()==0) return pos0.offset > pos1.offset;
+    if (pos0.path == pos1.path) return pos0.offset > pos1.offset;
     return pos0.path > pos1.path;
 };
 

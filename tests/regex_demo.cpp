@@ -1,3 +1,7 @@
+/*
+ * Small test program to show how to use C++17 regular expressions.
+ */
+
 #include <iostream>
 #include <string>
 #include <regex>
@@ -8,7 +12,7 @@ int main(int argc,char **argv)
     std::regex  r("([0-9]+)");
     std::smatch m;
     if (std::regex_search(s, m, r)){
-        std::cout << "Matches '"<<m.str() << "'\n";
+        std::cout << "Matches '" << m.str() << "'\n";
     }
     return(0);
 }

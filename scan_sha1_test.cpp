@@ -12,17 +12,17 @@
 #include <iostream>
 #include <sys/types.h>
 
-#include "scan_sha1.h"
+#include "scan_sha1_test.h"
 #include "scanner_params.h"
 #include "scanner_set.h"
 #include "dfxml/src/hash_t.h"
 
-void  scan_sha1(struct scanner_params &sp)
+void  scan_sha1_test(struct scanner_params &sp)
 {
     if(sp.phase==scanner_params::PHASE_INIT){
         static scanner_params::scanner_info info;
-        info.scanner     = scan_sha1;
-        info.name        = "sha1";
+        info.scanner     = scan_sha1_test;
+        info.name        = "sha1_test";
         info.author      = "Simson L. Garfinkel";
         info.description = "Compute the SHA1 of every sbuf.";
         info.url         = "https://digitalcorpora.org/bulk_extractor";
@@ -34,7 +34,7 @@ void  scan_sha1(struct scanner_params &sp)
         // scanners may specify any number of featur recorders.
         info.feature_names.insert("sha1_bufs");
 
-        histogram_def hd("sha1","^(.....)","_first5",histogram_def::flags_t(true,false));
+        histogram_def hd("sha1_test","^(.....)","_first5",histogram_def::flags_t(true,false));
         info.histogram_defs.insert(hd);
         sp.register_info(info);
         return;

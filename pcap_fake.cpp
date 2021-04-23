@@ -1,5 +1,10 @@
 /* -*- mode: C++; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 
+/*
+ * pcap_fake.cpp
+ * A fake libpcap implementation that can only read files without a filter.
+ */
+
 #include "config.h"
 
 #ifndef HAVE_LIBPCAP
@@ -68,7 +73,7 @@ pcap_t  *pcap_open_live(const char *, int, int, int, char *)
     return 0;
 }
 
-inline uint32_t swap4(uint32_t x) 
+inline uint32_t swap4(uint32_t x)
 {
     return (
         ((x & 0xff000000) >> 24) |
@@ -77,7 +82,7 @@ inline uint32_t swap4(uint32_t x)
         ((x & 0x000000ff) << 24));
 }
 
-inline uint32_t swap2(uint16_t x) 
+inline uint32_t swap2(uint16_t x)
 {
     return (
         ((x & 0xff00) >> 8)  |
@@ -126,7 +131,7 @@ pcap_t *pcap_fopen_offline(FILE *fp, char *errbuf)
     ret->pktbuf  = (uint8_t *)malloc(header.snaplen);
     if(ret->pktbuf==0) { // did we get the snaplen?
         std::cerr << "Couldn't get header snaplen";
-        free(ret);                      
+        free(ret);
         return 0;
     }
     //DEBUG(100) ("pcap_fake.cpp DEBUG: header.magic = %x", header.magic);
@@ -141,7 +146,7 @@ pcap_t *pcap_fopen_offline(FILE *fp, char *errbuf)
     ret->swapped = swapped;
     ret->linktype = header.linktype;
     return ret;
-}       
+}
 
 /*
  * These are not implemented in pcap_fake
@@ -181,7 +186,7 @@ int pcap_loop(pcap_t *p, int cnt, pcap_handler callback, uint8_t *user)
         if(fread(&tv_usec,sizeof(uint32_t),1,p->fp)!=1) break;
         hdr.ts.tv_sec  = tv_sec;
         hdr.ts.tv_usec = tv_usec;
-        
+
         if(fread(&hdr.caplen,sizeof(uint32_t),1,p->fp)!=1) break;
         if(fread(&hdr.len,sizeof(uint32_t),1,p->fp)!=1) break;
 

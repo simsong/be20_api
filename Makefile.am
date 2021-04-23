@@ -60,6 +60,6 @@ test_be13_api_SOURCES = $(DFXML_WRITER) test_be13_api.cpp catch.hpp \
 	feature_recorder_set.h 	feature_recorder_set.cpp \
 	feature_recorder.h 	feature_recorder.cpp \
 	word_and_context_list.h  word_and_context_list.cpp \
-	scan_sha1.h scan_sha1.cpp \
+	scan_sha1_test.h scan_sha1_test.cpp \
 	sbuf.h sbuf.cpp \
 	utils.h

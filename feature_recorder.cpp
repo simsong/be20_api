@@ -277,7 +277,6 @@ void feature_recorder::write(const pos0_t &pos0, const std::string &feature_, co
     /* add the feature to any histograms; the regex is applied in the histogram */
     this->histograms_add_feature(feature);
 
-
     /* Finally write out the feature and the context */
     this->write0(pos0, feature, context);
 }
@@ -330,11 +329,6 @@ void feature_recorder::write_buf(const sbuf_t &sbuf,size_t pos,size_t len)
         context = sbuf.substr(p0,p1-p0);
     }
     this->write(sbuf.pos0+pos, feature, context);
-#ifdef DEBUG_SCANNER
-    if(debug & DEBUG_SCANNER){
-        std::cerr << ".\n";
-    }
-#endif
 }
 
 

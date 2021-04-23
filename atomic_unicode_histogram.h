@@ -41,7 +41,7 @@ struct AtomicUnicodeHistogram  {
         virtual ~HistogramTally(){};
 
         bool operator==(const HistogramTally &a) const {
-            return this->count==a.count && this->count16==a.count16;
+            return this->count==a.count && this->count16 == a.count16;
         };
         bool operator!=(const HistogramTally &a) const {
             return !(*this == a);

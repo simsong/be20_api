@@ -3,5 +3,5 @@
 
 #include "scanner_params.h"
 
-scanner_t scan_sha1;
+scanner_t scan_sha1_test;
 #endif
