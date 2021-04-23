@@ -174,4 +174,9 @@ struct histogram_def {
     }
 };
 
+inline std::ostream & operator << (std::ostream &os, const histogram_def &hd)  {
+    os << "<histogram_def( " << hd.feature << "," << hd.pattern << "," << hd.suffix << ")>";
+    return os;
+}
+
 #endif

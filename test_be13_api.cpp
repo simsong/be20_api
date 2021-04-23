@@ -89,7 +89,14 @@ std::string get_exe()
         throw std::runtime_error("bufsize too small");
     }
 #else
-    readlink("/proc/self/exe",rpath, sizeof(rpath));
+    ssize_t ret = readlink("/proc/self/exe",rpath, sizeof(rpath));
+    if (ret<0){
+        throw std::runtime_error("readlink failed");
+    }
+    if (ret==sizeof(rpath)) {
+        throw std::runtime_error("rpath too small");
+    }
+    rpath[ret] = 0;                     // terminate the string
 #endif
     return std::string(rpath);
 }
@@ -580,36 +587,40 @@ TEST_CASE("enable/disable", "[scanner_set]") {
     struct feature_recorder_set::flags_t f;
     scanner_set ss(sc, f);
     ss.add_scanner(scan_sha1_test);
+    puts(".hello.");
 
-    SECTION(" Make sure that the scanner was added ") {
+    //SECTION(" Make sure that the scanner was added ") {
         REQUIRE_NOTHROW( ss.get_scanner_by_name("sha1_test") );
         REQUIRE( ss.get_scanner_by_name("sha1_test") == scan_sha1_test );
         REQUIRE_THROWS_AS(ss.get_scanner_by_name("no_such_scanner"), scanner_set::NoSuchScanner );
-    }
+        //}
 
     /* Enable the scanner */
     const std::string SHA1_TEST = "sha1_test";
     ss.set_scanner_enabled(SHA1_TEST, true);
 
-    SECTION("Make sure that the sha1 scanner is enabled and only the sha1 scanner is enabled") {
+    puts(">one");
+    //SECTION("Make sure that the sha1 scanner is enabled and only the sha1 scanner is enabled") {
         REQUIRE( ss.is_scanner_enabled(SHA1_TEST) == true );
         REQUIRE( ss.is_find_scanner_enabled() == false); // only sha1 scanner is enabled
-    }
+        //}
 
-    SECTION("Turn it off and make sure that it's disabled") {
+    puts(">two");
+    //SECTION("Turn it off and make sure that it's disabled") {
         ss.set_scanner_enabled(SHA1_TEST, false);
         REQUIRE( ss.is_scanner_enabled(SHA1_TEST) == false );
-    }
+        //}
 
-    SECTION("Try enabling all ") {
+    puts(">three");
+    //SECTION("Try enabling all ") {
         ss.set_scanner_enabled(scanner_set::ALL_SCANNERS,true);
         REQUIRE( ss.is_scanner_enabled(SHA1_TEST) == true );
-    }
+        //}
 
-    SECTION("  /* Try disabling all ") {
+        //SECTION("  /* Try disabling all ") {
         ss.set_scanner_enabled(scanner_set::ALL_SCANNERS,false);
         REQUIRE( ss.is_scanner_enabled(SHA1_TEST) == false );
-    }
+        //}
 }
 
 /* This test runs a scan on the hello_sbuf() with the sha1 scanner. */
@@ -636,9 +647,16 @@ TEST_CASE("run", "[scanner_set]") {
     /* It should be a regular expression that extracts the first 5 characters */
     /* Test the regular expression */
     /* And it should write to a feature file that has a suffix of "_first5" */
-    REQUIRE( fr.histograms[0]->suffix == "_first5");
 
-    puts("simson is here")
+    std::cerr << "fr.histograms.size=" << fr.histograms.size() << "\n";
+
+    REQUIRE( fr.histograms[0]->def.feature == "sha1_test");
+    REQUIRE( fr.histograms[0]->def.pattern == "^(.....)");
+    REQUIRE( fr.histograms[0]->def.suffix == "_first5");
+    REQUIRE( fr.histograms[0]->def.flags.lowercase == true);
+    REQUIRE( fr.histograms[0]->def.flags.numeric == false);
+
+    puts("simson is here");
     /* Simson is here */
 
     puts("point10");
@@ -722,5 +740,8 @@ TEST_CASE("unicode_detection", "[unicode]") {
 
 TEST_CASE("finished", "[zz]") {
     std::string cmd = "ls -l "+get_tempdir();
-    system(cmd.c_str());
+    int ret = system(cmd.c_str());
+    if (ret != 0){
+        throw std::runtime_error("could not list tempdir???");
+    }
 }

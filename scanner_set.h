@@ -181,7 +181,7 @@ public:;
     };
     const std::string get_scanner_name(scanner_t scanner) const; // returns the name of the scanner
     virtual scanner_t &get_scanner_by_name(const std::string &name) ;
-    virtual feature_recorder &named_feature_recorder(const std::string &name);
+    virtual feature_recorder &named_feature_recorder(const std::string &name); // returns the feature recorder
 
     // report on the loaded scanners
     void     info_scanners(std::ostream &out,

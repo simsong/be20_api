@@ -5,6 +5,9 @@
 #include "feature_recorder_set.h"
 #include "feature_recorder.h"
 
+/**
+ * register_info() lets a scanner register its scanner info with the scanner_set.
+ */
 void scanner_params::register_info(const scanner_info &si)
 {
     ss.register_info(&si);

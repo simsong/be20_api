@@ -20,6 +20,7 @@
 void  scan_sha1_test(struct scanner_params &sp)
 {
     if(sp.phase==scanner_params::PHASE_INIT){
+        /* Create a scanner_info block to register this scanner */
         static scanner_params::scanner_info info;
         info.scanner     = scan_sha1_test;
         info.name        = "sha1_test";
@@ -31,9 +32,11 @@ void  scan_sha1_test(struct scanner_params &sp)
 
         // specify the feature_records that the scanner wants.
         // Note that the feature recorder does not need to be the same name as the scanner
-        // scanners may specify any number of featur recorders.
+        // scanners may specify any number of feature recorders.
         info.feature_names.insert("sha1_bufs");
 
+        // Note that histogram_defs is a set, so it's okay if this initialization routine is called twice,
+        // the histogram only gets inserted once.
         histogram_def hd("sha1_test","^(.....)","_first5",histogram_def::flags_t(true,false));
         info.histogram_defs.insert(hd);
         sp.register_info(info);

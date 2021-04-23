@@ -5,7 +5,6 @@
 #include <cassert>
 
 #include <string>
-//#include <regex>
 #include <set>
 #include <map>
 #include <thread>
