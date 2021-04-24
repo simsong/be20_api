@@ -38,8 +38,19 @@
  *   It initializes the feature recorders and itself.
  */
 
+/* Define a map of feature recorders with atomic access. */
+typedef atomic_map<std::string, class feature_recorder *> feature_recorder_map_t;
+inline std::ostream & operator << (std::ostream &os, const feature_recorder_map_t &m) {
+    for( auto it:m){
+        os << " " << it.first << ": frm\n";
+    }
+    return os;
+}
+
+
 class word_and_context_list;
 class feature_recorder_set {
+private:
     //typedef std::map<std::string, class feature_recorder *> feature_recorder_map;
 
     // neither copying nor assignment is implemented
@@ -56,9 +67,9 @@ class feature_recorder_set {
     size_t   context_window_default {16};           // global option
 
 
-    // TK-replace with an atomic_set:
-    atomic_map<std::string, class feature_recorder *> frm {};
-    //feature_recorder_map  frm {};              // map of feature recorders, name->feature recorder, by name
+    // map of feature recorders, name->feature recorder, by name
+    feature_recorder_map_t frm {};
+
     feature_recorder      *stop_list_recorder {nullptr}; // where stopped features get written (if there is one)
 #if defined(HAVE_SQLITE3_H) and defined(HAVE_LIBSQLITE3)
     /* If we are compiled with SQLite3, this is the handle to the open database */
@@ -66,6 +77,7 @@ class feature_recorder_set {
 #endif
 
 public:
+    size_t   feature_recorder_count() const { return frm.size(); }
     /* Flags for feature recorders. This used to be a bitmask, but Stroustrup (2013) recommends just having
      * a bunch of bools.
      */
@@ -144,7 +156,6 @@ public:
 
     // called when scanner_set shuts down:
     void     histograms_generate();     // make the histograms in the output directory (and optionally in the database)
-public:
 
 #if 0
     typedef  void (*xml_notifier_t)(const std::string &xmlstring);
@@ -190,7 +201,9 @@ public:
     // Management of previously seen data
     virtual bool check_previously_processed(const sbuf_t &sbuf);
 
+
 };
+
 
 
 #endif

@@ -241,7 +241,7 @@ void scanner_set::load_scanner_packet_handlers()
  * 'all' is a special scanner that enables all scanners.
  */
 
-void scanner_set::set_scanner_enabled(const std::string &name,bool enable)
+void scanner_set::set_scanner_enabled(const std::string &name, bool enable)
 {
     /* If name is 'all' and the NO_ALL flag is not set for that scanner,
      * then either enable it or disable it as appropriate */

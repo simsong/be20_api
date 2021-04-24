@@ -587,40 +587,37 @@ TEST_CASE("enable/disable", "[scanner_set]") {
     struct feature_recorder_set::flags_t f;
     scanner_set ss(sc, f);
     ss.add_scanner(scan_sha1_test);
-    puts(".hello.");
 
-    //SECTION(" Make sure that the scanner was added ") {
-        REQUIRE_NOTHROW( ss.get_scanner_by_name("sha1_test") );
-        REQUIRE( ss.get_scanner_by_name("sha1_test") == scan_sha1_test );
-        REQUIRE_THROWS_AS(ss.get_scanner_by_name("no_such_scanner"), scanner_set::NoSuchScanner );
-        //}
+    /*  Make sure that the scanner was added  */
+    REQUIRE_NOTHROW( ss.get_scanner_by_name("sha1_test") );
+    REQUIRE( ss.get_scanner_by_name("sha1_test") == scan_sha1_test );
+    REQUIRE_THROWS_AS(ss.get_scanner_by_name("no_such_scanner"), scanner_set::NoSuchScanner );
 
     /* Enable the scanner */
     const std::string SHA1_TEST = "sha1_test";
     ss.set_scanner_enabled(SHA1_TEST, true);
 
-    puts(">one");
-    //SECTION("Make sure that the sha1 scanner is enabled and only the sha1 scanner is enabled") {
-        REQUIRE( ss.is_scanner_enabled(SHA1_TEST) == true );
-        REQUIRE( ss.is_find_scanner_enabled() == false); // only sha1 scanner is enabled
-        //}
+    /* Make sure that the sha1 scanner is enabled and only the sha1 scanner is enabled */
+    REQUIRE( ss.is_scanner_enabled(SHA1_TEST) == true );
+    REQUIRE( ss.is_find_scanner_enabled() == false); // only sha1 scanner is enabled
 
-    puts(">two");
-    //SECTION("Turn it off and make sure that it's disabled") {
-        ss.set_scanner_enabled(SHA1_TEST, false);
-        REQUIRE( ss.is_scanner_enabled(SHA1_TEST) == false );
-        //}
+    /* Make sure that the scanner set has a two feature recorders: the alert recorder and the sha1_bufs recorder */
+    REQUIRE( ss.feature_recorder_count() == 2);
 
-    puts(">three");
-    //SECTION("Try enabling all ") {
-        ss.set_scanner_enabled(scanner_set::ALL_SCANNERS,true);
-        REQUIRE( ss.is_scanner_enabled(SHA1_TEST) == true );
-        //}
+    /* Make sure it has a single histogram */
+    REQUIRE( ss.histogram_count() == 1);
 
-        //SECTION("  /* Try disabling all ") {
-        ss.set_scanner_enabled(scanner_set::ALL_SCANNERS,false);
-        REQUIRE( ss.is_scanner_enabled(SHA1_TEST) == false );
-        //}
+    /* Turn it off and make sure that it's disabled */
+    ss.set_scanner_enabled(SHA1_TEST, false);
+    REQUIRE( ss.is_scanner_enabled(SHA1_TEST) == false );
+
+    /* Try enabling all */
+    ss.set_scanner_enabled(scanner_set::ALL_SCANNERS,true);
+    REQUIRE( ss.is_scanner_enabled(SHA1_TEST) == true );
+
+    /* Try disabling all */
+    ss.set_scanner_enabled(scanner_set::ALL_SCANNERS,false);
+    REQUIRE( ss.is_scanner_enabled(SHA1_TEST) == false );
 }
 
 /* This test runs a scan on the hello_sbuf() with the sha1 scanner. */
@@ -641,6 +638,8 @@ TEST_CASE("run", "[scanner_set]") {
     /* Make sure we got a sha1_test feature recorder */
     feature_recorder &fr = ss.named_feature_recorder("sha1_test");
 
+    std::cerr << "fr.histograms.size=" << fr.histograms.size() << "\n";
+
     /* Check to see if the histogram of the first 5 characters of the SHA1 code of each buffer was properly created. */
     /* There should be 1 histogram */
     REQUIRE( fr.histogram_count()==1 );
@@ -648,7 +647,6 @@ TEST_CASE("run", "[scanner_set]") {
     /* Test the regular expression */
     /* And it should write to a feature file that has a suffix of "_first5" */
 
-    std::cerr << "fr.histograms.size=" << fr.histograms.size() << "\n";
 
     REQUIRE( fr.histograms[0]->def.feature == "sha1_test");
     REQUIRE( fr.histograms[0]->def.pattern == "^(.....)");

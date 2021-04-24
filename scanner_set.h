@@ -191,6 +191,7 @@ public:;
     const std::string       &get_input_fname() const;
     scanner_params::phase_t get_current_phase() const { return current_phase;};
     size_t   histogram_count() const { return fs.histogram_count();};       // passthrough, mostly for debugging
+    size_t   feature_recorder_count() const { return fs.feature_recorder_count();};
 
     // Scanners automatically get initted when they are loaded.
     // They are immediately ready to process sbufs and packets!
