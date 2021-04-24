@@ -626,55 +626,48 @@ TEST_CASE("run", "[scanner_set]") {
     sc.outdir = get_tempdir();
     sc.hash_alg = "sha1";               // it's faster than SHA1!
 
-    std::cout << "outdir="<< sc.outdir <<"\n";
-    puts("point1");
     struct feature_recorder_set::flags_t f;
     scanner_set ss(sc, f);
     ss.add_scanner(scan_sha1_test);
-    puts("point2");
-
-    ss.set_scanner_enabled("sha1_test", true); /* Turn it onn */
+    ss.set_scanner_enabled(std::string("sha1_test"), true); /* Turn it onn */
 
     /* Make sure we got a sha1_test feature recorder */
-    feature_recorder &fr = ss.named_feature_recorder("sha1_test");
+    feature_recorder &fr = ss.named_feature_recorder("sha1_bufs");
 
-    std::cerr << "fr.histograms.size=" << fr.histograms.size() << "\n";
+    REQUIRE( fr.name == "sha1_bufs");
 
     /* Check to see if the histogram of the first 5 characters of the SHA1 code of each buffer was properly created. */
     /* There should be 1 histogram */
-    REQUIRE( fr.histogram_count()==1 );
+    REQUIRE( ss.histogram_count() == 1);
+    REQUIRE( fr.histogram_count() == 1);
     /* It should be a regular expression that extracts the first 5 characters */
     /* Test the regular expression */
     /* And it should write to a feature file that has a suffix of "_first5" */
 
 
-    REQUIRE( fr.histograms[0]->def.feature == "sha1_test");
+    REQUIRE( fr.histograms[0]->def.feature == "sha1_bufs");
     REQUIRE( fr.histograms[0]->def.pattern == "^(.....)");
     REQUIRE( fr.histograms[0]->def.suffix == "_first5");
     REQUIRE( fr.histograms[0]->def.flags.lowercase == true);
     REQUIRE( fr.histograms[0]->def.flags.numeric == false);
 
-    puts("simson is here");
-    /* Simson is here */
-
-    puts("point10");
     /* Might as well use it! */
     ss.phase_scan();                    // start the scanner phase
-    puts("point11");
-
-    ss.process_sbuf( hello_sbuf() );
+    ss.process_sbuf( hello_sbuf() );    // process a single sbuf
     puts("calling ss.shutdown");
-    ss.shutdown();
+    ss.shutdown();                      // shutdown; this will write out the histograms.
 
     /* Make sure that the feature recorder output was created */
     std::vector<std::string> lines;
     std::string fname_fr   = get_tempdir()+"/sha1_bufs.txt";
     lines = getLines(fname_fr);
+    puts("feature file in place");
 
     /* The sha1 scanner makes a single histogram. Make sure we got it. */
     REQUIRE( ss.histogram_count() == 1);
     std::string fname_hist = get_tempdir()+"/sha1_bufs_first5.txt";
     lines = getLines(fname_hist);
+    puts("histogram in place");
 }
 
 
