@@ -54,11 +54,7 @@ inline int ishexnumber(int c)
 }
 #endif
 
-inline std::string itos(int i){ std::stringstream ss; ss << i;return ss.str();}
-inline std::string dtos(double d){ std::stringstream ss; ss << d;return ss.str();}
-inline std::string utos(unsigned int i){ std::stringstream ss; ss << i;return ss.str();}
-inline std::string utos(uint64_t i){ std::stringstream ss; ss << i;return ss.str();}
-inline std::string utos(uint16_t i){ std::stringstream ss; ss << i;return ss.str();}
+
 inline std::string safe_utf16to8(std::wstring s){ // needs to be cleaned up
     std::string utf8_line;
     try {

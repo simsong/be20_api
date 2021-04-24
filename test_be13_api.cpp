@@ -644,7 +644,7 @@ TEST_CASE("run", "[scanner]") {
 
     REQUIRE( fr.histograms[0]->def.feature == "sha1_bufs");
     REQUIRE( fr.histograms[0]->def.pattern == "^(.....)");
-    REQUIRE( fr.histograms[0]->def.suffix == "_first5");
+    REQUIRE( fr.histograms[0]->def.suffix == "first5");
     REQUIRE( fr.histograms[0]->def.flags.lowercase == true);
     REQUIRE( fr.histograms[0]->def.flags.numeric == false);
 

@@ -135,13 +135,13 @@ const std::string feature_recorder::fname_in_outdir(std::string suffix, int coun
     }
     if (count == NO_COUNT) return base_name+".txt";
     if (count != NEXT_COUNT){
-        return base_name+"_"+itos(count)+".txt";
+        return base_name+"_"+std::to_string(count)+".txt";
     }
     /* Probe for a file that we can create. When we create it, return the name.
      * Yes, this created a TOCTOU error. We should return the open file descriptor.
      */
-    for(int i=1;i<1000000;i++){
-        std::string fname = base_name+"_"+itos(i)+".txt";
+    for(int i=0;i<1000000;i++){
+        std::string fname = base_name + (i>0 ? "_"+std::to_string(i) : "") + ".txt";
         std::cerr << "fname=" << fname << "i=" << i << "\n";
         int fd = open(fname.c_str(), O_WRONLY | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR);
         if ( fd >= 0 ){
@@ -318,7 +318,7 @@ void feature_recorder::write_buf(const sbuf_t &sbuf,size_t pos,size_t len)
     }
 
     if(pos >= sbuf.bufsize){    /* Sanity checks */
-        throw std::runtime_error(std::string("*** write_buf: WRITE OUTSIDE BUFFER. pos=")  + itos(pos) + " sbuf=");
+        throw std::runtime_error(std::string("*** write_buf: WRITE OUTSIDE BUFFER. pos=")  + std::to_string(pos) + " sbuf=");
     }
 
     /* Asked to write beyond bufsize; bring it in */
