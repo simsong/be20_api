@@ -72,6 +72,11 @@ AtomicUnicodeHistogram::auh_t::report AtomicUnicodeHistogram::makeReport(size_t 
 
 // debug_histogram_malloc_fail_frequency allows us to simulate low-memory situations for testing the code.
 uint32_t AtomicUnicodeHistogram::debug_histogram_malloc_fail_frequency = 0;
+void AtomicUnicodeHistogram::clear()
+{
+    h.clear();
+}
+
 void AtomicUnicodeHistogram::add(const std::string &key_unknown_encoding)
 {
     if (key_unknown_encoding.size()==0) return;		// don't deal with zero-length keys
@@ -126,4 +131,13 @@ void AtomicUnicodeHistogram::add(const std::string &key_unknown_encoding)
             h[displayString].count16++;  // track how many UTF16s were converted
         }
     }
+}
+
+size_t AtomicUnicodeHistogram::bytes()               // returns the total number of bytes of the histogram,.
+{
+    size_t count = sizeof(*this);
+    for(auto it:h){
+        count += sizeof(it.first) + it.first.size() + it.second.bytes();
+    }
+    return count;
 }

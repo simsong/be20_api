@@ -17,7 +17,6 @@
 #define CATCH_CONFIG_CONSOLE_WIDTH 120
 #include "config.h"                     // supposed to come after bulk_extractor_i.h
 
-
 #include "catch.hpp"
 
 #include <algorithm>
@@ -138,7 +137,7 @@ TEST_CASE("aftimer", "[utils]") {
  * atomic_set_map.h
  */
 #include "atomic_set.h"
-TEST_CASE( "atomic_set", "[histogram]" ){
+TEST_CASE( "atomic_set", "[atomic]" ){
     atomic_set<std::string> as;
     REQUIRE( as.size() == 0);
     as.insert("one");
@@ -150,7 +149,7 @@ TEST_CASE( "atomic_set", "[histogram]" ){
 }
 
 #include "atomic_map.h"
-TEST_CASE( "atomic_map", "[histogram]" ){
+TEST_CASE( "atomic_map", "[atomic]" ){
     atomic_map<std::string,int> am;
     am.insert("one",1);
     am.insert("two",2);
@@ -171,9 +170,9 @@ TEST_CASE( "atomic_map", "[histogram]" ){
  */
 #include "atomic_unicode_histogram.h"
 #include "histogram_def.h"
-TEST_CASE( "atomic_histogram", "[histogram]" ){
+TEST_CASE( "histogram_def and First AtomicUnicodeHistogram test", "[atomic][regex]" ){
     /* Histogram that matches everything */
-    histogram_def d1("name","(.*)","suffix1",histogram_def::flags_t());
+    histogram_def d1("name","feature_file","(.*)","","suffix1",histogram_def::flags_t());
     AtomicUnicodeHistogram h(d1);
     h.add("foo");
     h.add("foo");
@@ -188,6 +187,63 @@ TEST_CASE( "atomic_histogram", "[histogram]" ){
     REQUIRE( f.at(0).key=="foo");
     REQUIRE( f.at(0).value.count==3);
     REQUIRE( f.at(0).value.count16==0);
+}
+
+TEST_CASE( "Second AtomicUnicodeHistogram test", "[histogram]") {
+    /* Make sure that the histogram elements work */
+    AtomicUnicodeHistogram::auh_t::AMReportElement e1("hello");
+    AtomicUnicodeHistogram::auh_t::AMReportElement e2("world");
+
+    REQUIRE( e1 == e1 );
+    REQUIRE( e1 != e2);
+    REQUIRE( e1 < e2);
+
+    /* Try a simple histogram with just numbers */
+    histogram_def::flags_t flags;
+    flags.numeric = true;
+    histogram_def h1("phones", "p","([0-9]+)","", "phones",flags);
+    AtomicUnicodeHistogram hm(h1);
+
+    hm.add("100");
+    hm.add("200");
+    hm.add("300");
+    hm.add("200");
+    hm.add("300");
+    hm.add("foo 300 bar");
+
+    AtomicUnicodeHistogram::auh_t::report r = hm.makeReport(0);
+    REQUIRE( r.size() == 3);
+
+    /* reverse sort! */
+
+    REQUIRE( r.at(0).key == "300");
+    REQUIRE( r.at(0).value.count == 3);
+    REQUIRE( r.at(0).value.count16 == 0);
+
+    REQUIRE( r.at(1).key == "200");
+    REQUIRE( r.at(1).value.count == 2);
+    REQUIRE( r.at(1).value.count16 == 0);
+
+    REQUIRE( r.at(2).key == "100");
+    REQUIRE( r.at(2).value.count == 1);
+    REQUIRE( r.at(2).value.count16 == 0);
+
+    char buf300[6] {'\000','3','\000','0','\000','0'};
+    std::string b300(buf300,6);
+    hm.add(b300);
+    r = hm.makeReport(0);
+    REQUIRE( r.at(0).key == "300");
+    REQUIRE( r.at(0).value.count == 4);
+    REQUIRE( r.at(0).value.count16 == 1);
+
+    /* Now write out the histogram */
+    std::string tempdir = get_tempdir();
+    std::string fname = tempdir + "/histogram1.txt";
+    {
+        std::ofstream o(fname.c_str());
+        o << r;
+        o.close();
+    }
 }
 
 
@@ -237,7 +293,7 @@ TEST_CASE("quote_if_necessary", "[feature_recorder]") {
     REQUIRE( c1=="context" );
 }
 
-TEST_CASE("fname_in_outdir", "[feature_recorder]") {
+TEST_CASE("fname in outdir", "[feature_recorder]") {
     feature_recorder_set::flags_t flags;
     flags.no_alert = true;
     feature_recorder_set frs( flags, "sha1", scanner_config::NO_INPUT, get_tempdir());
@@ -297,7 +353,7 @@ TEST_CASE("write_features", "[feature_recorder_set]" ) {
         REQUIRE_THROWS_AS( fs.named_feature_recorder("test_not"), feature_recorder_set::NoSuchFeatureRecorder);
 
         /* Ask the feature recorder to create a histogram */
-        histogram_def h1("name","([0-9]+)","suffix1",histogram_def::flags_t());
+        histogram_def h1("name","feature_file","([0-9]+)","","suffix1",histogram_def::flags_t());
         REQUIRE( fs.histogram_count() == 0);
         fs.histogram_add(h1);
         REQUIRE( fs.histogram_count() == 1);
@@ -350,8 +406,8 @@ TEST_CASE( "char_class", "[char_class]") {
  */
 #include "histogram_def.h"
 TEST_CASE( "histogram_def", "[histogram_def]" ){
-    histogram_def h1("feature1","pattern1","suffix1",histogram_def::flags_t());
-    histogram_def h2("feature2","pattern2","suffix2",histogram_def::flags_t());
+    histogram_def h1("name1","feature1","pattern1","","suffix1",histogram_def::flags_t());
+    histogram_def h2("name2","feature2","pattern2","","suffix2",histogram_def::flags_t());
 
     REQUIRE( h1 == h1);
     REQUIRE( h1 != h2);
@@ -360,14 +416,14 @@ TEST_CASE( "histogram_def", "[histogram_def]" ){
 
 TEST_CASE( "match0" , "[histogram_def]") {
     /* Regular expression that matches numbers */
-    histogram_def d0("numbers", "([0-9]+)", "s0", histogram_def::flags_t());
+    histogram_def d0("numbers", "numbers", "([0-9]+)", "", "s0", histogram_def::flags_t());
     REQUIRE ( d0.match("123" ) == true);
     REQUIRE ( d0.match("abc" ) == false);
 };
 
 TEST_CASE( "match1" , "[histogram_def]") {
     /* Regular expression that matches numbers */
-    histogram_def d0("numbers", "([0-9]+)", "s0", histogram_def::flags_t());
+    histogram_def d0("numbers", "numbers", "([0-9]+)", "", "s0", histogram_def::flags_t());
     std::string s1;
     REQUIRE ( d0.match("abc123def", &s1) == true);
     std::cerr << "s1=" << s1 << "\n";
@@ -376,67 +432,6 @@ TEST_CASE( "match1" , "[histogram_def]") {
 
 
 
-/****************************************************************
- * atomic_unicode_histogram.h
- */
-#include "atomic_unicode_histogram.h"
-TEST_CASE( "atomic_unicode_histogram", "[histogram]") {
-    /* Make sure that the histogram elements work */
-    AtomicUnicodeHistogram::auh_t::AMReportElement e1("hello");
-    AtomicUnicodeHistogram::auh_t::AMReportElement e2("world");
-
-    REQUIRE( e1 == e1 );
-    REQUIRE( e1 != e2);
-    REQUIRE( e1 < e2);
-
-    /* Try a simple histogram with just numbers */
-    histogram_def::flags_t flags;
-    flags.numeric = true;
-    histogram_def h1("p","([0-9]+)","phones",flags);
-    AtomicUnicodeHistogram hm(h1);
-
-    hm.add("100");
-    hm.add("200");
-    hm.add("300");
-    hm.add("200");
-    hm.add("300");
-    hm.add("foo 300 bar");
-
-    AtomicUnicodeHistogram::auh_t::report r = hm.makeReport(0);
-    REQUIRE( r.size() == 3);
-
-    /* reverse sort! */
-
-    REQUIRE( r.at(0).key == "300");
-    REQUIRE( r.at(0).value.count == 3);
-    REQUIRE( r.at(0).value.count16 == 0);
-
-    REQUIRE( r.at(1).key == "200");
-    REQUIRE( r.at(1).value.count == 2);
-    REQUIRE( r.at(1).value.count16 == 0);
-
-    REQUIRE( r.at(2).key == "100");
-    REQUIRE( r.at(2).value.count == 1);
-    REQUIRE( r.at(2).value.count16 == 0);
-
-    char buf300[6] {'\000','3','\000','0','\000','0'};
-    std::string b300(buf300,6);
-    hm.add(b300);
-    r = hm.makeReport(0);
-    REQUIRE( r.at(0).key == "300");
-    REQUIRE( r.at(0).value.count == 4);
-    REQUIRE( r.at(0).value.count16 == 1);
-
-    /* Now write out the histogram */
-    std::string tempdir = get_tempdir();
-    std::string fname = tempdir + "/histogram1.txt";
-    {
-        std::ofstream o(fname.c_str());
-        o << r;
-        o.close();
-    }
-}
-
 
 /****************************************************************
  *
@@ -444,7 +439,7 @@ TEST_CASE( "atomic_unicode_histogram", "[histogram]") {
  */
 
 #include "pos0.h"
-TEST_CASE( "pos0_t", "[vector]" ){
+TEST_CASE( "pos0_t", "[feature_recorder]" ){
     REQUIRE( stoi64("12345") == 12345);
 
     pos0_t p0("10000-hello-200-bar",300);
@@ -469,7 +464,7 @@ TEST_CASE( "pos0_t", "[vector]" ){
  * regex_vector.h & regex_vector.cpp
  */
 #include "regex_vector.h"
-TEST_CASE( "test regex_vector", "[vector]" ) {
+TEST_CASE( "test regex_vector", "[regex]" ) {
     REQUIRE( regex_vector::has_metachars("this[1234]foo") == true );
     REQUIRE( regex_vector::has_metachars("this(1234)foo") == true );
     REQUIRE( regex_vector::has_metachars("this[1234].*foo") == true);
@@ -542,7 +537,7 @@ TEST_CASE("map_file","[sbuf]") {
  * holds the feature recorders. THey are called with the default values.
  */
 #include "scanner_config.h"
-TEST_CASE("scanner_config", "[scanner_config]") {
+TEST_CASE("scanner_config", "[scanner]") {
     std::string help_string {"   -S first-day=sunday    value for first-day (first-day)\n"
                              "   -S age=0    age in years (age)\n"};
     scanner_config sc;
@@ -567,7 +562,7 @@ TEST_CASE("scanner_config", "[scanner_config]") {
  * The interface used by scanners.
  */
 #include "scanner_params.h"
-TEST_CASE("scanner", "[scanner_params]") {
+TEST_CASE("scanner", "[scanner]") {
     /* check that scanner params made from an existing scanner params are deeper */
 }
 
@@ -579,7 +574,7 @@ TEST_CASE("scanner", "[scanner_params]") {
  */
 #include "scanner_set.h"
 #include "scan_sha1_test.h"
-TEST_CASE("enable/disable", "[scanner_set]") {
+TEST_CASE("enable/disable", "[scanner]") {
     scanner_config sc;
     sc.outdir = get_tempdir();
     sc.hash_alg = "sha1";
@@ -621,7 +616,7 @@ TEST_CASE("enable/disable", "[scanner_set]") {
 }
 
 /* This test runs a scan on the hello_sbuf() with the sha1 scanner. */
-TEST_CASE("run", "[scanner_set]") {
+TEST_CASE("run", "[scanner]") {
     scanner_config sc;
     sc.outdir = get_tempdir();
     sc.hash_alg = "sha1";               // it's faster than SHA1!
@@ -644,6 +639,8 @@ TEST_CASE("run", "[scanner_set]") {
     /* Test the regular expression */
     /* And it should write to a feature file that has a suffix of "_first5" */
 
+
+    std::cerr << "fr.histograms[0]: " << fr.histograms[0]->def << "\n";
 
     REQUIRE( fr.histograms[0]->def.feature == "sha1_bufs");
     REQUIRE( fr.histograms[0]->def.pattern == "^(.....)");
@@ -675,7 +672,7 @@ TEST_CASE("run", "[scanner_set]") {
  *  word_and_context_list.h
  */
 #include "word_and_context_list.h"
-TEST_CASE("word_and_context_list", "[vector]") {
+TEST_CASE("word_and_context_list", "[feature_recorder]") {
     REQUIRE( word_and_context_list::rstrcmp("aaaa1", "bbbb0") < 0 );
     REQUIRE( word_and_context_list::rstrcmp("aaaa1", "aaaa1") == 0 );
     REQUIRE( word_and_context_list::rstrcmp("bbbb0", "aaaa1") > 0 );

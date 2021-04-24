@@ -19,6 +19,27 @@ hello-0	d3486ae9136e7856bc42212385ea797094475802
 - [ ] Histogram is created with the wrong filename
 - [ ] Histogram file is empty
 
+## 2021-04-24
+Current problems are the UTF-8 histograms that are extracted with
+regular expressions. Ideally we should do the regular expressions in
+Unicode, not in UTF-8
+
+Another option is to do everything as UTF-32 regex and convert the
+UTF-32 to UTF-8 when rendering into the files.
+- https://stackoverflow.com/questions/37989081/how-to-use-unicode-range-in-c-regex
+
+Another option is to add an ICU dependency:
+- https://unicode-org.github.io/icu/userguide/strings/regexp.html
+
+See also:
+- http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/p0169r0.html
+
+Oh, Boost has a unicode regular expressions too:
+- https://www.boost.org/doc/libs/1_46_1/libs/regex/doc/html/boost_regex/ref/non_std_strings/icu/unicode_algo.html
+
+But make a decision. What we currently have is a mess.
+
+
 # Outstanding things to do
 
 - [ ] move histograms out of feature_recorder and feature_recorder_set.

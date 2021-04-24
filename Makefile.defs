@@ -12,8 +12,8 @@ BE13_API_SRC= \
         $(BE13_API_DIR)feature_recorder_set.cpp \
         $(BE13_API_DIR)feature_recorder_set.h \
         $(BE13_API_DIR)fpos0.h \
-        $(BE13_API_DIR)histogram_defs.cpp \
-        $(BE13_API_DIR)histogram_defs.h \
+        $(BE13_API_DIR)histogram_def.cpp \
+        $(BE13_API_DIR)histogram_def.h \
         $(BE13_API_DIR)net_ethernet.h \
         $(BE13_API_DIR)pcap_fake.cpp \
         $(BE13_API_DIR)pcap_fake.h \

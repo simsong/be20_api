@@ -2,7 +2,7 @@
 /*
  * regex_vector.h:
  *
- * simple cover for regular expression class.
+ * simple cover for the C++14 regular expression class.
  */
 
 #ifndef REGEX_VECTOR_H

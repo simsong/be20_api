@@ -40,7 +40,7 @@ AUTOMAKE_OPTIONS = subdir-objects
 #libbe13api_a_SOURCES = $(BE13_API_SRC)
 
 bin_PROGRAMS = test_be13_api
-check_PROGRAMS = test_be13_api
+check_PROGRAMS = test_be13_api test_be13_api_malloc_debug
 TESTS = $(check_PROGRAMS)
 
 apitest: test_be13_api
@@ -53,7 +53,7 @@ test_be13_api_SOURCES = $(DFXML_WRITER) test_be13_api.cpp catch.hpp \
 	scanner_set.h scanner_set.cpp \
 	scanner_params.h scanner_params.cpp \
 	packet_info.h pcap_fake.h \
-	histogram_def.h  \
+	histogram_def.h  histogram_def.cpp \
 	atomic_unicode_histogram.h atomic_unicode_histogram.cpp \
 	feature_recorder_sql.h feature_recorder_sql.cpp \
 	feature_recorder_file.h feature_recorder_file.cpp \

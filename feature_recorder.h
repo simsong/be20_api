@@ -145,7 +145,6 @@ public:;
      */
     void quote_if_necessary(std::string &feature,std::string &context) const;
 
-
     /* File management */
 
     /* fname_in_outdir(suffix, count):
@@ -219,10 +218,17 @@ public:;
     virtual std::string carve_records(const sbuf_t &sbuf, size_t offset, size_t len, const std::string &name);
 
     /*
-     * Histogram control.
+     * Each feature_recorder can have multiple histograms. They are generated on-the-fly for the file-based feature-recorder,
+     * and generated in SQL for the SQL-based feature-recorder.
+     *
+     * I tried to make this work with std::unique_ptr, but failed.
+     *
+     * This did not work:
+     * std::vector<std::unique_ptr<AtomicUnicodeHistogram>> histograms {};
+     *
+     * this works:
      */
-    // this works:
-    std::vector<std::unique_ptr<AtomicUnicodeHistogram>> histograms {};
+    std::vector< AtomicUnicodeHistogram* > histograms {};
     //size_t histogram_largest() const;   // returns the memory size of the largest histogram
     virtual size_t histogram_count() { return histograms.size();}     // how many histograms it has
     virtual void histogram_add(const struct histogram_def &def); // add a new histogram

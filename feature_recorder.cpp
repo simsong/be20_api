@@ -68,6 +68,11 @@ feature_recorder::feature_recorder(class feature_recorder_set &fs_, const std::s
 
 feature_recorder::~feature_recorder()
 {
+    /* Because we no longer use the unique_ptr, we now need to delete the histograms when the feature recorder is deleted */
+    for (auto h : histograms ){
+        delete h;
+    }
+    histograms.clear();
 }
 
 /**
@@ -124,17 +129,22 @@ const std::string &feature_recorder::get_outdir() const // cannot be inline becu
 const std::string feature_recorder::fname_in_outdir(std::string suffix, int count) const
 {
     std::string base_name = fs.get_outdir() + "/" + this->name;
-    if (suffix.size()){
+    std::cerr << "base_name=" << base_name << "\n";
+    if (suffix.size() > 0){
         base_name += "_"+suffix;
     }
-    if (count==NO_COUNT) return base_name+".txt";
-    if (count!=NEXT_COUNT){
+    if (count == NO_COUNT) return base_name+".txt";
+    if (count != NEXT_COUNT){
         return base_name+"_"+itos(count)+".txt";
     }
+    /* Probe for a file that we can create. When we create it, return the name.
+     * Yes, this created a TOCTOU error. We should return the open file descriptor.
+     */
     for(int i=1;i<1000000;i++){
         std::string fname = base_name+"_"+itos(i)+".txt";
+        std::cerr << "fname=" << fname << "i=" << i << "\n";
         int fd = open(fname.c_str(), O_WRONLY | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR);
-        if (fd>=0){
+        if ( fd >= 0 ){
             /* Created the file. close it. and return.*/
             close(fd);
             return fname;
@@ -672,16 +682,26 @@ void feature_recorder::set_carve_mtime(const std::string &fname, const std::stri
 
 
 
-// add a new histogram
+/**
+ * add a new histogram to this feature recorder.
+ * @param def - the histogram definition
+ */
 void feature_recorder::histogram_add(const struct histogram_def &def)
 {
     if (features_written != 0 ){
         throw std::runtime_error("Cannot add histograms after features have been written.");
     }
-    histograms.push_back(std::make_unique<AtomicUnicodeHistogram>( def ));
+    /* This did not work:
+     * histograms.push_back( std::make_unique<AtomicUnicodeHistogram>( def ));
+     * This works:
+     */
+    histograms.push_back( new AtomicUnicodeHistogram(def) );
 }
 
-// add a feature to all of the histograms
+/**
+ * add a feature to all of the feature recorder's histograms
+ * @param feature - the feature to add.
+ */
 void feature_recorder::histograms_add_feature(const std::string &feature)
 {
     std::cerr << "add_feature( " << feature << " )\n";
@@ -690,29 +710,47 @@ void feature_recorder::histograms_add_feature(const std::string &feature)
     }
 }
 
-bool feature_recorder::histogram_flush_largest()
-{
-    return false;
-}
-
-void feature_recorder::histogram_flush_all()
-{
-    for (auto &h: histograms ) {
-        this->histogram_flush( *h );
-    }
-}
-
+/** Flush a specific histogram.
+ * This is how the feature recorder triggers the histogram to be written.
+ */
 void feature_recorder::histogram_flush(AtomicUnicodeHistogram &h)
 {
     /* Get the next filename */
+    std::cerr << "histogram_flush2 \n";
     std::string fname = fname_in_outdir(h.def.suffix, NEXT_COUNT);
+    std::cerr << "histogram_flush3 \n";
     std::fstream hfile;
+    std::cerr << "feature_recorder::histogram_flush: writing histogram " << h.def << " to " << fname << "\n";
     hfile.open( fname.c_str(), std::ios_base::out);
     if (!hfile.is_open()){
         throw std::runtime_error("Cannot open feature histogram file "+fname);
     }
     hfile << h.makeReport(0, true); // sorted and clear
     hfile.close();
+}
+
+/**
+ * flush the largest histogram to the disk. This is a way to release
+ * allocated memory.
+ *
+ * In BE2.0, the file recorder's histograms are built in memory. If
+ * they are too big for memory, file-histograms they are flushed and
+ * need to be recombined in post-processing. SQL feature recorder uses the
+ * SQLite3 to create the histograms.
+ */
+
+bool feature_recorder::histogram_flush_largest()
+{
+    /* TODO - implement */
+    return false;
+}
+
+void feature_recorder::histogram_flush_all()
+{
+    for (auto &h: histograms ) {
+        std::cerr << "histogram_flush \n";
+        this->histogram_flush( *h );
+    }
 }
 
 /*
@@ -723,8 +761,10 @@ void feature_recorder::histogram_flush(AtomicUnicodeHistogram &h)
  */
 void feature_recorder::histogram_merge(const struct histogram_def &def)
 {
+    std::cerr << "TODO - implement me!\n";
 }
 
 void feature_recorder::histogram_merge_all()
 {
+    std::cerr << "TODO - implement me!\n";
 }

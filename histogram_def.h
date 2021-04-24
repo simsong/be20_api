@@ -39,35 +39,42 @@ struct histogram_def {
             return (this->lowercase == a.lowercase) && (this->numeric   == a.numeric);
         }
 
-
         flags_t(){};
         flags_t(bool lowercase_,bool numeric_): lowercase(lowercase_),numeric(numeric_){}
         bool lowercase {false};         // make all flags lowercase
-        bool numeric  {false};           // extract digits only
+        bool numeric   {false};           // extract digits only
     };
 
     /**
-     * @param feature- the feature file to histogram (no .txt)
-     * @param re     - the regular expression to extract.
-     * @param require- require this string on the line (usually in context)
+     * @param feature - the feature file to histogram (no .txt)
+     * @param pattern - the regular expression to extract.
      * @param suffix - the suffix to add to the histogram file after feature name before .txt
      * @param flags  - any flags (see above)
+     * @param require- require this string on the line (usually in context)
      */
 
-    histogram_def(const std::string &feature_, // which feature file to use
+    histogram_def(const std::string &name_,
+                  const std::string &feature_, // which feature file to use
                   const std::string &pattern_, // which pattern to abstract
+                  const std::string &require_, // text required on the line
                   const std::string &suffix_,  // which suffix to add to the feature file name for the histogram
                   const struct flags_t &flags_): // flags - see below
-        feature(feature_),pattern(pattern_),require(),
-        suffix(suffix_),reg(pattern_),flags(flags_) { }
+        name(name_),
+        feature(feature_),
+        pattern(pattern_), reg(pattern_),
+        require(require_),
+        suffix(suffix_),
+        flags(flags_) {
+        std::cerr << "histogram_def. compiled " << pattern_ << "\n";
+    }
 
-    std::string feature {};     /* feature file name */
-    std::string pattern {};     /* regular expression used to extract feature substring from feature. "" means use the entire feature*/
-    std::string require {};         /* text required somewhere on the feature line. Sort of like grep. used for IP histograms */
-    std::string suffix {};   /* suffix to append to histogram report name */
 
-    /* the compiled regular expression. Since it is compiled, it need not be used in comparisions */
-    mutable std::regex  reg {};
+    std::string name    {};    // name of the hsitogram
+    std::string feature {};    // feature file to extract
+    std::string pattern {};    // regular expression used to extract feature substring from feature. "" means use the entire feature
+    mutable std::regex  reg {};         // the compiled regular expression.
+    std::string require {};    // text required somewhere on the feature line. Sort of like grep. used for IP histograms
+    std::string suffix  {};    // suffix to append to histogram report name
 
     /* flags */
     struct flags_t flags {};
@@ -75,27 +82,30 @@ struct histogram_def {
 
     /* default copy construction and assignment */
     histogram_def(const histogram_def &a) {
+        this->name    = a.name;
         this->feature = a.feature;
         this->pattern = a.pattern;
+        this->reg     = a.reg;
         this->require = a.require;
         this->suffix  = a.suffix;
-        this->reg     = a.reg;
         this->flags   = a.flags;
     };
 
     /* assignment operator */
     histogram_def &operator=(const histogram_def &a) {
+        this->name    = a.name;
         this->feature = a.feature;
         this->pattern = a.pattern;
+        this->reg     = a.reg;
         this->require = a.require;
         this->suffix  = a.suffix;
-        this->reg     = a.reg;
         this->flags   = a.flags;
         return *this;
     }
 
     bool operator==(const histogram_def &a) const {
         return
+            (this->name    == a.name)    &&
             (this->feature == a.feature) &&
             (this->pattern == a.pattern) &&
             (this->require == a.require) &&
@@ -111,6 +121,8 @@ struct histogram_def {
      * ignores reg.
      */
     bool operator<(const histogram_def &a) const {
+        if (this->name < a.name) return true;
+        if (this->name > a.name) return false;
         if (this->feature < a.feature) return true;
         if (this->feature > a.feature) return false;
         if (this->pattern < a.pattern) return true;
@@ -128,55 +140,10 @@ struct histogram_def {
      * set match to Extract and match: Does this string match
      */
 
-    bool match(std::u32string u32key, std::string *displayString = nullptr) const {
-        if ( flags.lowercase ){
-            u32key = utf32_lowercase( u32key );
-        }
-
-        if ( flags.numeric ) {
-            u32key = utf32_extract_numeric( u32key );
-        }
-
-        /* TODO: When we have the ability to do regular expressions in utf32, do that here.
-         * We don't have that, so do the rest in utf8 */
-
-        /* Convert match string to u8key */
-        std::string u8key = convert_utf32_to_utf8( u32key );
-
-
-        std::cerr << "u8key="<<u8key<<"\n";
-
-        /* If a string is required and it is not present, return */
-        if (require.size() > 0 && u8key.find_first_of(require)==std::string::npos){
-            std::cerr << "fail1\n";
-            return false;
-        }
-
-        /* Check for pattern */
-        if (pattern.size() > 0){
-            std::smatch m;
-            std::regex_search( u8key, m, reg);
-            if (m.empty()==true){       // match does not exist
-                std::cerr << "fail2  pattern=" << pattern << "\n";
-                return false;           // regex not found
-            }
-            u8key = m.str();
-            std::cerr << "m=" << m.str() << " \n";
-        }
-
-        if (displayString) {
-            *displayString = u8key;
-        }
-        return true;
-    }
-    bool match(std::string u32key, std::string *displayString = nullptr) const {
-        return match( convert_utf8_to_utf32( u32key), displayString);
-    }
+    bool match(std::u32string u32key, std::string *displayString = nullptr) const;
+    bool match(std::string u32key, std::string *displayString = nullptr) const;
 };
 
-inline std::ostream & operator << (std::ostream &os, const histogram_def &hd)  {
-    os << "<histogram_def( " << hd.feature << "," << hd.pattern << "," << hd.suffix << ")>";
-    return os;
-}
+std::ostream & operator << (std::ostream &os, const histogram_def &hd);
 
 #endif
