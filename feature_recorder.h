@@ -220,25 +220,19 @@ public:;
     /*
      * Each feature_recorder can have multiple histograms. They are generated on-the-fly for the file-based feature-recorder,
      * and generated in SQL for the SQL-based feature-recorder.
-     *
-     * I tried to make this work with std::unique_ptr, but failed.
-     *
-     * This did not work:
-     *
-     *
-     * this works:
      */
     std::vector<std::unique_ptr<AtomicUnicodeHistogram>> histograms {};
-    //std::vector< AtomicUnicodeHistogram* > histograms {};
-    //size_t histogram_largest() const;   // returns the memory size of the largest histogram
+
+    /* These must be specialized */
+    virtual void histogram_flush(AtomicUnicodeHistogram &h); // flush a specific histogram
+    virtual void histograms_add_feature(const std::string &feature); // propose a feature to all of the histograms
+
     virtual size_t histogram_count() { return histograms.size();}     // how many histograms it has
     virtual void histogram_add(const struct histogram_def &def); // add a new histogram
-    virtual void histograms_add_feature(const std::string &feature); // add a feature to all of the histograms
     virtual bool histogram_flush_largest();     // flushes largest histogram. returns false if no histogram could be flushed.
-    virtual void histogram_flush(AtomicUnicodeHistogram &h); // flush a specific histogram
     virtual void histogram_flush_all(); // flushes all histograms
-    virtual void histogram_merge(const struct histogram_def &def); // merge sort on this histogram
-    virtual void histogram_merge_all();                            // merge sort on all histograms
+    //virtual void histogram_merge(const struct histogram_def &def); // merge sort on this histogram
+    //virtual void histogram_merge_all();                            // merge sort on all histograms
 };
 
 #endif

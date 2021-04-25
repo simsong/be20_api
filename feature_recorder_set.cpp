@@ -5,6 +5,7 @@
 #include "scanner_config.h"
 #include "feature_recorder_set.h"
 #include "feature_recorder_file.h"
+#include "feature_recorder_sql.h"
 
 #include "dfxml/src/dfxml_writer.h"
 #include "dfxml/src/hash_t.h"
@@ -153,7 +154,20 @@ feature_recorder &feature_recorder_set::named_feature_recorder(const std::string
     if ( it != frm.end() ) return *it->second;
 
     if (create) {
-        feature_recorder *fr = new feature_recorder_file(*this, name);
+        if (flags.record_files and flags.record_sql){
+            throw std::runtime_error("currently can only record to files or SQL, not both");
+        }
+        if (!flags.record_files and !flags.record_sql){
+            throw std::runtime_error("Must record to either files or SQL");
+        }
+
+        feature_recorder *fr = nullptr;
+        if (flags.record_files) {
+            fr = new feature_recorder_file(*this, name);
+        }
+        if (flags.record_sql) {
+            fr = new feature_recorder_sql(*this, name);
+        }
         frm.insert(name, fr);
         return *fr;
     }
@@ -253,9 +267,11 @@ size_t feature_recorder_set::histogram_count() const
 }
 
 
+/**
+ * Have every feature recorder generate all of its histograms.
+ */
 void feature_recorder_set::histograms_generate()
 {
-    /* Ask each feature recorder to dump its histograms */
     for (auto it : frm ){
         it.second->histogram_flush_all();
     }

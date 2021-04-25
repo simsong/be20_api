@@ -456,6 +456,13 @@ void scanner_set::phase_scan()
  *** PHASE_SHUTDOWN methods.
  ****************************************************************/
 
+/**
+ * Shutdown:
+ * 1 - change phase from PHASE_SCAN to PHASE_SHUTDOWN.
+ * 2 - Shut down all of the scanners.
+ * 3 - write out the in-memory histograms.
+ * 4 - terminate the XML file.
+ */
 void scanner_set::shutdown()
 {
     if (current_phase != scanner_params::PHASE_SCAN){

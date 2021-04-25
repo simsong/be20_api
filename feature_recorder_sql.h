@@ -19,11 +19,6 @@
 #endif
 
 class feature_recorder_sql : public feature_recorder {
-    static void truncate_at(std::string &line, char ch) {
-        size_t pos = line.find(ch);
-        if(pos != std::string::npos) line.resize(pos);
-    };
-
     struct besql_stmt {
         besql_stmt(const besql_stmt &)=delete;
         besql_stmt &operator=(const besql_stmt &)=delete;

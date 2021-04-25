@@ -60,7 +60,7 @@ feature_recorder_file::feature_recorder_file(class feature_recorder_set &fs_, co
      * If the file exists, seek to the end and find the last complete line, and start there.
      */
     const std::lock_guard<std::mutex> lock(Mios);
-    fname = fname_in_outdir("",NO_COUNT);
+    std::string fname = fname_in_outdir("",NO_COUNT);
     ios.open( fname.c_str(), std::ios_base::in|std::ios_base::out|std::ios_base::ate);
     if ( ios.is_open()){                  // opened existing file
         ios.seekg(0L,std::ios_base::end);
@@ -328,10 +328,31 @@ static void dump_hist(sqlite3_context *ctx,int argc,sqlite3_value**argv)
  ****************************************************************/
 
 
+/** Flush a specific histogram.
+ * This is how the feature recorder triggers the histogram to be written.
+ */
+void feature_recorder_file::histogram_flush(AtomicUnicodeHistogram &h)
+{
+    /* Get the next filename */
+    std::cerr << "histogram_flush2 \n";
+    std::string fname = fname_in_outdir(h.def.suffix, NEXT_COUNT);
+    std::cerr << "histogram_flush3 to " << fname << "\n";
+    std::fstream hfile;
+    std::cerr << "feature_recorder::histogram_flush: writing histogram " << h.def << " to " << fname << "\n";
+    hfile.open( fname.c_str(), std::ios_base::out);
+    if (!hfile.is_open()){
+        throw std::runtime_error("Cannot open feature histogram file "+fname);
+    }
+    hfile << h.makeReport(0, true); // sorted and clear
+    hfile.close();
+}
 
+
+
+
+#if 0
 void feature_recorder_file::generate_histogram(std::ostream &os, const struct histogram_def &def)
 {
-#if 0
     const std::lock_guard<std::mutex> lock(Mios);
     ios.flush();
     os << histogram_file_header;
@@ -424,8 +445,8 @@ void feature_recorder_file::generate_histogram(std::ostream &os, const struct hi
     }
     std::cerr << "Looped " << max_histogram_files
               << " times on histogram; something seems wrong\n";
-#endif
 }
+#endif
 
 
 #if 0

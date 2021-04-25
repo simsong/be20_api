@@ -39,6 +39,7 @@
  */
 
 /* Define a map of feature recorders with atomic access. */
+/* TODO: This should probably be a unique_ptr */
 typedef atomic_map<std::string, class feature_recorder *> feature_recorder_map_t;
 inline std::ostream & operator << (std::ostream &os, const feature_recorder_map_t &m) {
     for( auto it:m){
@@ -51,8 +52,6 @@ inline std::ostream & operator << (std::ostream &os, const feature_recorder_map_
 class word_and_context_list;
 class feature_recorder_set {
 private:
-    //typedef std::map<std::string, class feature_recorder *> feature_recorder_map;
-
     // neither copying nor assignment is implemented
     feature_recorder_set(const feature_recorder_set &fs)=delete;
     feature_recorder_set &operator=(const feature_recorder_set &fs)=delete;
@@ -82,12 +81,14 @@ public:
      * a bunch of bools.
      */
     struct flags_t {
-        bool disabled {false}; // do not record anything! THis is is just used for a path-printer
-        bool pedantic {false};        // make sure that all features written are valid utf-8
-        bool no_alert {false};                              // no alert recorder
-        bool only_alert {false};                                //  always return the alert recorder
+        bool disabled {false}; // do not record anything! This is is just used for a path-printer
+        bool pedantic {false}; // make sure that all features written are valid utf-8
+        bool no_alert {false}; // no alert recorder
+        bool only_alert {false};  //  always return the alert recorder
         bool create_stop_list_recorders {false}; // static const uint32_t CREATE_STOP_LIST_RECORDERS= 0x04;  //
-        bool debug {false};                      // enable debug printing
+        bool debug {false};             // enable debug printing
+        bool record_files {true};       // record to files
+        bool record_sql {false};        // record to SQL
     } flags;
 
     /** Constructor:
@@ -173,6 +174,7 @@ public:
         const char *what() const noexcept override {return m_error.c_str();}
     };
 
+    /* return the named feature recorder, creating it if necessary */
     virtual feature_recorder &named_feature_recorder(const std::string &name, bool create=false);
     virtual feature_recorder &get_alert_recorder() ;
     virtual void get_feature_file_list(std::vector<std::string> &ret); // clears ret and fills with a list of feature file names

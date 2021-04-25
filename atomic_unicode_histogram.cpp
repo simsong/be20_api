@@ -47,6 +47,8 @@ AtomicUnicodeHistogram::auh_t::report AtomicUnicodeHistogram::makeReport(size_t 
 {
     auh_t::report rep = h.dump( true, clearMap );
 
+    std::cerr << "makeReport. rep.size=" << rep.size() << "\n";
+
     /* If we only want some of them, delete the extra */
     if ( (topN > 0)  && ( topN < rep.size()) ){
         rep.resize( topN );

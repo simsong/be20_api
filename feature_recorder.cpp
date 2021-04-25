@@ -716,18 +716,7 @@ void feature_recorder::histograms_add_feature(const std::string &feature)
  */
 void feature_recorder::histogram_flush(AtomicUnicodeHistogram &h)
 {
-    /* Get the next filename */
-    std::cerr << "histogram_flush2 \n";
-    std::string fname = fname_in_outdir(h.def.suffix, NEXT_COUNT);
-    std::cerr << "histogram_flush3 \n";
-    std::fstream hfile;
-    std::cerr << "feature_recorder::histogram_flush: writing histogram " << h.def << " to " << fname << "\n";
-    hfile.open( fname.c_str(), std::ios_base::out);
-    if (!hfile.is_open()){
-        throw std::runtime_error("Cannot open feature histogram file "+fname);
-    }
-    hfile << h.makeReport(0, true); // sorted and clear
-    hfile.close();
+    throw std::runtime_error("feature_recorder::histogram_flush needs to be overridden.");
 }
 
 /**
@@ -754,6 +743,7 @@ void feature_recorder::histogram_flush_all()
     }
 }
 
+#if 0
 /*
  * histogram_merge:
  * If possible, read all histogram files into memory and write them
@@ -769,3 +759,4 @@ void feature_recorder::histogram_merge_all()
 {
     std::cerr << "TODO - implement me!\n";
 }
+#endif

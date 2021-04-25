@@ -33,6 +33,10 @@
 #include "sbuf.h"
 
 
+/****************************************************************
+ *** Support code
+ ****************************************************************/
+
 // https://inversepalindrome.com/blog/how-to-create-a-random-string-in-cpp
 std::string random_string(std::size_t length)
 {
@@ -122,6 +126,27 @@ const sbuf_t hello16_sbuf() {
     return sbuf_t(p0, hello16_buf, strlen(hello)*2, strlen(hello)*2, 0, false, false, false);
 }
 
+/* Read all of the lines of a file and return them as a vector */
+std::vector<std::string> getLines(const std::string &filename)
+{
+    std::vector<std::string> lines;
+    std::string line;
+    std::ifstream inFile;
+    inFile.open(filename.c_str());
+    if (!inFile.is_open()) {
+        throw std::runtime_error("getLines: Cannot open file: "+filename);
+    }
+    while (std::getline(inFile, line)){
+        if (line.size()>0){
+            lines.push_back(line);
+        }
+    }
+    return lines;
+}
+
+/*************************
+ *** UNIT TESTS FOLLOW ***
+ *************************/
 
 /****************************************************************
  * aftimer.h
@@ -166,11 +191,40 @@ TEST_CASE( "atomic_map", "[atomic]" ){
 }
 
 /****************************************************************
+ * histogram_def.h
+ */
+#include "histogram_def.h"
+TEST_CASE( "histogram_def comparision functions", "[histogram_def]" ){
+    histogram_def h1("name1","feature1","pattern1","","suffix1",histogram_def::flags_t());
+    histogram_def h2("name2","feature2","pattern2","","suffix2",histogram_def::flags_t());
+
+    REQUIRE( h1 == h1);
+    REQUIRE( h1 != h2);
+    REQUIRE( h1  < h2);
+}
+
+TEST_CASE( "histogram_def 8-bit regular expression functions" , "[histogram_def]") {
+    histogram_def d0("numbers", "numbers", "([0-9]+)", "", "s0", histogram_def::flags_t());
+    REQUIRE ( d0.match("123" ) == true);
+    REQUIRE ( d0.match("abc" ) == false);
+
+    std::string s1;
+    REQUIRE ( d0.match("abc123def", &s1) == true);
+    REQUIRE ( s1 == "123" );
+
+    histogram_def d1("extraction", "extraction", "^(.....)", "", "", histogram_def::flags_t());
+    REQUIRE ( d1.match("abcdefghijklmnop", &s1) == true);
+    REQUIRE ( s1 == "abcde" );
+
+};
+
+
+/****************************************************************
  * atomic_unicode_histogram.h
  */
 #include "atomic_unicode_histogram.h"
 #include "histogram_def.h"
-TEST_CASE( "histogram_def and First AtomicUnicodeHistogram test", "[atomic][regex]" ){
+TEST_CASE( "First AtomicUnicodeHistogram test", "[atomic][regex]" ){
     /* Histogram that matches everything */
     histogram_def d1("name","feature_file","(.*)","","suffix1",histogram_def::flags_t());
     AtomicUnicodeHistogram h(d1);
@@ -181,15 +235,25 @@ TEST_CASE( "histogram_def and First AtomicUnicodeHistogram test", "[atomic][rege
 
     /* Now make sure things were added with the right counts */
     AtomicUnicodeHistogram::FrequencyReportVector f = h.makeReport();
-    std::cerr << "f.at(0)=" << f.at(0) << "\n";
-    std::cerr << "f.at(1)=" << f.at(1) << "\n";
-
     REQUIRE( f.at(0).key=="foo");
     REQUIRE( f.at(0).value.count==3);
     REQUIRE( f.at(0).value.count16==0);
 }
 
-TEST_CASE( "Second AtomicUnicodeHistogram test", "[histogram]") {
+TEST_CASE( "Second AtomicUnicodeHistogram test", "[atomic][regex]" ){
+    /* Histogram that matches everything */
+    histogram_def d1("extraction", "extraction", "^(.....)", "", "", histogram_def::flags_t());
+    AtomicUnicodeHistogram h(d1);
+    h.add("abcdefghijklmnop");
+
+    /* Now make sure things were added with the right counts */
+    AtomicUnicodeHistogram::FrequencyReportVector f = h.makeReport();
+    REQUIRE( f.at(0).key=="abcde");
+    REQUIRE( f.at(0).value.count==1);
+    REQUIRE( f.at(0).value.count16==0);
+}
+
+TEST_CASE( "Third AtomicUnicodeHistogram test", "[histogram]") {
     /* Make sure that the histogram elements work */
     AtomicUnicodeHistogram::auh_t::AMReportElement e1("hello");
     AtomicUnicodeHistogram::auh_t::AMReportElement e2("world");
@@ -214,8 +278,7 @@ TEST_CASE( "Second AtomicUnicodeHistogram test", "[histogram]") {
     AtomicUnicodeHistogram::auh_t::report r = hm.makeReport(0);
     REQUIRE( r.size() == 3);
 
-    /* reverse sort! */
-
+    /* Make sure that the tallies were correct. */
     REQUIRE( r.at(0).key == "300");
     REQUIRE( r.at(0).value.count == 3);
     REQUIRE( r.at(0).value.count16 == 0);
@@ -228,6 +291,7 @@ TEST_CASE( "Second AtomicUnicodeHistogram test", "[histogram]") {
     REQUIRE( r.at(2).value.count == 1);
     REQUIRE( r.at(2).value.count16 == 0);
 
+    /* Add a UTF-16 300 */
     char buf300[6] {'\000','3','\000','0','\000','0'};
     std::string b300(buf300,6);
     hm.add(b300);
@@ -236,13 +300,22 @@ TEST_CASE( "Second AtomicUnicodeHistogram test", "[histogram]") {
     REQUIRE( r.at(0).value.count == 4);
     REQUIRE( r.at(0).value.count16 == 1);
 
-    /* Now write out the histogram */
+    /* write the histogram to a file */
     std::string tempdir = get_tempdir();
     std::string fname = tempdir + "/histogram1.txt";
     {
-        std::ofstream o(fname.c_str());
-        o << r;
-        o.close();
+        std::ofstream out(fname.c_str());
+        out << r;
+        out.close();
+    }
+
+    /* And verify the histogram that was written */
+    {
+        std::vector<std::string> lines {getLines(fname)};
+        REQUIRE( lines.size() == 3);
+        REQUIRE( lines[0] == "n=4\t300\t(utf16=1)" );
+        REQUIRE( lines[1] == "n=2\t200" );
+        REQUIRE( lines[2] == "n=1\t100" );
     }
 }
 
@@ -278,6 +351,7 @@ TEST_CASE("sha1", "[hash]") {
 #include "scanner_config.h"
 #include "feature_recorder.h"
 #include "feature_recorder_set.h"
+#include "feature_recorder_file.h"
 TEST_CASE("quote_if_necessary", "[feature_recorder]") {
     std::string f1("feature");
     std::string c1("context");
@@ -311,24 +385,6 @@ TEST_CASE("fname in outdir", "[feature_recorder]") {
     const std::string n2 = ft.fname_in_outdir("bar", feature_recorder::NEXT_COUNT);
     std::filesystem::path p2(n2);
     REQUIRE( p2.filename()=="test_bar_1.txt");
-}
-
-/* Read all of the lines of a file and return them as a vector */
-std::vector<std::string> getLines(const std::string &filename)
-{
-    std::vector<std::string> lines;
-    std::string line;
-    std::ifstream inFile;
-    inFile.open(filename.c_str());
-    if (!inFile.is_open()) {
-        throw std::runtime_error("getLines: Cannot open file: "+filename);
-    }
-    while (std::getline(inFile, line)){
-        if (line.size()>0){
-            lines.push_back(line);
-        }
-    }
-    return lines;
 }
 
 /****************************************************************
@@ -400,35 +456,6 @@ TEST_CASE( "char_class", "[char_class]") {
     REQUIRE( c.range_G_Z == 0);
     REQUIRE( c.range_0_9 == 1);
 }
-
-/****************************************************************
- * histogram_def.h
- */
-#include "histogram_def.h"
-TEST_CASE( "histogram_def", "[histogram_def]" ){
-    histogram_def h1("name1","feature1","pattern1","","suffix1",histogram_def::flags_t());
-    histogram_def h2("name2","feature2","pattern2","","suffix2",histogram_def::flags_t());
-
-    REQUIRE( h1 == h1);
-    REQUIRE( h1 != h2);
-    REQUIRE( h1  < h2);
-}
-
-TEST_CASE( "match0" , "[histogram_def]") {
-    /* Regular expression that matches numbers */
-    histogram_def d0("numbers", "numbers", "([0-9]+)", "", "s0", histogram_def::flags_t());
-    REQUIRE ( d0.match("123" ) == true);
-    REQUIRE ( d0.match("abc" ) == false);
-};
-
-TEST_CASE( "match1" , "[histogram_def]") {
-    /* Regular expression that matches numbers */
-    histogram_def d0("numbers", "numbers", "([0-9]+)", "", "s0", histogram_def::flags_t());
-    std::string s1;
-    REQUIRE ( d0.match("abc123def", &s1) == true);
-    std::cerr << "s1=" << s1 << "\n";
-    REQUIRE ( s1 == "123" );
-};
 
 
 
@@ -640,31 +667,29 @@ TEST_CASE("run", "[scanner]") {
     /* And it should write to a feature file that has a suffix of "_first5" */
 
 
-    std::cerr << "fr.histograms[0]: " << fr.histograms[0]->def << "\n";
-
     REQUIRE( fr.histograms[0]->def.feature == "sha1_bufs");
     REQUIRE( fr.histograms[0]->def.pattern == "^(.....)");
     REQUIRE( fr.histograms[0]->def.suffix == "first5");
     REQUIRE( fr.histograms[0]->def.flags.lowercase == true);
     REQUIRE( fr.histograms[0]->def.flags.numeric == false);
 
-    /* Might as well use it! */
+    /* Perform a simulated scan */
     ss.phase_scan();                    // start the scanner phase
     ss.process_sbuf( hello_sbuf() );    // process a single sbuf
     puts("calling ss.shutdown");
-    ss.shutdown();                      // shutdown; this will write out the histograms.
+    ss.shutdown();                      // shutdown; this will write out the in-memory histogram.
 
     /* Make sure that the feature recorder output was created */
     std::vector<std::string> lines;
     std::string fname_fr   = get_tempdir()+"/sha1_bufs.txt";
     lines = getLines(fname_fr);
-    puts("feature file in place");
+    REQUIRE( lines.size() == 5);
 
     /* The sha1 scanner makes a single histogram. Make sure we got it. */
     REQUIRE( ss.histogram_count() == 1);
     std::string fname_hist = get_tempdir()+"/sha1_bufs_first5.txt";
     lines = getLines(fname_hist);
-    puts("histogram in place");
+    REQUIRE( lines.size() == 1);
 }
 
 
@@ -726,8 +751,9 @@ TEST_CASE("unicode_detection", "[unicode]") {
     REQUIRE( t8 == false);
 }
 
-TEST_CASE("finished", "[zz]") {
+TEST_CASE("Show the output directory", "[end]") {
     std::string cmd = "ls -l "+get_tempdir();
+    std::cout << cmd << "\n";
     int ret = system(cmd.c_str());
     if (ret != 0){
         throw std::runtime_error("could not list tempdir???");

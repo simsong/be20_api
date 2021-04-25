@@ -14,22 +14,16 @@
 #include <atomic>
 
 #include "feature_recorder.h"
-//#include "atomic_set_map.h"
 #include "pos0.h"
 #include "sbuf.h"
 
 class feature_recorder_file : public feature_recorder {
-    static void truncate_at(std::string &line, char ch) {
-        size_t pos = line.find(ch);
-        if (pos != std::string::npos) line.resize(pos);
-    };
-
 public:;
     feature_recorder_file(class feature_recorder_set &fs, const std::string &name);
-    virtual        ~feature_recorder_file();
+    virtual ~feature_recorder_file();
 
 private:
-    std::string  fname {};              // feature filename
+    //std::string  fname {};              // feature filename
     std::mutex   Mios {};               // mutex for IOS
     std::fstream ios {};                // where features are written
 
@@ -69,15 +63,17 @@ public:
     virtual void add_histogram(const histogram_def &def); // adds a histogram to process
 #endif
 
+    virtual void histogram_flush(AtomicUnicodeHistogram &h) override;
+
     //virtual void dump_histogram_file(const histogram_def &def,void *user,feature_recorder::dump_callback_t cb) const;
     //virtual size_t count_histograms() const;
     //virtual void dump_histogram(const histogram_def &def,void *user,feature_recorder::dump_callback_t cb) const;
-    typedef void (*xml_notifier_t)(const std::string &xmlstring);
+    //typedef void (*xml_notifier_t)(const std::string &xmlstring);
     //virtual void dump_histograms(void *user,feature_recorder::dump_callback_t cb, xml_notifier_t xml_error_notifier) const;
 
     /* Methods to get info */
     //uint64_t count() const { return count_; }
-    virtual void generate_histogram(std::ostream &os, const struct histogram_def &def);
+    //virtual void generate_histogram(std::ostream &os, const struct histogram_def &def);
 
 };
 
