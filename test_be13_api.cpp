@@ -306,11 +306,11 @@ TEST_CASE("fname in outdir", "[feature_recorder]") {
 
     const std::string n1 = ft.fname_in_outdir("bar", feature_recorder::NEXT_COUNT);
     std::filesystem::path p1(n1);
-    REQUIRE( p1.filename()=="test_bar_1.txt");
+    REQUIRE( p1.filename()=="test_bar.txt");
 
     const std::string n2 = ft.fname_in_outdir("bar", feature_recorder::NEXT_COUNT);
     std::filesystem::path p2(n2);
-    REQUIRE( p2.filename()=="test_bar_2.txt");
+    REQUIRE( p2.filename()=="test_bar_1.txt");
 }
 
 /* Read all of the lines of a file and return them as a vector */

@@ -224,11 +224,12 @@ public:;
      * I tried to make this work with std::unique_ptr, but failed.
      *
      * This did not work:
-     * std::vector<std::unique_ptr<AtomicUnicodeHistogram>> histograms {};
+     *
      *
      * this works:
      */
-    std::vector< AtomicUnicodeHistogram* > histograms {};
+    std::vector<std::unique_ptr<AtomicUnicodeHistogram>> histograms {};
+    //std::vector< AtomicUnicodeHistogram* > histograms {};
     //size_t histogram_largest() const;   // returns the memory size of the largest histogram
     virtual size_t histogram_count() { return histograms.size();}     // how many histograms it has
     virtual void histogram_add(const struct histogram_def &def); // add a new histogram

@@ -69,10 +69,10 @@ feature_recorder::feature_recorder(class feature_recorder_set &fs_, const std::s
 feature_recorder::~feature_recorder()
 {
     /* Because we no longer use the unique_ptr, we now need to delete the histograms when the feature recorder is deleted */
-    for (auto h : histograms ){
-        delete h;
-    }
-    histograms.clear();
+    //for (auto h : histograms ){
+    //delete h;
+    //}
+    //histograms.clear();
 }
 
 /**
@@ -692,10 +692,11 @@ void feature_recorder::histogram_add(const struct histogram_def &def)
         throw std::runtime_error("Cannot add histograms after features have been written.");
     }
     /* This did not work:
-     * histograms.push_back( std::make_unique<AtomicUnicodeHistogram>( def ));
+
      * This works:
      */
-    histograms.push_back( new AtomicUnicodeHistogram(def) );
+    histograms.push_back( std::make_unique<AtomicUnicodeHistogram>( def ));
+    //histograms.push_back( new AtomicUnicodeHistogram(def) );
 }
 
 /**

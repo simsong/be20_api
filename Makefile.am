@@ -40,7 +40,8 @@ AUTOMAKE_OPTIONS = subdir-objects
 #libbe13api_a_SOURCES = $(BE13_API_SRC)
 
 bin_PROGRAMS = test_be13_api
-check_PROGRAMS = test_be13_api test_be13_api_malloc_debug
+check_PROGRAMS = test_be13_api
+check_SCRIPTS = test_be13_api_malloc_debug
 TESTS = $(check_PROGRAMS)
 
 apitest: test_be13_api
