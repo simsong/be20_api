@@ -79,7 +79,6 @@ void scanner_set::register_info(const scanner_params::scanner_info *si)
      * Multiple scanners may request the same feature recorder without generating an error.
      */
     for (auto it: si->feature_names ){
-        std::cerr << "registering feature recorder " << it << "\n";
         fs.named_feature_recorder( it, true );
     }
 
@@ -87,7 +86,6 @@ void scanner_set::register_info(const scanner_params::scanner_info *si)
      * Multiple scanners may request the same histograms without generating an error.
      */
     for (auto it: si->histogram_defs ){
-        std::cerr << "registering histogram " << it << "\n";
         // Make sure that a feature recorder exists for the feature specified in the histogram
         fs.named_feature_recorder( it.feature, false ).histogram_add( it );
     }

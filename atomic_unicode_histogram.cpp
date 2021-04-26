@@ -1,8 +1,7 @@
 /**
  * atomic_unicode_histogram.cpp:
- * Maintain a histogram for Unicode strings provided as UTF-8 and UTF-16 encodings.
- * Track number of each coding provided.
- *
+ * Maintain a histogram for Unicode strings provided with either UTF-8 or UTF-16 encodings.
+ * Track number of UTF-16 encodings provided.
  *
  * Perhaps I really should just keep everything as UTF-8.
  * https://www.moria.us/articles/wchar-is-a-historical-accident/?
@@ -111,8 +110,12 @@ void AtomicUnicodeHistogram::add(const std::string &key_unknown_encoding)
 
     /* Perform the regular expressions in utf16 space, which is provided by c++ */
     std::string displayString;
+
+    std::cerr << "atomic_unicode_histogram. u32key=" << displayString << "\n";
+
     if (def.match( u32key, &displayString )){
 
+        std::cerr << "atomic_unicode_histogram. displayString=" << displayString << "\n";
         /* Escape */
         displayString = validateOrEscapeUTF8( displayString, true, true, false);
 

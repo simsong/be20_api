@@ -65,7 +65,6 @@ struct histogram_def {
         require(require_),
         suffix(suffix_),
         flags(flags_) {
-        std::cerr << "histogram_def. compiled " << pattern_ << "\n";
     }
 
 

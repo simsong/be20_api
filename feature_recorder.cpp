@@ -684,8 +684,6 @@ void feature_recorder::set_carve_mtime(const std::string &fname, const std::stri
  ** Histogram Support
  ****************************************************************/
 
-
-
 /**
  * add a new histogram to this feature recorder.
  * @param def - the histogram definition
@@ -695,12 +693,7 @@ void feature_recorder::histogram_add(const struct histogram_def &def)
     if (features_written != 0 ){
         throw std::runtime_error("Cannot add histograms after features have been written.");
     }
-    /* This did not work:
-
-     * This works:
-     */
     histograms.push_back( std::make_unique<AtomicUnicodeHistogram>( def ));
-    //histograms.push_back( new AtomicUnicodeHistogram(def) );
 }
 
 /**
@@ -709,7 +702,7 @@ void feature_recorder::histogram_add(const struct histogram_def &def)
  */
 void feature_recorder::histograms_add_feature(const std::string &feature)
 {
-    std::cerr << "add_feature( " << feature << " )\n";
+    std::cerr << "add_feature('" << feature << "')\n";
     for (auto &h: histograms ){
         h->add(feature);               // add the original feature
     }
