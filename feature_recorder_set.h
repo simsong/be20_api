@@ -156,6 +156,7 @@ public:
     size_t   histogram_count() const;  // counts histograms in all feature recorders
 
     // called when scanner_set shuts down:
+    void     feature_recorders_shutdown();
     void     histograms_generate();     // make the histograms in the output directory (and optionally in the database)
 
 #if 0

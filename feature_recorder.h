@@ -145,6 +145,9 @@ public:;
      */
     void quote_if_necessary(std::string &feature,std::string &context) const;
 
+    /* Called when the scanner set shutdown */
+    virtual void shutdown();
+
     /* File management */
 
     /* fname_in_outdir(suffix, count):

@@ -483,6 +483,10 @@ const std::string feature_recorder::hash(const sbuf_t &sbuf) const
 }
 
 
+void feature_recorder::shutdown()
+{
+}
+
 #include <iomanip>
 #if 0
 /**

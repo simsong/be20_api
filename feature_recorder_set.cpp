@@ -185,20 +185,14 @@ feature_recorder &feature_recorder_set::get_alert_recorder()
     return named_feature_recorder(feature_recorder_set::ALERT_RECORDER_NAME, false);
 }
 
-#if 0
+
 // send every enabled scanner the phase message
-void feature_recorder_set::message_enabled_scanners(scanner_params::phase_t phase)
+void feature_recorder_set::feature_recorders_shutdown()
 {
-    /* make an empty sbuf and feature recorder set */
-    scanner_params sp(phase,sbuf_t(), *this); // dummy sp to get phase
-    recursion_control_block rcb(0,"");    // dummy rcb
     for(auto const &it : frm){
-        if (it.second->enabled){
-            (it.second)(sp, rcb);
-        }
+        it.second->shutdown();
     }
 }
-#endif
 
 
 /****************************************************************

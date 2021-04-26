@@ -682,6 +682,12 @@ TEST_CASE("run", "[scanner]") {
     /* Make sure that the feature recorder output was created */
     std::vector<std::string> lines;
     std::string fname_fr   = get_tempdir()+"/sha1_bufs.txt";
+    std::string cmd = "ls -l "+get_tempdir();
+    int ret = system(cmd.c_str());
+    if (ret != 0){
+        throw std::runtime_error("could not list tempdir???");
+    }
+
     lines = getLines(fname_fr);
     REQUIRE( lines.size() == 5);
 

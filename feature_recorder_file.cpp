@@ -126,9 +126,9 @@ void feature_recorder_file::banner_stamp(std::ostream &os,const std::string &hea
 
     if (fs.get_input_fname().size()) os << "# Filename: " << fs.get_input_fname() << "\n";
 #if 0
-    if (feature_recorder::debug!=0){
+    if (feature_recorder_file::debug!=0){
         os << "# DEBUG: " << debug << " (";
-        if (feature_recorder::debug & DEBUG_PEDANTIC) os << " DEBUG_PEDANTIC ";
+        if (feature_recorder_file::debug & DEBUG_PEDANTIC) os << " DEBUG_PEDANTIC ";
         os << ")\n";
     }
 #endif
@@ -143,9 +143,14 @@ const std::string feature_recorder_file::histogram_file_header("# Histogram-File
 const std::string feature_recorder_file::bulk_extractor_version_header("# " PACKAGE_NAME "-Version: " PACKAGE_VERSION "\n");
 
 
+void feature_recorder_file::shutdown()
+{
+    ios.flush();
+}
+
 #if 0
 // add a memory histogram; assume the position in the mhistograms is stable
-void feature_recorder::enable_memory_histograms()
+void feature_recorder_file::enable_memory_histograms()
 {
     for( auto it: histogram_defs){
         mhistograms[it] = new mhistogram_t();
@@ -159,7 +164,7 @@ void feature_recorder::enable_memory_histograms()
  */
 
 /* dump_callback_test is a simple callback that just prints to stderr. It's for testing */
-int feature_recorder::dump_callback_test(void *user,const feature_recorder &fr,
+int feature_recorder_file::dump_callback_test(void *user,const feature_recorder &fr,
                                           const std::string &str,const uint64_t &count)
 {
     (void)user;
@@ -204,7 +209,7 @@ public:
 
 
 #if 0
-size_t feature_recorder::count_histograms() const
+size_t feature_recorder_file::count_histograms() const
 {
     return histogram_defs.size();
 }
@@ -277,7 +282,7 @@ void feature_recorder_file::write0(const pos0_t &pos0, const std::string &featur
 
 
 #if 0
-void feature_recorder::printf(const char *fmt, ...)
+void feature_recorder_file::printf(const char *fmt, ...)
 {
     const int maxsize = 65536;
     managed_malloc<char>p(maxsize);
@@ -338,7 +343,7 @@ void feature_recorder_file::histogram_flush(AtomicUnicodeHistogram &h)
     std::string fname = fname_in_outdir(h.def.suffix, NEXT_COUNT);
     std::cerr << "histogram_flush3 to " << fname << "\n";
     std::fstream hfile;
-    std::cerr << "feature_recorder::histogram_flush: writing histogram " << h.def << " to " << fname << "\n";
+    std::cerr << "feature_recorder_file::histogram_flush: writing histogram " << h.def << " to " << fname << "\n";
     hfile.open( fname.c_str(), std::ios_base::out);
     if (!hfile.is_open()){
         throw std::runtime_error("Cannot open feature histogram file "+fname);
@@ -450,7 +455,7 @@ void feature_recorder_file::generate_histogram(std::ostream &os, const struct hi
 
 
 #if 0
-void feature_recorder::dump_histogram(const histogram_def &def,void *user,feature_recorder::dump_callback_t cb) const
+void feature_recorder_file::dump_histogram(const histogram_def &def,void *user,feature_recorder::dump_callback_t cb) const
 {
     /* Inform that we are dumping this histogram */
     if(cb) cb(user,*this,def,"",0);
@@ -480,7 +485,7 @@ void feature_recorder::dump_histogram(const histogram_def &def,void *user,featur
 
 
 #if 0
-void feature_recorder::dump_histograms(void *user,feature_recorder::dump_callback_t cb,
+void feature_recorder_file::dump_histograms(void *user,feature_recorder::dump_callback_t cb,
                                            feature_recorder_set::xml_notifier_t xml_error_notifier) const
 {
     /* If we are recording features to SQL and we have a histogram defintion
@@ -510,7 +515,7 @@ void feature_recorder::dump_histograms(void *user,feature_recorder::dump_callbac
 
 
 #if 0
-void feature_recorder::add_histogram(const histogram_def &def)
+void feature_recorder_file::add_histogram(const histogram_def &def)
 {
     histogram_defs.insert(def);
 }

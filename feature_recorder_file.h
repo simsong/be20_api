@@ -33,6 +33,7 @@ private:
     static const std::string feature_file_header;
     static const std::string bulk_extractor_version_header;
 
+    virtual void shutdown() override;
 public:
     /* these are not threadsafe and should only be called in startup */
     //void set_carve_ignore_encoding( const std::string &encoding ){ MAINTHREAD();ignore_encoding = encoding;}
