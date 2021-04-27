@@ -19,10 +19,10 @@
 #include <unordered_set>
 
 template <class T1,class T2 > class atomic_map {
-    mutable std::mutex M {};
-    std::map<T1, T2>mymap {};
     // Mutex M protects mymap.
     // It is mutable to allow modification in const methods
+    mutable std::mutex M {};
+    std::map<T1, T2>mymap {};
 public:
     atomic_map(){}
     ~atomic_map(){}
@@ -77,8 +77,10 @@ public:
     }
     void insertIfNotContains(T1 key, T2 val){
         const std::lock_guard<std::mutex> lock(M);
+        std::cerr << "insertIfNotContains " << key << "\n";
         if (mymap.find(key)==mymap.end()) {
             mymap[key] = val;
+            std::cerr << " ** inserted! **\n";
         }
     }
     struct AMReportElement {
@@ -108,15 +110,13 @@ public:
         }                 // number of bytes used by object
     };
     typedef std::vector<AMReportElement> report;
-    report dump(bool sorted=false, bool clearMap=false) const {
+    report dump(bool sorted=false) const {
+        std::cerr << "atomic_map.h. mymap.size=" << mymap.size() << "\n";
         report r;
         {
             const std::lock_guard<std::mutex> lock(M);
             for(auto it: mymap){
                 r.push_back(AMReportElement(it.first,it.second));
-            }
-            if(clearMap){
-                r.clear();
             }
         }
         if (sorted) {

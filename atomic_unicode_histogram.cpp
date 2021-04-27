@@ -42,11 +42,13 @@ std::ostream & operator << (std::ostream &os, const AtomicUnicodeHistogram::auh_
  * @param topN - if >0, return only this many.
  * Return only the topN.
  */
-AtomicUnicodeHistogram::auh_t::report AtomicUnicodeHistogram::makeReport(size_t topN, bool clearMap)
+AtomicUnicodeHistogram::auh_t::report AtomicUnicodeHistogram::makeReport(size_t topN)
 {
-    auh_t::report rep = h.dump( true, clearMap );
+    std::cerr << "makeReport 1. topN=" << topN << " h.size=" << h.size() << "\n";
 
-    std::cerr << "makeReport. rep.size=" << rep.size() << "\n";
+    auh_t::report rep = h.dump( true );
+
+    std::cerr << "makeReport 2. rep.size=" << rep.size() << "\n";
 
     /* If we only want some of them, delete the extra */
     if ( (topN > 0)  && ( topN < rep.size()) ){
@@ -92,28 +94,35 @@ void AtomicUnicodeHistogram::add(const std::string &key_unknown_encoding)
         // and then convert it to utf32
         u32key = convert_utf8_to_utf32( convert_utf16_to_utf8(key_unknown_encoding, little_endian));
         found_utf16 = true;
+        std::cerr <<"point1\n";
     } else {
         u32key = convert_utf8_to_utf32( key_unknown_encoding );
+        std::cerr <<"point2\n";
     }
-
+    std::cerr << "len(u32key)="<<u32key.size() << "\n";
 
     /* At this point we have UTF-32, which we treat as raw unicode characters.
      * (It's almost the same.)
      *
-     * Process lowercase, numeric and regular expressions in utf32 world.
+     * We would like to process lowercase, numeric and regular expressions in utf32 world.
      * Ideally this would be done with ICU, but we do not want to assume we have ICU.
      * https://stackoverflow.com/questions/34433380/lowercase-of-unicode-character
      * https://stackoverflow.com/questions/313970/how-to-convert-stdstring-to-lower-case/24063783
      * https://en.cppreference.com/w/cpp/string/wide/towlower
      * See: http://stackoverflow.com/questions/1081456/wchar-t-vs-wint-t
+     *
+     * One possibility is the SRELL library, which is included in this repo.
+     * However, right now, we are just converting to UTF-8 and running 8-bit regular expressions.
      */
 
-    /* Perform the regular expressions in utf16 space, which is provided by c++ */
+    std::string u8key = convert_utf32_to_utf8(u32key);
+
     std::string displayString;
 
-    std::cerr << "atomic_unicode_histogram. u32key=" << displayString << "\n";
+    //std::cerr << "atomic_unicode_histogram. u32key=" << u32key << "\n";
+    std::cerr << "def=" << def << "\n";
 
-    if (def.match( u32key, &displayString )){
+    if (def.match( u8key, &displayString )){
 
         std::cerr << "atomic_unicode_histogram. displayString=" << displayString << "\n";
         /* Escape */
@@ -132,10 +141,13 @@ void AtomicUnicodeHistogram::add(const std::string &key_unknown_encoding)
         /* Add the key to the histogram. Note that this is threadsafe */
         h.insertIfNotContains(displayString, HistogramTally());
         h[displayString].count++;
+        std::cerr << "Incremented count. Now = " << h[displayString].count << "\n";
         if (found_utf16){
             h[displayString].count16++;  // track how many UTF16s were converted
         }
     }
+    std::cerr << "end of AtomicUnicodeHistogram::add. size=" << h.size() << "\n";
+
 }
 
 size_t AtomicUnicodeHistogram::bytes()               // returns the total number of bytes of the histogram,.

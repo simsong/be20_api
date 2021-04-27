@@ -235,6 +235,18 @@ TEST_CASE( "First AtomicUnicodeHistogram test", "[atomic][regex]" ){
 
     /* Now make sure things were added with the right counts */
     AtomicUnicodeHistogram::FrequencyReportVector f = h.makeReport();
+    REQUIRE( f.size() == 2);
+    REQUIRE( f.at(0).key=="foo");
+    REQUIRE( f.at(0).value.count==3);
+    REQUIRE( f.at(0).value.count16==0);
+
+    REQUIRE( f.at(1).key=="bar");
+    REQUIRE( f.at(1).value.count==1);
+    REQUIRE( f.at(1).value.count16==0);
+
+    f = h.makeReport(1);
+
+    REQUIRE( f.size() == 1);
     REQUIRE( f.at(0).key=="foo");
     REQUIRE( f.at(0).value.count==3);
     REQUIRE( f.at(0).value.count16==0);

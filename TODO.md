@@ -39,6 +39,19 @@ Oh, Boost has a unicode regular expressions too:
 
 But make a decision. What we currently have is a mess.
 
+## 2021-04-25
+Found an error in which a value from the stack was being passed by
+reference, the reference was being retained, and then it was going
+bad.
+- [ ] Review every pass by reference and change to pass by value when
+  possible. Note that pass by value may be more efficient than pass by
+  reference with modern compilers.
+- [ ] Looks like the Atomic Unicode Histogram is using an ASCII/UTF-8
+  regular expression on a UTF32 value, which isn't working. Perhaps
+  I'm wrong above, and all regular expressions should be done in UTF-8
+  and not UTF-32?
+- [ ] Perhaps move to SRELL as the regex package? http://www.akenotsuki.com/misc/srell/en/
+
 
 # Outstanding things to do
 
