@@ -35,5 +35,6 @@ class feature_recorder_sql : public feature_recorder {
 public:
     feature_recorder_sql(class feature_recorder_set &fs, const std::string &name);
     virtual ~feature_recorder_sql();
+    virtual void histogram_flush(AtomicUnicodeHistogram &h); // flush a specific histogram
 
 };

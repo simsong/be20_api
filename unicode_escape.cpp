@@ -301,7 +301,7 @@ std::u32string convert_utf16_to_utf32(const std::u16string &input)
 {
     constexpr uint16_t REPLACEMENT_CHARACTER = 0xfffd;
     std::u32string output;
-    for (int i=0; i<input.size(); i++){
+    for (size_t i=0; i<input.size(); i++){
         uint16_t uc = input[i];
         if (!is_surrogate(uc)) {
             output.push_back( uc );

@@ -701,14 +701,6 @@ void feature_recorder::histograms_add_feature(const std::string &feature)
     }
 }
 
-/** Flush a specific histogram.
- * This is how the feature recorder triggers the histogram to be written.
- */
-void feature_recorder::histogram_flush(AtomicUnicodeHistogram &h)
-{
-    throw std::runtime_error("feature_recorder::histogram_flush needs to be overridden.");
-}
-
 /**
  * flush the largest histogram to the disk. This is a way to release
  * allocated memory.

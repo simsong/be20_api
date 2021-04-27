@@ -181,4 +181,11 @@ void feature_recorder::write(const pos0_t &pos0, const std::string &feature, con
     }
 }
 #endif
+
+void feature_recorder_sql::histogram_flush(AtomicUnicodeHistogram &h)
+{
+    /* SQL histograms don't need flushing. This is a stub function */
+}
+
+
 #endif
