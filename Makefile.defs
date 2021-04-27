@@ -24,8 +24,6 @@ BE13_API_SRC= \
         $(BE13_API_DIR)sbuf.cpp \
         $(BE13_API_DIR)sbuf.h \
         $(BE13_API_DIR)sbuf_private.h \
-        $(BE13_API_DIR)sbuf_stream.cpp \
-        $(BE13_API_DIR)sbuf_stream.h \
         $(BE13_API_DIR)scanner_set.cpp \
         $(BE13_API_DIR)scanner_set.h \
         $(BE13_API_DIR)unicode_escape.cpp \

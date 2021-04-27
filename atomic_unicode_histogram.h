@@ -57,14 +57,11 @@ struct AtomicUnicodeHistogram  {
     typedef atomic_map<std::string, struct AtomicUnicodeHistogram::HistogramTally> auh_t;
     typedef std::vector<auh_t::AMReportElement> FrequencyReportVector;
 
-    AtomicUnicodeHistogram(const struct histogram_def &def_):def(def_){
-        std::cerr << "new histogram: " << def_ << "\n";
-        std::cerr << "          and: " << def << "\n";
-    }
+    AtomicUnicodeHistogram(const struct histogram_def &def_):def(def_){ }
     virtual ~AtomicUnicodeHistogram(){};
 
-    void clear();                     //empties the histogram
-    void add(const std::string &key);  // adds Unicode string to the histogram count
+    void   clear();                     //empties the histogram
+    void   add(const std::string &key);  // adds Unicode string to the histogram count
     size_t bytes();               // returns the total number of bytes of the histogram,.
 
     /** makeReport() makes a report and returns a
