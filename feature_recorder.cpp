@@ -68,11 +68,6 @@ feature_recorder::feature_recorder(class feature_recorder_set &fs_, const std::s
 
 feature_recorder::~feature_recorder()
 {
-    /* Because we no longer use the unique_ptr, we now need to delete the histograms when the feature recorder is deleted */
-    //for (auto h : histograms ){
-    //delete h;
-    //}
-    //histograms.clear();
 }
 
 /**
@@ -129,7 +124,6 @@ const std::string &feature_recorder::get_outdir() const // cannot be inline becu
 const std::string feature_recorder::fname_in_outdir(std::string suffix, int count) const
 {
     std::string base_name = fs.get_outdir() + "/" + this->name;
-    std::cerr << "base_name=" << base_name << "\n";
     if (suffix.size() > 0){
         base_name += "_"+suffix;
     }
@@ -142,7 +136,6 @@ const std::string feature_recorder::fname_in_outdir(std::string suffix, int coun
      */
     for(int i=0;i<1000000;i++){
         std::string fname = base_name + (i>0 ? "_"+std::to_string(i) : "") + ".txt";
-        std::cerr << "fname=" << fname << "i=" << i << "\n";
         int fd = open(fname.c_str(), O_WRONLY | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR);
         if ( fd >= 0 ){
             /* Created the file. close it. and return.*/
@@ -220,12 +213,10 @@ void feature_recorder::write(const pos0_t &pos0, const std::string &feature_, co
 
     if (fs.flags.pedantic){
         if (feature_.size() > fs.opt_max_feature_size){
-            std::cerr << "feature_recorder::write : feature_.size()=" << feature_.size() << "\n";
-            assert(0);
+            throw std::runtime_error(std::string("feature_recorder::write : feature_.size()=") + feature_.size());
         }
         if (context_.size() > fs.opt_max_context_size){
-            std::cerr << "feature_recorder::write : context_.size()=" << context_.size() << "\n";
-            assert(0);
+            throw std::runtime_error(std::string("feature_recorder::write : context_.size()=") + context_.size());
         }
     }
 
@@ -245,14 +236,14 @@ void feature_recorder::write(const pos0_t &pos0, const std::string &feature_, co
     if ( fs.flags.pedantic ){
         /* Check for tabs or newlines in feature and and context */
         for(size_t i=0;i<feature.size();i++){
-            if (feature[i]=='\t') assert(0);
-            if (feature[i]=='\n') assert(0);
-            if (feature[i]=='\r') assert(0);
+            if (feature[i]=='\t') throw std::runtime_error("feature contains \\t");
+            if (feature[i]=='\n') throw std::runtime_error("feature contains \\n");
+            if (feature[i]=='\r') throw std::runtime_error("feature contains \\r");
         }
         for(size_t i=0;i<context.size();i++){
-            if (context[i]=='\t') assert(0);
-            if (context[i]=='\n') assert(0);
-            if (context[i]=='\r') assert(0);
+            if (context[i]=='\t') throw std::runtime_error("context contains \\t");
+            if (context[i]=='\n') throw std::runtime_error("context contains \\n");
+            if (context[i]=='\r') throw std::runtime_error("context contains \\r");
         }
     }
 
@@ -305,8 +296,10 @@ void feature_recorder::write_buf(const sbuf_t &sbuf,size_t pos,size_t len)
 {
     if (fs.flags.debug){
         std::cerr << "*** write_buf " << name << " sbuf=" << sbuf << " pos=" << pos << " len=" << len << "\n";
-        // for debugging, set print Imagine that when pos= the location where the crash is happening.
-        // then set a breakpoint at std::cerr.
+        /*
+         * for debugging, you can set a debug at Breakpoint Reached below.
+         * This lets you fast-forward to the error condition without having to set a watch point.
+         */
         if (sbuf.pos0==debug_halt_pos0 || pos==debug_halt_pos) {
             std::cerr << "Breakpoint Reached.\n";
         }
@@ -749,11 +742,11 @@ void feature_recorder::histogram_flush_all()
  */
 void feature_recorder::histogram_merge(const struct histogram_def &def)
 {
-    std::cerr << "TODO - implement me!\n";
+    throw std::runtime_error("Implement histogram_merge");
 }
 
 void feature_recorder::histogram_merge_all()
 {
-    std::cerr << "TODO - implement me!\n";
+    throw std::runtime_error("Implement histogram_merge_all");
 }
 #endif

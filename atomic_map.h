@@ -77,10 +77,8 @@ public:
     }
     void insertIfNotContains(T1 key, T2 val){
         const std::lock_guard<std::mutex> lock(M);
-        std::cerr << "insertIfNotContains " << key << "\n";
         if (mymap.find(key)==mymap.end()) {
             mymap[key] = val;
-            std::cerr << " ** inserted! **\n";
         }
     }
     struct AMReportElement {
@@ -111,9 +109,9 @@ public:
     };
     typedef std::vector<AMReportElement> report;
     report dump(bool sorted=false) const {
-        std::cerr << "atomic_map.h. mymap.size=" << mymap.size() << "\n";
         report r;
         {
+            /* Protect access to mymap with mutex */
             const std::lock_guard<std::mutex> lock(M);
             for(auto it: mymap){
                 r.push_back(AMReportElement(it.first,it.second));
