@@ -213,10 +213,10 @@ void feature_recorder::write(const pos0_t &pos0, const std::string &feature_, co
 
     if (fs.flags.pedantic){
         if (feature_.size() > fs.opt_max_feature_size){
-            throw std::runtime_error(std::string("feature_recorder::write : feature_.size()=") + feature_.size());
+            throw std::runtime_error(std::string("feature_recorder::write : feature_.size()=") + std::to_string(feature_.size()));
         }
         if (context_.size() > fs.opt_max_context_size){
-            throw std::runtime_error(std::string("feature_recorder::write : context_.size()=") + context_.size());
+            throw std::runtime_error(std::string("feature_recorder::write : context_.size()=") + std::to_string(context_.size()));
         }
     }
 
