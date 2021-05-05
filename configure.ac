@@ -8,12 +8,12 @@
 # This file is public domain
 #
 
-AC_PREREQ(2.57)
-AC_INIT(BE13_API, 1.0.0, bugs@digitalcorpora.org)
+AC_PREREQ([2.71])
+AC_INIT([BE13_API],[1.0.0],[bugs@digitalcorpora.org])
 AC_CONFIG_MACRO_DIR(m4)
 
 AC_CONFIG_FILES([Makefile ])
-AC_CONFIG_HEADER([config.h])
+AC_CONFIG_HEADERS([config.h])
 AM_INIT_AUTOMAKE
 AM_MAINTAINER_MODE
 AC_PROG_RANLIB
@@ -38,7 +38,11 @@ m4_include([m4/slg_gcc_all_warnings.m4])
 ################################################################
 # Specify our headers
 
-AC_HEADER_STDC
+# Autoupdate added the next two lines to ensure that your configure
+# script's behavior did not change.  They are probably safe to remove.
+AC_CHECK_INCLUDES_DEFAULT
+AC_PROG_EGREP
+
 ## Check for headers used by bulk Extractor
 ## do not put pthread here
 

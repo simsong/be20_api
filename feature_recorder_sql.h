@@ -3,16 +3,12 @@
 
 #include <string>
 #include <regex>
-#include <set>
 #include <map>
 #include <thread>
-#include <iostream>
-#include <fstream>
 #include <atomic>
 
 #include "feature_recorder.h"
 #include "pos0.h"
-#include "sbuf.h"
 
 #ifdef HAVE_SQLITE3_H
 #include <sqlite3.h>
@@ -22,7 +18,7 @@ class feature_recorder_sql : public feature_recorder {
     struct besql_stmt {
         besql_stmt(const besql_stmt &)=delete;
         besql_stmt &operator=(const besql_stmt &)=delete;
-        std::mutex         Mstmt {};
+        std::mutex Mstmt {};
         sqlite3_stmt *stmt {};      // the prepared statement
         besql_stmt(sqlite3 *db3,const char *sql);
         virtual ~besql_stmt();

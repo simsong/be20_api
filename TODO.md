@@ -46,11 +46,18 @@ bad.
 - [ ] Review every pass by reference and change to pass by value when
   possible. Note that pass by value may be more efficient than pass by
   reference with modern compilers.
-- [ ] Looks like the Atomic Unicode Histogram is using an ASCII/UTF-8
+- [x] Looks like the Atomic Unicode Histogram is using an ASCII/UTF-8
   regular expression on a UTF32 value, which isn't working. Perhaps
   I'm wrong above, and all regular expressions should be done in UTF-8
-  and not UTF-32?
-- [ ] Perhaps move to SRELL as the regex package? http://www.akenotsuki.com/misc/srell/en/
+  and not UTF-32?  EDIT: Decided not to do this.
+- [x] Perhaps move to SRELL as the regex package?
+  http://www.akenotsuki.com/misc/srell/en/.  EDIT: Decided not to do this.
+
+
+## 2021-04-27
+All errors in histogram production seem to be fixed!
+- [ ] Need to decide if the first BE2.0 program will be bulk_extractor
+  of tcpflow.  Since tcpflow works, let's with with bulk_extractor.
 
 
 # Outstanding things to do
