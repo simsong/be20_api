@@ -1,4 +1,5 @@
 # be13_api
+[branch slg-dev](https://github.com/simsong/be13_api/blob/slg-dev/README.md): [![codecov](https://codecov.io/gh/simsong/be13_api/branch/slg-dev/graph/badge.svg?token=Nj8q8eo3Ji)](https://codecov.io/gh/simsong/be13_api)
 
 [![codecov](https://codecov.io/gh/simsong/be13_api/branch/slg-dev/graph/badge.svg?token=Nj8q8eo3Ji)](https://codecov.io/gh/simsong/be13_api)
 
@@ -63,3 +64,13 @@ Update to this repository to master:
 * max_depth is now defined for the `scanner_set`, not per scanner. An
   individual scanner can just look at the depth in the sbuf and abort
   if the scanner things have gone on too long.
+
+BE13_API STATUS REPORT
+======================
+I continue to port bulk_extractor, tcpflow, be13_api and dfxml to modern C++. After surveying the standards I’ve decided to go with C++17 and not C++14, as support for 17 is now widespread. (I probably don’t need 20). I am sticking with autotools, although there seems a strong reason to move to CMake. I am keeping be13_api and dfxml as a modules that are included, python-style, rather than making them stand-alone libraries that are linked against. I’m not 100% sure that’s the correct decision, though.
+
+The project is taking longer than anticipated because I am also doing a general code refactoring. The main thing that is taking time is figuring out how to detangle all of the C++ objects having to do with parser options and configuration.
+
+Given that tcpflow and bulk_extractor both use be13_api, my attention has shifted to using tcpflow to get be13_api operational, as it is a simpler program. I’m about three quarters of the way through now. I anticipate having something finished before the end of 2020.
+
+--- Simson Garfinkel, October 18, 2020
