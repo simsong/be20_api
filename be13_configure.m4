@@ -9,7 +9,7 @@ AC_C_BIGENDIAN([AC_DEFINE(BE13_API_BIGENDIAN, 1, [Big Endian aarchitecutre - lik
                 AC_DEFINE(BE13_API_LITTLEENDIAN, 1, [Little Endian aarchitecutre - like x86]))
 
 
-AC_CHECK_HEADERS([dirent.h dlfcn.h err.h errno.h fcntl.h linux/if_ether.h net/ethernet.h netinet/if_ether.h netinet/in.h pcap.h pcap/pcap.h pthread.h sqlite3.h stdint.h stdio.h stdlib.h string.h sys/cdefs.h sys/mman.h sys/stat.h sys/time.h sys/types.h unistd.h windows.h windows.h windowsx.h winsock2.h wpcap/pcap.h mach-o/dyld.h])
+AC_CHECK_HEADERS([dirent.h dlfcn.h err.h errno.h fcntl.h limits.h limits/limits.h linux/if_ether.h net/ethernet.h netinet/if_ether.h netinet/in.h pcap.h pcap/pcap.h pthread.h sqlite3.h stdint.h stdio.h stdlib.h string.h sys/cdefs.h sys/mman.h sys/stat.h sys/time.h sys/types.h unistd.h windows.h windows.h windowsx.h winsock2.h wpcap/pcap.h mach-o/dyld.h])
 
 AC_CHECK_FUNCS([gmtime_r ishexnumber isxdigit localtime_r unistd.h mmap err errx warn warnx pread64 pread strptime _lseeki64 utimes ])
 

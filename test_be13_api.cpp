@@ -79,6 +79,9 @@ std::string get_tempdir()
 #ifdef HAVE_LIMITS_H
 #include <limits.h>
 #endif
+#ifdef HAVE_LIMITS_LIMITS_H
+#include <limits.h>
+#endif
 
 std::string get_exe()
 {
