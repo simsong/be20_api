@@ -9,7 +9,7 @@
 # It's only for people who check out the git repo
 
 EXTRA_DIST = \
-	slg_gcc_all_warnings.m4
+	m4/slg_gcc_all_warnings.m4
 
 ETAGS = etags-emacs
 ACLOCAL_AMFLAGS = -I m4
