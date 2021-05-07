@@ -50,5 +50,4 @@ AC_PROG_EGREP
 m4_include([dfxml/src/dfxml_configure.m4])
 m4_include([be13_configure.m4])
 
-
 AC_OUTPUT

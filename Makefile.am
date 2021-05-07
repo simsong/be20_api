@@ -9,7 +9,11 @@
 # It's only for people who check out the git repo
 
 EXTRA_DIST = \
-	m4/slg_gcc_all_warnings.m4
+	bootstrap.sh \
+	m4/slg_gcc_all_warnings.m4 \
+	test_be13_api_malloc_debug \
+	tests/unilang.htm \
+	tests/unilang8.htm
 
 ETAGS = etags-emacs
 ACLOCAL_AMFLAGS = -I m4
@@ -42,23 +46,59 @@ check_PROGRAMS = test_be13_api
 check_SCRIPTS = test_be13_api_malloc_debug
 TESTS = $(check_PROGRAMS)
 
-apitest: test_be13_api
+# apitest: test_be13_api
 
 # Slowly add modules as tests are written for them.
+#	feature_recorder_mhist.cpp
+#	feature_recorder_mhist.h
+
 test_be13_api_SOURCES = $(DFXML_WRITER) test_be13_api.cpp catch.hpp \
-	regex_vector.h regex_vector.cpp \
-	unicode_escape.h unicode_escape.cpp \
-	scanner_config.h scanner_config.cpp \
-	scanner_set.h scanner_set.cpp \
-	scanner_params.h scanner_params.cpp \
-	packet_info.h pcap_fake.h \
-	histogram_def.h  histogram_def.cpp \
-	atomic_unicode_histogram.h atomic_unicode_histogram.cpp \
-	feature_recorder_sql.h feature_recorder_sql.cpp \
-	feature_recorder_file.h feature_recorder_file.cpp \
-	feature_recorder_set.h 	feature_recorder_set.cpp \
-	feature_recorder.h 	feature_recorder.cpp \
-	word_and_context_list.h  word_and_context_list.cpp \
-	scan_sha1_test.h scan_sha1_test.cpp \
-	sbuf.h sbuf.cpp \
-	utils.h
+	aftimer.h \
+	atomic_map.h \
+	atomic_set.h \
+	atomic_unicode_histogram.cpp \
+	atomic_unicode_histogram.h \
+	bulk_extractor_i.h \
+	char_class.h \
+	feature_recorder.cpp \
+	feature_recorder.h 	\
+	feature_recorder_file.cpp \
+	feature_recorder_file.h \
+	feature_recorder_set.cpp \
+	feature_recorder_set.h 	\
+	feature_recorder_sql.cpp \
+	feature_recorder_sql.h \
+	histogram_def.cpp \
+	histogram_def.h  \
+	net_ethernet.h \
+	packet_info.h \
+	pcap_fake.cpp \
+	pcap_fake.h \
+	pos0.h \
+	regex_vector.cpp \
+	regex_vector.h \
+	sbuf.cpp \
+	sbuf.h \
+	sbuf_private.h \
+	scan_sha1_test.cpp \
+	scan_sha1_test.h \
+	scanner_config.cpp \
+	scanner_config.h \
+	scanner_params.cpp \
+	scanner_params.h \
+	scanner_set.cpp \
+	scanner_set.h \
+	unicode_escape.cpp \
+	unicode_escape.h \
+	utf8.h \
+	utf8/checked.h \
+	utf8/core.h \
+	utf8/cpp11.h \
+	utf8/cpp17.h \
+	utf8/LICENSE \
+	utf8/README.md \
+	utf8/unchecked.h \
+	utils.cpp \
+	utils.h \
+	word_and_context_list.cpp \
+	word_and_context_list.h
