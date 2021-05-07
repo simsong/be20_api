@@ -9,7 +9,6 @@
 # It's only for people who check out the git repo
 
 EXTRA_DIST = \
-	cester_configure.m4 \
 	slg_gcc_all_warnings.m4
 
 ETAGS = etags-emacs
