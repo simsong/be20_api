@@ -70,3 +70,8 @@ All errors in histogram production seem to be fixed!
 - [ ] Merge of all outstanding histograms can be done single-threaded
       or multi-threaded.
 - [ ] Make sure there is an alert recorder if dup_data_alerts is set
+
+## 2021-05-08
+- [ ] Get scanner commands moved from scanner_set to scanner_config.
+- [ ] Implement processing of scanner commands to scanner set.
+- [ ] Implement tests

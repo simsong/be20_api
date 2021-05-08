@@ -4,8 +4,8 @@
  * class to hold name=value configurations for all of the scanners.
  */
 
-
-/* Config is a set of name=value pairs from the command line.
+/* Config is a set of name=value pairs from the command line and the list of all scanners that
+ * are enabled or disabled.
  * All of the scanners get the same config, so the names that the scanners want need to be unique.
  * We could have adopted a system where each scanner had its own configuraiton space, but we didn't.
  * Scanner histograms are added to 'histograms' by machinery.
@@ -21,7 +21,7 @@
 
 struct  scanner_config {
     typedef std::map<std::string,std::string>  config_t ; // configuration for scanner passed in
-    config_t  namevals{};             //  (input) name=val map
+    config_t  namevals {};             //  (input) name=val map
     std::string help_str {};          // help string that is built
     //std::stringstream helpstream{};
     //static std::string MAX_DEPTH;
@@ -53,6 +53,24 @@ struct  scanner_config {
 #endif
     virtual void get_config( const std::string &name, bool *val,        const std::string &help);
     //virtual int max_depth() const;
+
+    /**
+     * Commands whether to enable or disable a scanner.
+     * Typically created from parsing command-line arguments
+     */
+    struct scanner_command {
+        enum command_t {DISABLE_ALL=0,ENABLE_ALL,DISABLE,ENABLE};
+        scanner_command(const scanner_command &sc):command(sc.command),name(sc.name){};
+        scanner_command(scanner_command::command_t c,const std::string &n):command(c),name(n){};
+        command_t command {};
+        std::string name  {};
+    };
+
+    // The commands for those scanners (enable, disable, options, etc.
+    typedef std::vector<struct scanner_command> scanner_commands_t;
+    scanner_commands_t scanner_commands {};
+
+
 };
 
 #endif

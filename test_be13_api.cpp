@@ -645,7 +645,9 @@ TEST_CASE("enable/disable", "[scanner]") {
     REQUIRE( ss.is_scanner_enabled(SHA1_TEST) == true );
     REQUIRE( ss.is_find_scanner_enabled() == false); // only sha1 scanner is enabled
 
-    /* Make sure that the scanner set has a two feature recorders: the alert recorder and the sha1_bufs recorder */
+    /* Make sure that the scanner set has a two feature recorders:
+     * the alert recorder and the sha1_bufs recorder
+     */
     REQUIRE( ss.feature_recorder_count() == 2);
 
     /* Make sure it has a single histogram */
