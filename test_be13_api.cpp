@@ -109,6 +109,13 @@ std::string get_exe()
 
 std::string tests_dir()
 {
+    /* if srcdir is defined, then return srcdir/tests */
+    const char *srcdir = getenv("srcdir");
+    if (srcdir) {
+        return std::string(srcdir) + "/tests";
+    }
+
+    /* Otherwise, return relative to this executable */
     std::filesystem::path p( get_exe() );
     return  p.parent_path().string() + "/tests";
 }

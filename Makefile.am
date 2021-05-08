@@ -12,6 +12,9 @@ EXTRA_DIST = \
 	bootstrap.sh \
 	m4/slg_gcc_all_warnings.m4 \
 	test_be13_api_malloc_debug \
+	tests/Makefile \
+	tests/random.dat \
+	tests/regex_demo.cpp \
 	tests/unilang.htm \
 	tests/unilang8.htm
 

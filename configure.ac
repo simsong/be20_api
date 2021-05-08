@@ -14,6 +14,10 @@ AC_CONFIG_MACRO_DIR(m4)
 
 AC_CONFIG_FILES([Makefile ])
 AC_CONFIG_HEADERS([config.h])
+
+AC_CONFIG_AUX_DIR([build-aux])
+
+
 AM_INIT_AUTOMAKE
 AM_MAINTAINER_MODE
 AC_PROG_RANLIB
@@ -33,6 +37,9 @@ AC_LANG_POP()
 
 # Turn on all warnings
 m4_include([m4/slg_gcc_all_warnings.m4])
+
+# Extra files
+AC_REQUIRE_AUX_FILE([foobar.txt])
 
 
 ################################################################
