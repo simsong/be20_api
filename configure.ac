@@ -38,10 +38,6 @@ AC_LANG_POP()
 # Turn on all warnings
 m4_include([m4/slg_gcc_all_warnings.m4])
 
-# Extra files
-AC_REQUIRE_AUX_FILE([foobar.txt])
-
-
 ################################################################
 # Specify our headers
 
