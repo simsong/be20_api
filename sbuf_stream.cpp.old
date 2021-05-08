@@ -167,12 +167,12 @@ int64_t sbuf_stream::get64i(sbuf_t::byte_order_t bo) {
 /*
  * string readers
  */
-void sbuf_stream::getUTF8(size_t num_octets_requested, string &utf8_string) {
+void sbuf_stream::getUTF8(size_t num_octets_requested, std::string &utf8_string) {
     sbuf.getUTF8(num_octets_requested, utf8_string);
     offset += utf8_string.length();
     return;
 }
-void sbuf_stream::getUTF8(string &utf8_string) {
+void sbuf_stream::getUTF8( std::string &utf8_string) {
     sbuf.getUTF8(offset, utf8_string);
     size_t num_bytes = utf8_string.length();
     if (num_bytes > 0) {
@@ -183,12 +183,12 @@ void sbuf_stream::getUTF8(string &utf8_string) {
     return;
 }
 
-void sbuf_stream::getUTF16(size_t code_units_requested, wstring &utf16_string) {
+void sbuf_stream::getUTF16( size_t code_units_requested, std::wstring &utf16_string) {
     sbuf.getUTF16(offset, code_units_requested, utf16_string);
     offset += utf16_string.length() * 2;
     return;
 }
-void sbuf_stream::getUTF16(wstring &utf16_string) {
+void sbuf_stream::getUTF16( std::wstring &utf16_string) {
     sbuf.getUTF16(offset, utf16_string);
     size_t num_bytes = utf16_string.length() * 2;
     if (num_bytes > 0) {

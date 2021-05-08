@@ -2,13 +2,12 @@
 /**
  * unicode_escape.cpp:
  * Escape unicode that is not valid.
- * 
+ *
  * References:
  * http://www.ietf.org/rfc/rfc3987.txt
  * http://en.wikipedia.org/wiki/UTF-8
  *
  * @author Simson Garfinkel
- *
  *
  * The software provided here is released by the Naval Postgraduate
  * School, an agency of the U.S. Department of Navy.  The software
@@ -25,31 +24,19 @@
  * not subject to copyright.
  */
 
-#ifndef PACKAGE_NAME
-#include "config.h"
-#endif
-
-#include "unicode_escape.h"
-
-#include <stdio.h>
-#include <assert.h>
+#include <cstdio>
+#include <cassert>
 #include <iostream>
 #include <fstream>
+#include <cstdint>
+#include <iterator>
 
-#ifndef __STDC_FORMAT_MACROS
-#define __STDC_FORMAT_MACROS
-#endif
 
-#ifdef HAVE_STDINT_H
-#include <stdint.h>
-#endif
-
-#define IS_IN_RANGE(c, f, l)    (((c) >= (f)) && ((c) <= (l)))
-
+#include "config.h"
+#include "unicode_escape.h"
 #include "utf8.h"
 
-//extern int debug;
-
+/**************** BULK_EXTRACTOR 1.0 CODE ****************/
 std::string hexesc(unsigned char ch)
 {
     char buf[10];
@@ -89,16 +76,16 @@ bool valid_utf8codepoint(uint32_t unichar)
     if(unichar > 0x13fff && unichar < 0x16000) return false;
     if(unichar > 0x16fff && unichar < 0x1b000) return false;
     if(unichar > 0x1bfff && unichar < 0x1d000) return false;
-        
+
     // Plane 2
     if(unichar > 0x2bfff && unichar < 0x2f000) return false;
-    
+
     // Planes 3--13 are unassigned
     if(unichar >= 0x30000 && unichar < 0xdffff) return false;
 
     // Above Plane 16 is invalid
     if(unichar > 0x10FFFF) return false;        // above plane 16?
-    
+
     return true;                        // must be valid
 }
 
@@ -109,25 +96,25 @@ bool valid_utf8codepoint(uint32_t unichar)
  * Note:
  *    - if not escaping but an invalid encoding is present and DEBUG_PEDANTIC is set, then assert() is called.
  *    - DO NOT USE wchar_t because it is 16-bits on Windows and 32-bits on Unix.
- * Output: 
+ * Output:
  *   - UTF8 string.  If do_escape is set, then corruptions are escaped in \xFF notation where FF is a hex character.
  */
 
-//int count=0;
-bool validateOrEscapeUTF8_validate=false;
-std::string validateOrEscapeUTF8(const std::string &input, bool escape_bad_utf8,bool escape_backslash)
+std::string validateOrEscapeUTF8(const std::string &input,
+                                 bool escape_bad_utf8,
+                                 bool escape_backslash,
+                                 bool validateOrEscapeUTF8_validate)
 {
-    // 
     // skip the validation if not escaping and not DEBUG_PEDANTIC
-    if (escape_bad_utf8==false && escape_backslash==false && !validateOrEscapeUTF8_validate){
+    if (escape_bad_utf8==false && escape_backslash==false && validateOrEscapeUTF8_validate==false){
         return input;
     }
-        
+
     // validate or escape input
     std::string output;
-    for(std::string::size_type i =0; i< input.length(); ) {
+    for(std::string::size_type i = 0; i< input.length(); ) {
         uint8_t ch = (uint8_t)input.at(i);
-        
+
         // utf8 1 byte prefix (0xxx xxxx)
         if((ch & 0x80)==0x00){          // 00 .. 0x7f
             if(ch=='\\' && escape_backslash){   // escape the escape character as \x92
@@ -155,13 +142,13 @@ std::string validateOrEscapeUTF8(const std::string &input, bool escape_bad_utf8,
             // check for valid 2-byte encoding
             if(valid_utf8codepoint(unichar)
                && ((uint8_t)input.at(i)!=0xc0)
-               && (unichar >= 0x80)){ 
+               && (unichar >= 0x80)){
                 output += (uint8_t)input.at(i++);       // byte1
                 output += (uint8_t)input.at(i++);       // byte2
                 continue;
             }
         }
-                
+
         // utf8 3 bytes (1110 xxxx prefix)
         if(((ch & 0xf0) == 0xe0)
            && (i+2 < input.length())
@@ -170,17 +157,17 @@ std::string validateOrEscapeUTF8(const std::string &input, bool escape_bad_utf8,
             uint32_t unichar = (((uint8_t)input.at(i) & 0x0f) << 12)
                 | (((uint8_t)input.at(i+1) & 0x3f) << 6)
                 | (((uint8_t)input.at(i+2) & 0x3f));
-            
+
             // check for a valid 3-byte code point
             if(valid_utf8codepoint(unichar)
-               && unichar>=0x800){                     
+               && unichar>=0x800){
                 output += (uint8_t)input.at(i++);       // byte1
                 output += (uint8_t)input.at(i++);       // byte2
                 output += (uint8_t)input.at(i++);       // byte3
                 continue;
             }
         }
-            
+
         // utf8 4 bytes (1111 0xxx prefix)
         if((( ch & 0xf8) == 0xf0)
            && (i+3 < input.length())
@@ -212,121 +199,147 @@ std::string validateOrEscapeUTF8(const std::string &input, bool escape_bad_utf8,
                 std::ofstream os("bad_unicode.txt");
                 os << input << "\n";
                 os.close();
-                std::cerr << "INTERNAL ERROR: bad unicode stored in bad_unicode.txt\n";
-                assert(0);
+                throw std::runtime_error("INTERNAL ERROR: bad unicode stored in bad_unicode.txt\n");
             }
         }
     }
     return output;
 }
 
-#ifdef STANDALONE
-
-void show(const std::string &ugly)
+/* static */
+bool looks_like_utf16(const std::string &str,bool &little_endian)
 {
-    for(size_t j=0;j<ugly.size();j++){
-        printf("%02X ",(unsigned char)ugly[j]);
+    if ((uint8_t)str[0]==0xff && (uint8_t)str[1]==0xfe){
+	little_endian = true;
+	return true; // begins with FFFE
     }
+    if ((uint8_t)str[0]==0xfe && (uint8_t)str[1]==0xff){
+	little_endian = false;
+	return true; // begins with FEFF
+    }
+    /* If none of the even characters are NULL and some of the odd characters are NULL, it's UTF-16 */
+    uint32_t even_null_count = 0;
+    uint32_t odd_null_count = 0;
+    for(size_t i=0;i+1<str.size();i+=2){
+	if (str[i]==0) even_null_count++;
+	if (str[i+1]==0) odd_null_count++;
+        /* TODO: Should we look for FFFE or FEFF and act accordingly ? */
+    }
+    if(even_null_count==0 && odd_null_count>1){
+	little_endian = true;
+	return true;
+    }
+    if(odd_null_count==0 && even_null_count>1){
+	little_endian = false;
+	return true;
+    }
+    return false;
 }
 
-void check(const std::string &ugly,bool verbose)
+/**
+ * Converts a utf16 with a byte order to utf8.
+ *
+ */
+/* static */
+std::string convert_utf16_to_utf8(const std::string &key,bool little_endian)
 {
-    std::string res = validateOrEscapeUTF8(ugly,true);
-    std::wstring utf16;
-    /* Now check to make sure it is valid UTF8 */
+    /* re-image this string as UTF16*/
+    std::u16string utf16;
+    for(size_t i=0;i<key.size();i+=2){
+        if (little_endian) utf16.push_back(key[i] | (key[i+1]<<8));
+        else utf16.push_back(key[i]<<8 | (key[i+1]));
+    }
+    /* Now convert it to a UTF-8;
+     * set tempKey to be the utf-8 string that will be erased.
+     */
+    std::string tempKey;
+    utf8::utf16to8(utf16.begin(),utf16.end(),std::back_inserter(tempKey));
+    /* Erase any nulls if present */
+    while(tempKey.size()>0) {
+        size_t nullpos = tempKey.find('\000');
+        if (nullpos==std::string::npos) break;
+        tempKey.erase(nullpos,1);
+    }
+    return tempKey;
+}
+
+
+std::string convert_utf16_to_utf8(const std::string &key)
+{
+    bool little_endian=false;
+    if(looks_like_utf16(key,little_endian)){
+        return convert_utf16_to_utf8(key, little_endian);
+    }
+    throw utf8::invalid_utf16(0);
+}
+
+std::string make_utf8(const std::string &str)
+{
     try {
-        utf8::utf8to16(res.begin(),res.end(),std::back_inserter(utf16));
-        if(verbose){
-            show(ugly);
-            printf(" successfully encodes as ");
-            show(res);
-            printf(" (\"%s\")\n",res.c_str());
-        }
-    } catch(utf8::exception){
-        printf("utf8 error hex sequence: ");
-        show(ugly);
-        printf(" encoded as: ");
-        show(res);
-        printf("\n");
-    } catch(std::exception){
-        std::cout << "other exception \n";
+        return convert_utf16_to_utf8(str);
+    }
+    catch (const utf8::invalid_utf16 &){
+        return validateOrEscapeUTF8(str, true, true, true);
     }
 }
 
-void testfile(const char *fn)
+/*
+ * BULK_EXTRACTOR 2 code uses UTF32, but the utf8 package doesn't provide utf16 to utf32 conversion
+ */
+
+// https://stackoverflow.com/questions/23919515/how-to-convert-from-utf-16-to-utf-32-on-linux-with-std-library
+inline int is_surrogate(uint16_t uc)      { return (uc - 0xd800u) < 2048u; }
+inline int is_high_surrogate(uint16_t uc) { return (uc & 0xfffffc00) == 0xd800; }
+inline int is_low_surrogate(uint16_t uc)  { return (uc & 0xfffffc00) == 0xdc00; }
+
+inline uint32_t surrogate_to_utf32(uint16_t high, uint16_t low) {
+    return (high << 10) + low - 0x35fdc00;
+}
+
+
+std::u32string convert_utf16_to_utf32(const std::u16string &input)
 {
-    validateOrEscapeUTF8_validate = true;
-
-    std::cout << "testing file " << fn << "\n";
-    ifstream i(fn);
-    if(i.is_open()){
-        string line;
-        getline(i,line);
-        std::cout << "line length: " << line.size() << "\n";
-        std::cout << "calling ValidateOrEscapeUTF8 to escape...\n";
-        string l2 = validateOrEscapeUTF8(line,true);
-        std::cout << "     length l2: " << l2.size() << "\n";
-        std::cout << "calling ValidateOrEscapeUTF8 to validate...\n";
-        validateOrEscapeUTF8(l2,false);
-        std::cout << "calling check...\n";
-        check(l2,false);
+    constexpr uint16_t REPLACEMENT_CHARACTER = 0xfffd;
+    std::u32string output;
+    for (size_t i=0; i<input.size(); i++){
+        uint16_t uc = input[i];
+        if (!is_surrogate(uc)) {
+            output.push_back( uc );
+            continue;
+        }
+        if (is_high_surrogate(uc) && (i+1) < input.size() && is_low_surrogate(input[i+1])){
+            output.push_back( surrogate_to_utf32( uc, input[++i] ) );
+            continue;
+        }
+        output.push_back(REPLACEMENT_CHARACTER);
     }
-    std::cout << "done\n";
-    exit(0);
+    return output;
 }
 
-int main(int argc,char **argv)
+/*
+ * https://stackoverflow.com/questions/42899410/convert-utf-32-wide-char-to-utf-16-wide-char-in-linux-for-supplementary-plane-ch
+ */
+std::u16string convert_utf32_to_utf16(const std::u32string &str)
 {
-    std::cout << "Unicode Escape Regression Tester\n";
-    int ch;
-    while ((ch = getopt(argc,argv,"r:h")) != -1){
-        switch(ch) {
-        case 'r':
-            testfile(optarg);
-            break;
+    /* The conversion from UTF-32 to UTF-16 might possibly require surrogates.
+     * A surrogate pair suffices to represent all wide characters, because all
+     * characters outside the range will be mapped to the sentinel value
+     * U+FFFD.  Add one character for the terminating NUL.
+     */
+    std::u16string result;
+
+    for ( auto ch: str) {
+        if ( ch < 0 || ch > 0x10FFFF || (ch >= 0xD800 && ch <= 0xDFFF) ) {
+            // Invalid code point.  Replace with sentinel, per Unicode standard:
+            constexpr char16_t sentinel = u'\uFFFD';
+            result.push_back(sentinel);
+        } else if ( ch < 0x10000UL ) { // In the BMP.
+            result.push_back(static_cast<char16_t>(ch));
+        } else {
+            const char16_t leading = static_cast<char16_t>( ((ch-0x10000UL) / 0x400U) + 0xD800U );
+            const char16_t trailing = static_cast<char16_t>( ((ch-0x10000UL) % 0x400U) + 0xDC00U );
+            result.append({leading, trailing});
         }
     }
-
-
-    const char buf[] = {0xef, 0xbe, 0xad, 0x5c};
-    check(std::string(buf,1),true);
-    check(std::string(buf,2),true);
-    check(std::string(buf,3),true);
-    check(std::string(buf,4),true);
-
-    /* Runs 16 copies simultaneously... */
-    uint32_t max=0xFFFFFFFF;            // 2^32-1
-    for(uint64_t prefix=0;prefix<max;prefix+=0x10000000){
-        pid_t child = fork();
-        if(child==0){
-            /* Try all 4-byte sequences in the prefix range...*/
-            for(uint32_t k=0;k<=0x0FFFFFFF;k++){
-                uint32_t i=prefix+k;
-                std::string ugly((char *)&i,4);
-                check(ugly,false);
-                if((i & 0x00FFFFFF)==0x00FFFFFF){
-                    printf("pid=%d prefix=%x i=%x\n",getpid(),(uint32_t)prefix,(uint32_t)i);
-                    fflush(stdout);
-                }
-            }
-            exit(0);
-        }
-        printf("Launched PID %d\n",child);
-        fflush(stdout);
-    }
-    for(int i=0;i<16;i++){
-        int s=0;
-        pid_t p = wait(&s);
-        printf("pid %d finished with exit code %d\n",p,s);
-    }
-    std::cout << "done\n";
-    exit(1);
-
-    /* Generic fuzzing. Try random attempts */
-    std::string line;
-    while(getline(std::cin,line)){
-        std::cout << validateOrEscapeUTF8(line,true) << "\n";
-    }
-        
+    return result;
 }
-#endif

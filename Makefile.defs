@@ -1,26 +1,31 @@
+# including be13_api/Makefile.defs
 BE13_API_SRC= \
-        $(BE13_API_DIR)atomic_set_map.h \
         $(BE13_API_DIR)aftimer.h \
-        $(BE13_API_DIR)regex_vector.cpp \
-        $(BE13_API_DIR)regex_vector.h \
+        $(BE13_API_DIR)atomic_histogram.h \
+        $(BE13_API_DIR)atomic_map.h \
+        $(BE13_API_DIR)atomic_set.h \
+        $(BE13_API_DIR)atomic_unicode_histogram.cpp \
+        $(BE13_API_DIR)atomic_unicode_histogram.h \
         $(BE13_API_DIR)bulk_extractor_i.h \
-        $(BE13_API_DIR)cppmutex.h \
         $(BE13_API_DIR)feature_recorder.cpp \
         $(BE13_API_DIR)feature_recorder.h \
         $(BE13_API_DIR)feature_recorder_set.cpp \
         $(BE13_API_DIR)feature_recorder_set.h \
-        $(BE13_API_DIR)feature_recorder_sql.cpp \
-        $(BE13_API_DIR)histogram.h \
-        $(BE13_API_DIR)histogram.cpp \
+        $(BE13_API_DIR)fpos0.h \
+        $(BE13_API_DIR)histogram_def.cpp \
+        $(BE13_API_DIR)histogram_def.h \
         $(BE13_API_DIR)net_ethernet.h \
         $(BE13_API_DIR)pcap_fake.cpp \
         $(BE13_API_DIR)pcap_fake.h \
         $(BE13_API_DIR)plugin.cpp \
+        $(BE13_API_DIR)plugin.h \
+        $(BE13_API_DIR)regex_vector.cpp \
+        $(BE13_API_DIR)regex_vector.h \
         $(BE13_API_DIR)sbuf.cpp \
         $(BE13_API_DIR)sbuf.h \
         $(BE13_API_DIR)sbuf_private.h \
-        $(BE13_API_DIR)sbuf_stream.cpp \
-        $(BE13_API_DIR)sbuf_stream.h \
+        $(BE13_API_DIR)scanner_set.cpp \
+        $(BE13_API_DIR)scanner_set.h \
         $(BE13_API_DIR)unicode_escape.cpp \
         $(BE13_API_DIR)unicode_escape.h \
         $(BE13_API_DIR)utf8.h \
@@ -30,7 +35,4 @@ BE13_API_SRC= \
         $(BE13_API_DIR)utils.cpp \
         $(BE13_API_DIR)utils.h \
         $(BE13_API_DIR)word_and_context_list.cpp \
-        $(BE13_API_DIR)word_and_context_list.h 
-
-
-
+        $(BE13_API_DIR)word_and_context_list.h

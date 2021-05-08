@@ -7,6 +7,7 @@
 *.swp
 *.trs
 *~
+build-aux/
 .DS_Store
 .deps
 .dirstamp
@@ -34,3 +35,14 @@ tests/Makefile
 *.gcda
 *.gcno
 out/
+test_be13api_catch2
+ar-lib
+test-driver
+config.guess
+config.sub
+test_be13_api
+*.d
+*.zip
+x.cpp
+TAGS
+*.tar.gz

@@ -1,24 +1,17 @@
 #ifndef __AFTIMER_H__
 #define __AFTIMER_H__
 
-#ifdef __cplusplus
-#ifndef WIN32
-#ifndef __STDC_FORMAT_MACROS
-#define __STDC_FORMAT_MACROS
-#endif
-#include <inttypes.h>
-#include <sys/time.h>
-#endif
-#include <sys/types.h>
-#include <stdio.h>
+#include <cinttypes>
 #include <string>
+#include <sys/time.h>
+
 
 class aftimer {
-    struct timeval t0;
-    bool running;
-    long total_sec;
-    long total_usec;
-    double lap_time_;			// time from when we last did a "stop"
+    struct timeval t0 {};
+    bool running {};
+    long total_sec {};
+    long total_usec {};
+    double lap_time_ {};			// time from when we last did a "stop"
 public:
     aftimer():t0(),running(false),total_sec(0),total_usec(0),lap_time_(0){}
 
@@ -35,40 +28,44 @@ public:
     std::string eta_time(double fraction_done) const; // the actual time
 };
 
-/* This code in part from 
+/* This code is from:
  * http://social.msdn.microsoft.com/Forums/en/vcgeneral/thread/430449b3-f6dd-4e18-84de-eebd26a8d668
+ * and:
+ * https://gist.github.com/ugovaretto/5875385
  */
 
-#if defined(WIN32) || defined(__MINGW32__)
-#  include <winsock2.h>
-#  include <windows.h>			
-#  ifndef DELTA_EPOCH_IN_MICROSECS
-#    if defined(_MSC_VER) || defined(_MSC_EXTENSIONS)
-#      define DELTA_EPOCH_IN_MICROSECS  11644473600000000Ui64
-#    else
-#      define DELTA_EPOCH_IN_MICROSECS  11644473600000000ULL
-#    endif
-#  endif
-#endif
-
-inline void timestamp(struct timeval *t)
-{
 #ifdef WIN32
+inline int getimeofday(struct timeval *tv, struct timezone *tz)
+{
     FILETIME ft;
     GetSystemTimeAsFileTime(&ft);
     unsigned __int64 tmpres = 0;
     tmpres |= ft.dwHighDateTime;
     tmpres <<= 32;
     tmpres |= ft.dwLowDateTime;
- 
+
     /*converting file time to unix epoch*/
-    tmpres -= DELTA_EPOCH_IN_MICROSECS; 
+    tmpres -= DELTA_EPOCH_IN_MICROSECS;
     tmpres /= 10;  /*convert into microseconds*/
     t->tv_sec = (long)(tmpres / 1000000UL);
     t->tv_usec = (long)(tmpres % 1000000UL);
-#else
+
+    if (NULL != tz) {
+        if (!tzflag)    {
+            _tzset();
+            tzflag++;
+        }
+        tz->tz_minuteswest = _timezone / 60;
+        tz->tz_dsttime = _daylight;
+    }
+    return 0;
+}
+#endif
+
+
+inline void timestamp(struct timeval *t)
+{
     gettimeofday(t,NULL);
-#endif    
 }
 
 inline void aftimer::start()
@@ -109,7 +106,7 @@ inline std::string aftimer::hms(long t) const
 {
     char   buf[64];
     int    days = t / (60*60*24);
-    
+
     t = t % (60*60*24);			/* what's left */
 
     int    h = t / 3600;
@@ -158,7 +155,7 @@ inline std::string aftimer::eta_text(double fraction_done) const
 /**
  * Returns the time when data is due.
  */
-inline std::string aftimer::eta_time(double fraction_done) const 
+inline std::string aftimer::eta_time(double fraction_done) const
 {
     time_t t = time_t(eta(fraction_done)) + time(0);
     struct tm tm;
@@ -167,12 +164,9 @@ inline std::string aftimer::eta_time(double fraction_done) const
 #else
     tm = *localtime(&t);
 #endif
-    
     char buf[64];
     snprintf(buf,sizeof(buf),"%02d:%02d:%02d",tm.tm_hour,tm.tm_min,tm.tm_sec);
     return std::string(buf);
 }
-
-#endif
 
 #endif

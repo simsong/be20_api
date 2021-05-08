@@ -1,0 +1,10 @@
+#!/bin/sh
+# https://developer.apple.com/library/archive/documentation/Performance/Conceptual/ManagingMemory/Articles/MallocDebug.html
+export MallocStackLogging=1
+export MallocStackLoggingNoCompact=1
+export MallocScribble=1
+export MallocPreScribble=1
+export MallocGuardEdges=1
+#export MallocCheckHeapStart=1000
+#export MallocCheckHeapEach=100
+./test_be13_api $*

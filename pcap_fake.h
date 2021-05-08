@@ -1,13 +1,13 @@
 /* -*- mode: C++; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
  * pcap_fake.h
- * A fake libpcap implementation that can only read files without a filter.
+ * A fake libpcap interface that can only read files without a filter.
  */
 
-#include <sys/cdefs.h>
-#include <stdint.h>
-#include <sys/time.h>
 #include <stdio.h>
+#include <stdint.h>
+#include <sys/cdefs.h>
+#include <sys/time.h>
 
 __BEGIN_DECLS
 
@@ -21,8 +21,7 @@ __BEGIN_DECLS
 #define PCAP_VERSION_MAJOR 2
 #define PCAP_VERSION_MINOR 4
 #define PCAP_ERRBUF_SIZE 256
-    
-    
+
 struct pcap_file_header {
     uint32_t magic;                     // d4 c3 b2 a1
     uint16_t version_major;             // 02 00
@@ -80,5 +79,3 @@ char    *pcap_geterr(pcap_t *);
 
 
 __END_DECLS
-
-

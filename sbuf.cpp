@@ -3,11 +3,17 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <stdio.h>
-#include "bulk_extractor_i.h"
+#include <filesystem>
+
+#include "sbuf.h"
+//#include "bulk_extractor_i.h"
 #include "unicode_escape.h"
 
 /****************************************************************
  *** SBUF_T
+ *** Implement the sbuf abstraction, which is the primary buffer management
+ *** tool of bulk_extractor. sbufs maintain memory management.
+ *** Could this be done with a smart pointer?
  ****************************************************************/
 
 #ifndef O_BINARY
@@ -19,12 +25,13 @@
  */
 const std::string sbuf_t::U10001C("\xf4\x80\x80\x9c");
 std::string sbuf_t::map_file_delimiter(sbuf_t::U10001C);
-sbuf_t *sbuf_t::map_file(const std::string &fname)
+const sbuf_t sbuf_t::map_file(const std::string &fname)
 {
     int fd = open(fname.c_str(),O_RDONLY|O_BINARY,0);
-    if(fd<0) return 0;          /* cannot open file */
-    sbuf_t *sbuf = sbuf_t::map_file(fname, fd, true);
-    return sbuf;
+    if (fd<0){
+        throw std::filesystem::filesystem_error(fname, std::error_code(errno, std::generic_category()));
+    }
+    return sbuf_t::map_file(fname, fd, true);
 }
 
 /* Map a file when we are given an open fd.
@@ -32,12 +39,12 @@ sbuf_t *sbuf_t::map_file(const std::string &fname)
  * If there is no mmap, just allocate space and read the file
  */
 
-sbuf_t *sbuf_t::map_file(const std::string &fname, int fd, bool should_close)
+const sbuf_t sbuf_t::map_file(const std::string &fname, int fd, bool should_close)
 {
     struct stat st;
     if(fstat(fd,&st)){
         close(fd);
-        return 0; /* cannot stat */
+        throw std::filesystem::filesystem_error("fstat", std::error_code(errno, std::generic_category()));
     }
 
 #ifdef HAVE_MMAP
@@ -60,24 +67,23 @@ sbuf_t *sbuf_t::map_file(const std::string &fname, int fd, bool should_close)
     bool should_free = true;
     bool should_unmap = false;
 #endif
-    sbuf_t *sbuf = new sbuf_t(pos0_t(fname+sbuf_t::map_file_delimiter),
-                              buf,
-                              st.st_size, // bufsize
-                              st.st_size, // pagesize
-                              fd,         // fd
-                              should_unmap, 
-                              should_free,
-                              should_close);
-    return sbuf;
+    return sbuf_t(pos0_t(fname+sbuf_t::map_file_delimiter),
+                  buf,
+                  st.st_size, // bufsize
+                  st.st_size, // pagesize
+                  fd,         // fd
+                  should_unmap,
+                  should_free,
+                  should_close);
 }
 
 /*
  * Returns self or the highest parent of self, whichever is higher
  */
-const sbuf_t *sbuf_t::highest_parent() const 
+const sbuf_t *sbuf_t::highest_parent() const
 {
     const sbuf_t *hp = this;
-    while(hp->parent != 0){
+    while (hp->parent != 0){
         hp = hp->parent;
     }
     return hp;
@@ -166,7 +172,7 @@ ssize_t sbuf_t::write(FILE *f,size_t loc,size_t len) const
 }
 
 /* Return a substring */
-std::string sbuf_t::substr(size_t loc,size_t len) const
+const std::string sbuf_t::substr(size_t loc,size_t len) const
 {
     if(loc>=bufsize) return std::string("");            // cannot write
     if(loc+len>bufsize) len=bufsize-loc; // clip at the end
@@ -183,7 +189,7 @@ bool sbuf_t::is_constant(size_t off,size_t len,uint8_t ch) const // verify that 
     return true;
 }
 
-void sbuf_t::hex_dump(std::ostream &os) const 
+void sbuf_t::hex_dump(std::ostream &os) const
 {
     hex_dump(os,0,bufsize);
 }
@@ -228,7 +234,7 @@ static const char *hexbuf(char *dst,int dst_len,const unsigned char *bin,int byt
         dst_len -= 2;
         bytes--;
         charcount++;                    // how many characters
-        
+
         if((flag & NSRL_HEXBUF_SPACE2) || ((flag & NSRL_HEXBUF_SPACE4) && charcount%2==0)){
             *dst++ = ' ';
             *dst   = '\000';
@@ -237,6 +243,21 @@ static const char *hexbuf(char *dst,int dst_len,const unsigned char *bin,int byt
     }
     return start;                       // return the start
 }
+
+
+/* Determine if the sbuf consists of a repeating ngram */
+size_t sbuf_t::find_ngram_size(const size_t max_ngram) const
+{
+    for (size_t ngram_size = 1; ngram_size < max_ngram; ngram_size++){
+	bool ngram_match = true;
+	for (size_t i=ngram_size; i < pagesize && ngram_match; i++){
+	    if ((*this)[i%ngram_size]!=(*this)[i]) ngram_match = false;
+	}
+	if (ngram_match) return ngram_size;
+    }
+    return 0;                           // no ngram size
+}
+
 
 
 std::ostream & operator <<(std::ostream &os,const sbuf_t &t){
@@ -385,4 +406,3 @@ void sbuf_t::getUTF16(size_t i, byte_order_t bo, std::wstring &utf16_string) con
         utf16_string.push_back(code_unit);
     }
 }
-

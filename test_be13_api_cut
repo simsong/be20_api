@@ -1,0 +1,34 @@
+#if 0
+
+#if defined(HAVE_SQLITE3_H) and defined(HAVE_LIBSQLITE3)
+    fs.db_transaction_begin();
+#endif
+
+    //fs.db_create();
+
+    /* Create an email table */
+    //fs.db_create_table("mail_test");
+
+    /* Lets some  features into the table as a test */
+    //sqlite3_exec(db,"BEGIN TRANSACTION",NULL,NULL,&errmsg);
+    //beapi_sql_stmt s(db,"email");
+    for(int i=0;i<10;i++){
+        pos0_t p;
+        pos0_t p1 = p+i;
+
+        char feature[64];
+        snprintf(feature,sizeof(feature),"user%d@company.com",i);
+        char context[64];
+        snprintf(context,sizeof(context),"this is the context user%d@company.com yes it is!",i);
+        fr.write(p1, feature, context);
+        //insert_statement(stmt,p1,feature,context);
+    }
+#if defined(HAVE_SQLITE3_H) and defined(HAVE_LIBSQLITE3)
+    fs.db_transaction_commit();
+#endif
+    //sqlite3_exec(db,"COMMIT TRANSACTION",NULL,NULL,&errmsg);
+    //fs.db_close();
+
+    /* Now verify that they are there */
+}
+#endif

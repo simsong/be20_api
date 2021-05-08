@@ -1,0 +1,8 @@
+the following unit test frameworks were considered in order:
+
+1. https://github.com/exoticlibraries/libcester
+2. https://github.com/catchorg/Catch2/blob/master/docs/assertions.md#top
+3. https://github.com/cpputest/cpputest
+4. https://github.com/unittest-cpp/unittest-cpp
+
+Currently we are using libcester due to excellent support from the author!
