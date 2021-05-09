@@ -3,7 +3,7 @@
 # 2020-06-27 - slg - expanded to G++ for MacOS
 # 2020-07-03 - slg - ported to be13_api; removed python (be13_api doesn't use python)
 
-name: BE13_API CI (c++14)
+name: BE13_API CI (c++17)
 on: [push]
 
 jobs:
