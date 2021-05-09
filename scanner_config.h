@@ -18,6 +18,7 @@
 #include <map>
 #include <string>
 #include <sstream>
+#include <vector>
 
 struct  scanner_config {
     typedef std::map<std::string,std::string>  config_t ; // configuration for scanner passed in
@@ -59,18 +60,20 @@ struct  scanner_config {
      * Typically created from parsing command-line arguments
      */
     struct scanner_command {
-        enum command_t {DISABLE_ALL=0,ENABLE_ALL,DISABLE,ENABLE};
-        scanner_command(const scanner_command &sc):command(sc.command),name(sc.name){};
-        scanner_command(scanner_command::command_t c,const std::string &n):command(c),name(n){};
-        command_t command {};
-        std::string name  {};
+        static const std::string ALL_SCANNERS;
+        enum command_t {DISABLE,ENABLE};
+        scanner_command(const scanner_command &sc):scannerName(sc.scannerName),command(sc.command){};
+        scanner_command(const std::string &scannerName_,scanner_command::command_t c):scannerName(scannerName_),command(c){};
+        const std::string scannerName  {};
+        const command_t command {};
     };
 
     // The commands for those scanners (enable, disable, options, etc.
     typedef std::vector<struct scanner_command> scanner_commands_t;
     scanner_commands_t scanner_commands {};
 
-
+    /* Control which scanners are enabled */
+    void    push_scanner_command(const std::string &scannerName, scanner_command::command_t c); // enable/disable a specific scanner
 };
 
 #endif
