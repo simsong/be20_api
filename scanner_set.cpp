@@ -47,9 +47,6 @@ public:
 typedef std::vector<packet_plugin_info> packet_plugin_info_vector_t;
 packet_plugin_info_vector_t  packet_handlers;   // pcap callback handlers
 
-std::string scanner_set::ALL_SCANNERS {"all"};
-
-
 /****************************************************************
  * create the scanner set
  */
@@ -239,32 +236,36 @@ void scanner_set::load_scanner_packet_handlers()
  * 'all' is a special scanner that enables all scanners.
  */
 
-void scanner_set::set_scanner_enabled(const std::string &name, bool enable)
+void scanner_set::apply_scanner_commands()
 {
-    /* If name is 'all' and the NO_ALL flag is not set for that scanner,
-     * then either enable it or disable it as appropriate */
-    if (name == scanner_set::ALL_SCANNERS){
-        for (auto it: scanner_info_db) {
-            if (it.second->scanner_flags.no_all) {
-                continue;
+    for (auto cmd: sc.scanner_commands) {
+        if (cmd.scannerName == scanner_config::scanner_command::ALL_SCANNERS){
+            /* If name is 'all' and the NO_ALL flag is not set for that scanner,
+             * then either enable it or disable it as appropriate
+             */
+            for (auto it: scanner_info_db) {
+                if (it.second->scanner_flags.no_all) {
+                    continue;
+                }
+                if (cmd.command == scanner_config::scanner_command::ENABLE) {
+                    enabled_scanners.insert( it.first );
+                } else {
+                    enabled_scanners.erase( it.first );
+                }
             }
-            if (enable) {
-                enabled_scanners.insert( it.first );
+        } else {
+            /* enable or disable this scanner */
+            scanner_t *scanner = get_scanner_by_name( cmd.scannerName);
+            if (!scanner) {
+                /* Scanner wasn't found */
+                throw std::invalid_argument("Invalid scanner name: " + cmd.scannerName);
+            }
+            if (cmd.command == scanner_config::scanner_command::ENABLE) {
+                enabled_scanners.insert( scanner );
             } else {
-                enabled_scanners.erase( it.first );
+                enabled_scanners.erase( scanner );
             }
         }
-        return;
-    }
-    scanner_t *scanner = get_scanner_by_name(name);
-    if (!scanner) {
-        /* Scanner wasn't found */
-        throw std::invalid_argument("Invalid scanner name: " + name);
-    }
-    if (enable) {
-        enabled_scanners.insert(scanner );
-    } else {
-        enabled_scanners.erase( scanner );
     }
 }
 
@@ -379,53 +380,6 @@ void scanner_set::info_scanners(std::ostream &out,
     }
 }
 
-
-
-#if 0
-/****************************************************************
- *** Scanner Commands (which one is enabled or disabled)
- ****************************************************************/
-
-void scanner_set::set_scanner_enabled_all( bool shouldEnable )
-{
-
-    assert(scanner_commands_processed==false);
-    scanner_commands.push_back(scanner_command(scanner_command::DISABLE_ALL,std::string("")));
-}
-
-void scanner_set::scanners_enable_all()
-{
-    assert(scanner_commands_processed==false);
-    scanner_commands.push_back(scanner_command(scanner_command::ENABLE_ALL,std::string("")));
-}
-
-void scanner_set::scanners_enable(const std::string &name)
-{
-    assert(scanner_commands_processed==false);
-    scanner_commands.push_back(scanner_command(scanner_command::ENABLE,name));
-}
-
-void scanner_set::scanners_disable(const std::string &name)
-{
-    assert(scanner_commands_processed==false);
-    scanner_commands.push_back(scanner_command(scanner_command::DISABLE,name));
-}
-
-void scanner_set::scanners_process_enable_disable_commands()
-{
-    for(std::vector<scanner_command>::const_iterator it=scanner_commands.begin();
-        it!=scanner_commands.end();it++){
-        switch((*it).command){
-        case scanner_command::ENABLE_ALL:  set_scanner_enabled_all(true);break;
-        case scanner_command::DISABLE_ALL: set_scanner_enabled_all(false); break;
-        case scanner_command::ENABLE:      set_scanner_enabled((*it).name,true);break;
-        case scanner_command::DISABLE:     set_scanner_enabled((*it).name,false);break;
-        }
-    }
-    load_scanner_packet_handlers();     // can't do until enable/disable commands are run
-    scanner_commands_processed = true;
-}
-#endif
 
 
 const std::string & scanner_set::get_input_fname() const

@@ -27,15 +27,6 @@
  *
  * NOTE: plugins can only call virtual functions!
  *
- * Process to set up:
- * 1 - plugin::scanners_process_enable_disable_commands is run to determine which scanners are enabled.
- * 2 - plugin::get_scanner_feature_file_names(feature_file_names) gets a list of the current feature files.
- * 3 - feature_recorder_set is created, given:
- *       - flags
- *       - hash algorithm to use
- *       - input file
- *       - output directory
- *   It initializes the feature recorders and itself.
  */
 
 /* Define a map of feature recorders with atomic access. */

@@ -5,8 +5,9 @@
  *** HELP and  option processing  ***
  ************************************/
 
-const std::string scanner_config::NO_INPUT = "<NO-INPUT>";
-const std::string scanner_config::NO_OUTDIR = "<NO-OUTDIR>";
+const std::string scanner_config::NO_INPUT  {"<NO-INPUT>"};
+const std::string scanner_config::NO_OUTDIR {"<NO-OUTDIR>"};
+const std::string scanner_config::scanner_command::ALL_SCANNERS {"<ALL>"};
 
 void scanner_config::set_config(const std::string &name, const std::string &val)
 {
@@ -80,4 +81,9 @@ void scanner_config::get_config(const std::string &n,bool *val,const std::string
     default:
         *val = false;
     }
+}
+
+void scanner_config::push_scanner_command(const std::string &scannerName, scanner_command::command_t c)
+{
+    scanner_commands.push_back(scanner_command(scannerName,c));
 }
