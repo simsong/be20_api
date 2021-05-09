@@ -4,8 +4,8 @@
  * class to hold name=value configurations for all of the scanners.
  */
 
-
-/* Config is a set of name=value pairs from the command line.
+/* Config is a set of name=value pairs from the command line and the list of all scanners that
+ * are enabled or disabled.
  * All of the scanners get the same config, so the names that the scanners want need to be unique.
  * We could have adopted a system where each scanner had its own configuraiton space, but we didn't.
  * Scanner histograms are added to 'histograms' by machinery.
@@ -18,10 +18,11 @@
 #include <map>
 #include <string>
 #include <sstream>
+#include <vector>
 
 struct  scanner_config {
     typedef std::map<std::string,std::string>  config_t ; // configuration for scanner passed in
-    config_t  namevals{};             //  (input) name=val map
+    config_t  namevals {};             //  (input) name=val map
     std::string help_str {};          // help string that is built
     //std::stringstream helpstream{};
     //static std::string MAX_DEPTH;
@@ -53,6 +54,26 @@ struct  scanner_config {
 #endif
     virtual void get_config( const std::string &name, bool *val,        const std::string &help);
     //virtual int max_depth() const;
+
+    /**
+     * Commands whether to enable or disable a scanner.
+     * Typically created from parsing command-line arguments
+     */
+    struct scanner_command {
+        static const std::string ALL_SCANNERS;
+        enum command_t {DISABLE,ENABLE};
+        scanner_command(const scanner_command &sc):scannerName(sc.scannerName),command(sc.command){};
+        scanner_command(const std::string &scannerName_,scanner_command::command_t c):scannerName(scannerName_),command(c){};
+        const std::string scannerName  {};
+        const command_t command {};
+    };
+
+    // The commands for those scanners (enable, disable, options, etc.
+    typedef std::vector<struct scanner_command> scanner_commands_t;
+    scanner_commands_t scanner_commands {};
+
+    /* Control which scanners are enabled */
+    void    push_scanner_command(const std::string &scannerName, scanner_command::command_t c); // enable/disable a specific scanner
 };
 
 #endif

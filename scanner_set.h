@@ -70,22 +70,6 @@ class scanner_set {
     scanner_set(const scanner_set &s)=delete;
     scanner_set &operator=(const scanner_set &s)=delete;
 
-    /**
-     *  Commands whether to enable or disable a scanner. Typically created from parsing command-line arguments
-     */
-    struct scanner_command {
-        enum command_t {DISABLE_ALL=0,ENABLE_ALL,DISABLE,ENABLE};
-        scanner_command(const scanner_command &sc):command(sc.command),name(sc.name){};
-        scanner_command(scanner_command::command_t c,const std::string &n):command(c),name(n){};
-        command_t command {};
-        std::string name  {};
-    };
-
-    // The commands for those scanners (enable, disable, options, etc.
-    typedef std::vector<struct scanner_command> scanner_commands_t;
-    scanner_commands_t scanner_commands {};
-    void    process_scanner_commands(const std::vector<scanner_command> &scanner_commands); // process the commands
-
     /* The scanners that are registered and enabled */
 
     // Map the scanner name to the scanner pointer
@@ -125,7 +109,8 @@ class scanner_set {
 
 public:;
     /* constructor and destructor */
-    scanner_set(const scanner_config &sc, const feature_recorder_set::flags_t &f, class dfxml_writer *writerl=0);
+    scanner_set(const scanner_config &sc,
+                const feature_recorder_set::flags_t &f, class dfxml_writer *writerl=0);
     virtual ~scanner_set(){};
 
     /* PHASE_INIT */
@@ -161,14 +146,10 @@ public:;
 
     void    load_scanner_packet_handlers(); // after all scanners are loaded, this sets up the packet handlers.
 
-    /* Control which scanners are enabled */
-    void    set_scanner_enabled(const std::string &name, bool shouldEnable); // enable/disable a specific scanner
-    void    set_scanner_enabled_all(bool shouldEnable); // enable/disable all scanners
-
+    void    apply_scanner_commands();   // applies all of the enable/disable commands
     bool    is_scanner_enabled(const std::string &name); // report if it is enabled or not
     void    get_enabled_scanners(std::vector<std::string> &svector); // put names of the enabled scanners into the vector
     bool    is_find_scanner_enabled(); // return true if a find scanner is enabled
-    static std::string ALL_SCANNERS;   // special flag for all scanners
 
     /* These functions must be virtual so they can be called by dynamically loaded plugins */
     /* They throw a ScannerNotFound exception if no scanner exists */

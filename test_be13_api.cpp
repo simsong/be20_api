@@ -604,6 +604,11 @@ TEST_CASE("scanner_config", "[scanner]") {
     sc.get_config("age", &ival, "age in years");
     REQUIRE(ival == 5);
     REQUIRE(sc.help() == help_string);
+
+    sc.push_scanner_command("scanner1",scanner_config::scanner_command::ENABLE);
+    sc.push_scanner_command("scanner2",scanner_config::scanner_command::DISABLE);
+    REQUIRE(sc.scanner_commands.size()==2);
+
 }
 
 /****************************************************************
@@ -628,40 +633,50 @@ TEST_CASE("enable/disable", "[scanner]") {
     sc.outdir = get_tempdir();
     sc.hash_alg = "sha1";
 
-    struct feature_recorder_set::flags_t f;
-    scanner_set ss(sc, f);
-    ss.add_scanner(scan_sha1_test);
-
-    /*  Make sure that the scanner was added  */
-    REQUIRE_NOTHROW( ss.get_scanner_by_name("sha1_test") );
-    REQUIRE( ss.get_scanner_by_name("sha1_test") == scan_sha1_test );
-    REQUIRE_THROWS_AS(ss.get_scanner_by_name("no_such_scanner"), scanner_set::NoSuchScanner );
-
     /* Enable the scanner */
     const std::string SHA1_TEST = "sha1_test";
-    ss.set_scanner_enabled(SHA1_TEST, true);
 
-    /* Make sure that the sha1 scanner is enabled and only the sha1 scanner is enabled */
-    REQUIRE( ss.is_scanner_enabled(SHA1_TEST) == true );
-    REQUIRE( ss.is_find_scanner_enabled() == false); // only sha1 scanner is enabled
+    struct feature_recorder_set::flags_t f;
+    {
+        sc.push_scanner_command(SHA1_TEST, scanner_config::scanner_command::ENABLE);
+        scanner_set ss(sc, f);
+        ss.add_scanner(scan_sha1_test);
+        ss.apply_scanner_commands();        // applied after all scanners are added
 
-    /* Make sure that the scanner set has a two feature recorders: the alert recorder and the sha1_bufs recorder */
-    REQUIRE( ss.feature_recorder_count() == 2);
+        /*  Make sure that the scanner was added  */
+        REQUIRE_NOTHROW( ss.get_scanner_by_name("sha1_test") );
+        REQUIRE( ss.get_scanner_by_name("sha1_test") == scan_sha1_test );
+        REQUIRE_THROWS_AS(ss.get_scanner_by_name("no_such_scanner"), scanner_set::NoSuchScanner );
 
-    /* Make sure it has a single histogram */
-    REQUIRE( ss.histogram_count() == 1);
+        /* Make sure that the sha1 scanner is enabled and only the sha1 scanner is enabled */
+        REQUIRE( ss.is_scanner_enabled(SHA1_TEST) == true );
+        REQUIRE( ss.is_find_scanner_enabled() == false); // only sha1 scanner is enabled
 
-    /* Turn it off and make sure that it's disabled */
-    ss.set_scanner_enabled(SHA1_TEST, false);
-    REQUIRE( ss.is_scanner_enabled(SHA1_TEST) == false );
+        /* Make sure that the scanner set has a two feature recorders:
+         * the alert recorder and the sha1_bufs recorder
+         */
+        REQUIRE( ss.feature_recorder_count() == 2);
 
-    /* Try enabling all */
-    ss.set_scanner_enabled(scanner_set::ALL_SCANNERS,true);
-    REQUIRE( ss.is_scanner_enabled(SHA1_TEST) == true );
-
-    /* Try disabling all */
-    ss.set_scanner_enabled(scanner_set::ALL_SCANNERS,false);
-    REQUIRE( ss.is_scanner_enabled(SHA1_TEST) == false );
+        /* Make sure it has a single histogram */
+        REQUIRE( ss.histogram_count() == 1);
+    }
+    {
+        /* Try it again, but this time turning on all of the commands */
+        sc.push_scanner_command(scanner_config::scanner_command::ALL_SCANNERS, scanner_config::scanner_command::ENABLE);
+        scanner_set ss(sc, f);
+        ss.add_scanner(scan_sha1_test);
+        ss.apply_scanner_commands();        // applied after all scanners are adde
+        REQUIRE( ss.is_scanner_enabled(SHA1_TEST) == true );
+    }
+    {
+        /* Try it again, but this time turning on the scanner, and then turning all off*/
+        sc.push_scanner_command(SHA1_TEST, scanner_config::scanner_command::ENABLE);
+        sc.push_scanner_command(scanner_config::scanner_command::ALL_SCANNERS, scanner_config::scanner_command::DISABLE);
+        scanner_set ss(sc, f);
+        ss.add_scanner(scan_sha1_test);
+        ss.apply_scanner_commands();        // applied after all scanners are adde
+        REQUIRE( ss.is_scanner_enabled(SHA1_TEST) == false );
+    }
 }
 
 /* This test runs a scan on the hello_sbuf() with the sha1 scanner. */
@@ -669,11 +684,11 @@ TEST_CASE("run", "[scanner]") {
     scanner_config sc;
     sc.outdir = get_tempdir();
     sc.hash_alg = "sha1";               // it's faster than SHA1!
+    sc.push_scanner_command(std::string("sha1_test"), scanner_config::scanner_command::ENABLE); /* Turn it onn */
 
     struct feature_recorder_set::flags_t f;
     scanner_set ss(sc, f);
     ss.add_scanner(scan_sha1_test);
-    ss.set_scanner_enabled(std::string("sha1_test"), true); /* Turn it onn */
 
     /* Make sure we got a sha1_test feature recorder */
     feature_recorder &fr = ss.named_feature_recorder("sha1_bufs");
