@@ -47,13 +47,12 @@ struct scanner_params {
      *
      */
     struct scanner_info {
-        std::stringstream helpstream {}; // where scanner info help messages are saved.
+        //std::stringstream helpstream {}; // where scanner info help messages are saved.
 
         // default copy construction and assignment are meaningless
         // and not implemented
         scanner_info(const scanner_info &i)=delete;
         scanner_info &operator=(const scanner_info &i)=delete;
-        std::string helpstr() const { return helpstream.str();}
 
         struct scanner_flags_t {
             bool  default_enabled {true}; //  enabled by default
@@ -87,6 +86,7 @@ struct scanner_params {
         /* PASSED FROM SCANNER to API: */
         //int               si_version { CURRENT_SI_VERSION };             // version number for this structure
         scanner_t         *scanner {};            // the scanner
+        std::string       helpstr {};             // the help string
         std::string       name {};                //   scanner name
         std::string       author {};              //   who wrote me?
         std::string       description {};         //   what do I do?
@@ -98,6 +98,20 @@ struct scanner_params {
         std::set<histogram_def>  histogram_defs {};      //   histogram definition info
         //void              *packet_user {};        //   data for network callback
         //be13::packet_callback_t *packet_cb {};    //   callback for processing network packets, or NULL
+
+        // Move constructor
+        scanner_info(scanner_info &&source ) :
+            scanner(source.scanner),
+            helpstr(source.helpstr),
+            name(source.name),
+            description(source.description),
+            url(source.url),
+            scanner_version(source.scanner_version),
+            pathPrefix(source.pathPrefix),
+            flags(source.flags),
+            feature_names(source.feature_names),
+            histogram_defs(source.histogram_defs) {
+        }
     };
 
     /* Scanners can also be asked to assist in printing. */
@@ -152,7 +166,8 @@ struct scanner_params {
         ss(ss_),phase(phase_),sbuf(sbuf_),print_options(print_options_),sxml(xmladd){ }
 
     /* User-servicable parts; these are here for scanners */
-    virtual void register_info(const scanner_info *si); // called by a scanner to register its info
+    //register_info should use unique_ptr(), but I couldn't get it to work.
+    virtual void register_info(const scanner_info *); // called by a scanner to register its info
     virtual ~scanner_params(){};
     virtual feature_recorder &named_feature_recorder(const std::string &feature_recorder_name);
 

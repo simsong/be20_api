@@ -353,7 +353,7 @@ void scanner_set::info_scanners(std::ostream &out,
             }
             if (detailed_settings){
                 out << "Settable Options (and their defaults): \n";
-                out << it.second->helpstr();
+                out << it.second->helpstr;
             }
             out << "\n\n";
         }

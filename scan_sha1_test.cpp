@@ -21,7 +21,7 @@ void  scan_sha1_test(struct scanner_params &sp)
 {
     if(sp.phase==scanner_params::PHASE_INIT){
         /* Create a scanner_info block to register this scanner */
-        scanner_params::scanner_info *info = new scanner_params::scanner_info();
+        auto info = new scanner_params::scanner_info();
         info->scanner     = scan_sha1_test;
         info->name        = "sha1_test";
         info->author      = "Simson L. Garfinkel";

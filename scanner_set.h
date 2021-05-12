@@ -138,7 +138,7 @@ public:;
      * Each scanner is called with scanner_params and a scanner control block as arguments.
      * See "scanner_params.h".
      */
-    void    register_info(const scanner_params::scanner_info *si);
+    void    register_info(const scanner_params::scanner_info *);
     void    add_scanner(scanner_t scanner);      // load a specific scanner in memory
     void    add_scanners(scanner_t * const *scanners_builtin); // load a nullptr array of scanners.
     void    add_scanner_file(std::string fn);    // load a scanner from a shared library file
