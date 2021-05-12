@@ -152,7 +152,7 @@ struct scanner_params {
         ss(ss_),phase(phase_),sbuf(sbuf_),print_options(print_options_),sxml(xmladd){ }
 
     /* User-servicable parts; these are here for scanners */
-    virtual void register_info(const scanner_info &si); // called by a scanner to register its info
+    virtual void register_info(const scanner_info *si); // called by a scanner to register its info
     virtual ~scanner_params(){};
     virtual feature_recorder &named_feature_recorder(const std::string &feature_recorder_name);
 
@@ -183,7 +183,8 @@ struct scanner_params {
         depth(sp_existing.depth+1){ };
 #endif
 
-    class scanner_set           &ss;           // the scanner set calling this scanner. Includes the scanner_config and feature_    //register_info_t             register_info; // callback function to register the scanner
+    class scanner_set           &ss;           // the scanner set calling this scanner. Includes the scanner_config and feature_
+    //register_info_t             register_info; // callback function to register the scanner
     //const class scanner_config  &config;       // configuration for all scanners.
     const phase_t               phase;         // what scanner should do
     const sbuf_t                &sbuf;         // what to scan / only valid in SCAN_PHASE
