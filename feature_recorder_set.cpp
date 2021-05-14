@@ -18,7 +18,7 @@
  */
 
 const std::string feature_recorder_set::ALERT_RECORDER_NAME = "alerts";
-const std::string feature_recorder_set::DISABLED_RECORDER_NAME = "disabled";
+//const std::string feature_recorder_set::DISABLED_RECORDER_NAME = "disabled";
 
 /* be_hash. Currently this just returns the MD5 of the sbuf,
  * but eventually it will allow the use of different hashes.
@@ -78,14 +78,16 @@ feature_recorder_set::feature_recorder_set( const flags_t &flags_,
         }
     }
 
+#if 0
     /* Create a disabled feature recorder if necessary */
     if ( flags.disabled ){
-        named_feature_recorder(DISABLED_RECORDER_NAME, true).flags.disabled=true;
+        named_feature_recorder(DISABLED_RECORDER_NAME).flags.disabled=true;
     }
+#endif
 
     /* Create an alert recorder if necessary */
     if (!flags.no_alert) {
-        named_feature_recorder(feature_recorder_set::ALERT_RECORDER_NAME, true); // make the alert recorder
+        create_feature_recorder(feature_recorder_def(feature_recorder_set::ALERT_RECORDER_NAME,0)); // make the alert recorder
     }
 
     //message_enabled_scanners(scanner_params::PHASE_INIT); // tell all enabled scanners to init
@@ -134,44 +136,44 @@ feature_recorder_set::~feature_recorder_set()
  *** adding and removing feature recorders
  ****************************************************************/
 
+/**
+ * Create a requested feature recorder. Do not create it if it already exists.
+ */
+
+void feature_recorder_set::create_feature_recorder(const feature_recorder_def def)
+{
+    if (flags.record_files and flags.record_sql){
+        throw std::runtime_error("currently can only record to files or SQL, not both");
+    }
+    if (!flags.record_files and !flags.record_sql){
+        throw std::runtime_error("Must record to either files or SQL");
+    }
+    auto it = frm.find(def.name);
+    if ( it != frm.end() ) {
+        throw FeatureRecorderAlreadyExists {std::string("feature recorder already exists: ")+def.name};
+    }
+
+    feature_recorder *fr = nullptr;
+    if (flags.record_files) {
+        fr = new feature_recorder_file(*this, def);
+    }
+    if (flags.record_sql) {
+        fr = new feature_recorder_sql(*this, def);
+    }
+    frm.insert(def.name, fr);
+}
+
 /*
  * Get the named feature recorder.
  * If the feature recorder doesn't exist and create is true, create it.
  * Otherwise raise an exception.
  */
-feature_recorder &feature_recorder_set::named_feature_recorder(const std::string &name, bool create)
+feature_recorder &feature_recorder_set::named_feature_recorder(const std::string name)
 {
-    const std::string *thename = &name;
-    if (flags.disabled){           // if feature recorder set is disabled, return the disabled recorder.
-        thename = &feature_recorder_set::DISABLED_RECORDER_NAME;
-    }
-
-    if (flags.only_alert){
-        thename = &feature_recorder_set::ALERT_RECORDER_NAME;
-    }
-
-    auto it = frm.find(*thename);
-    if ( it != frm.end() ) return *it->second;
-
-    if (create) {
-        if (flags.record_files and flags.record_sql){
-            throw std::runtime_error("currently can only record to files or SQL, not both");
-        }
-        if (!flags.record_files and !flags.record_sql){
-            throw std::runtime_error("Must record to either files or SQL");
-        }
-
-        feature_recorder *fr = nullptr;
-        if (flags.record_files) {
-            fr = new feature_recorder_file(*this, name);
-        }
-        if (flags.record_sql) {
-            fr = new feature_recorder_sql(*this, name);
-        }
-        frm.insert(name, fr);
-        return *fr;
-    }
-    else {
+    auto it = frm.find(*name);
+    if ( it != frm.end() ) {
+        return *it->second;
+    } else {
         throw NoSuchFeatureRecorder {std::string("No such feature recorder: ")+name};
     }
 }
@@ -182,7 +184,7 @@ feature_recorder &feature_recorder_set::named_feature_recorder(const std::string
  */
 feature_recorder &feature_recorder_set::get_alert_recorder()
 {
-    return named_feature_recorder(feature_recorder_set::ALERT_RECORDER_NAME, false);
+    return named_feature_recorder(feature_recorder_set::ALERT_RECORDER_NAME);
 }
 
 
@@ -247,7 +249,7 @@ void feature_recorder_set::dump_name_count_stats(dfxml_writer *writer) const
 
 void feature_recorder_set::histogram_add(const histogram_def &def)
 {
-    named_feature_recorder(def.feature, true).histogram_add(def);
+    named_feature_recorder(def.feature).histogram_add(def);
 }
 
 size_t feature_recorder_set::histogram_count() const
@@ -272,11 +274,13 @@ void feature_recorder_set::histograms_generate()
 }
 
 
-void feature_recorder_set::get_feature_file_list(std::vector<std::string> &ret)
+std::vector<std::string> feature_recorder_set::get_feature_file_list()
 {
+    std::vector<std::string> ret
     for( auto it: frm ){
         ret.push_back(it.first);
     }
+    return ret;
 }
 
 

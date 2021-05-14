@@ -61,8 +61,8 @@ static inline int hexval(char ch)
     return 0;
 }
 
-feature_recorder::feature_recorder(class feature_recorder_set &fs_, const std::string &name_):
-    fs(fs_),name(name_)
+feature_recorder::feature_recorder(class feature_recorder_set &fs_, const struct feature_recorder_def def):
+    fs(fs_),name(def.name),flags(def.flags)
 {
 }
 

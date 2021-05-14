@@ -107,6 +107,7 @@ class scanner_set {
     class dfxml_writer *writer     {nullptr}; // if provided, a dfxml writer
     scanner_params::phase_t     current_phase {scanner_params::PHASE_INIT};
 
+
 public:;
     /* constructor and destructor */
     scanner_set(const scanner_config &sc,
@@ -146,7 +147,7 @@ public:;
 
     void    load_scanner_packet_handlers(); // after all scanners are loaded, this sets up the packet handlers.
 
-    void    apply_scanner_commands();   // applies all of the enable/disable commands
+    void    apply_scanner_commands();   // applies all of the enable/disable commands and create the feature recorders
     bool    is_scanner_enabled(const std::string &name); // report if it is enabled or not
     void    get_enabled_scanners(std::vector<std::string> &svector); // put names of the enabled scanners into the vector
     bool    is_find_scanner_enabled(); // return true if a find scanner is enabled
@@ -162,7 +163,7 @@ public:;
     };
     const std::string get_scanner_name(scanner_t scanner) const; // returns the name of the scanner
     virtual scanner_t &get_scanner_by_name(const std::string &name) ;
-    virtual feature_recorder &named_feature_recorder(const std::string &name); // returns the feature recorder
+    virtual feature_recorder &named_feature_recorder(const std::string name); // returns the feature recorder
 
     // report on the loaded scanners
     void     info_scanners(std::ostream &out,

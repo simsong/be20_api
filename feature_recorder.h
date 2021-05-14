@@ -53,6 +53,38 @@
  * Then, if there is any case where multiple histogram files were written, a merge-sort is performed.
  */
 
+struct feature_recorder_def {
+    std::string name;                   // the name of the feature recorder
+    /**
+     * \name Flags that control scanners
+     * @{
+     * These flags control scanners.  Set them with flag_set().
+     */
+    /** Disable this recorder. */
+    struct flags_t {
+        bool  disabled;           // feature recorder is Disabled
+        bool  no_context;         // Do not write context.
+        bool  no_stoplist;        // Do not honor the stoplist/alertlist.
+        bool  no_alertlist;       // Do not honor the stoplist/alertlist.
+        bool  no_features;         // do not record features (used for in-memory histogram recorder)
+    /**
+     * Normally feature recorders automatically quote non-UTF8 characters
+     * with \x00 notation and quote "\" as \x5C. Specify FLAG_NO_QUOTE to
+     * disable this behavior.
+     */
+        bool  no_quote;            // do not escape UTF8 codes
+
+    /**
+     * Use this flag the feature recorder is sending UTF-8 XML.
+     * non-UTF8 will be quoted but "\" will not be escaped.
+     */
+        bool  xml;                 // will be sending XML
+
+    } flags {};
+
+    /** @} */
+};
+
 
 /* New classes for a more object-oriented interface */
 struct Feature {
@@ -90,45 +122,19 @@ public:;
     /* The main public interface:
      * Note that feature_recorders exist in a feature_recorder_set and have a name.
      */
-    feature_recorder(class feature_recorder_set &fs, const std::string &name);
+    feature_recorder(class feature_recorder_set &fs, const feature_recorder_def def);
     virtual        ~feature_recorder();
 
     const  std::string name {};      // name of this feature recorder.
+    feature_recorder_def::flags_t flags;
     bool   validateOrEscapeUTF8_validate { true };     // should we validate or escape UTF8?
 
     /* State variables for this feature recorder */
     std::atomic<size_t>       context_window {0};      // context window for this feature recorder
     std::atomic<int64_t>      features_written {0};
 
-    /**
-     * \name Flags that control scanners
-     * @{
-     * These flags control scanners.  Set them with flag_set().
-     */
-    /** Disable this recorder. */
-    struct flags_t {
-        bool  disabled;           // feature recorder is Disabled
-        bool  no_context;         // Do not write context.
-        bool  no_stoplist;        // Do not honor the stoplist/alertlist.
-        bool  no_alertlist;       // Do not honor the stoplist/alertlist.
-        bool  no_features;         // do not record features (used for in-memory histogram recorder)
-    /**
-     * Normally feature recorders automatically quote non-UTF8 characters
-     * with \x00 notation and quote "\" as \x5C. Specify FLAG_NO_QUOTE to
-     * disable this behavior.
-     */
-        bool  no_quote;            // do not escape UTF8 codes
 
-    /**
-     * Use this flag the feature recorder is sending UTF-8 XML.
-     * non-UTF8 will be quoted but "\" will not be escaped.
-     */
-        bool  xml;                 // will be sending XML
-
-    } flags {};
-    /** @} */
-
-    /* Special flags written into the file */
+    /* Special tokens written into the file */
     static const std::string MAX_DEPTH_REACHED_ERROR_FEATURE;
     static const std::string MAX_DEPTH_REACHED_ERROR_CONTEXT;
 

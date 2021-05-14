@@ -29,7 +29,7 @@ class feature_recorder_sql : public feature_recorder {
     //virtual void dump_histogram_sqlite3(const histogram_def &def,void *user,feature_recorder::dump_callback_t cb) const;
 #endif
 public:
-    feature_recorder_sql(class feature_recorder_set &fs, const std::string &name);
+    feature_recorder_sql(class feature_recorder_set &fs, feature_recorder_def def);
     virtual ~feature_recorder_sql();
     virtual void histogram_flush(AtomicUnicodeHistogram &h); // flush a specific histogram
 

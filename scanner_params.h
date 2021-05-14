@@ -94,8 +94,8 @@ struct scanner_params {
         std::string       scanner_version {};     //   version for the scanner
         std::string       pathPrefix{};           //   this scanner's path prefix for recursive scanners. e.g. "GZIP"
         uint64_t          flags {};               //   flags
-        std::set<std::string>    feature_names {};   //   feature files that this scanner needs.
-        std::set<histogram_def>  histogram_defs {};      //   histogram definition info
+        std::set<feature_file_def>    feature_defs {};   //   feature files that this scanner needs.
+        std::set<histogram_def>  histogram_defs {};      //   histogram definitions that the scanner needs
         //void              *packet_user {};        //   data for network callback
         //be13::packet_callback_t *packet_cb {};    //   callback for processing network packets, or NULL
 
@@ -169,7 +169,7 @@ struct scanner_params {
     //register_info should use unique_ptr(), but I couldn't get it to work.
     virtual void register_info(const scanner_info *); // called by a scanner to register its info
     virtual ~scanner_params(){};
-    virtual feature_recorder &named_feature_recorder(const std::string &feature_recorder_name);
+    virtual feature_recorder &named_feature_recorder(const std::string feature_recorder_name);
 
 
 #if 0

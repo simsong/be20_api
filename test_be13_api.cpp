@@ -414,6 +414,18 @@ TEST_CASE("fname in outdir", "[feature_recorder]") {
  *
  * Create a simple set and write two features and make a histogram.
  */
+TEST_CASE("feature_recorder_def", "[feature_recorder_set]") {
+    feature_recorder_def d1("test1", feature_recorder_def::flags_t::xml);
+    feature_recorder_def d2("test1", feature_recorder_def::flags_t::xml);
+    feature_recorder_def d3("test1", feature_recorder_def::flags_t::no_features);
+    feature_recorder_def d4("test4", feature_recorder_def::flags_t::no_features);
+
+    REQUIRE ( d1 == d2 );
+    REQUIRE ( d1 != d3 );
+    REQUIRE ( d1 < d4 );
+}
+
+
 TEST_CASE("write_features", "[feature_recorder_set]" ) {
 
     // Create a random directory for the output of the feature recorder

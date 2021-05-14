@@ -121,7 +121,7 @@ public:
     const  hash_def       hasher;                    // name and function that perform hashing; set by allocator
 
     static const std::string   ALERT_RECORDER_NAME;  // the name of the alert recorder
-    static const std::string   DISABLED_RECORDER_NAME; // the fake disabled feature recorder
+    //static const std::string   DISABLED_RECORDER_NAME; // the fake disabled feature recorder
 
     void          set_stop_list(const word_and_context_list *alist){stop_list=alist;}
     void          set_alert_list(const word_and_context_list *alist){alert_list=alist;}
@@ -166,10 +166,18 @@ public:
         const char *what() const noexcept override {return m_error.c_str();}
     };
 
+    class FeatureRecorderAlreadyExists : public std::exception {
+        std::string m_error{};
+    public:
+        FeatureRecorderAlreadyExists(std::string_view error):m_error(error){}
+        const char *what() const noexcept override {return m_error.c_str();}
+    };
+
     /* return the named feature recorder, creating it if necessary */
-    virtual feature_recorder &named_feature_recorder(const std::string &name, bool create=false);
-    virtual feature_recorder &get_alert_recorder() ;
-    virtual void get_feature_file_list(std::vector<std::string> &ret); // clears ret and fills with a list of feature file names
+    virtual feature_recorder create_feature_recorder(feature_recorder_def def); // create a feature recorder
+    virtual feature_recorder &named_feature_recorder(const std::string name); // returns the named feature recorder
+    virtual feature_recorder &get_alert_recorder() ; // returns the alert recorder
+    virtual std::vector<std::string> feature_file_list(); // returns a list of feature file names
 
     void    dump_name_count_stats(class dfxml_writer *writer) const;
 

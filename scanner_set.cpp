@@ -76,7 +76,7 @@ void scanner_set::register_info(const scanner_params::scanner_info *si)
      * Multiple scanners may request the same feature recorder without generating an error.
      */
     for (auto it: si->feature_names ){
-        fs.named_feature_recorder( it, true );
+        fs.named_feature_recorder( it );
     }
 
     /* Create all of the requested histograms
@@ -230,10 +230,9 @@ void scanner_set::load_scanner_packet_handlers()
  * return true a scanner is enabled
  */
 
-/* enable or disable a specific scanner.
- * enable = 0  - disable that scanner.
- * enable = 1  - enable that scanner
- * 'all' is a special scanner that enables all scanners.
+/**
+ * apply_sacanner_commands:
+ * applies all of the enable/disable commands and create the feature recorders
  */
 
 void scanner_set::apply_scanner_commands()
@@ -267,6 +266,12 @@ void scanner_set::apply_scanner_commands()
             }
         }
     }
+
+    TODO --
+    /* Verify that none of the scanners have conflicting feature recorders - same name but different flags */
+
+    TODO -- Create the feature recorders
+
 }
 
 
