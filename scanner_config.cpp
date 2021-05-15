@@ -43,28 +43,30 @@ void scanner_config::get_config(const std::string &name, std::string *val,const 
         ss >> *val;\
     }
 
-GET_CONFIG(uint64_t)
-GET_CONFIG(int32_t)                     // both int32_t and uint32_t
-GET_CONFIG(uint32_t)
-GET_CONFIG(uint16_t)
-#ifdef HAVE_GET_CONFIG_SIZE_T
-GET_CONFIG(size_t)
-#endif
+GET_CONFIG(short)
+GET_CONFIG(int)
+GET_CONFIG(long)
+GET_CONFIG(long long)
+GET_CONFIG(unsigned short)
+GET_CONFIG(unsigned int)
+GET_CONFIG(unsigned long)
+GET_CONFIG(unsigned long long)
 
 
-/* uint8_t needs cast to uint32_t for <<
+/* signed/unsigned char need cast to larger type for <<
  * Otherwise it is interpreted as a character.
  */
-void scanner_config::get_config(const std::string &n,uint8_t *val_,const std::string &help)
+void scanner_config::get_config(const std::string &n,unsigned char *val_,const std::string &help)
 {
-    uint32_t val = *val_;
-    std::stringstream ss;
-    ss << val;
-    std::string v(ss.str());
-    get_config(n,&v,help);
-    ss.str(v);
-    ss >> val;
-    *val_ = (uint8_t)val;
+    unsigned int val = *val_;
+    get_config(n, &val, help);
+    *val_ = (unsigned char)val;
+}
+void scanner_config::get_config(const std::string &n,signed char *val_,const std::string &help)
+{
+    int val = *val_;
+    get_config(n, &val, help);
+    *val_ = (signed char)val;
 }
 
 /* bool needs special processing for YES/NO/TRUE/FALSE */
