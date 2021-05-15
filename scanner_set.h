@@ -145,13 +145,6 @@ public:;
     void    add_scanner_file(std::string fn);    // load a scanner from a shared library file
     void    add_scanner_directory(const std::string &dirname); // load all scanners in the directory
 
-    void    load_scanner_packet_handlers(); // after all scanners are loaded, this sets up the packet handlers.
-
-    void    apply_scanner_commands();   // applies all of the enable/disable commands and create the feature recorders
-    bool    is_scanner_enabled(const std::string &name); // report if it is enabled or not
-    void    get_enabled_scanners(std::vector<std::string> &svector); // put names of the enabled scanners into the vector
-    bool    is_find_scanner_enabled(); // return true if a find scanner is enabled
-
     /* These functions must be virtual so they can be called by dynamically loaded plugins */
     /* They throw a ScannerNotFound exception if no scanner exists */
 
@@ -162,16 +155,30 @@ public:;
         const char *what() const noexcept override {return m_error.c_str();}
     };
     const std::string get_scanner_name(scanner_t scanner) const; // returns the name of the scanner
-    virtual scanner_t &get_scanner_by_name(const std::string &name) ;
-    virtual feature_recorder &named_feature_recorder(const std::string name); // returns the feature recorder
+    virtual scanner_t *get_scanner_by_name(const std::string name) const ;
+    virtual feature_recorder &named_feature_recorder(const std::string name) const; // returns the feature recorder
+    virtual std::vector<std::string> feature_file_list() const;   // returns the list of feature files
 
     // report on the loaded scanners
     void     info_scanners(std::ostream &out,
                            bool detailed_info,bool detailed_settings,
                            const char enable_opt,const char disable_opt);
 
-    const std::string       &get_input_fname() const;
-    scanner_params::phase_t get_current_phase() const { return current_phase;};
+    /*
+     * PHASE_ENABLE
+     * Various scanners are enabled and their histograms are created
+     */
+
+
+    void    apply_scanner_commands();   // applies all of the enable/disable commands and create the feature recorders
+    bool    is_scanner_enabled(const std::string &name); // report if it is enabled or not
+    void    get_enabled_scanners(std::vector<std::string> &svector); // put names of the enabled scanners into the vector
+    bool    is_find_scanner_enabled(); // return true if a find scanner is enabled
+
+    //void    load_scanner_packet_handlers(); // after all scanners are loaded, this sets up the packet handlers.
+
+    const std::string       get_input_fname() const;
+    //scanner_params::phase_t get_current_phase() const { return current_phase;};
     size_t   histogram_count() const { return fs.histogram_count();};       // passthrough, mostly for debugging
     size_t   feature_recorder_count() const { return fs.feature_recorder_count();};
 

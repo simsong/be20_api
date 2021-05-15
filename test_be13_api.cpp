@@ -382,7 +382,7 @@ TEST_CASE("quote_if_necessary", "[feature_recorder]") {
     flags.no_alert = true;
 
     feature_recorder_set frs( flags, "sha1", scanner_config::NO_INPUT, scanner_config::NO_OUTDIR);
-    frs.named_feature_recorder("test", true);
+    frs.create_feature_recorder("test");
     feature_recorder &ft = frs.named_feature_recorder("test");
     ft.quote_if_necessary(f1,c1);
     REQUIRE( f1=="feature" );
@@ -393,7 +393,7 @@ TEST_CASE("fname in outdir", "[feature_recorder]") {
     feature_recorder_set::flags_t flags;
     flags.no_alert = true;
     feature_recorder_set frs( flags, "sha1", scanner_config::NO_INPUT, get_tempdir());
-    frs.named_feature_recorder("test", true);
+    frs.create_feature_recorder("test");
     feature_recorder &ft = frs.named_feature_recorder("test");
 
     const std::string n = ft.fname_in_outdir("foo", feature_recorder::NO_COUNT);
@@ -415,14 +415,17 @@ TEST_CASE("fname in outdir", "[feature_recorder]") {
  * Create a simple set and write two features and make a histogram.
  */
 TEST_CASE("feature_recorder_def", "[feature_recorder_set]") {
-    feature_recorder_def d1("test1", feature_recorder_def::flags_t::xml);
-    feature_recorder_def d2("test1", feature_recorder_def::flags_t::xml);
-    feature_recorder_def d3("test1", feature_recorder_def::flags_t::no_features);
-    feature_recorder_def d4("test4", feature_recorder_def::flags_t::no_features);
+    feature_recorder_def d1("test1");
+    feature_recorder_def d2("test1");
+    feature_recorder_def d3("test1"); d3.flags.xml = true;
+    feature_recorder_def d4("test4");
 
+    REQUIRE ( d1.name=="test1");
     REQUIRE ( d1 == d2 );
+    REQUIRE ( d1.name == d3.name );
+    REQUIRE ( d1.flags != d3.flags );
     REQUIRE ( d1 != d3 );
-    REQUIRE ( d1 < d4 );
+    //REQUIRE ( d1 < d4 );
 }
 
 
@@ -436,10 +439,10 @@ TEST_CASE("write_features", "[feature_recorder_set]" ) {
         flags.debug    = true;
 
         feature_recorder_set fs( flags, "sha1", scanner_config::NO_INPUT, tempdir);
-        feature_recorder &fr = fs.named_feature_recorder("test", true);
+        feature_recorder &fr = fs.create_feature_recorder("feature_file");
 
         /* Make sure requesting a valid name does not generate an exception and an invalid name generates an exception */
-        REQUIRE_NOTHROW( fs.named_feature_recorder("test") );
+        REQUIRE_NOTHROW( fs.named_feature_recorder("feature_file") );
         REQUIRE_THROWS_AS( fs.named_feature_recorder("test_not"), feature_recorder_set::NoSuchFeatureRecorder);
 
         /* Ask the feature recorder to create a histogram */
@@ -656,7 +659,9 @@ TEST_CASE("enable/disable", "[scanner]") {
         ss.apply_scanner_commands();        // applied after all scanners are added
 
         /*  Make sure that the scanner was added  */
+        std::cerr << "FOO1\n";
         REQUIRE_NOTHROW( ss.get_scanner_by_name("sha1_test") );
+        std::cerr << "FOO2\n";
         REQUIRE( ss.get_scanner_by_name("sha1_test") == scan_sha1_test );
         REQUIRE_THROWS_AS(ss.get_scanner_by_name("no_such_scanner"), scanner_set::NoSuchScanner );
 
@@ -701,6 +706,7 @@ TEST_CASE("run", "[scanner]") {
     struct feature_recorder_set::flags_t f;
     scanner_set ss(sc, f);
     ss.add_scanner(scan_sha1_test);
+    ss.apply_scanner_commands();
 
     /* Make sure we got a sha1_test feature recorder */
     feature_recorder &fr = ss.named_feature_recorder("sha1_bufs");

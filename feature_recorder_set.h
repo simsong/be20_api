@@ -56,8 +56,7 @@ private:
     atomic_set<std::string> seen_set {};       // hex hash values of pages that have been seen
     size_t   context_window_default {16};           // global option
 
-
-    // map of feature recorders, name->feature recorder, by name
+    // map of feature recorders, name->feature recorder
     feature_recorder_map_t frm {};
 
     feature_recorder      *stop_list_recorder {nullptr}; // where stopped features get written (if there is one)
@@ -173,11 +172,16 @@ public:
         const char *what() const noexcept override {return m_error.c_str();}
     };
 
-    /* return the named feature recorder, creating it if necessary */
-    virtual feature_recorder create_feature_recorder(feature_recorder_def def); // create a feature recorder
-    virtual feature_recorder &named_feature_recorder(const std::string name); // returns the named feature recorder
-    virtual feature_recorder &get_alert_recorder() ; // returns the alert recorder
-    virtual std::vector<std::string> feature_file_list(); // returns a list of feature file names
+    /* create a feature recorder, and return it as well */
+    virtual feature_recorder &create_feature_recorder(feature_recorder_def def); // create a feature recorder
+    /* convenience constructor */
+    virtual feature_recorder &create_feature_recorder(const std::string name) {
+        return create_feature_recorder(feature_recorder_def(name));
+    }
+    // Just return it
+    virtual feature_recorder &named_feature_recorder(const std::string name) const; // returns the named feature recorder
+    virtual feature_recorder &get_alert_recorder() const ; // returns the alert recorder
+    virtual std::vector<std::string> feature_file_list() const; // returns a list of feature file names
 
     void    dump_name_count_stats(class dfxml_writer *writer) const;
 

@@ -87,7 +87,7 @@ feature_recorder_set::feature_recorder_set( const flags_t &flags_,
 
     /* Create an alert recorder if necessary */
     if (!flags.no_alert) {
-        create_feature_recorder(feature_recorder_def(feature_recorder_set::ALERT_RECORDER_NAME,0)); // make the alert recorder
+        create_feature_recorder(feature_recorder_set::ALERT_RECORDER_NAME); // make the alert recorder
     }
 
     //message_enabled_scanners(scanner_params::PHASE_INIT); // tell all enabled scanners to init
@@ -140,7 +140,7 @@ feature_recorder_set::~feature_recorder_set()
  * Create a requested feature recorder. Do not create it if it already exists.
  */
 
-void feature_recorder_set::create_feature_recorder(const feature_recorder_def def)
+feature_recorder &feature_recorder_set::create_feature_recorder(const feature_recorder_def def)
 {
     if (flags.record_files and flags.record_sql){
         throw std::runtime_error("currently can only record to files or SQL, not both");
@@ -161,6 +161,7 @@ void feature_recorder_set::create_feature_recorder(const feature_recorder_def de
         fr = new feature_recorder_sql(*this, def);
     }
     frm.insert(def.name, fr);
+    return *fr;                          // as a courtesy
 }
 
 /*
@@ -168,21 +169,20 @@ void feature_recorder_set::create_feature_recorder(const feature_recorder_def de
  * If the feature recorder doesn't exist and create is true, create it.
  * Otherwise raise an exception.
  */
-feature_recorder &feature_recorder_set::named_feature_recorder(const std::string name)
+feature_recorder &feature_recorder_set::named_feature_recorder(const std::string name) const
 {
-    auto it = frm.find(*name);
-    if ( it != frm.end() ) {
-        return *it->second;
-    } else {
+    auto it = frm.find(name);
+    if ( it == frm.end() ) {
         throw NoSuchFeatureRecorder {std::string("No such feature recorder: ")+name};
     }
+    return *it->second;
 }
 
 /*
  * The alert recorder is special. It's provided for all of the feature recorders.
  * If one doesn't exist, create it.
  */
-feature_recorder &feature_recorder_set::get_alert_recorder()
+feature_recorder &feature_recorder_set::get_alert_recorder() const
 {
     return named_feature_recorder(feature_recorder_set::ALERT_RECORDER_NAME);
 }
@@ -274,9 +274,9 @@ void feature_recorder_set::histograms_generate()
 }
 
 
-std::vector<std::string> feature_recorder_set::get_feature_file_list()
+std::vector<std::string> feature_recorder_set::feature_file_list() const
 {
-    std::vector<std::string> ret
+    std::vector<std::string> ret;
     for( auto it: frm ){
         ret.push_back(it.first);
     }
