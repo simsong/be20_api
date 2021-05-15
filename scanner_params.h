@@ -13,12 +13,14 @@
 #include <map>
 #include <ostream>
 
+// Note: Do not include scanner_set.h, because it needs scanner_params.h!
 
 #include "histogram_def.h"
 #include "packet_info.h"
 #include "sbuf.h"
 #include "scanner_config.h"
 #include "feature_recorder.h"
+#include "feature_recorder_set.h"
 
 /** A scanner is a function that takes a reference to scanner params and a recrusion control block */
 typedef void scanner_t(struct scanner_params &sp);

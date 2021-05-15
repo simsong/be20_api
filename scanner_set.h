@@ -54,6 +54,7 @@
 
 #include "packet_info.h"
 #include "feature_recorder_set.h"
+#include "scanner_params.h"             // needed for scanner_t
 
 /**
  *  \class scanner_set
