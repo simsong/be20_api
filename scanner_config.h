@@ -42,17 +42,18 @@ struct  scanner_config {
     // The get_config methods should be called on the si object during PHASE_STARTUP
     //virtual void get_config(const scanner_info::config_t &c, const std::string &name,std::string *val,const std::string &help);
     virtual void set_config( const std::string &name, const std::string &val);
-    virtual void get_config( const std::string &name, std::string *val, const std::string &help);
-    virtual void get_config( const std::string &name, uint64_t *val,    const std::string &help);
-    virtual void get_config( const std::string &name, int32_t *val,     const std::string &help);
-    virtual void get_config( const std::string &name, uint32_t *val,    const std::string &help);
-    virtual void get_config( const std::string &name, uint16_t *val,    const std::string &help);
-    virtual void get_config( const std::string &name, uint8_t *val,     const std::string &help);
-#ifdef __APPLE__
-    virtual void get_config( const std::string &name, size_t *val,      const std::string &help);
-#define HAVE_GET_CONFIG_SIZE_T
-#endif
-    virtual void get_config( const std::string &name, bool *val,        const std::string &help);
+    virtual void get_config( const std::string &name, std::string *val,        const std::string &help);
+    virtual void get_config( const std::string &name, signed char *val,        const std::string &help);
+    virtual void get_config( const std::string &name, short *val,              const std::string &help);
+    virtual void get_config( const std::string &name, int *val,                const std::string &help);
+    virtual void get_config( const std::string &name, long *val,               const std::string &help);
+    virtual void get_config( const std::string &name, long long *val,          const std::string &help);
+    virtual void get_config( const std::string &name, unsigned char *val,      const std::string &help);
+    virtual void get_config( const std::string &name, unsigned short *val,     const std::string &help);
+    virtual void get_config( const std::string &name, unsigned int *val,       const std::string &help);
+    virtual void get_config( const std::string &name, unsigned long *val,      const std::string &help);
+    virtual void get_config( const std::string &name, unsigned long long *val, const std::string &help);
+    virtual void get_config( const std::string &name, bool *val,               const std::string &help);
     //virtual int max_depth() const;
 
     /**
