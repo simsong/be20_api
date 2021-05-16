@@ -1,0 +1,36 @@
+name: BE13_API CI (c++17) on FreeBSD
+on: [push]
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+      with:
+        submodules: recursive
+
+    - name: c/c++ test
+      uses: vmactions/freebsd-vm@v0.1.4
+      with:
+        usesh: true
+        prepare: pkg install -y libtool libltdl autoconf automake openssl-devel pkg-config
+        run: |
+          bash bootstrap.sh && ./configure && make
+          make check
+          make distcheck
+
+    - name: Save failures report
+      if:   failure()
+      uses: actions/upload-artifact@v2
+      with:
+        name: freebsd-error-report
+        path: |
+          autom4te.cache/**
+          config.log
+          config.h
+          test*.log
+
+    - uses: ammaraskar/gcc-problem-matcher@0.1
+      name: GCC Problem Matcher
