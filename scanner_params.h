@@ -53,8 +53,8 @@ struct scanner_params {
 
         // default copy construction and assignment are meaningless
         // and not implemented
-        scanner_info(const scanner_info &i)=delete;
-        scanner_info &operator=(const scanner_info &i)=delete;
+        //scanner_info(const scanner_info &i)=delete;
+        //scanner_info &operator=(const scanner_info &i)=delete;
 
         struct scanner_flags_t {
             bool  default_enabled {true}; //  enabled by default
@@ -84,12 +84,14 @@ struct scanner_params {
             }
         } scanner_flags {};
 
-        scanner_info(){};
+        // constructor. We must have the name and the pointer. Everything else is optional
+        scanner_info(scanner_t *scanner_,std::string name_):scanner(scanner_),name(name_){
+        };
         /* PASSED FROM SCANNER to API: */
         //int               si_version { CURRENT_SI_VERSION };             // version number for this structure
-        scanner_t         *scanner {};            // the scanner
+        scanner_t         *scanner;            // the scanner
+        std::string       name;                //   scanner name
         std::string       helpstr {};             // the help string
-        std::string       name {};                //   scanner name
         std::string       author {};              //   who wrote me?
         std::string       description {};         //   what do I do?
         std::string       url {};                 //   where I come from
@@ -104,8 +106,8 @@ struct scanner_params {
         // Move constructor
         scanner_info(scanner_info &&source ) :
             scanner(source.scanner),
-            helpstr(source.helpstr),
             name(source.name),
+            helpstr(source.helpstr),
             description(source.description),
             url(source.url),
             scanner_version(source.scanner_version),
@@ -173,7 +175,6 @@ struct scanner_params {
     virtual void register_info(const scanner_info *) ; // called by a scanner to register its info
     virtual ~scanner_params(){};
     virtual feature_recorder &named_feature_recorder(const std::string feature_recorder_name) const;
-
 
 #if 0
     /* A scanner params with no print options */

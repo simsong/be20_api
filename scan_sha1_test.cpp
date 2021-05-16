@@ -21,9 +21,7 @@ void  scan_sha1_test(struct scanner_params &sp)
 {
     if(sp.phase==scanner_params::PHASE_INIT){
         /* Create a scanner_info block to register this scanner */
-        auto info = new scanner_params::scanner_info();
-        info->scanner     = scan_sha1_test;
-        info->name        = "sha1_test";
+        auto info = new scanner_params::scanner_info(scan_sha1_test,"sha1_test");
         info->author      = "Simson L. Garfinkel";
         info->description = "Compute the SHA1 of every sbuf.";
         info->url         = "https://digitalcorpora.org/bulk_extractor";

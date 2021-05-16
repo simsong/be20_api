@@ -121,19 +121,19 @@ std::string tests_dir()
 }
 
 
-const char *hello="Hello world!";
+const char *hello_="Hello world!";
 const char *hello_sha1="d3486ae9136e7856bc42212385ea797094475802";
-const uint8_t *hello_buf = reinterpret_cast<const uint8_t *>(hello);
+const uint8_t *hello_buf = reinterpret_cast<const uint8_t *>(hello_);
 const sbuf_t hello_sbuf() {
-    pos0_t p0("hello");
-    return sbuf_t(p0, hello_buf, strlen(hello), strlen(hello), 0, false, false, false);
+    pos0_t p0(hello_);
+    return sbuf_t(p0, hello_buf, strlen(hello_), strlen(hello_), 0, false, false, false);
 }
 
 const char *hello16="H\000e\000l\000l\000o\000 \000w\000o\000r\000l\000d\000!\000";
 const uint8_t *hello16_buf = reinterpret_cast<const uint8_t *>(hello16);
 const sbuf_t hello16_sbuf() {
     pos0_t p0("hello16");
-    return sbuf_t(p0, hello16_buf, strlen(hello)*2, strlen(hello)*2, 0, false, false, false);
+    return sbuf_t(p0, hello16_buf, strlen(hello_)*2, strlen(hello_)*2, 0, false, false, false);
 }
 
 /* Read all of the lines of a file and return them as a vector */
@@ -364,7 +364,7 @@ static std::string hash_func(const uint8_t *buf,size_t bufsize)
 }
 
 TEST_CASE("sha1", "[hash]") {
-    REQUIRE( hash_func(reinterpret_cast<const uint8_t *>(hello), strlen(hello))==hello_sha1);
+    REQUIRE( hash_func(reinterpret_cast<const uint8_t *>(hello_), strlen(hello_))==hello_sha1);
 }
 
 /****************************************************************
@@ -457,7 +457,7 @@ TEST_CASE("write_features", "[feature_recorder_set]" ) {
         fr.write(p+10, "two", "context");
 
         sbuf_t sb16 = hello16_sbuf();
-        REQUIRE( sb16.size() == strlen(hello)*2 );
+        REQUIRE( sb16.size() == strlen(hello_)*2 );
     }
 #if 0
     std::vector<std::string> lines = getLines(tempdir+"/name_suffix1.txt");
@@ -558,7 +558,7 @@ TEST_CASE( "test regex_vector", "[regex]" ) {
 
 TEST_CASE("hello_sbuf","[sbuf]") {
     sbuf_t sb1 = hello_sbuf();
-    REQUIRE( sb1.size()==strlen(hello));
+    REQUIRE( sb1.size()==strlen(hello_));
     REQUIRE( sb1.offset(&hello_buf[2]) == 2);
     REQUIRE( sb1.asString() == std::string("Hello world!"));
     REQUIRE( sb1.get8uBE(0) == 'H');
@@ -577,15 +577,15 @@ TEST_CASE("map_file","[sbuf]") {
 
     os.open( fname );
     REQUIRE( os.is_open() );
-    os << hello;
+    os << hello_;
     os.close();
 
 
     sbuf_t sb1 = sbuf_t::map_file(fname);
-    REQUIRE( sb1.bufsize == strlen(hello));
+    REQUIRE( sb1.bufsize == strlen(hello_));
     REQUIRE( sb1.bufsize == sb1.pagesize);
-    for(int i=0;hello[i];i++){
-        REQUIRE( hello[i] == sb1[i] );
+    for(int i=0;hello_[i];i++){
+        REQUIRE( hello_[i] == sb1[i] );
     }
     REQUIRE( sb1[-1] == '\000' );
     REQUIRE( sb1[1000] == '\000' );
@@ -653,10 +653,14 @@ TEST_CASE("enable/disable", "[scanner]") {
 
     struct feature_recorder_set::flags_t f;
     {
-        sc.push_scanner_command(SHA1_TEST, scanner_config::scanner_command::ENABLE);
+        sc.push_scanner_command(scanner_config::scanner_command::ALL_SCANNERS, scanner_config::scanner_command::ENABLE);
+        std::cerr << "b0++++++++++++++++++++++++\n";
         scanner_set ss(sc, f);
+        std::cerr << "a0------------------------\n";
         ss.add_scanner(scan_sha1_test);
+        std::cerr << "p0------------------------\n";
         ss.apply_scanner_commands();        // applied after all scanners are added
+        std::cerr << "p1------------------------\n";
 
         /*  Make sure that the scanner was added  */
         std::cerr << "FOO1\n";
@@ -699,8 +703,8 @@ TEST_CASE("enable/disable", "[scanner]") {
 /* This test runs a scan on the hello_sbuf() with the sha1 scanner. */
 TEST_CASE("run", "[scanner]") {
     scanner_config sc;
-    sc.outdir = get_tempdir();
-    sc.hash_alg = "sha1";               // it's faster than SHA1!
+    sc.outdir   = get_tempdir();
+    sc.hash_alg = "sha1";               // it's faster than MD5!
     sc.push_scanner_command(std::string("sha1_test"), scanner_config::scanner_command::ENABLE); /* Turn it onn */
 
     struct feature_recorder_set::flags_t f;
@@ -728,10 +732,13 @@ TEST_CASE("run", "[scanner]") {
     REQUIRE( fr.histograms[0]->def.flags.lowercase == true);
     REQUIRE( fr.histograms[0]->def.flags.numeric == false);
 
+    /* Test the hasher */
+    sbuf_t hello = hello_sbuf();
+    std::string hashed = fr.hash( hello );
+
     /* Perform a simulated scan */
     ss.phase_scan();                    // start the scanner phase
-    ss.process_sbuf( hello_sbuf() );    // process a single sbuf
-    puts("calling ss.shutdown");
+    ss.process_sbuf( hello );    // process a single sbuf
     ss.shutdown();                      // shutdown; this will write out the in-memory histogram.
 
     /* Make sure that the feature recorder output was created */

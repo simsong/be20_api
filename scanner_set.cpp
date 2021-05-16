@@ -75,6 +75,7 @@ void scanner_set::register_info(const scanner_params::scanner_info *si)
         throw std::runtime_error("A scanner tried to register itself that is already registered");
     }
     scanner_info_db[si->scanner] = si;
+    std::cerr << "registered " << si->name << "\n";
 }
 
 
@@ -231,17 +232,22 @@ void scanner_set::apply_scanner_commands()
         throw std::runtime_error("apply_scanner_commands can only be run in scanner_params::PHASE_INIT");
     }
     for (auto cmd: sc.scanner_commands) {
+        std::cerr << "name: " << cmd.scannerName << "\n";
         if (cmd.scannerName == scanner_config::scanner_command::ALL_SCANNERS){
             /* If name is 'all' and the NO_ALL flag is not set for that scanner,
              * then either enable it or disable it as appropriate
              */
+            std::cerr << "Foo size=" << scanner_info_db.size() << "\n";
             for (auto it: scanner_info_db) {
                 if (it.second->scanner_flags.no_all) {
+                    std::cerr << "no_all\n";
                     continue;
                 }
                 if (cmd.command == scanner_config::scanner_command::ENABLE) {
+                    std::cerr << "first=" << it.first << "\n";
                     enabled_scanners.insert( it.first );
                 } else {
+                    std::cerr << "-first=" << it.first << "\n";
                     enabled_scanners.erase( it.first );
                 }
             }
@@ -283,11 +289,14 @@ bool scanner_set::is_scanner_enabled(const std::string &name)
 }
 
 // put the enabled scanners into the vector
-void scanner_set::get_enabled_scanners(std::vector<std::string> &svector)
+std::vector<std::string> scanner_set::get_enabled_scanners() const
 {
+    std::vector<std::string> ret;
     for (auto it: enabled_scanners) {
-        svector.push_back( scanner_info_db[it]->name );
+        auto f = scanner_info_db.find(it);
+        ret.push_back( f->second->name );
     }
+    return ret;
 }
 
 // Return true if any of the enabled scanners are a FIND scanner
@@ -321,6 +330,13 @@ scanner_t *scanner_set::get_scanner_by_name(const std::string search_name) const
             return it.first;
         }
     }
+#if 0
+    std::cerr << "scanners on file:\n";
+    for (auto it: scanner_info_db) {
+        std::cerr << " " <<  it.second->name  << "\n";
+    }
+    std::cerr << "no such scanner: " << search_name << "\n";
+#endif
     throw NoSuchScanner(search_name);
 }
 

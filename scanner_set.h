@@ -173,7 +173,7 @@ public:;
 
     void    apply_scanner_commands();   // applies all of the enable/disable commands and create the feature recorders
     bool    is_scanner_enabled(const std::string &name); // report if it is enabled or not
-    void    get_enabled_scanners(std::vector<std::string> &svector); // put names of the enabled scanners into the vector
+    std::vector<std::string>   get_enabled_scanners() const; // put names of the enabled scanners into the vector
     bool    is_find_scanner_enabled(); // return true if a find scanner is enabled
 
     //void    load_scanner_packet_handlers(); // after all scanners are loaded, this sets up the packet handlers.
