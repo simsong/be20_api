@@ -365,9 +365,9 @@ void scanner_set::info_scanners(std::ostream &out,
             }
             out << "\n";
             out << "flags:  " << it.second->scanner_flags.asString() << "\n";
-            if (it.second->author.size()) out << "Author: " << it.second->author << "\n";
-            if (it.second->description.size()) out << "Description: " << it.second->description << "\n";
-            if (it.second->url.size()) out << "URL: " << it.second->url << "\n";
+            if (it.second->author.size())          out << "Author: "          << it.second->author << "\n";
+            if (it.second->description.size())     out << "Description: "     << it.second->description << "\n";
+            if (it.second->url.size())             out << "URL: "             << it.second->url << "\n";
             if (it.second->scanner_version.size()) out << "Scanner Version: " << it.second->scanner_version << "\n";
             out << "Feature Names: ";
             for ( auto i2: it.second->feature_defs ) {
