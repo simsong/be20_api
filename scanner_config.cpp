@@ -21,6 +21,7 @@ void scanner_config::set_config(const std::string &name, const std::string &val)
  * the configuration being requested (by each scanner). Thus, after each of the scanners
  * query for their arguments, it's possible to dump the help stream and find eveyrthing that they were looking for.
  */
+template<>
 void scanner_config::get_config(const std::string &name, std::string *val,const std::string &help)
 {
     std::stringstream ss;
@@ -33,35 +34,17 @@ void scanner_config::get_config(const std::string &name, std::string *val,const 
     }
 }
 
-/* Should this be redone with templates? */
-#define GET_CONFIG(T) void scanner_config::get_config(const std::string &n,T *val,const std::string &help) { \
-        std::stringstream ss;\
-        ss << *val;\
-        std::string v(ss.str());\
-        get_config(n,&v,help);\
-        ss.str(v);\
-        ss >> *val;\
-    }
-
-GET_CONFIG(short)
-GET_CONFIG(int)
-GET_CONFIG(long)
-GET_CONFIG(long long)
-GET_CONFIG(unsigned short)
-GET_CONFIG(unsigned int)
-GET_CONFIG(unsigned long)
-GET_CONFIG(unsigned long long)
-
-
 /* signed/unsigned char need cast to larger type for <<
  * Otherwise it is interpreted as a character.
  */
+template<>
 void scanner_config::get_config(const std::string &n,unsigned char *val_,const std::string &help)
 {
     unsigned int val = *val_;
     get_config(n, &val, help);
     *val_ = (unsigned char)val;
 }
+template<>
 void scanner_config::get_config(const std::string &n,signed char *val_,const std::string &help)
 {
     int val = *val_;
@@ -70,6 +53,7 @@ void scanner_config::get_config(const std::string &n,signed char *val_,const std
 }
 
 /* bool needs special processing for YES/NO/TRUE/FALSE */
+template<>
 void scanner_config::get_config(const std::string &n,bool *val,const std::string &help)
 {
     std::stringstream ss;
