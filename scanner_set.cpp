@@ -244,10 +244,8 @@ void scanner_set::apply_scanner_commands()
                     continue;
                 }
                 if (cmd.command == scanner_config::scanner_command::ENABLE) {
-                    std::cerr << "first=" << it.first << "\n";
                     enabled_scanners.insert( it.first );
                 } else {
-                    std::cerr << "-first=" << it.first << "\n";
                     enabled_scanners.erase( it.first );
                 }
             }

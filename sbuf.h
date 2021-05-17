@@ -239,6 +239,15 @@ public:
         map_file_delimiter = new_delim;
     }
 
+    /* Allocate an sbuf from a null-terminated string. Used for debugging mostly */
+    explicit sbuf_t(const char *str):
+        buf(reinterpret_cast<const uint8_t *>(str)),
+        bufsize(strlen(str)),
+        pagesize(strlen(str)) {};
+
+
+
+
     /* Properties */
     size_t size() const {return bufsize;} // return the number of bytes
     size_t left(size_t n) const {return n<bufsize ? bufsize-n : 0;}; // how much space is left at n
@@ -407,6 +416,7 @@ public:
      */
     ssize_t find(uint8_t ch,size_t start=0) const {
         for(;start<pagesize;start++){
+            std::cerr << "buf[" << start << "]=" << buf[start] << " ch=" << ch << "\n";
             if(buf[start]==ch) return start;
         }
         return -1;

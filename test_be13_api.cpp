@@ -121,19 +121,14 @@ std::string tests_dir()
 }
 
 
-const char *hello_="Hello world!";
+const char *hello8="Hello world!";
 const char *hello_sha1="d3486ae9136e7856bc42212385ea797094475802";
-const uint8_t *hello_buf = reinterpret_cast<const uint8_t *>(hello_);
-const sbuf_t hello_sbuf() {
-    pos0_t p0(hello_);
-    return sbuf_t(p0, hello_buf, strlen(hello_), strlen(hello_), 0, false, false, false);
-}
 
 const char *hello16="H\000e\000l\000l\000o\000 \000w\000o\000r\000l\000d\000!\000";
 const uint8_t *hello16_buf = reinterpret_cast<const uint8_t *>(hello16);
 const sbuf_t hello16_sbuf() {
     pos0_t p0("hello16");
-    return sbuf_t(p0, hello16_buf, strlen(hello_)*2, strlen(hello_)*2, 0, false, false, false);
+    return sbuf_t(p0, hello16_buf, strlen(hello8)*2, strlen(hello8)*2, 0, false, false, false);
 }
 
 /* Read all of the lines of a file and return them as a vector */
@@ -363,8 +358,9 @@ static std::string hash_func(const uint8_t *buf,size_t bufsize)
     exit(1);
 }
 
+// Test the hash function without testing the SBUF, then test it with the sbuf
 TEST_CASE("sha1", "[hash]") {
-    REQUIRE( hash_func(reinterpret_cast<const uint8_t *>(hello_), strlen(hello_))==hello_sha1);
+    REQUIRE( hash_func(reinterpret_cast<const uint8_t *>(hello8), strlen(hello8))==hello_sha1);
 }
 
 /****************************************************************
@@ -457,7 +453,7 @@ TEST_CASE("write_features", "[feature_recorder_set]" ) {
         fr.write(p+10, "two", "context");
 
         sbuf_t sb16 = hello16_sbuf();
-        REQUIRE( sb16.size() == strlen(hello_)*2 );
+        REQUIRE( sb16.size() == strlen(hello8)*2 );
     }
 #if 0
     std::vector<std::string> lines = getLines(tempdir+"/name_suffix1.txt");
@@ -557,11 +553,17 @@ TEST_CASE( "test regex_vector", "[regex]" ) {
 
 
 TEST_CASE("hello_sbuf","[sbuf]") {
-    sbuf_t sb1 = hello_sbuf();
-    REQUIRE( sb1.size()==strlen(hello_));
-    REQUIRE( sb1.offset(&hello_buf[2]) == 2);
+    sbuf_t sb1 = sbuf_t(hello8);
+    REQUIRE( sb1.size()==strlen(hello8));
+    REQUIRE( sb1.offset(reinterpret_cast<const uint8_t *>(hello8)+2) == 2);
     REQUIRE( sb1.asString() == std::string("Hello world!"));
     REQUIRE( sb1.get8uBE(0) == 'H');
+    REQUIRE( sb1.get8uBE(1) == 'e');
+    REQUIRE( sb1.get8uBE(2) == 'l');
+    REQUIRE( sb1.get8uBE(3) == 'l');
+    REQUIRE( sb1.get8uBE(4) == 'o');
+    REQUIRE( sb1.find('H', 0) == 0);
+    REQUIRE( sb1.find('e', 0) == 1);
     REQUIRE( sb1.find('o', 0) == 4);
     REQUIRE( sb1.find("world") == 6);
 
@@ -577,15 +579,15 @@ TEST_CASE("map_file","[sbuf]") {
 
     os.open( fname );
     REQUIRE( os.is_open() );
-    os << hello_;
+    os << hello8;
     os.close();
 
 
     sbuf_t sb1 = sbuf_t::map_file(fname);
-    REQUIRE( sb1.bufsize == strlen(hello_));
+    REQUIRE( sb1.bufsize == strlen(hello8));
     REQUIRE( sb1.bufsize == sb1.pagesize);
-    for(int i=0;hello_[i];i++){
-        REQUIRE( hello_[i] == sb1[i] );
+    for(int i=0;hello8[i];i++){
+        REQUIRE( hello8[i] == sb1[i] );
     }
     REQUIRE( sb1[-1] == '\000' );
     REQUIRE( sb1[1000] == '\000' );
@@ -733,7 +735,7 @@ TEST_CASE("run", "[scanner]") {
     REQUIRE( fr.histograms[0]->def.flags.numeric == false);
 
     /* Test the hasher */
-    sbuf_t hello = hello_sbuf();
+    sbuf_t hello = sbuf_t(hello8);
     std::string hashed = fr.hash( hello );
 
     /* Perform a simulated scan */
