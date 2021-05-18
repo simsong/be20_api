@@ -4,8 +4,11 @@
  * bulk_extractor backend stuff, used for both standalone executable and bulk_extractor.
  */
 
-#include "config.h"
 #include <cassert>
+#include <vector>
+#include <string>
+
+#include "config.h"
 
 #ifdef HAVE_ERR_H
 #include <err.h>
@@ -21,17 +24,16 @@
 #include "dfxml/src/dfxml_writer.h"
 #include "aftimer.h"
 
-
 /****************************************************************
  *** SCANNER SET IMPLEMENTATION (previously the PLUG-IN SYSTEM)
  ****************************************************************/
 
 /* BE2 revision:
  * In BE1, the active scanners were maintained by the plugin system's global state.
- * In BE2, there is no global states. Instead, scanners are grouped into scanner set, which
- *         in turn has a feature_recorder_set, which in turn has multiple feature recorders.
- *         The scanner set can then be asked to process a sbuf.
- *         All of the global variables go away.
+ * In BE2, there is no global state. Instead, scanners are grouped into scanner set, which
+ *        in turn has a feature_recorder_set, which in turn has multiple feature recorders.
+ *        The scanner set can then be asked to process a sbuf.
+ *        All of the global variables go away.
  */
 
 
@@ -45,7 +47,7 @@ public:
 
 /* Vector of callbacks */
 typedef std::vector<packet_plugin_info> packet_plugin_info_vector_t;
-packet_plugin_info_vector_t  packet_handlers;   // pcap callback handlers
+//packet_plugin_info_vector_t  packet_handlers;   // pcap callback handlers
 
 /****************************************************************
  * create the scanner set
@@ -64,34 +66,22 @@ scanner_set::scanner_set(const scanner_config &sc_,
  ****************************************************************/
 
 
-/* Callback for a scanner to register its info with the scanner set. */
+/* Callback for a scanner to register its info with the scanner set.
+ * This does not create the feature recorders! That happens below
+ */
 void scanner_set::register_info(const scanner_params::scanner_info *si)
 {
     if (scanner_info_db.find( si->scanner) != scanner_info_db.end()){
         throw std::runtime_error("A scanner tried to register itself that is already registered");
     }
     scanner_info_db[si->scanner] = si;
-
-    /* Create all of the requested feature recorders.
-     * Multiple scanners may request the same feature recorder without generating an error.
-     */
-    for (auto it: si->feature_names ){
-        fs.named_feature_recorder( it );
-    }
-
-    /* Create all of the requested histograms
-     * Multiple scanners may request the same histograms without generating an error.
-     */
-    for (auto it: si->histogram_defs ){
-        // Make sure that a feature recorder exists for the feature specified in the histogram
-        fs.named_feature_recorder( it.feature, false ).histogram_add( it );
-    }
+    std::cerr << "registered " << si->name << "\n";
 }
 
 
 /****************************************************************
  *
- * Add the scanner.
+ * Add a scanner to the scanner set.
  */
 
 void scanner_set::add_scanner(scanner_t scanner)
@@ -113,6 +103,7 @@ void scanner_set::add_scanner(scanner_t scanner)
     // register_info above, which will add the scanner's scanner_info to the database.
     (*scanner)(sp);
 
+    // Make sure it was registered
     if (scanner_info_db.find(scanner) == scanner_info_db.end()){
         throw std::runtime_error("a scanner did not register itself");
     }
@@ -237,13 +228,19 @@ void scanner_set::load_scanner_packet_handlers()
 
 void scanner_set::apply_scanner_commands()
 {
+    if (current_phase != scanner_params::PHASE_INIT){
+        throw std::runtime_error("apply_scanner_commands can only be run in scanner_params::PHASE_INIT");
+    }
     for (auto cmd: sc.scanner_commands) {
+        std::cerr << "name: " << cmd.scannerName << "\n";
         if (cmd.scannerName == scanner_config::scanner_command::ALL_SCANNERS){
             /* If name is 'all' and the NO_ALL flag is not set for that scanner,
              * then either enable it or disable it as appropriate
              */
+            std::cerr << "Foo size=" << scanner_info_db.size() << "\n";
             for (auto it: scanner_info_db) {
                 if (it.second->scanner_flags.no_all) {
+                    std::cerr << "no_all\n";
                     continue;
                 }
                 if (cmd.command == scanner_config::scanner_command::ENABLE) {
@@ -255,10 +252,6 @@ void scanner_set::apply_scanner_commands()
         } else {
             /* enable or disable this scanner */
             scanner_t *scanner = get_scanner_by_name( cmd.scannerName);
-            if (!scanner) {
-                /* Scanner wasn't found */
-                throw std::invalid_argument("Invalid scanner name: " + cmd.scannerName);
-            }
             if (cmd.command == scanner_config::scanner_command::ENABLE) {
                 enabled_scanners.insert( scanner );
             } else {
@@ -267,26 +260,41 @@ void scanner_set::apply_scanner_commands()
         }
     }
 
-    TODO --
-    /* Verify that none of the scanners have conflicting feature recorders - same name but different flags */
+    /* Create all of the requested feature recorders.
+     * Multiple scanners may request the same feature recorder without generating an error.
+     */
+    for (auto sit: scanner_info_db) {
+        for (auto it: sit.second->feature_defs ){
+            fs.create_feature_recorder( it );
+        }
 
-    TODO -- Create the feature recorders
-
+        /* Create all of the requested histograms
+         * Multiple scanners may request the same histograms without generating an error.
+         */
+        for (auto it: sit.second->histogram_defs ){
+            // Make sure that a feature recorder exists for the feature specified in the histogram
+            fs.named_feature_recorder( it.feature ).histogram_add( it );
+        }
+    }
+    current_phase = scanner_params::PHASE_ENABLED;
 }
 
 
 bool scanner_set::is_scanner_enabled(const std::string &name)
 {
     scanner_t *scanner = get_scanner_by_name(name);
-    return scanner && enabled_scanners.find(scanner) != enabled_scanners.end();
+    return enabled_scanners.find(scanner) != enabled_scanners.end();
 }
 
 // put the enabled scanners into the vector
-void scanner_set::get_enabled_scanners(std::vector<std::string> &svector)
+std::vector<std::string> scanner_set::get_enabled_scanners() const
 {
+    std::vector<std::string> ret;
     for (auto it: enabled_scanners) {
-        svector.push_back( scanner_info_db[it]->name );
+        auto f = scanner_info_db.find(it);
+        ret.push_back( f->second->name );
     }
+    return ret;
 }
 
 // Return true if any of the enabled scanners are a FIND scanner
@@ -313,20 +321,27 @@ const std::string scanner_set::get_scanner_name(scanner_t scanner) const
     return "";
 }
 
-scanner_t &scanner_set::get_scanner_by_name(const std::string &search_name)
+scanner_t *scanner_set::get_scanner_by_name(const std::string search_name) const
 {
     for (auto it: scanner_info_db) {
         if ( it.second->name == search_name) {
-            return *it.first;
+            return it.first;
         }
     }
+#if 0
+    std::cerr << "scanners on file:\n";
+    for (auto it: scanner_info_db) {
+        std::cerr << " " <<  it.second->name  << "\n";
+    }
+    std::cerr << "no such scanner: " << search_name << "\n";
+#endif
     throw NoSuchScanner(search_name);
 }
 
 /* This interface creates if we are in init phase, doesn't if we are in scan phase */
-feature_recorder &scanner_set::named_feature_recorder(const std::string &name)
+feature_recorder &scanner_set::named_feature_recorder(const std::string name) const
 {
-    return fs.named_feature_recorder(name, current_phase==scanner_params::PHASE_INIT);
+    return fs.named_feature_recorder(name);
 }
 
 /**
@@ -348,13 +363,13 @@ void scanner_set::info_scanners(std::ostream &out,
             }
             out << "\n";
             out << "flags:  " << it.second->scanner_flags.asString() << "\n";
-            if (it.second->author.size()) out << "Author: " << it.second->author << "\n";
-            if (it.second->description.size()) out << "Description: " << it.second->description << "\n";
-            if (it.second->url.size()) out << "URL: " << it.second->url << "\n";
+            if (it.second->author.size())          out << "Author: "          << it.second->author << "\n";
+            if (it.second->description.size())     out << "Description: "     << it.second->description << "\n";
+            if (it.second->url.size())             out << "URL: "             << it.second->url << "\n";
             if (it.second->scanner_version.size()) out << "Scanner Version: " << it.second->scanner_version << "\n";
             out << "Feature Names: ";
-            for ( auto i2: it.second->feature_names ) {
-                out << i2 << " ";
+            for ( auto i2: it.second->feature_defs ) {
+                out << i2.name << " ";
             }
             if (detailed_settings){
                 out << "Settable Options (and their defaults): \n";
@@ -386,8 +401,7 @@ void scanner_set::info_scanners(std::ostream &out,
 }
 
 
-
-const std::string & scanner_set::get_input_fname() const
+const std::string scanner_set::get_input_fname() const
 {
     return sc.input_fname;
 }
@@ -401,8 +415,8 @@ const std::string & scanner_set::get_input_fname() const
 /* Transition to the scanning phase */
 void scanner_set::phase_scan()
 {
-    if (current_phase != scanner_params::PHASE_INIT){
-        throw std::runtime_error("start_scan can only be run in scanner_params::PHASE_INIT");
+    if (current_phase != scanner_params::PHASE_ENABLED){
+        throw std::runtime_error("start_scan can only be run in scanner_params::PHASE_ENABLED");
     }
     current_phase = scanner_params::PHASE_SCAN;
 }
@@ -513,11 +527,9 @@ void scanner_set::process_sbuf(const class sbuf_t &sbuf)
      *** CALL EACH OF THE SCANNERS ON THE SBUF
      ****************************************************************/
 
-#if 0
-    if (debug & DEBUG_DUMP_DATA) {
-        sp.sbuf.hex_dump(std::cerr);
+    if (debug_flags.debug_dump_data) {
+        sbuf.hex_dump(std::cerr);
     }
-#endif
 
     for (auto it: scanner_info_db) {
         // Look for reasons not to run a scanner
@@ -561,21 +573,18 @@ void scanner_set::process_sbuf(const class sbuf_t &sbuf)
             /* Call the scanner.*/
             {
                 aftimer t;
-#if 0
-                if (debug & DEBUG_PRINT_STEPS){
+
+                if (debug_flags.debug_print_steps){
                     std::cerr << "sbuf.pos0=" << sbuf.pos0 << " calling scanner " << name << "\n";
                 }
-#endif
                 t.start();
                 scanner_params sp(*this, scanner_params::PHASE_SCAN, sbuf, scanner_params::PrintOptions());
                 (*it.first)( sp );
                 t.stop();
-#if 0
-                if (debug & DEBUG_PRINT_STEPS){
+                if (debug_flags.debug_print_steps){
                     std::cerr << "sbuf.pos0=" << sbuf.pos0 << " scanner "
                               << name << " t=" << t.elapsed_seconds() << "\n";
                 }
-#endif
                 // fs.add_stats(epath,t.elapsed_seconds());
             }
 
@@ -624,15 +633,7 @@ void scanner_set::process_packet(const be13::packet_info &pi)
 #endif
 
 
-#if 0
-void scanner_set::get_scanner_feature_file_names(feature_file_names_t &feature_file_names)
+std::vector<std::string> scanner_set::feature_file_list() const
 {
-    for (auto it: scanner_info_db) {
-        if (enabled_scanners.find(it.first) != enabled_scanners.end()){
-            for( auto it2:second->feature_names) {
-                feature_file_names.insert(it2);
-            }
-        }
-    }
+    return fs.feature_file_list();
 }
-#endif

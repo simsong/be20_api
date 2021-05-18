@@ -13,12 +13,14 @@
 #include <map>
 #include <ostream>
 
+// Note: Do not include scanner_set.h, because it needs scanner_params.h!
 
 #include "histogram_def.h"
 #include "packet_info.h"
 #include "sbuf.h"
 #include "scanner_config.h"
 #include "feature_recorder.h"
+#include "feature_recorder_set.h"
 
 /** A scanner is a function that takes a reference to scanner params and a recrusion control block */
 typedef void scanner_t(struct scanner_params &sp);
@@ -51,8 +53,8 @@ struct scanner_params {
 
         // default copy construction and assignment are meaningless
         // and not implemented
-        scanner_info(const scanner_info &i)=delete;
-        scanner_info &operator=(const scanner_info &i)=delete;
+        //scanner_info(const scanner_info &i)=delete;
+        //scanner_info &operator=(const scanner_info &i)=delete;
 
         struct scanner_flags_t {
             bool  default_enabled {true}; //  enabled by default
@@ -82,34 +84,36 @@ struct scanner_params {
             }
         } scanner_flags {};
 
-        scanner_info(){};
+        // constructor. We must have the name and the pointer. Everything else is optional
+        scanner_info(scanner_t *scanner_,std::string name_):scanner(scanner_),name(name_){
+        };
         /* PASSED FROM SCANNER to API: */
         //int               si_version { CURRENT_SI_VERSION };             // version number for this structure
-        scanner_t         *scanner {};            // the scanner
+        scanner_t         *scanner;            // the scanner
+        std::string       name;                //   scanner name
         std::string       helpstr {};             // the help string
-        std::string       name {};                //   scanner name
         std::string       author {};              //   who wrote me?
         std::string       description {};         //   what do I do?
         std::string       url {};                 //   where I come from
         std::string       scanner_version {};     //   version for the scanner
         std::string       pathPrefix{};           //   this scanner's path prefix for recursive scanners. e.g. "GZIP"
         uint64_t          flags {};               //   flags
-        std::set<feature_file_def>    feature_defs {};   //   feature files that this scanner needs.
-        std::set<histogram_def>  histogram_defs {};      //   histogram definitions that the scanner needs
+        std::vector<feature_recorder_def>    feature_defs {};   //   feature files that this scanner needs.
+        std::vector<histogram_def>  histogram_defs {};      //   histogram definitions that the scanner needs
         //void              *packet_user {};        //   data for network callback
         //be13::packet_callback_t *packet_cb {};    //   callback for processing network packets, or NULL
 
         // Move constructor
         scanner_info(scanner_info &&source ) :
             scanner(source.scanner),
-            helpstr(source.helpstr),
             name(source.name),
+            helpstr(source.helpstr),
             description(source.description),
             url(source.url),
             scanner_version(source.scanner_version),
             pathPrefix(source.pathPrefix),
             flags(source.flags),
-            feature_names(source.feature_names),
+            feature_defs(source.feature_defs),
             histogram_defs(source.histogram_defs) {
         }
     };
@@ -143,6 +147,7 @@ struct scanner_params {
     // the scans are implemented in the scanner set
     enum phase_t {
         PHASE_INIT,    // called in main thread when scanner loads
+        PHASE_ENABLED, // enable/disable commands called
         PHASE_SCAN,    // called in worker thread for every ENABLED scanner to scan an sbuf
         PHASE_SHUTDOWN // called in main thread for every ENABLED scanner when scanner is shutting down. Allows XML closing.
     };
@@ -167,10 +172,9 @@ struct scanner_params {
 
     /* User-servicable parts; these are here for scanners */
     //register_info should use unique_ptr(), but I couldn't get it to work.
-    virtual void register_info(const scanner_info *); // called by a scanner to register its info
+    virtual void register_info(const scanner_info *) ; // called by a scanner to register its info
     virtual ~scanner_params(){};
-    virtual feature_recorder &named_feature_recorder(const std::string feature_recorder_name);
-
+    virtual feature_recorder &named_feature_recorder(const std::string feature_recorder_name) const;
 
 #if 0
     /* A scanner params with no print options */
@@ -208,7 +212,7 @@ struct scanner_params {
     const uint32_t              depth {0};     //  how far down are we? / only valid in SCAN_PHASE
     std::stringstream           *sxml{};       //  on scanning and shutdown: CDATA added to XML stream if provided
 
-    std::string const &get_input_fname() const;
+    std::string const get_input_fname() const;
 };
 
 inline std::ostream & operator <<(std::ostream &os,const scanner_params &sp){

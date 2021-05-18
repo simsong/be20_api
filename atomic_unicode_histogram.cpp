@@ -94,12 +94,9 @@ void AtomicUnicodeHistogram::add(const std::string &key_unknown_encoding)
         // and then convert it to utf32
         u32key = convert_utf8_to_utf32( convert_utf16_to_utf8(key_unknown_encoding, little_endian));
         found_utf16 = true;
-        std::cerr <<"point1\n";
     } else {
         u32key = convert_utf8_to_utf32( key_unknown_encoding );
-        std::cerr <<"point2\n";
     }
-    std::cerr << "len(u32key)="<<u32key.size() << "\n";
 
     /* At this point we have UTF-32, which we treat as raw unicode characters.
      *

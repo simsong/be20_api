@@ -121,19 +121,14 @@ std::string tests_dir()
 }
 
 
-const char *hello="Hello world!";
+const char *hello8="Hello world!";
 const char *hello_sha1="d3486ae9136e7856bc42212385ea797094475802";
-const uint8_t *hello_buf = reinterpret_cast<const uint8_t *>(hello);
-const sbuf_t hello_sbuf() {
-    pos0_t p0("hello");
-    return sbuf_t(p0, hello_buf, strlen(hello), strlen(hello), 0, false, false, false);
-}
 
 const char *hello16="H\000e\000l\000l\000o\000 \000w\000o\000r\000l\000d\000!\000";
 const uint8_t *hello16_buf = reinterpret_cast<const uint8_t *>(hello16);
 const sbuf_t hello16_sbuf() {
     pos0_t p0("hello16");
-    return sbuf_t(p0, hello16_buf, strlen(hello)*2, strlen(hello)*2, 0, false, false, false);
+    return sbuf_t(p0, hello16_buf, strlen(hello8)*2, strlen(hello8)*2, 0, false, false, false);
 }
 
 /* Read all of the lines of a file and return them as a vector */
@@ -363,8 +358,9 @@ static std::string hash_func(const uint8_t *buf,size_t bufsize)
     exit(1);
 }
 
+// Test the hash function without testing the SBUF, then test it with the sbuf
 TEST_CASE("sha1", "[hash]") {
-    REQUIRE( hash_func(reinterpret_cast<const uint8_t *>(hello), strlen(hello))==hello_sha1);
+    REQUIRE( hash_func(reinterpret_cast<const uint8_t *>(hello8), strlen(hello8))==hello_sha1);
 }
 
 /****************************************************************
@@ -382,7 +378,7 @@ TEST_CASE("quote_if_necessary", "[feature_recorder]") {
     flags.no_alert = true;
 
     feature_recorder_set frs( flags, "sha1", scanner_config::NO_INPUT, scanner_config::NO_OUTDIR);
-    frs.named_feature_recorder("test", true);
+    frs.create_feature_recorder("test");
     feature_recorder &ft = frs.named_feature_recorder("test");
     ft.quote_if_necessary(f1,c1);
     REQUIRE( f1=="feature" );
@@ -393,7 +389,7 @@ TEST_CASE("fname in outdir", "[feature_recorder]") {
     feature_recorder_set::flags_t flags;
     flags.no_alert = true;
     feature_recorder_set frs( flags, "sha1", scanner_config::NO_INPUT, get_tempdir());
-    frs.named_feature_recorder("test", true);
+    frs.create_feature_recorder("test");
     feature_recorder &ft = frs.named_feature_recorder("test");
 
     const std::string n = ft.fname_in_outdir("foo", feature_recorder::NO_COUNT);
@@ -415,14 +411,17 @@ TEST_CASE("fname in outdir", "[feature_recorder]") {
  * Create a simple set and write two features and make a histogram.
  */
 TEST_CASE("feature_recorder_def", "[feature_recorder_set]") {
-    feature_recorder_def d1("test1", feature_recorder_def::flags_t::xml);
-    feature_recorder_def d2("test1", feature_recorder_def::flags_t::xml);
-    feature_recorder_def d3("test1", feature_recorder_def::flags_t::no_features);
-    feature_recorder_def d4("test4", feature_recorder_def::flags_t::no_features);
+    feature_recorder_def d1("test1");
+    feature_recorder_def d2("test1");
+    feature_recorder_def d3("test1"); d3.flags.xml = true;
+    feature_recorder_def d4("test4");
 
+    REQUIRE ( d1.name=="test1");
     REQUIRE ( d1 == d2 );
+    REQUIRE ( d1.name == d3.name );
+    REQUIRE ( d1.flags != d3.flags );
     REQUIRE ( d1 != d3 );
-    REQUIRE ( d1 < d4 );
+    //REQUIRE ( d1 < d4 );
 }
 
 
@@ -436,10 +435,10 @@ TEST_CASE("write_features", "[feature_recorder_set]" ) {
         flags.debug    = true;
 
         feature_recorder_set fs( flags, "sha1", scanner_config::NO_INPUT, tempdir);
-        feature_recorder &fr = fs.named_feature_recorder("test", true);
+        feature_recorder &fr = fs.create_feature_recorder("feature_file");
 
         /* Make sure requesting a valid name does not generate an exception and an invalid name generates an exception */
-        REQUIRE_NOTHROW( fs.named_feature_recorder("test") );
+        REQUIRE_NOTHROW( fs.named_feature_recorder("feature_file") );
         REQUIRE_THROWS_AS( fs.named_feature_recorder("test_not"), feature_recorder_set::NoSuchFeatureRecorder);
 
         /* Ask the feature recorder to create a histogram */
@@ -454,7 +453,7 @@ TEST_CASE("write_features", "[feature_recorder_set]" ) {
         fr.write(p+10, "two", "context");
 
         sbuf_t sb16 = hello16_sbuf();
-        REQUIRE( sb16.size() == strlen(hello)*2 );
+        REQUIRE( sb16.size() == strlen(hello8)*2 );
     }
 #if 0
     std::vector<std::string> lines = getLines(tempdir+"/name_suffix1.txt");
@@ -554,11 +553,17 @@ TEST_CASE( "test regex_vector", "[regex]" ) {
 
 
 TEST_CASE("hello_sbuf","[sbuf]") {
-    sbuf_t sb1 = hello_sbuf();
-    REQUIRE( sb1.size()==strlen(hello));
-    REQUIRE( sb1.offset(&hello_buf[2]) == 2);
+    sbuf_t sb1 = sbuf_t(hello8);
+    REQUIRE( sb1.size()==strlen(hello8));
+    REQUIRE( sb1.offset(reinterpret_cast<const uint8_t *>(hello8)+2) == 2);
     REQUIRE( sb1.asString() == std::string("Hello world!"));
     REQUIRE( sb1.get8uBE(0) == 'H');
+    REQUIRE( sb1.get8uBE(1) == 'e');
+    REQUIRE( sb1.get8uBE(2) == 'l');
+    REQUIRE( sb1.get8uBE(3) == 'l');
+    REQUIRE( sb1.get8uBE(4) == 'o');
+    REQUIRE( sb1.find('H', 0) == 0);
+    REQUIRE( sb1.find('e', 0) == 1);
     REQUIRE( sb1.find('o', 0) == 4);
     REQUIRE( sb1.find("world") == 6);
 
@@ -574,15 +579,15 @@ TEST_CASE("map_file","[sbuf]") {
 
     os.open( fname );
     REQUIRE( os.is_open() );
-    os << hello;
+    os << hello8;
     os.close();
 
 
     sbuf_t sb1 = sbuf_t::map_file(fname);
-    REQUIRE( sb1.bufsize == strlen(hello));
+    REQUIRE( sb1.bufsize == strlen(hello8));
     REQUIRE( sb1.bufsize == sb1.pagesize);
-    for(int i=0;hello[i];i++){
-        REQUIRE( hello[i] == sb1[i] );
+    for(int i=0;hello8[i];i++){
+        REQUIRE( hello8[i] == sb1[i] );
     }
     REQUIRE( sb1[-1] == '\000' );
     REQUIRE( sb1[1000] == '\000' );
@@ -650,13 +655,19 @@ TEST_CASE("enable/disable", "[scanner]") {
 
     struct feature_recorder_set::flags_t f;
     {
-        sc.push_scanner_command(SHA1_TEST, scanner_config::scanner_command::ENABLE);
+        sc.push_scanner_command(scanner_config::scanner_command::ALL_SCANNERS, scanner_config::scanner_command::ENABLE);
+        std::cerr << "b0++++++++++++++++++++++++\n";
         scanner_set ss(sc, f);
+        std::cerr << "a0------------------------\n";
         ss.add_scanner(scan_sha1_test);
+        std::cerr << "p0------------------------\n";
         ss.apply_scanner_commands();        // applied after all scanners are added
+        std::cerr << "p1------------------------\n";
 
         /*  Make sure that the scanner was added  */
+        std::cerr << "FOO1\n";
         REQUIRE_NOTHROW( ss.get_scanner_by_name("sha1_test") );
+        std::cerr << "FOO2\n";
         REQUIRE( ss.get_scanner_by_name("sha1_test") == scan_sha1_test );
         REQUIRE_THROWS_AS(ss.get_scanner_by_name("no_such_scanner"), scanner_set::NoSuchScanner );
 
@@ -694,13 +705,14 @@ TEST_CASE("enable/disable", "[scanner]") {
 /* This test runs a scan on the hello_sbuf() with the sha1 scanner. */
 TEST_CASE("run", "[scanner]") {
     scanner_config sc;
-    sc.outdir = get_tempdir();
-    sc.hash_alg = "sha1";               // it's faster than SHA1!
+    sc.outdir   = get_tempdir();
+    sc.hash_alg = "sha1";               // it's faster than MD5!
     sc.push_scanner_command(std::string("sha1_test"), scanner_config::scanner_command::ENABLE); /* Turn it onn */
 
     struct feature_recorder_set::flags_t f;
     scanner_set ss(sc, f);
     ss.add_scanner(scan_sha1_test);
+    ss.apply_scanner_commands();
 
     /* Make sure we got a sha1_test feature recorder */
     feature_recorder &fr = ss.named_feature_recorder("sha1_bufs");
@@ -722,10 +734,13 @@ TEST_CASE("run", "[scanner]") {
     REQUIRE( fr.histograms[0]->def.flags.lowercase == true);
     REQUIRE( fr.histograms[0]->def.flags.numeric == false);
 
+    /* Test the hasher */
+    sbuf_t hello = sbuf_t(hello8);
+    std::string hashed = fr.hash( hello );
+
     /* Perform a simulated scan */
     ss.phase_scan();                    // start the scanner phase
-    ss.process_sbuf( hello_sbuf() );    // process a single sbuf
-    puts("calling ss.shutdown");
+    ss.process_sbuf( hello );    // process a single sbuf
     ss.shutdown();                      // shutdown; this will write out the in-memory histogram.
 
     /* Make sure that the feature recorder output was created */

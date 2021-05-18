@@ -21,6 +21,7 @@
 #include <vector>
 
 struct  scanner_config {
+
     typedef std::map<std::string,std::string>  config_t ; // configuration for scanner passed in
     config_t  namevals {};             //  (input) name=val map
     std::string help_str {};          // help string that is built
@@ -32,7 +33,7 @@ struct  scanner_config {
     scanner_config( const scanner_config &) = default;
     std::string input_fname {};         // where input comes from
     std::string outdir {};              // where output goes
-    std::string hash_alg {};            // which hash algorithm are se using
+    std::string hash_alg {"sha1"};            // which hash algorithm are using; default to SHA1
     std::string help() { return help_str; };
     static const std::string   NO_INPUT;  // 'filename' indicator that the FRS has no input file
     static const std::string   NO_OUTDIR; // 'dirname' indicator that the FRS produces no file output
@@ -55,8 +56,14 @@ struct  scanner_config {
         enum command_t {DISABLE,ENABLE};
         scanner_command(const scanner_command &sc):scannerName(sc.scannerName),command(sc.command){};
         scanner_command(const std::string &scannerName_,scanner_command::command_t c):scannerName(scannerName_),command(c){};
-        const std::string scannerName  {};
-        const command_t command {};
+        std::string scannerName  {};
+        command_t command {};
+        /* default copy construction and assignment */
+        scanner_command &operator=(const scanner_command &a){
+            this->scannerName = a.scannerName;
+            this->command     = a.command;
+            return *this;
+        }
     };
 
     // The commands for those scanners (enable, disable, options, etc.

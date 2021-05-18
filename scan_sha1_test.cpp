@@ -21,9 +21,7 @@ void  scan_sha1_test(struct scanner_params &sp)
 {
     if(sp.phase==scanner_params::PHASE_INIT){
         /* Create a scanner_info block to register this scanner */
-        auto info = new scanner_params::scanner_info();
-        info->scanner     = scan_sha1_test;
-        info->name        = "sha1_test";
+        auto info = new scanner_params::scanner_info(scan_sha1_test,"sha1_test");
         info->author      = "Simson L. Garfinkel";
         info->description = "Compute the SHA1 of every sbuf.";
         info->url         = "https://digitalcorpora.org/bulk_extractor";
@@ -33,12 +31,12 @@ void  scan_sha1_test(struct scanner_params &sp)
         // specify the feature_records that the scanner wants.
         // Note that the feature recorder does not need to be the same name as the scanner
         // scanners may specify any number of feature recorders.
-        info->feature_names.insert("sha1_bufs");
+        info->feature_defs.push_back( feature_recorder_def("sha1_bufs"));
 
         // Note that histogram_defs is a set, so it's okay if this initialization routine is called twice,
         // the histogram only gets inserted once.
         histogram_def hd("test_histogram","sha1_bufs", "^(.....)", "", "first5", histogram_def::flags_t(true,false));
-        info->histogram_defs.insert(hd);
+        info->histogram_defs.push_back(hd);
         sp.register_info(info);
         return;
     }

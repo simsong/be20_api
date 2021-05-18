@@ -54,7 +54,7 @@
  */
 
 struct feature_recorder_def {
-    std::string name;                   // the name of the feature recorder
+    std::string name {};                   // the name of the feature recorder
     /**
      * \name Flags that control scanners
      * @{
@@ -62,27 +62,45 @@ struct feature_recorder_def {
      */
     /** Disable this recorder. */
     struct flags_t {
-        bool  disabled;           // feature recorder is Disabled
-        bool  no_context;         // Do not write context.
-        bool  no_stoplist;        // Do not honor the stoplist/alertlist.
-        bool  no_alertlist;       // Do not honor the stoplist/alertlist.
-        bool  no_features;         // do not record features (used for in-memory histogram recorder)
+        bool  disabled     {false};           // feature recorder is Disabled
+        bool  no_context   {false};         // Do not write context.
+        bool  no_stoplist  {false};        // Do not honor the stoplist/alertlist.
+        bool  no_alertlist {false};       // Do not honor the stoplist/alertlist.
+        bool  no_features  {false};         // do not record features (used for in-memory histogram recorder)
     /**
      * Normally feature recorders automatically quote non-UTF8 characters
      * with \x00 notation and quote "\" as \x5C. Specify FLAG_NO_QUOTE to
      * disable this behavior.
      */
-        bool  no_quote;            // do not escape UTF8 codes
+        bool  no_quote {false};            // do not escape UTF8 codes
 
     /**
      * Use this flag the feature recorder is sending UTF-8 XML.
      * non-UTF8 will be quoted but "\" will not be escaped.
      */
-        bool  xml;                 // will be sending XML
-
+        bool  xml {false};                 // will be sending XML
+        bool operator==(const flags_t &a) const {
+            return this->disabled == a.disabled  &&
+                this->no_context == a.no_context &&
+                this->no_stoplist == a.no_stoplist &&
+                this->no_alertlist == a.no_alertlist &&
+                this->no_features == a.no_features &&
+                this->no_quote == a.no_quote &&
+                this->xml      == a.xml;
+        }
+        bool operator!=(const flags_t &a) const {
+            return !( *this == a);
+        }
     } flags {};
 
     /** @} */
+    feature_recorder_def(std::string name_):name(name_){} // flagless constructor
+    bool operator==(const feature_recorder_def &a) const {
+        return (this->name==a.name) && (this->flags == a.flags);
+    };
+    bool operator!=(const feature_recorder_def &a) const {
+        return !( *this == a);
+    }
 };
 
 
@@ -233,7 +251,7 @@ public:;
     std::vector<std::unique_ptr<AtomicUnicodeHistogram>> histograms {};
 
     /* These must be specialized */
-    virtual void histogram_flush(AtomicUnicodeHistogram &h) = 0; // flush a specific histogram
+    virtual void histogram_flush(AtomicUnicodeHistogram &h); // flush a specific histogram
     virtual void histograms_add_feature(const std::string &feature); // propose a feature to all of the histograms
 
     virtual size_t histogram_count() { return histograms.size();}     // how many histograms it has
