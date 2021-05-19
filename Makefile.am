@@ -31,14 +31,6 @@ clean-local:
 clean-gcov:
 	rm -f *.gcov *.gcda *.gcno
 
-#DFXML_SRC_DIR=dfxml/src/
-#include dfxml/src/Makefile.defs
-
-DFXML_WRITER = dfxml/src/dfxml_writer.cpp \
-      dfxml/src/dfxml_writer.h \
-      dfxml/src/hash_t.h \
-      dfxml/src/cpuid.h
-
 AUTOMAKE_OPTIONS = subdir-objects
 
 #noinst_LIBRARIES = libbe13api.a
@@ -51,4 +43,4 @@ TESTS = $(check_PROGRAMS)
 
 # apitest: test_be13_api
 
-test_be13_api_SOURCES = $(DFXML_WRITER) $(BE13_API_SRC) test_be13_api.cpp catch.hpp
+test_be13_api_SOURCES = $(BE13_API_SRC) test_be13_api.cpp catch.hpp
