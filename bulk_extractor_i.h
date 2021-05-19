@@ -92,7 +92,7 @@
 #include "feature_recorder_set.h"
 #include "packet_info.h"
 #include "sbuf_private.h"
-#include "sbuf_stream.h"
+//#include "sbuf_stream.h"
 #include "scanner_config.h"
 #include "scanner_set.h"
 #include "word_and_context_list.h"

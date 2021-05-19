@@ -232,12 +232,10 @@ void scanner_set::apply_scanner_commands()
         throw std::runtime_error("apply_scanner_commands can only be run in scanner_params::PHASE_INIT");
     }
     for (auto cmd: sc.scanner_commands) {
-        std::cerr << "name: " << cmd.scannerName << "\n";
         if (cmd.scannerName == scanner_config::scanner_command::ALL_SCANNERS){
             /* If name is 'all' and the NO_ALL flag is not set for that scanner,
              * then either enable it or disable it as appropriate
              */
-            std::cerr << "Foo size=" << scanner_info_db.size() << "\n";
             for (auto it: scanner_info_db) {
                 if (it.second->scanner_flags.no_all) {
                     std::cerr << "no_all\n";

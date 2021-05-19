@@ -740,7 +740,7 @@ TEST_CASE("run", "[scanner]") {
 
     /* Perform a simulated scan */
     ss.phase_scan();                    // start the scanner phase
-    ss.process_sbuf( hello );    // process a single sbuf
+    ss.process_sbuf( hello );           // process a single sbuf
     ss.shutdown();                      // shutdown; this will write out the in-memory histogram.
 
     /* Make sure that the feature recorder output was created */
