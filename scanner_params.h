@@ -211,7 +211,6 @@ struct scanner_params {
     PrintOptions                print_options {}; // how to print. Default is that there are no options
     const uint32_t              depth {0};     //  how far down are we? / only valid in SCAN_PHASE
     std::stringstream           *sxml{};       //  on scanning and shutdown: CDATA added to XML stream if provided
-
     std::string const get_input_fname() const;
 };
 

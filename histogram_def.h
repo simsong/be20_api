@@ -78,7 +78,6 @@ struct histogram_def {
     /* flags */
     struct flags_t flags {};
 
-
     /* default copy construction and assignment */
     histogram_def(const histogram_def &a) {
         this->name    = a.name;
@@ -139,8 +138,8 @@ struct histogram_def {
      * set match to Extract and match: Does this string match
      */
 
-    bool match(std::u32string u32key, std::string *displayString = nullptr) const;
-    bool match(std::string u32key, std::string *displayString = nullptr) const;
+    bool match( std::u32string u32key, std::string *displayString = nullptr) const;
+    bool match( std::string u32key,    std::string *displayString = nullptr) const;
 };
 
 std::ostream & operator << (std::ostream &os, const histogram_def &hd);

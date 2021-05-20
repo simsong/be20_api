@@ -89,7 +89,10 @@ class scanner_set {
     // This provides all_scanners
 
     // The scanner_set's configuration for all the scanners that are loaded.
-    const  scanner_config sc;
+    // it cannot be const, because it is modified when scanners add their help.
+public:
+    scanner_config sc;
+private:
 
     /* The feature recorder set where the scanners outputs are stored */
     class  feature_recorder_set fs;

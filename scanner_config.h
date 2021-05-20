@@ -44,7 +44,7 @@ struct  scanner_config {
     //void get_config(const scanner_info::config_t &c, const std::string &name,std::string *val,const std::string &help);
     void set_config( const std::string &name, const std::string &val);
     template<typename T>
-    void get_config( const std::string &name, T *val,                  const std::string &help);
+    void get_config( const std::string &name, T *val, const std::string &help) ;
     //int max_depth() const;
 
     /**
@@ -74,13 +74,13 @@ struct  scanner_config {
     void    push_scanner_command(const std::string &scannerName, scanner_command::command_t c); // enable/disable a specific scanner
 };
 
-template<> void scanner_config::get_config( const std::string &name, std::string *val,        const std::string &help);
-template<> void scanner_config::get_config( const std::string &name, signed char *val,        const std::string &help);
-template<> void scanner_config::get_config( const std::string &name, unsigned char *val,      const std::string &help);
-template<> void scanner_config::get_config( const std::string &name, bool *val,               const std::string &help);
+template<> void scanner_config::get_config( const std::string &name, std::string *val,        const std::string &help) ;
+template<> void scanner_config::get_config( const std::string &name, signed char *val,        const std::string &help) ;
+template<> void scanner_config::get_config( const std::string &name, unsigned char *val,      const std::string &help) ;
+template<> void scanner_config::get_config( const std::string &name, bool *val,               const std::string &help) ;
 
 template<typename T>
-void scanner_config::get_config(const std::string &n,T *val,const std::string &help) {
+void scanner_config::get_config(const std::string &n,T *val,const std::string &help)  {
     std::stringstream ss;
     ss << *val;
     std::string v(ss.str());

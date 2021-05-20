@@ -26,7 +26,7 @@ void scanner_config::get_config(const std::string &name, std::string *val,const 
 {
     std::stringstream ss;
     ss << "   -S " << name << "=" << *val << "    " << help << " (" << name << ")\n";
-    help_str += ss.str();
+    help_str += ss.str();               // add the help in
 
     auto it = namevals.find(name);
     if ( it != namevals.end() && val){
