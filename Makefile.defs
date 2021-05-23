@@ -49,7 +49,6 @@ BE13_API_SRC= \
 	$(BE13_API_DIR)/utils.h \
 	$(BE13_API_DIR)/word_and_context_list.cpp \
 	$(BE13_API_DIR)/word_and_context_list.h \
-        $(BE13_API_DIR)/dfxml/src/dfxml_writer.cpp \
         $(BE13_API_DIR)/dfxml/src/dfxml_writer.h \
         $(BE13_API_DIR)/dfxml/src/hash_t.h \
         $(BE13_API_DIR)/dfxml/src/cpuid.h

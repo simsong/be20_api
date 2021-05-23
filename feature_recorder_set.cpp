@@ -66,7 +66,7 @@ feature_recorder_set::feature_recorder_set( const flags_t &flags_,
     hasher( hash_def(hash_algorithm, hash_def::hash_func_for_name(hash_algorithm)))
 {
     if (outdir.size() == 0){
-        throw std::invalid_argument("output directory not provided");
+        throw std::invalid_argument("feature_recorder_set::feature_recorder_set(): output directory not provided");
     }
 
     /* Make sure we can write to the outdir if one is provided */
