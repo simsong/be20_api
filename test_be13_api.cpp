@@ -31,6 +31,7 @@
 
 #include "atomic_unicode_histogram.h"
 #include "sbuf.h"
+#include "utils.h"
 
 
 /****************************************************************
@@ -828,4 +829,19 @@ TEST_CASE("Show the output directory", "[end]") {
     if (ret != 0){
         throw std::runtime_error("could not list tempdir???");
     }
+}
+
+TEST_CASE("directory_support", "[utilities]") {
+    namespace fs = std::filesystem;
+    std::string tmpdir = NamedTemporaryDirectory();
+    REQUIRE( fs::is_directory("no such directory") == false);
+    REQUIRE( fs::is_directory(tmpdir) == true);
+    REQUIRE( directory_empty(tmpdir) == true);
+    std::string foo_txt = tmpdir+"/foo.txt";
+    FILE *f = fopen( foo_txt.c_str(), "w");
+    fprintf(f,"foo\n");
+    fclose(f);
+    REQUIRE( directory_empty(tmpdir) == false);
+    unlink(foo_txt.c_str());
+    rmdir(tmpdir.c_str());
 }

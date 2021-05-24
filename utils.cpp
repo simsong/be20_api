@@ -17,6 +17,7 @@
 #include <cstdarg>
 #include <cstdio>
 #include <cerrno>
+#include <filesystem>
 
 #include <mutex>
 #include <sstream>

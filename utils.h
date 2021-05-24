@@ -12,9 +12,11 @@
 #include <cstdint>
 #include <sys/types.h>
 #include <sys/time.h>
+#include <unistd.h>
 
 #include <string>
 #include <vector>
+#include <filesystem>
 
 #include "utf8.h"
 
@@ -129,6 +131,23 @@ inline bool validASCIIName(const std::string &name)
         if (ch & 0x80)  return false; // high bit should not be set
         if (ch < ' ')   return false;  // should not be control character
         if (ch == 0x7f) return false; // DEL is not printable
+    }
+    return true;
+}
+
+inline std::filesystem::path NamedTemporaryDirectory() {
+    char tmpl[] = "/tmp/dirXXXXXX";
+    mkdtemp(tmpl);
+    return tmpl;
+}
+
+inline bool directory_empty(std::filesystem::path path) {
+    namespace fs = std::filesystem;
+    if (fs::is_directory(path)) {
+        for (const auto & it : fs::directory_iterator(path)) {
+            (void) it;
+            return false;
+        }
     }
     return true;
 }
