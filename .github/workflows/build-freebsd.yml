@@ -15,7 +15,7 @@ jobs:
       uses: vmactions/freebsd-vm@v0.1.4
       with:
         usesh: true
-        prepare: pkg install -y libtool libltdl autoconf automake openssl-devel pkgconf
+        prepare: pkg install -y libtool libltdl autoconf automake openssl-devel pkgconf bash
         run: |
           bash bootstrap.sh && ./configure && make
           make check
