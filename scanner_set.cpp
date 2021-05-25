@@ -75,7 +75,6 @@ void scanner_set::register_info(const scanner_params::scanner_info *si)
         throw std::runtime_error("A scanner tried to register itself that is already registered");
     }
     scanner_info_db[si->scanner] = si;
-    std::cerr << "registered " << si->name << "\n";
 }
 
 
@@ -383,19 +382,18 @@ void scanner_set::info_scanners(std::ostream &out,
             disabled_scanner_names.push_back(it.second->name);
         }
     }
-    out << "\n";
-    out << "These scanners disabled by default; enable with -" << enable_opt << ":\n";
-
-    sort( disabled_scanner_names.begin(), disabled_scanner_names.end());
-    sort( enabled_scanner_names.begin(), enabled_scanner_names.end());
-
-    for ( auto it:disabled_scanner_names ){
-        out << "   -" << enable_opt << " " <<  it << " - enable scanner " << it << "\n";
+    if (enabled_scanner_names.size()){
+        out << "These scanners enabled; disable with -" << disable_opt << ":\n";
+        for ( auto it:enabled_scanner_names ){
+            out << "   -" << disable_opt << " " <<  it << " - disable scanner " << it << "\n";
+        }
     }
-    out << "\n";
-    out << "These scanners enabled by default; disable with -" << disable_opt << ":\n";
-    for ( auto it:disabled_scanner_names ){
-        out << "   -" << disable_opt << " " <<  it << " - disable scanner " << it << "\n";
+    if (disabled_scanner_names.size()){
+        out << "These scanners disabled; enable with -" << enable_opt << ":\n";
+        sort( disabled_scanner_names.begin(), disabled_scanner_names.end());
+        for ( auto it:disabled_scanner_names ){
+            out << "   -" << enable_opt << " " <<  it << " - enable scanner " << it << "\n";
+        }
     }
 }
 

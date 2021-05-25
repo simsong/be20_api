@@ -339,11 +339,8 @@ static void dump_hist(sqlite3_context *ctx,int argc,sqlite3_value**argv)
 void feature_recorder_file::histogram_flush(AtomicUnicodeHistogram &h)
 {
     /* Get the next filename */
-    std::cerr << "histogram_flush2 \n";
     std::string fname = fname_in_outdir(h.def.suffix, NEXT_COUNT);
-    std::cerr << "histogram_flush3 to " << fname << "\n";
     std::fstream hfile;
-    std::cerr << "feature_recorder_file::histogram_flush: writing histogram " << h.def << " to " << fname << "\n";
     hfile.open( fname.c_str(), std::ios_base::out);
     if (!hfile.is_open()){
         throw std::runtime_error("Cannot open feature histogram file "+fname);

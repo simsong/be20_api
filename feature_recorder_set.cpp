@@ -10,8 +10,6 @@
 #include "dfxml/src/dfxml_writer.h"
 #include "dfxml/src/hash_t.h"
 
-namespace fs = std::filesystem;
-
 /**
  * feature_recorder_set:
  * Manage the set of feature recorders.
@@ -66,6 +64,7 @@ feature_recorder_set::feature_recorder_set( const flags_t &flags_,
     input_fname(input_fname_),outdir(outdir_),flags(flags_),
     hasher( hash_def(hash_algorithm, hash_def::hash_func_for_name(hash_algorithm)))
 {
+    namespace fs = std::filesystem;
     if (outdir.size() == 0){
         throw std::invalid_argument("feature_recorder_set::feature_recorder_set(): output directory not provided");
     }

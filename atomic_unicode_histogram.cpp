@@ -44,11 +44,7 @@ std::ostream & operator << (std::ostream &os, const AtomicUnicodeHistogram::auh_
  */
 AtomicUnicodeHistogram::auh_t::report AtomicUnicodeHistogram::makeReport(size_t topN)
 {
-    std::cerr << "makeReport 1. topN=" << topN << " h.size=" << h.size() << "\n";
-
     auh_t::report rep = h.dump( true );
-
-    std::cerr << "makeReport 2. rep.size=" << rep.size() << "\n";
 
     /* If we only want some of them, delete the extra */
     if ( (topN > 0)  && ( topN < rep.size()) ){

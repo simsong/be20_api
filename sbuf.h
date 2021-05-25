@@ -416,7 +416,6 @@ public:
      */
     ssize_t find(uint8_t ch,size_t start=0) const {
         for(;start<pagesize;start++){
-            std::cerr << "buf[" << start << "]=" << buf[start] << " ch=" << ch << "\n";
             if(buf[start]==ch) return start;
         }
         return -1;

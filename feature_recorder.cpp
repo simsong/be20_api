@@ -695,7 +695,6 @@ void feature_recorder::histogram_add(const struct histogram_def &def)
  */
 void feature_recorder::histograms_add_feature(const std::string &feature)
 {
-    std::cerr << "add_feature('" << feature << "')\n";
     for (auto &h: histograms ){
         h->add(feature);               // add the original feature
     }
@@ -727,7 +726,6 @@ bool feature_recorder::histogram_flush_largest()
 void feature_recorder::histogram_flush_all()
 {
     for (auto &h: histograms ) {
-        std::cerr << "histogram_flush \n";
         this->histogram_flush( *h );
     }
 }

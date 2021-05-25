@@ -28,7 +28,6 @@ bool histogram_def::match(std::u32string u32key, std::string *displayString) con
         std::smatch m {};
         std::regex_search( u8key, m, this->reg);
         if (m.empty()==true){       // match does not exist
-            std::cerr << "fail2  pattern=" << pattern << "\n";
             return false;           // regex not found
         }
         u8key = m.str();

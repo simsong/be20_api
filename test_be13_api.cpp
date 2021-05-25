@@ -657,18 +657,12 @@ TEST_CASE("enable/disable", "[scanner]") {
     struct feature_recorder_set::flags_t f;
     {
         sc.push_scanner_command(scanner_config::scanner_command::ALL_SCANNERS, scanner_config::scanner_command::ENABLE);
-        std::cerr << "b0++++++++++++++++++++++++\n";
         scanner_set ss(sc, f);
-        std::cerr << "a0------------------------\n";
         ss.add_scanner(scan_sha1_test);
-        std::cerr << "p0------------------------\n";
         ss.apply_scanner_commands();        // applied after all scanners are added
-        std::cerr << "p1------------------------\n";
 
         /*  Make sure that the scanner was added  */
-        std::cerr << "FOO1\n";
         REQUIRE_NOTHROW( ss.get_scanner_by_name("sha1_test") );
-        std::cerr << "FOO2\n";
         REQUIRE( ss.get_scanner_by_name("sha1_test") == scan_sha1_test );
         REQUIRE_THROWS_AS(ss.get_scanner_by_name("no_such_scanner"), scanner_set::NoSuchScanner );
 
@@ -714,6 +708,13 @@ TEST_CASE("run", "[scanner]") {
     scanner_set ss(sc, f);
     ss.add_scanner(scan_sha1_test);
     ss.apply_scanner_commands();
+
+    /* Make sure scanner is enabled */
+    std::stringstream s2;
+    ss.info_scanners(s2, true, true, 'e', 'x');
+    auto s2str = s2.str();
+    REQUIRE( s2str.find("disable scanner sha1") > 0 );
+    REQUIRE( s2str.find("enable scanner sha1") == std::string::npos);
 
     /* Make sure we got a sha1_test feature recorder */
     feature_recorder &fr = ss.named_feature_recorder("sha1_bufs");
