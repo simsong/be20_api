@@ -10,6 +10,7 @@
 #include "dfxml/src/dfxml_writer.h"
 #include "dfxml/src/hash_t.h"
 
+namespace fs = std::filesystem;
 
 /**
  * feature_recorder_set:
@@ -73,6 +74,16 @@ feature_recorder_set::feature_recorder_set( const flags_t &flags_,
     if (outdir == scanner_config::NO_OUTDIR){
         flags.disabled = true;
     } else {
+        /* Create the output directory if it doesn't exist */
+        if (!fs::is_directory(outdir)) {
+            fs::create_directory(outdir);
+        }
+
+        /* Make sure it is writable */
+        if (!fs::is_directory(outdir)){
+            throw std::runtime_error("Could not create directory " + outdir);
+        }
+
         if (access(outdir.c_str(),W_OK)!=0) {
             throw std::invalid_argument("output directory " + outdir + " not writable");
         }
@@ -84,11 +95,6 @@ feature_recorder_set::feature_recorder_set( const flags_t &flags_,
         named_feature_recorder(DISABLED_RECORDER_NAME).flags.disabled=true;
     }
 #endif
-
-    /* Create an alert recorder if necessary */
-    if (!flags.no_alert) {
-        create_feature_recorder(feature_recorder_set::ALERT_RECORDER_NAME); // make the alert recorder
-    }
 
     //message_enabled_scanners(scanner_params::PHASE_INIT); // tell all enabled scanners to init
 
@@ -135,6 +141,15 @@ feature_recorder_set::~feature_recorder_set()
 /****************************************************************
  *** adding and removing feature recorders
  ****************************************************************/
+
+void feature_recorder_set::create_alert_recorder()
+{
+    /* Create an alert recorder if necessary */
+    if (!flags.no_alert) {
+        create_feature_recorder(feature_recorder_set::ALERT_RECORDER_NAME); // make the alert recorder
+    }
+}
+
 
 /**
  * Create a requested feature recorder. Do not create it if it already exists.

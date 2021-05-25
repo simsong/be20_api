@@ -55,16 +55,8 @@ typedef std::vector<packet_plugin_info> packet_plugin_info_vector_t;
 scanner_set::scanner_set(const scanner_config &sc_,
                          const feature_recorder_set::flags_t &f,
                          class dfxml_writer *writer_):
-    sc(sc_),fs(f,sc_.hash_alg, sc_.input_fname, sc_.outdir), writer(writer_)
+    sc(sc_),fs(f, sc_.hash_alg, sc_.input_fname, sc_.outdir), writer(writer_)
 {
-    namespace fs = std::filesystem;
-    /* Create the output directory if it doesn't exist */
-    if (!fs::is_directory(sc.outdir)) {
-        fs::create_directory(sc.outdir);
-    }
-    if (!fs::is_directory(sc.outdir)){
-        throw std::runtime_error("Could not create directory " + sc.outdir);
-    }
 }
 
 
@@ -269,6 +261,7 @@ void scanner_set::apply_scanner_commands()
     /* Create all of the requested feature recorders.
      * Multiple scanners may request the same feature recorder without generating an error.
      */
+    fs.create_alert_recorder();
     for (auto sit: scanner_info_db) {
         for (auto it: sit.second->feature_defs ){
             fs.create_feature_recorder( it );

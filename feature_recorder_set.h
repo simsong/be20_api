@@ -173,6 +173,7 @@ public:
     };
 
     /* create a feature recorder, and return it as well */
+    virtual void create_alert_recorder();
     virtual feature_recorder &create_feature_recorder(feature_recorder_def def); // create a feature recorder
     /* convenience constructor */
     virtual feature_recorder &create_feature_recorder(const std::string name) {
