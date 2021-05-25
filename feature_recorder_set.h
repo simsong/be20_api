@@ -3,6 +3,7 @@
 #define FEATURE_RECORDER_SET_H
 
 #include <exception>
+#include <filesystem>
 
 #if defined(HAVE_SQLITE3_H)
 #include <sqlite3.h>
