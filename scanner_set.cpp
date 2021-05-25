@@ -57,6 +57,14 @@ scanner_set::scanner_set(const scanner_config &sc_,
                          class dfxml_writer *writer_):
     sc(sc_),fs(f,sc_.hash_alg, sc_.input_fname, sc_.outdir), writer(writer_)
 {
+    namespace fs = std::filesystem;
+    /* Create the output directory if it doesn't exist */
+    if (!fs::is_directory(sc.outdir)) {
+        fs::create_directory(sc.outdir);
+    }
+    if (!fs::is_directory(sc.outdir)){
+        throw std::runtime_error("Could not create directory " + sc.outdir);
+    }
 }
 
 

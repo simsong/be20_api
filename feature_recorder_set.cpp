@@ -74,7 +74,7 @@ feature_recorder_set::feature_recorder_set( const flags_t &flags_,
         flags.disabled = true;
     } else {
         if (access(outdir.c_str(),W_OK)!=0) {
-            throw std::invalid_argument("output directory not writable");
+            throw std::invalid_argument("output directory " + outdir + " not writable");
         }
     }
 
