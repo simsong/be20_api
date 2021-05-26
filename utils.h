@@ -138,7 +138,7 @@ inline bool validASCIIName(const std::string &name)
 inline std::filesystem::path NamedTemporaryDirectory() {
     char tmpl[] = "/tmp/dirXXXXXX";
     mkdtemp(tmpl);
-    return tmpl;
+    return std::filesystem::path(tmpl);
 }
 
 inline bool directory_empty(std::filesystem::path path) {

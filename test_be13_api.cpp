@@ -573,6 +573,7 @@ TEST_CASE("hello_sbuf","[sbuf]") {
     REQUIRE(s == "world");
 }
 
+
 TEST_CASE("map_file","[sbuf]") {
     std::string tempdir = get_tempdir();
     std::ofstream os;
@@ -582,7 +583,6 @@ TEST_CASE("map_file","[sbuf]") {
     REQUIRE( os.is_open() );
     os << hello8;
     os.close();
-
 
     sbuf_t sb1 = sbuf_t::map_file(fname);
     REQUIRE( sb1.bufsize == strlen(hello8));
