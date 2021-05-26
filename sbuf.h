@@ -21,6 +21,8 @@
  * Created and maintained by Simson Garfinkel, 2007--2012, 2019.
  *
  * sbuf_stream is a stream-oriented interface for reading sbuf data.
+ * 2020 - complete refactoring for improved performance.
+ * 2021 - removed copy constructor. For performance we should never copy, but we can move.
  */
 
 #include "pos0.h"
@@ -51,9 +53,9 @@
  */
 
 //Don't turn this on; it currently makes scan_net crash.
-#define SBUF_TRACK
 
 
+#if 0
 /**
  * \class managed_malloc Like new[], but it automatically gets freed when the object is dropped.
  * throws std::bad_alloc if no memory.
@@ -71,7 +73,7 @@ public:
         if(buf) delete []buf;
     }
 };
-
+#endif
 
 /**
  * \class sbuf_t
@@ -108,9 +110,9 @@ public:;
     const uint64_t page_number {0};        /* from iterator when sbuf is created */
     const pos0_t  pos0       {};                 /* the path of buf[0] */
 private:
-    const sbuf_t  *parent    {nullptr};              // parent sbuf references data in another.
+    const sbuf_t  *parent    {nullptr};          // parent sbuf references data in another.
 public:
-    mutable std::atomic<int>   children {0}; // number of child sbufs; can get increment in copy
+    mutable std::atomic<int>   children {0};     // number of child sbufs; incremented when data in *buf is used by a child
     const unsigned int depth() const { return pos0.depth; }
 #ifdef PRIVATE_SBUF_BUF
 private:               // one day
@@ -128,6 +130,7 @@ public:
 
 private:
     void release();                     // release allocated storage
+    sbuf_t(const sbuf_t &that) = delete;          // default copy is not implemented
     sbuf_t &operator=(const sbuf_t &that) = delete; // default assignment not implemented
 public:
     /** Make an empty sbuf.
@@ -138,8 +141,23 @@ public:
      *** Child allocators --- allocate an sbuf from another sbuf
      ****************************************************************/
 
+    //sbuf_t(sbuf_t &&that) = delete;
+#if 1
+    /** Move constructor */
+    sbuf_t(sbuf_t &&that) noexcept:
+        page_number(that.page_number),
+        pos0(that.pos0),
+        parent(that.parent),
+        buf(that.buf), bufsize(that.bufsize),pagesize(that.pagesize){
+        parent->del_child(that);
+        parent->add_child(*this);
+    }
+#endif
+
+
+#if 0
     /**
-     * Make an sbuf from a parent.
+     * sbuf copy constructor. Make an sbuf from a parent.
      * note: don't add an 'explicit' --- it causes problems.
      */
     sbuf_t(const sbuf_t &that):
@@ -148,6 +166,7 @@ public:
         buf(that.buf),bufsize(that.bufsize),pagesize(that.pagesize){
         parent->add_child(*this);
     }
+#endif
 
     /**
      * Make an sbuf from a parent but with a different path.
@@ -258,9 +277,7 @@ public:
     }
     void del_child(const sbuf_t &child) const {
         children -= 1;
-#if defined(SBUF_TRACK)
         assert( children >= 0);
-#endif
     }
 
     /** Find the offset of a byte */
@@ -470,11 +487,9 @@ public:
     ssize_t  write(FILE *f,size_t loc,size_t len) const; /* write to a file descriptor, returns # bytes written */
 
     virtual ~sbuf_t() {
-#if defined(SBUF_TRACK)
         if (children != 0 ){
             std::cerr << "error: sbuf children=" << children << "\n";
         }
-#endif
         if(parent) parent->del_child(*this);
 
 #ifdef HAVE_MMAP
