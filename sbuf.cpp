@@ -23,9 +23,9 @@
 /**
  *  Map a file; falls back to read if mmap is not available
  */
-const std::string sbuf_t::U10001C("\xf4\x80\x80\x9c");
+//const std::string sbuf_t::U10001C("\xf4\x80\x80\x9c");
 std::string sbuf_t::map_file_delimiter(sbuf_t::U10001C);
-const sbuf_t sbuf_t::map_file(const std::string &fname)
+sbuf_t *sbuf_t::map_file(const std::string &fname)
 {
     int fd = open(fname.c_str(),O_RDONLY|O_BINARY,0);
     if (fd<0){
@@ -39,7 +39,7 @@ const sbuf_t sbuf_t::map_file(const std::string &fname)
  * If there is no mmap, just allocate space and read the file
  */
 
-const sbuf_t sbuf_t::map_file(const std::string &fname, int fd, bool should_close)
+sbuf_t *sbuf_t::map_file(const std::string &fname, int fd, bool should_close)
 {
     struct stat st;
     if(fstat(fd,&st)){
@@ -67,14 +67,14 @@ const sbuf_t sbuf_t::map_file(const std::string &fname, int fd, bool should_clos
     bool should_free = true;
     bool should_unmap = false;
 #endif
-    return sbuf_t(pos0_t(fname+sbuf_t::map_file_delimiter),
-                  buf,
-                  st.st_size, // bufsize
-                  st.st_size, // pagesize
-                  fd,         // fd
-                  should_unmap,
-                  should_free,
-                  should_close);
+    return new sbuf_t(pos0_t(fname+sbuf_t::map_file_delimiter),
+                      buf,
+                      st.st_size, // bufsize
+                      st.st_size, // pagesize
+                      fd,         // fd
+                      should_unmap,
+                      should_free,
+                      should_close);
 }
 
 /*
@@ -212,7 +212,7 @@ static const char *hexbuf(char *dst,int dst_len,const unsigned char *bin,int byt
     const char *start = dst;            // remember where the start of the string is
     const char *fmt = (flag & NSRL_HEXBUF_UPPERCASE) ? "%02X" : "%02x";
 
-    if(hexcharvals[0]==-1){
+    if (hexcharvals[0]==-1){
         /* Need to initialize this */
         for(int i=0;i<256;i++){
             hexcharvals[i] = 0;

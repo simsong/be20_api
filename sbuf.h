@@ -141,8 +141,6 @@ public:
      *** Child allocators --- allocate an sbuf from another sbuf
      ****************************************************************/
 
-    //sbuf_t(sbuf_t &&that) = delete;
-#if 1
     /** Move constructor */
     sbuf_t(sbuf_t &&that) noexcept:
         page_number(that.page_number),
@@ -152,21 +150,7 @@ public:
         parent->del_child(that);
         parent->add_child(*this);
     }
-#endif
 
-
-#if 0
-    /**
-     * sbuf copy constructor. Make an sbuf from a parent.
-     * note: don't add an 'explicit' --- it causes problems.
-     */
-    sbuf_t(const sbuf_t &that):
-        page_number(that.page_number),pos0(that.pos0),
-        parent(that.highest_parent()),
-        buf(that.buf),bufsize(that.bufsize),pagesize(that.pagesize){
-        parent->add_child(*this);
-    }
-#endif
 
     /**
      * Make an sbuf from a parent but with a different path.
@@ -249,10 +233,10 @@ public:
         return sbuf_t(*this,off);
     }
 
-    /* Allocate a sbuf from a file mapped into memory */
-    static const sbuf_t map_file(const std::string &fname); // map a sbuf from a file, or throw exception
-    static const sbuf_t map_file(const std::string &fname, int fd, bool should_close); // if file is already opened
-    static const std::string U10001C;         // default delimeter character in bulk_extractor
+    /* Allocate a sbuf from a file mapped into memory. The sbuf must be deleted */
+    static sbuf_t *map_file(const std::string &fname); // map a sbuf from a file, or throw exception
+    static sbuf_t *map_file(const std::string &fname, int fd, bool should_close); // if file is already opened
+    inline static const std::string U10001C = "\xf4\x80\x80\x9c";         // default delimeter character in bulk_extractor
     static std::string map_file_delimiter; // character placed
     static void set_map_file_delimiter(const std::string &new_delim){
         map_file_delimiter = new_delim;

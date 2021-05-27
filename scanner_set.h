@@ -192,7 +192,7 @@ public:;
 
     /* PHASE SCAN */
     void     phase_scan();              // start the scan phase
-    void     process_sbuf(const sbuf_t &sbuf);                              /* process for feature extraction */
+    void     process_sbuf(sbuf_t *sbuf);     // process the sbuf, then delete it.
     void     process_packet(const be13::packet_info &pi);
     uint32_t get_max_depth_seen() const; // max seen during scan
 

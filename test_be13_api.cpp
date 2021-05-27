@@ -127,9 +127,9 @@ const char *hello_sha1="d3486ae9136e7856bc42212385ea797094475802";
 
 const char *hello16="H\000e\000l\000l\000o\000 \000w\000o\000r\000l\000d\000!\000";
 const uint8_t *hello16_buf = reinterpret_cast<const uint8_t *>(hello16);
-const sbuf_t hello16_sbuf() {
+const sbuf_t *hello16_sbuf() {
     pos0_t p0("hello16");
-    return sbuf_t(p0, hello16_buf, strlen(hello8)*2, strlen(hello8)*2, 0, false, false, false);
+    return new sbuf_t(p0, hello16_buf, strlen(hello8)*2, strlen(hello8)*2, 0, false, false, false);
 }
 
 /* Read all of the lines of a file and return them as a vector */
@@ -453,8 +453,9 @@ TEST_CASE("write_features", "[feature_recorder_set]" ) {
         fr.write(p+5,  "one", "context");
         fr.write(p+10, "two", "context");
 
-        sbuf_t sb16 = hello16_sbuf();
-        REQUIRE( sb16.size() == strlen(hello8)*2 );
+        const sbuf_t *sb16 = hello16_sbuf();
+        REQUIRE( sb16->size() == strlen(hello8)*2 );
+        delete sb16;
     }
 #if 0
     std::vector<std::string> lines = getLines(tempdir+"/name_suffix1.txt");
@@ -584,7 +585,8 @@ TEST_CASE("map_file","[sbuf]") {
     os << hello8;
     os.close();
 
-    sbuf_t sb1 = sbuf_t::map_file(fname);
+    auto sb1p = sbuf_t::map_file(fname);
+    auto &sb1 = *sb1p;
     REQUIRE( sb1.bufsize == strlen(hello8));
     REQUIRE( sb1.bufsize == sb1.pagesize);
     for(int i=0;hello8[i];i++){
@@ -592,6 +594,7 @@ TEST_CASE("map_file","[sbuf]") {
     }
     REQUIRE( sb1[-1] == '\000' );
     REQUIRE( sb1[1000] == '\000' );
+    delete sb1p;
 }
 
 
@@ -737,12 +740,12 @@ TEST_CASE("run", "[scanner]") {
     REQUIRE( fr.histograms[0]->def.flags.numeric == false);
 
     /* Test the hasher */
-    sbuf_t hello = sbuf_t(hello8);
-    std::string hashed = fr.hash( hello );
+    sbuf_t *hello = new sbuf_t(hello8);
+    std::string hashed = fr.hash( *hello );
 
     /* Perform a simulated scan */
     ss.phase_scan();                    // start the scanner phase
-    ss.process_sbuf( hello );           // process a single sbuf
+    ss.process_sbuf( hello );           // process a single sbuf, and delete it
     ss.shutdown();                      // shutdown; this will write out the in-memory histogram.
 
     /* Make sure that the feature recorder output was created */
@@ -811,16 +814,20 @@ TEST_CASE("unicode_escape", "[unicode]") {
 }
 
 TEST_CASE("unicode_detection", "[unicode]") {
-    sbuf_t sb16 = sbuf_t::map_file(tests_dir() + "/unilang.htm");
+    auto sb16p = sbuf_t::map_file(tests_dir() + "/unilang.htm");
+    auto &sb16 = *sb16p;
 
     bool little_endian = false;
     bool t16 = looks_like_utf16(sb16.asString(), little_endian);
     REQUIRE( t16 == true);
     REQUIRE( little_endian == true);
+    delete sb16p;
 
-    sbuf_t sb8 = sbuf_t::map_file(tests_dir() + "/unilang8.htm");
+    auto sb8p = sbuf_t::map_file(tests_dir() + "/unilang8.htm");
+    auto &sb8 = *sb8p;
     bool t8 = looks_like_utf16(sb8.asString(), little_endian);
     REQUIRE( t8 == false);
+    delete sb8p;
 }
 
 TEST_CASE("Show the output directory", "[end]") {

@@ -477,9 +477,13 @@ void update_maximum(std::atomic<T>& maximum_value, T const& value) noexcept
 }
 
 
-/* Process an sbuf! */
-void scanner_set::process_sbuf(const class sbuf_t &sbuf)
+/* Process an sbuf!
+ * Deletes the buf after processing.
+ */
+void scanner_set::process_sbuf(class sbuf_t *sbufp)
 {
+    const class sbuf_t &sbuf = *sbufp;  // don't allow modification
+
     /* If we  have not transitioned to PHASE::SCAN, error */
     if (current_phase != scanner_params::PHASE_SCAN){
         throw std::runtime_error("process_sbuf can only be run in scanner_params::PHASE_SCAN");
@@ -496,123 +500,125 @@ void scanner_set::process_sbuf(const class sbuf_t &sbuf)
         fs.get_alert_recorder().write(pos0,
                                       feature_recorder::MAX_DEPTH_REACHED_ERROR_FEATURE,
                                       feature_recorder::MAX_DEPTH_REACHED_ERROR_CONTEXT );
-        return;
-    }
+    } else {
+        update_maximum<unsigned int>(max_depth_seen, sbuf.depth() );
 
-    update_maximum<unsigned int>(max_depth_seen, sbuf.depth() );
-
-    /* Determine if we have seen this buffer before */
-    bool seen_before = fs.check_previously_processed(sbuf);
-    if (seen_before) {
-        dfxml::sha1_t sha1 = dfxml::sha1_generator::hash_buf(sbuf.buf, sbuf.bufsize);
-        std::stringstream ss;
-        ss << "<buflen>" << sbuf.bufsize  << "</buflen>";
-        if(dup_data_alerts) {
-            fs.get_alert_recorder().write(sbuf.pos0,"DUP SBUF "+sha1.hexdigest(),ss.str());
-        }
-        dup_bytes_encountered += sbuf.bufsize;
-    }
-
-    /* Determine if the sbuf consists of a repeating ngram. If so,
-     * it's only passed to the parsers that want ngrams. (By default,
-     * such sbufs are booring.)
-     */
-
-    size_t ngram_size = sbuf.find_ngram_size( max_ngram );
-
-    /****************************************************************
-     *** CALL EACH OF THE SCANNERS ON THE SBUF
-     ****************************************************************/
-
-    if (debug_flags.debug_dump_data) {
-        sbuf.hex_dump(std::cerr);
-    }
-
-    for (auto it: scanner_info_db) {
-        // Look for reasons not to run a scanner
-        if (enabled_scanners.find(it.first) == enabled_scanners.end()){
-            continue;                       //  not enabled
-        }
-
-        if ( ngram_size>0  && it.second->scanner_flags.scan_ngram_buffer==false ){
-            continue;
-        }
-
-        if ( sbuf.depth() > 0 && it.second->scanner_flags.depth_0) {
-            // depth >0 and this scanner only run at depth 0
-            continue;
-        }
-
-        if ( seen_before && it.second->scanner_flags.scan_seen_before==false ){
-            continue;
-        }
-
-        const std::string &name = it.second->name;
-
-        try {
-
-            /* Compute the effective path for stats */
-            bool inname=false;
-            std::string epath;
-            for( auto cc: sbuf.pos0.path){
-                if (isupper(cc)) inname=true;
-                if (inname) epath.push_back(toupper(cc));
-                if (cc=='-') inname=false;
-            }
-            if (epath.size()>0) epath.push_back('-');
-            for (auto cc:name){
-                epath.push_back(toupper(cc));
-            }
-
-            /* Create a RCB that will recursively call process_sbuf() */
-            //recursion_control_block rcb(process_sbuf, upperstr(name));
-
-            /* Call the scanner.*/
-            {
-                aftimer t;
-
-                if (debug_flags.debug_print_steps){
-                    std::cerr << "sbuf.pos0=" << sbuf.pos0 << " calling scanner " << name << "\n";
-                }
-                t.start();
-                scanner_params sp(*this, scanner_params::PHASE_SCAN, sbuf, scanner_params::PrintOptions());
-                (*it.first)( sp );
-                t.stop();
-                if (debug_flags.debug_print_steps){
-                    std::cerr << "sbuf.pos0=" << sbuf.pos0 << " scanner "
-                              << name << " t=" << t.elapsed_seconds() << "\n";
-                }
-                // fs.add_stats(epath,t.elapsed_seconds());
-            }
-
-        }
-        catch (const std::exception &e ) {
+        /* Determine if we have seen this buffer before */
+        bool seen_before = fs.check_previously_processed(sbuf);
+        if (seen_before) {
+            dfxml::sha1_t sha1 = dfxml::sha1_generator::hash_buf(sbuf.buf, sbuf.bufsize);
             std::stringstream ss;
-            ss << "std::exception Scanner: " << name
-               << " Exception: " << e.what()
-               << " sbuf.pos0: " << sbuf.pos0 << " bufsize=" << sbuf.bufsize << "\n";
-            std::cerr << ss.str();
-            try {
-                fs.get_alert_recorder().write(sbuf.pos0,"scanner="+name,
-                                              std::string("<exception>")+e.what()+"</exception>");
+            ss << "<buflen>" << sbuf.bufsize  << "</buflen>";
+            if(dup_data_alerts) {
+                fs.get_alert_recorder().write(sbuf.pos0,"DUP SBUF "+sha1.hexdigest(),ss.str());
             }
-            catch (feature_recorder_set::NoSuchFeatureRecorder &e2){
-            }
+            dup_bytes_encountered += sbuf.bufsize;
         }
-        catch (...) {
-            std::stringstream ss;
-            ss << "std::exception Scanner: " << name
-               << " Unknown Exception "
-               << " sbuf.pos0: " << sbuf.pos0 << " bufsize=" << sbuf.bufsize << "\n";
-            std::cerr << ss.str();
-            try {
-                fs.get_alert_recorder().write(sbuf.pos0,"scanner="+name,
-                                              std::string("<unknown_exception></unknown_exception>"));
+
+        /* Determine if the sbuf consists of a repeating ngram. If so,
+         * it's only passed to the parsers that want ngrams. (By default,
+         * such sbufs are booring.)
+         */
+
+        size_t ngram_size = sbuf.find_ngram_size( max_ngram );
+
+        /****************************************************************
+         *** CALL EACH OF THE SCANNERS ON THE SBUF
+         ****************************************************************/
+
+        if (debug_flags.debug_dump_data) {
+            sbuf.hex_dump(std::cerr);
+        }
+
+        for (auto it: scanner_info_db) {
+            // Look for reasons not to run a scanner
+            if (enabled_scanners.find(it.first) == enabled_scanners.end()){
+                continue;                       //  not enabled
             }
-            catch (feature_recorder_set::NoSuchFeatureRecorder &e){
+
+            if ( ngram_size>0  && it.second->scanner_flags.scan_ngram_buffer==false ){
+                continue;
+            }
+
+            if ( sbuf.depth() > 0 && it.second->scanner_flags.depth_0) {
+                // depth >0 and this scanner only run at depth 0
+                continue;
+            }
+
+            if ( seen_before && it.second->scanner_flags.scan_seen_before==false ){
+                continue;
+            }
+
+            const std::string &name = it.second->name;
+
+            try {
+
+                /* Compute the effective path for stats */
+                bool inname=false;
+                std::string epath;
+                for( auto cc: sbuf.pos0.path){
+                    if (isupper(cc)) inname=true;
+                    if (inname) epath.push_back(toupper(cc));
+                    if (cc=='-') inname=false;
+                }
+                if (epath.size()>0) epath.push_back('-');
+                for (auto cc:name){
+                    epath.push_back(toupper(cc));
+                }
+
+                /* Create a RCB that will recursively call process_sbuf() */
+                //recursion_control_block rcb(process_sbuf, upperstr(name));
+
+                /* Call the scanner.*/
+                {
+                    aftimer t;
+
+                    if (debug_flags.debug_print_steps){
+                        std::cerr << "sbuf.pos0=" << sbuf.pos0 << " calling scanner " << name << "\n";
+                    }
+                    t.start();
+                    scanner_params sp(*this, scanner_params::PHASE_SCAN, sbuf, scanner_params::PrintOptions());
+                    (*it.first)( sp );
+                    t.stop();
+                    if (debug_flags.debug_print_steps){
+                        std::cerr << "sbuf.pos0=" << sbuf.pos0 << " scanner "
+                                  << name << " t=" << t.elapsed_seconds() << "\n";
+                    }
+                    // fs.add_stats(epath,t.elapsed_seconds());
+                }
+
+            }
+            catch (const std::exception &e ) {
+                std::stringstream ss;
+                ss << "std::exception Scanner: " << name
+                   << " Exception: " << e.what()
+                   << " sbuf.pos0: " << sbuf.pos0 << " bufsize=" << sbuf.bufsize << "\n";
+                std::cerr << ss.str();
+                try {
+                    fs.get_alert_recorder().write(sbuf.pos0,"scanner="+name,
+                                                  std::string("<exception>")+e.what()+"</exception>");
+                }
+                catch (feature_recorder_set::NoSuchFeatureRecorder &e2){
+                }
+            }
+            catch (...) {
+                std::stringstream ss;
+                ss << "std::exception Scanner: " << name
+                   << " Unknown Exception "
+                   << " sbuf.pos0: " << sbuf.pos0 << " bufsize=" << sbuf.bufsize << "\n";
+                std::cerr << ss.str();
+                try {
+                    fs.get_alert_recorder().write(sbuf.pos0,"scanner="+name,
+                                                  std::string("<unknown_exception></unknown_exception>"));
+                }
+                catch (feature_recorder_set::NoSuchFeatureRecorder &e){
+                }
             }
         }
     }
+    assert(sbuf.children==0);            // can't delete if there are any children.
+    delete sbufp;
+    return;
 }
 
 
