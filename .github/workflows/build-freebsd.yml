@@ -21,9 +21,7 @@ jobs:
           tar xfz autoconf-2.71.tar.gz && cd autoconf-2.71 && ./configure && make && sudo make install
           autoconf --version
           automake --version
-          bash bootstrap.sh && ./configure && make
-          make check
-          make distcheck
+          bash bootstrap.sh && ./configure && make && make check
 
     - name: Save failures report
       if:   failure()
