@@ -185,6 +185,7 @@ public:;
     //scanner_params::phase_t get_current_phase() const { return current_phase;};
     size_t   histogram_count() const { return fs.histogram_count();};       // passthrough, mostly for debugging
     size_t   feature_recorder_count() const { return fs.feature_recorder_count();};
+    void    dump_name_count_stats(class dfxml_writer &w) const { fs.dump_name_count_stats(w);}; // passthrough
 
     // Scanners automatically get initted when they are loaded.
     // They are immediately ready to process sbufs and packets!

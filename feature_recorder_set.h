@@ -185,7 +185,7 @@ public:
     virtual feature_recorder &get_alert_recorder() const ; // returns the alert recorder
     virtual std::vector<std::string> feature_file_list() const; // returns a list of feature file names
 
-    void    dump_name_count_stats(class dfxml_writer *writer) const;
+    void    dump_name_count_stats(class dfxml_writer &writer) const; // dumps the standard dfxml
 
     /****************************************************************
      *** DB interface

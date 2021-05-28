@@ -230,20 +230,18 @@ bool feature_recorder_set::check_previously_processed(const sbuf_t &sbuf)
  *** Stats
  ****************************************************************/
 
-void feature_recorder_set::dump_name_count_stats(dfxml_writer *writer) const
+void feature_recorder_set::dump_name_count_stats(dfxml_writer &writer) const
 {
-    if (writer) {
-        writer->push("feature_files");
-        for (auto ij: frm) {
-            writer->set_oneline(true);
-            writer->push("feature_file");
-            writer->xmlout("name",ij.second->name);
-            writer->xmlout("count",ij.second->features_written);
-            writer->pop();
-            writer->set_oneline(false);
-        }
-        writer->pop();
+    writer.push("feature_files");
+    for (auto ij: frm) {
+        writer.set_oneline(true);
+        writer.push("feature_file");
+        writer.xmlout("name",ij.second->name);
+        writer.xmlout("count",ij.second->features_written);
+        writer.pop();
+        writer.set_oneline(false);
     }
+    writer.pop();
 }
 
 
