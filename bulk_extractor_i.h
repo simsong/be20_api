@@ -9,6 +9,8 @@
  * #include "config.h" must appear as the first line of your .cpp file.
  */
 
+#if 0
+
 #ifndef PACKAGE_NAME
 #error bulk_extractor_i.h included before config.h
 #endif
@@ -22,8 +24,7 @@
 
 #define BE13_API_VERSION  2.0
 
-/* required per C++ standard */
-
+#if 0
 #include <atomic>
 #include <cassert>
 #include <cinttypes>
@@ -39,8 +40,9 @@
 #include <string>
 #include <thread>
 #include <vector>
+#endif
 
-#include <unistd.h>
+//#include <unistd.h>
 
 #ifdef HAVE_SYS_MMAN_H
 #include <sys/mman.h>
@@ -75,29 +77,30 @@
 #  error Invalid __BYTE_ORDER
 #endif
 
+#endif
 
 /**
  * \addtogroup plugin_module
  * @{
  */
 
+#include "aftimer.h"
+#include "atomic_map.h"
+#include "atomic_set.h"
 #include "dfxml/src/dfxml_writer.h"
 #include "dfxml/src/hash_t.h"
-#include "aftimer.h"
-#include "atomic_set.h"
-#include "atomic_map.h"
-#include "regex_vector.h"
-#include "sbuf.h"
 #include "feature_recorder.h"
 #include "feature_recorder_set.h"
 #include "packet_info.h"
+#include "regex_vector.h"
+#include "sbuf.h"
 #include "sbuf_private.h"
-//#include "sbuf_stream.h"
 #include "scanner_config.h"
 #include "scanner_set.h"
-#include "word_and_context_list.h"
 #include "unicode_escape.h"
-#include "utils.h"                      // for gmtime_r
 #include "utf8.h"
+#include "utils.h"                      // for gmtime_r
+#include "word_and_context_list.h"
+//#include "sbuf_stream.h"
 
 #endif
