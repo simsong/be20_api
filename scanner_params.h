@@ -166,7 +166,7 @@ struct scanner_params {
 
     /* A scanner params with all of the instance variables, typically for scanning  */
     scanner_params(scanner_set &ss_, phase_t phase_, const sbuf_t *sbuf_,
-                   PrintOptions print_options_, std::stringstream *xmladd=nullptr ):
+                   PrintOptions print_options_, std::stringstream *xmladd):
         ss(ss_),phase(phase_),sbuf(sbuf_),print_options(print_options_),sxml(xmladd){ }
 
     /* User-servicable parts; these are here for scanners */
@@ -185,8 +185,7 @@ struct scanner_params {
         sbuf(sbuf_new),
         print_options(sp_existing.print_options),
         depth(sp_existing.depth+1),
-        sxml(sp_existing.sxml),
-        callback(sp_existing.callback)
+        sxml(sp_existing.sxml)
         { };
 #if 0
     /* A scanner params with no print options */
@@ -201,7 +200,7 @@ struct scanner_params {
 
 #endif
 
-    typedef void callback_t(const scanner_params &sp); // signature for the callback function
+    //typedef void callback_t(const scanner_params &sp); // signature for the callback function
 
     class scanner_set           &ss;           // the scanner set calling this scanner. Includes the scanner_config and feature_
     const phase_t               phase;         // what scanner should do
@@ -209,12 +208,14 @@ struct scanner_params {
     PrintOptions                print_options {}; // how to print. Default is that there are no options
     const uint32_t              depth {0};     //  how far down are we? / only valid in SCAN_PHASE
     std::stringstream           *sxml{};       //  on scanning and shutdown: CDATA added to XML stream if provided
-    callback_t                  *callback{};   // what a recursive scanner should call. The callback has the responsibility of freeing the sbuf.
+    //callback_t                  *callback{};   // what a recursive scanner should call. The callback has the responsibility of freeing the sbuf.
     std::string const get_input_fname() const; // not sure why this is needed?
 
     //class feature_recorder_set  &fs;           // where to put the results / only valid in SCAN_PHASE
     //register_info_t             register_info; // callback function to register the scanner
     //const class scanner_config  &config;       // configuration for all scanners.
+    virtual void recurse(sbuf_t *sbuf) const; // recursive call by scanner
+
 };
 
 inline std::ostream & operator <<(std::ostream &os,const scanner_params &sp){

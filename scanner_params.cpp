@@ -25,3 +25,10 @@ const std::string scanner_params::get_input_fname() const
 {
     return ss.get_input_fname();
 }
+
+void scanner_params::recurse(sbuf_t *new_sbuf) const
+{
+    /* TODO - call other recursive functions depending on mode */
+    ss.process_sbuf(new_sbuf);
+    /* At this point, sbuf is deleted */
+}

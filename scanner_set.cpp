@@ -95,7 +95,7 @@ void scanner_set::add_scanner(scanner_t scanner)
      * We then ask the scanner to initialize.
      */
     scanner_params::PrintOptions po;
-    scanner_params sp(*this, scanner_params::PHASE_INIT, nullptr, po);
+    scanner_params sp(*this, scanner_params::PHASE_INIT, nullptr, po, nullptr);
 
     // Send the scanner the PHASE_INIT message, which will cause it to call
     // register_info above, which will add the scanner's scanner_info to the database.
@@ -439,7 +439,7 @@ void scanner_set::shutdown()
 
     /* Tell the scanners we are shutting down */
     scanner_params::PrintOptions po; // empty po
-    scanner_params sp(*this, scanner_params::PHASE_SHUTDOWN, nullptr, po);
+    scanner_params sp(*this, scanner_params::PHASE_SHUTDOWN, nullptr, po, nullptr);
     for ( auto it: enabled_scanners ){
         (*it)(sp);
     }
@@ -575,7 +575,7 @@ void scanner_set::process_sbuf(class sbuf_t *sbufp)
                         std::cerr << "sbuf.pos0=" << sbuf.pos0 << " calling scanner " << name << "\n";
                     }
                     t.start();
-                    scanner_params sp(*this, scanner_params::PHASE_SCAN, &sbuf, scanner_params::PrintOptions());
+                    scanner_params sp(*this, scanner_params::PHASE_SCAN, sbufp, scanner_params::PrintOptions(), nullptr);
                     (*it.first)( sp );
                     t.stop();
                     if (debug_flags.debug_print_steps){
