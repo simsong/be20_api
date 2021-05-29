@@ -55,26 +55,6 @@
 //Don't turn this on; it currently makes scan_net crash.
 
 
-#if 0
-/**
- * \class managed_malloc Like new[], but it automatically gets freed when the object is dropped.
- * throws std::bad_alloc if no memory.
- */
-template < class TYPE > class managed_malloc {
-    // default construction, copy construction and assignment are meaningless
-    // and not implemented
-    managed_malloc& operator=(const managed_malloc&);
-    managed_malloc(const managed_malloc&);
-    managed_malloc();
-public:
-    TYPE *buf;
-    managed_malloc(size_t bytes):buf(new TYPE[bytes]){ }
-    ~managed_malloc(){
-        if(buf) delete []buf;
-    }
-};
-#endif
-
 /**
  * \class sbuf_t
  * This class describes the search buffer.

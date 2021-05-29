@@ -1,3 +1,6 @@
+# Build inside a FreeBSD VM inside the macos VM
+# https://github.com/vmactions/freebsd-vm
+
 name: BE13_API CI (c++17) on FreeBSD
 on: [push]
 
@@ -11,30 +14,13 @@ jobs:
       with:
         submodules: recursive
 
-    - name: prepare freebsd-vm
+    - name: make check on FreeBSD
       uses: vmactions/freebsd-vm@v0.1.4
       with:
         usesh: true
+        sync: sshfs
         prepare: pkg install -y libtool libltdl automake openssl-devel pkgconf bash wget texinfo
-        run: |
-          wget https://ftpmirror.gnu.org/autoconf/autoconf-2.71.tar.gz
-          tar xfz autoconf-2.71.tar.gz && cd autoconf-2.71 && ./configure && make && make install
-
-    - name: validate freebsd-vm
-      uses: vmactions/freebsd-vm@v0.1.4
-      with:
-        usesh: true
-        prepare: pkg install -y libtool libltdl automake openssl-devel pkgconf bash wget texinfo
-        run: |
-          ls -l
-          autoconf --version
-          automake --version
-
-    - name: c/c++ test
-      uses: vmactions/freebsd-vm@v0.1.4
-      with:
-        usesh: true
-        prepare: pkg install -y libtool libltdl automake openssl-devel pkgconf bash wget texinfo
+        mem: 2048
         run: |
           wget https://ftpmirror.gnu.org/autoconf/autoconf-2.71.tar.gz
           tar xfz autoconf-2.71.tar.gz && cd autoconf-2.71 && ./configure && make && make install

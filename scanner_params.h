@@ -164,9 +164,8 @@ struct scanner_params {
     typedef void (*register_info_t)(class scanner_set *ss,
                                     const scanner_params::scanner_info *info);
 
-
     /* A scanner params with all of the instance variables, typically for scanning  */
-    scanner_params(scanner_set &ss_, phase_t phase_, const sbuf_t &sbuf_,
+    scanner_params(scanner_set &ss_, phase_t phase_, const sbuf_t *sbuf_,
                    PrintOptions print_options_, std::stringstream *xmladd=nullptr ):
         ss(ss_),phase(phase_),sbuf(sbuf_),print_options(print_options_),sxml(xmladd){ }
 
@@ -176,6 +175,19 @@ struct scanner_params {
     virtual ~scanner_params(){};
     virtual feature_recorder &named_feature_recorder(const std::string feature_recorder_name) const;
 
+    /** Construct a scanner_params for recursion from an existing sp and a new sbuf.
+     * Defaults to phase1.
+     * This is the complicated one!
+     */
+    scanner_params(const scanner_params &sp_existing, const sbuf_t *sbuf_new):
+        ss(sp_existing.ss),
+        phase(sp_existing.phase),
+        sbuf(sbuf_new),
+        print_options(sp_existing.print_options),
+        depth(sp_existing.depth+1),
+        sxml(sp_existing.sxml),
+        callback(sp_existing.callback)
+        { };
 #if 0
     /* A scanner params with no print options */
     scanner_params(phase_t phase_, const sbuf_t &sbuf_, class feature_recorder_set &fs_):
@@ -187,31 +199,22 @@ struct scanner_params {
         phase(phase_),sbuf(sbuf_),fs(fs_),sxml(xmladd){ }
 
 
-    /** Construct a scanner_params for recursion from an existing sp and a new sbuf.
-     * Defaults to phase1.
-     * This is the complicated one!
-     */
-    scanner_params(const scanner_params &sp_existing, const sbuf_t &sbuf_new):
-        //register_info(register_info_),
-        //owner(owner_),
-        config(sp_existing.config),
-        phase(sp_existing.phase),
-        sbuf(sbuf_new),
-        fs(sp_existing.fs),
-        print_options(sp_existing.print_options),
-        depth(sp_existing.depth+1){ };
 #endif
 
+    typedef void callback_t(const scanner_params &sp); // signature for the callback function
+
     class scanner_set           &ss;           // the scanner set calling this scanner. Includes the scanner_config and feature_
-    //register_info_t             register_info; // callback function to register the scanner
-    //const class scanner_config  &config;       // configuration for all scanners.
     const phase_t               phase;         // what scanner should do
-    const sbuf_t                &sbuf;         // what to scan / only valid in SCAN_PHASE
-    //class feature_recorder_set  &fs;           // where to put the results / only valid in SCAN_PHASE
+    const sbuf_t                *sbuf;         // what to scan / only valid in SCAN_PHASE
     PrintOptions                print_options {}; // how to print. Default is that there are no options
     const uint32_t              depth {0};     //  how far down are we? / only valid in SCAN_PHASE
     std::stringstream           *sxml{};       //  on scanning and shutdown: CDATA added to XML stream if provided
-    std::string const get_input_fname() const;
+    callback_t                  *callback{};   // what a recursive scanner should call. The callback has the responsibility of freeing the sbuf.
+    std::string const get_input_fname() const; // not sure why this is needed?
+
+    //class feature_recorder_set  &fs;           // where to put the results / only valid in SCAN_PHASE
+    //register_info_t             register_info; // callback function to register the scanner
+    //const class scanner_config  &config;       // configuration for all scanners.
 };
 
 inline std::ostream & operator <<(std::ostream &os,const scanner_params &sp){
@@ -219,6 +222,7 @@ inline std::ostream & operator <<(std::ostream &os,const scanner_params &sp){
     return os;
 };
 
+#if 0
 /**
  * the recursion_control_block keeps track of what gets added to
  * the path when there is recursive re-analysis. It's now a structure within the scanner_set
@@ -240,5 +244,6 @@ struct recursion_control_block {
     std::string partName{};            /* eg "ZIP", "GZIP" */
 };
 
+#endif
 
 #endif

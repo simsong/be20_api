@@ -1,8 +1,11 @@
 /* -*- mode: C++; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 #include "config.h"
+
+#include <ctype.h>
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <stdio.h>
+
 #include <filesystem>
 
 #include "sbuf.h"
@@ -261,10 +264,17 @@ size_t sbuf_t::find_ngram_size(const size_t max_ngram) const
 
 
 std::ostream & operator <<(std::ostream &os,const sbuf_t &t){
-        char hex[17];
-        hexbuf(hex,sizeof(hex),t.buf, 8, 0);
+        char hex_str[17];
+        char ascii_str[9];
+
+        hexbuf(hex_str,sizeof(hex_str),t.buf, 8, 0);
+        for(int i=0;i<sizeof(ascii_str)-1;i++){
+            ascii_str[i] = isprint(t.get8u(i)) ? t.get8u(i) : '.';
+        }
+        ascii_str[sizeof(ascii_str)-1] = '\000';
+
         os << "sbuf[page_number="   << t.page_number
-           << " pos0=" << t.pos0 << " " << "buf[0..8]=0x" << hex
+           << " pos0=" << t.pos0 << " " << "buf[0..8]=0x" << hex_str << "= \"" << ascii_str << "\""
            << " bufsize=" << t.bufsize << " pagesize=" << t.pagesize << "]";
         return os;
     }

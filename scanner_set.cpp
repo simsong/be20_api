@@ -94,9 +94,8 @@ void scanner_set::add_scanner(scanner_t scanner)
      * Use an empty sbuf and an empty feature recorder to create an empty scanner params that is in PHASE_STARTUP.
      * We then ask the scanner to initialize.
      */
-    const sbuf_t sbuf;
     scanner_params::PrintOptions po;
-    scanner_params sp(*this, scanner_params::PHASE_INIT, sbuf, po);
+    scanner_params sp(*this, scanner_params::PHASE_INIT, nullptr, po);
 
     // Send the scanner the PHASE_INIT message, which will cause it to call
     // register_info above, which will add the scanner's scanner_info to the database.
@@ -367,13 +366,13 @@ void scanner_set::info_scanners(std::ostream &out,
             if (it.second->scanner_version.size()) out << "Scanner Version: " << it.second->scanner_version << "\n";
             out << "Feature Names: ";
             for ( auto i2: it.second->feature_defs ) {
-                out << i2.name << " ";
+                out << i2.name << "\n";
             }
             if (detailed_settings){
                 out << "Settable Options (and their defaults): \n";
                 out << it.second->helpstr;
             }
-            out << "\n\n";
+            out << "------------------------------------------------\n\n";
         }
         if (it.second->scanner_flags.no_usage) continue;
         if (is_scanner_enabled(it.second->name)){
@@ -439,9 +438,8 @@ void scanner_set::shutdown()
     current_phase = scanner_params::PHASE_SHUTDOWN;
 
     /* Tell the scanners we are shutting down */
-    const sbuf_t sbuf;               // empty sbuf
     scanner_params::PrintOptions po; // empty po
-    scanner_params sp(*this, scanner_params::PHASE_SHUTDOWN, sbuf, po);
+    scanner_params sp(*this, scanner_params::PHASE_SHUTDOWN, nullptr, po);
     for ( auto it: enabled_scanners ){
         (*it)(sp);
     }
@@ -577,7 +575,7 @@ void scanner_set::process_sbuf(class sbuf_t *sbufp)
                         std::cerr << "sbuf.pos0=" << sbuf.pos0 << " calling scanner " << name << "\n";
                     }
                     t.start();
-                    scanner_params sp(*this, scanner_params::PHASE_SCAN, sbuf, scanner_params::PrintOptions());
+                    scanner_params sp(*this, scanner_params::PHASE_SCAN, &sbuf, scanner_params::PrintOptions());
                     (*it.first)( sp );
                     t.stop();
                     if (debug_flags.debug_print_steps){
