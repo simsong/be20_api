@@ -18,7 +18,6 @@ jobs:
       uses: vmactions/freebsd-vm@v0.1.4
       with:
         usesh: true
-        sync: sshfs
         prepare: pkg install -y libtool libltdl automake openssl-devel pkgconf bash wget texinfo
         mem: 2048
         run: |
