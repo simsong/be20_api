@@ -16,7 +16,6 @@ on:
 jobs:
   build:
     runs-on: macos-latest
-
     steps:
       - name: Create cache file
         run: |
@@ -34,43 +33,43 @@ jobs:
         if: steps.check_sha.outputs.cache-hit != 'true'
         run: echo "Execute the subsequent steps because the SHA changed"
 
-    - name: Checkout
-      uses: actions/checkout@v2
-      with:
-        submodules: recursive
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          submodules: recursive
 
-    - name: make check on FreeBSD
-      uses: vmactions/freebsd-vm@v0.1.4
-      with:
-        usesh: true
-        prepare: pkg install -y libtool libltdl automake openssl-devel pkgconf bash wget texinfo
-        mem: 2048
-        run: |
-          wget https://ftpmirror.gnu.org/autoconf/autoconf-2.71.tar.gz
-          tar xfz autoconf-2.71.tar.gz && cd autoconf-2.71 && ./configure && make && make install
-          autoconf --version
-          automake --version
-          echo ==================================================
-          echo ==================================================
-          echo ls -l:
-          ls -l
-          echo pwd
-          pwd
-          echo ==================================================
-          bash bootstrap.sh
-          ./configure
-          make check
+      - name: make check on FreeBSD
+        uses: vmactions/freebsd-vm@v0.1.4
+        with:
+          usesh: true
+          prepare: pkg install -y libtool libltdl automake openssl-devel pkgconf bash wget texinfo
+          mem: 2048
+          run: |
+            wget https://ftpmirror.gnu.org/autoconf/autoconf-2.71.tar.gz
+            tar xfz autoconf-2.71.tar.gz && cd autoconf-2.71 && ./configure && make && make install
+            autoconf --version
+            automake --version
+            echo ==================================================
+            echo ==================================================
+            echo ls -l:
+              ls -l
+              echo pwd
+              pwd
+              echo ==================================================
+              bash bootstrap.sh
+              ./configure
+              make check
 
-    - name: Save failures report
-      if:   failure()
-      uses: actions/upload-artifact@v2
-      with:
-        name: freebsd-error-report
-        path: |
-          autom4te.cache/**
-          config.log
-          config.h
-          test*.log
+              - name: Save failures report
+                if:   failure()
+                uses: actions/upload-artifact@v2
+                with:
+                  name: freebsd-error-report
+                  path: |
+                    autom4te.cache/**
+                    config.log
+                    config.h
+                    test*.log
 
-    - uses: ammaraskar/gcc-problem-matcher@0.1
-      name: GCC Problem Matcher
+                    - uses: ammaraskar/gcc-problem-matcher@0.1
+                      name: GCC Problem Matcher
