@@ -170,6 +170,12 @@ public:
         const char *what() const noexcept override {return m_error.c_str();}
     };
 
+    class FeatureRecorderNullName : public std::exception {
+    public:
+        FeatureRecorderNullName() {}
+        const char *what() const noexcept override {return "FeatureRecorderNullName";}
+    };
+
     /* create a feature recorder, and return it as well */
     virtual void create_alert_recorder();
     virtual feature_recorder &create_feature_recorder(feature_recorder_def def); // create a feature recorder

@@ -188,7 +188,7 @@ public:;
      * If count==NEXT_COUNT, create a zero-length file and return that file's name (we use the file system for atomic locks)
      */
 
-    const std::string fname_in_outdir(std::string suffix, int count) const; // returns the name of a dir in the outdir
+    const std::string fname_in_outdir(std::string suffix, int count) const; // returns the name of a dir in the outdir for this feature recorder
     enum count_mode_t {
         NO_COUNT=0,
         NEXT_COUNT = -1

@@ -85,7 +85,7 @@ feature_recorder_file::feature_recorder_file(class feature_recorder_set &fs_, co
     /* Just open the stream for output */
     ios.open(fname.c_str(),std::ios_base::out);
     if (!ios.is_open()){
-        std::cerr << "*** feature_recorder_file::open CANNOT OPEN FEATURE FILE FOR WRITING "
+        std::cerr << "*** feature_recorder_file::open Cannot open feature file for writing "
                   << fname << ":" << strerror(errno) << "\n";
         throw std::invalid_argument("cannot open feature file for writing");
     }

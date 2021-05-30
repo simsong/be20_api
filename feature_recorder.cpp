@@ -207,9 +207,6 @@ void feature_recorder::write0(const pos0_t &pos0, const std::string &feature, co
  */
 void feature_recorder::write(const pos0_t &pos0, const std::string &feature_, const std::string &context_)
 {
-    std::cerr << "fr0: feature=" << feature_ << "\n";
-
-
     if (fs.flags.disabled) return;           // disabled
 
     if (fs.flags.pedantic){
@@ -227,12 +224,7 @@ void feature_recorder::write(const pos0_t &pos0, const std::string &feature_, co
     std::string context      = def.flags.no_context ? "" : context_;
     std::string feature_utf8 = make_utf8(feature);
 
-    std::cerr << "fra: feature=" << feature << "\n";
-
     quote_if_necessary(feature,context);
-
-    std::cerr << "frb: feature=" << feature << "\n";
-
 
     if ( feature.size()==0 ){
         std::cerr << name << ": zero length feature at " << pos0 << "\n";
@@ -281,12 +273,8 @@ void feature_recorder::write(const pos0_t &pos0, const std::string &feature_, co
     }
 #endif
 
-    std::cerr << "fr1: feature=" << feature << "\n";
-
     /* add the feature to any histograms; the regex is applied in the histogram */
     this->histograms_add_feature(feature);
-
-    std::cerr << "fr2: feature=" << feature << "\n";
 
     /* Finally write out the feature and the context */
     this->write0(pos0, feature, context);

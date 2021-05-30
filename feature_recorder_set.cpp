@@ -162,9 +162,13 @@ feature_recorder &feature_recorder_set::create_feature_recorder(const feature_re
     if (!flags.record_files and !flags.record_sql){
         throw std::runtime_error("Must record to either files or SQL");
     }
+    if (def.name.size()==0){
+        throw FeatureRecorderNullName();
+    }
+
     auto it = frm.find(def.name);
     if ( it != frm.end() ) {
-        throw FeatureRecorderAlreadyExists {std::string("feature recorder already exists: ")+def.name};
+        throw FeatureRecorderAlreadyExists {std::string("feature recorder '") + def.name + "'already exists: "};
     }
 
     feature_recorder *fr = nullptr;
