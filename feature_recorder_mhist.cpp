@@ -8,11 +8,11 @@ void feature_recorder::write(const pos0_t &pos0,const std::string &feature_,cons
 {
     if (fs.flags.disabled) return;           // disabled
     if (fs.flags.pedantic){
-        if (feature_.size() > fs.opt_max_feature_size){
+        if (feature_.size() > def.max_feature_size){
             std::cerr << "feature_recorder::write : feature_.size()=" << feature_.size() << "\n";
             assert(0);
         }
-        if (context_.size() > fs.opt_max_context_size){
+        if (context_.size() > def.max_context_size){
             std::cerr << "feature_recorder::write : context_.size()=" << context_.size() << "\n";
             assert(0);
         }

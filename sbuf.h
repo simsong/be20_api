@@ -145,7 +145,7 @@ public:
     /**
      * make an sbuf from a parent but with an indent.
      */
-    sbuf_t(const sbuf_t &that_sbuf,size_t off):
+    sbuf_t(const sbuf_t &that_sbuf, size_t off):
         page_number(that_sbuf.page_number),pos0(that_sbuf.pos0+off),
         parent(that_sbuf.highest_parent()),
         buf(that_sbuf.buf+off),
@@ -156,8 +156,8 @@ public:
     /** Allocate from an existing sbuf.
      * The allocated buf MUST be freed before the source, since no copy is made...
      */
-    explicit sbuf_t(const sbuf_t &sbuf,size_t off,size_t len):
-        page_number(sbuf.page_number),pos0(sbuf.pos0+off),
+    explicit sbuf_t(const sbuf_t &sbuf, size_t off, size_t len):
+        page_number(sbuf.page_number), pos0(sbuf.pos0+off),
         parent(sbuf.highest_parent()),
         buf(sbuf.buf+off),
         bufsize(off+len<sbuf.bufsize ? len : sbuf.bufsize-off),

@@ -272,7 +272,7 @@ void feature_recorder_file::write0(const pos0_t &pos0, const std::string &featur
     }
     std::stringstream ss;
     ss << pos0.shift( fs.offset_add).str() << '\t' << feature;
-    if ((flags.no_context == false) && ( context.size()>0 )) {
+    if ((def.flags.no_context == false) && ( context.size()>0 )) {
         ss << '\t' << context;
     }
     feature_recorder::write0(pos0, feature, context); // call super

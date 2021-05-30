@@ -384,6 +384,15 @@ TEST_CASE("quote_if_necessary", "[feature_recorder]") {
     ft.quote_if_necessary(f1,c1);
     REQUIRE( f1=="feature" );
     REQUIRE( c1=="context" );
+
+    std::string f2("[{\"1\": \"one@company.com\"}, {\"2\": \"two@company.com\"}, {\"3\": \"two@company.com\"}]\");");
+    std::string c2("context");
+
+    std::string f2_quoted = f2;
+    std::string c2_quoted = c2;
+    ft.quote_if_necessary(f2_quoted, c2_quoted);
+    REQUIRE( f2_quoted == f2);
+    REQUIRE( c2_quoted == c2);
 }
 
 TEST_CASE("fname in outdir", "[feature_recorder]") {

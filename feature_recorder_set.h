@@ -136,9 +136,6 @@ public:
     /* feature_recorder_set flags */
     /* Flags are now implemented as booleans per stroustrup 2013 */
 
-    /* These used to be static variables in the feature recorder class. They are more properly here */
-    uint32_t    opt_max_context_size {64};
-    uint32_t    opt_max_feature_size {64};
     int64_t     offset_add {0};          // added to every reported offset, for use with hadoop
     std::string banner_filename {};         // banner for top of every file
 
@@ -176,7 +173,8 @@ public:
     /* create a feature recorder, and return it as well */
     virtual void create_alert_recorder();
     virtual feature_recorder &create_feature_recorder(feature_recorder_def def); // create a feature recorder
-    /* convenience constructor */
+
+    /* convenience constructor for feature recorder with default def */
     virtual feature_recorder &create_feature_recorder(const std::string name) {
         return create_feature_recorder(feature_recorder_def(name));
     }

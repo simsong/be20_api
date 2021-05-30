@@ -182,7 +182,7 @@ public:;
     //void    load_scanner_packet_handlers(); // after all scanners are loaded, this sets up the packet handlers.
 
     const std::string       get_input_fname() const;
-    //scanner_params::phase_t get_current_phase() const { return current_phase;};
+    scanner_params::phase_t get_current_phase() const { return current_phase;};
     size_t   histogram_count() const { return fs.histogram_count();};       // passthrough, mostly for debugging
     size_t   feature_recorder_count() const { return fs.feature_recorder_count();};
     void    dump_name_count_stats(class dfxml_writer &w) const { fs.dump_name_count_stats(w);}; // passthrough

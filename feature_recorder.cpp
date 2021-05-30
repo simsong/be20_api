@@ -21,8 +21,6 @@
 
 //int64_t feature_recorder::offset_add   = 0;
 //std::string  feature_recorder::banner_file;
-//uint32_t feature_recorder::opt_max_context_size=1024*1024;
-//uint32_t feature_recorder::opt_max_feature_size=1024*1024;
 //uint32_t feature_recorder::debug = DEBUG_PEDANTIC; // default during development
 //std::thread::id feature_recorder::main_thread_id = std::this_thread::get_id();
 const std::string feature_recorder::MAX_DEPTH_REACHED_ERROR_FEATURE {"process_extract: MAX DEPTH REACHED"};
@@ -61,8 +59,8 @@ static inline int hexval(char ch)
     return 0;
 }
 
-feature_recorder::feature_recorder(class feature_recorder_set &fs_, const struct feature_recorder_def def):
-    fs(fs_),name(def.name),flags(def.flags)
+feature_recorder::feature_recorder(class feature_recorder_set &fs_, const struct feature_recorder_def def_):
+    fs(fs_),name(def_.name),def(def_)
 {
 }
 
@@ -161,12 +159,12 @@ void feature_recorder::quote_if_necessary(std::string &feature,std::string &cont
     bool escape_bad_utf8  = true;
     bool escape_backslash = true;
 
-    if (flags.no_quote) {          // don't quote either
+    if (def.flags.no_quote) {          // don't quote either
         escape_bad_utf8  = false;
         escape_backslash = false;
     }
 
-    if (flags.xml) {               // only quote bad utf8
+    if (def.flags.xml) {               // only quote bad utf8
         escape_bad_utf8  = true;
         escape_backslash = false;
     }
@@ -175,15 +173,15 @@ void feature_recorder::quote_if_necessary(std::string &feature,std::string &cont
                                    escape_bad_utf8, escape_backslash,
                                    validateOrEscapeUTF8_validate);
 
-    if (feature.size() > fs.opt_max_feature_size) {
-        feature.resize(fs.opt_max_feature_size);
+    if (feature.size() > def.max_feature_size) {
+        feature.resize(def.max_feature_size);
     }
 
-    if ( flags.no_context == false) {
+    if ( def.flags.no_context == false) {
         context = validateOrEscapeUTF8(context, escape_bad_utf8,
                                        escape_backslash, validateOrEscapeUTF8_validate);
-        if (context.size() > fs.opt_max_context_size) {
-            context.resize(fs.opt_max_context_size);
+        if (context.size() > def.max_context_size) {
+            context.resize(def.max_context_size);
         }
     }
 }
@@ -209,13 +207,16 @@ void feature_recorder::write0(const pos0_t &pos0, const std::string &feature, co
  */
 void feature_recorder::write(const pos0_t &pos0, const std::string &feature_, const std::string &context_)
 {
+    std::cerr << "fr0: feature=" << feature_ << "\n";
+
+
     if (fs.flags.disabled) return;           // disabled
 
     if (fs.flags.pedantic){
-        if (feature_.size() > fs.opt_max_feature_size){
+        if (feature_.size() > def.max_feature_size){
             throw std::runtime_error(std::string("feature_recorder::write : feature_.size()=") + std::to_string(feature_.size()));
         }
-        if (context_.size() > fs.opt_max_context_size){
+        if (context_.size() > def.max_context_size){
             throw std::runtime_error(std::string("feature_recorder::write : context_.size()=") + std::to_string(context_.size()));
         }
     }
@@ -223,10 +224,15 @@ void feature_recorder::write(const pos0_t &pos0, const std::string &feature_, co
     /* TODO: This needs to be change to do all processing in utf32 and not utf8 */
 
     std::string feature      = feature_;
-    std::string context      = flags.no_context ? "" : context_;
+    std::string context      = def.flags.no_context ? "" : context_;
     std::string feature_utf8 = make_utf8(feature);
 
+    std::cerr << "fra: feature=" << feature << "\n";
+
     quote_if_necessary(feature,context);
+
+    std::cerr << "frb: feature=" << feature << "\n";
+
 
     if ( feature.size()==0 ){
         std::cerr << name << ": zero length feature at " << pos0 << "\n";
@@ -251,7 +257,7 @@ void feature_recorder::write(const pos0_t &pos0, const std::string &feature_, co
      * Only do this if we have a stop_list_recorder (the stop list recorder itself
      * does not have a stop list recorder. If it did we would infinitely recurse.
      */
-    if (flags.no_stoplist==false
+    if (def.flags.no_stoplist==false
         && fs.stop_list
         && fs.stop_list_recorder
         && fs.stop_list->check_feature_context(feature_utf8,context)) {
@@ -275,8 +281,12 @@ void feature_recorder::write(const pos0_t &pos0, const std::string &feature_, co
     }
 #endif
 
+    std::cerr << "fr1: feature=" << feature << "\n";
+
     /* add the feature to any histograms; the regex is applied in the histogram */
     this->histograms_add_feature(feature);
+
+    std::cerr << "fr2: feature=" << feature << "\n";
 
     /* Finally write out the feature and the context */
     this->write0(pos0, feature, context);
@@ -322,7 +332,7 @@ void feature_recorder::write_buf(const sbuf_t &sbuf,size_t pos,size_t len)
     std::string feature = sbuf.substr(pos,len);
     std::string context;
 
-    if (flags.no_context==false) {
+    if (def.flags.no_context==false) {
         /* Context write; create a clean context */
         size_t p0 = context_window < pos ? pos-context_window : 0;
         size_t p1 = pos+len+context_window;
@@ -681,12 +691,12 @@ void feature_recorder::set_carve_mtime(const std::string &fname, const std::stri
  * add a new histogram to this feature recorder.
  * @param def - the histogram definition
  */
-void feature_recorder::histogram_add(const struct histogram_def &def)
+void feature_recorder::histogram_add(const struct histogram_def &hdef)
 {
     if (features_written != 0 ){
         throw std::runtime_error("Cannot add histograms after features have been written.");
     }
-    histograms.push_back( std::make_unique<AtomicUnicodeHistogram>( def ));
+    histograms.push_back( std::make_unique<AtomicUnicodeHistogram>( hdef ));
 }
 
 /**

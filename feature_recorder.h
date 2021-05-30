@@ -55,6 +55,10 @@
 
 struct feature_recorder_def {
     std::string name {};                   // the name of the feature recorder
+    /* These used to be static variables in the feature recorder class. They are more properly here */
+    uint32_t    max_context_size {64};
+    uint32_t    max_feature_size {64};
+
     /**
      * \name Flags that control scanners
      * @{
@@ -79,6 +83,7 @@ struct feature_recorder_def {
      * non-UTF8 will be quoted but "\" will not be escaped.
      */
         bool  xml {false};                 // will be sending XML
+
         bool operator==(const flags_t &a) const {
             return this->disabled == a.disabled  &&
                 this->no_context == a.no_context &&
@@ -108,6 +113,9 @@ struct feature_recorder_def {
 struct Feature {
     Feature(const pos0_t &pos_, const std::string &feature_, const std::string & context_):
         pos(pos_), feature(feature_), context(context_){};
+    Feature(std::string pos_, std::string feature_, std::string context_):
+        pos(pos_),feature(feature_),context(context_){};
+
     const pos0_t pos;
     const std::string feature;
     const std::string context;
@@ -143,8 +151,8 @@ public:;
     feature_recorder(class feature_recorder_set &fs, const feature_recorder_def def);
     virtual        ~feature_recorder();
 
-    const  std::string name {};      // name of this feature recorder.
-    feature_recorder_def::flags_t flags;
+    const  std::string name {};      // name of this feature recorder (copied out of def)
+    feature_recorder_def def {"<NONAME>"};
     bool   validateOrEscapeUTF8_validate { true };     // should we validate or escape UTF8?
 
     /* State variables for this feature recorder */
