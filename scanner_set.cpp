@@ -365,9 +365,15 @@ void scanner_set::info_scanners(std::ostream &out,
             if (it.second->url.size())             out << "URL: "             << it.second->url << "\n";
             if (it.second->scanner_version.size()) out << "Scanner Version: " << it.second->scanner_version << "\n";
             out << "Feature Names: ";
+            int count = 0;
             for ( auto i2: it.second->feature_defs ) {
-                out << i2.name << "\n";
+                if (count++ > 0) out << ", ";
+                out << i2.name;
             }
+            if (count==0){
+                out << "(none)";
+            }
+            out << "\n";
             if (detailed_settings){
                 out << "Settable Options (and their defaults): \n";
                 out << it.second->helpstr;
