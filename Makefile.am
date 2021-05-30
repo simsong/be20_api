@@ -22,7 +22,7 @@ ETAGS = etags-emacs
 ACLOCAL_AMFLAGS = -I m4
 
 # Use the current directory and include the list of BE13_API sources
-BE13_API_DIR=.
+BE13_API_DIR = .
 include Makefile.defs
 
 clean-local:
