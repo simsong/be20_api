@@ -56,8 +56,8 @@
 struct feature_recorder_def {
     std::string name {};                   // the name of the feature recorder
     /* These used to be static variables in the feature recorder class. They are more properly here */
-    uint32_t    max_context_size {64};
-    uint32_t    max_feature_size {64};
+    uint32_t    max_context_size { 1024*1024 }; // 1024*1024 was in BE1.4
+    uint32_t    max_feature_size { 1024*1024 }; // 1024*1024 was in BE1.4
 
     /**
      * \name Flags that control scanners
