@@ -21,14 +21,17 @@
 #include <string>
 #include <sstream>
 #include <vector>
+#include <filesystem>
 
 struct  scanner_config {
 
     typedef std::map<std::string,std::string>  config_t ; // configuration for scanner passed in
-    config_t  namevals {};             //  (input) name=val map
-    std::string help_str {};          // help string that is built
+    config_t  namevals {};              //  (input) name=val map
+    std::string help_str {};            // help string that is built
 
     size_t   context_window_default {16};      // global option
+    uint64_t    offset_add {0};                   // add this number to the first offset in every feature file (used for parallelism)
+    std::filesystem::path banner_file;                      // add the contents of this file to the top of every feature file
 
     //std::stringstream helpstream{};
     //static std::string MAX_DEPTH;
@@ -36,8 +39,8 @@ struct  scanner_config {
     virtual ~scanner_config(){};
     scanner_config(){};
     scanner_config( const scanner_config &) = default;
-    std::string input_fname { NO_INPUT };          // where input comes from
-    std::string outdir { NO_OUTDIR };               // where output goes
+    std::filesystem::path input_fname { NO_INPUT };          // where input comes from
+    std::filesystem::path outdir { NO_OUTDIR };               // where output goes
     std::string hash_algorithm {"sha1"}; // which hash algorithm are using; default to SHA1
     std::string help() { return help_str; };
     static const std::string   NO_INPUT;  // 'filename' indicator that the FRS has no input file
@@ -46,7 +49,7 @@ struct  scanner_config {
     // These methods are implemented in the plugin system for the scanner to get config information.
     // which is why they need to be virtual functions.
     // The get_config methods should be called on the si object during PHASE_STARTUP
-    //void get_config(const scanner_info::config_t &c, const std::string &name,std::string *val,const std::string &help);
+    // void get_config(const scanner_info::config_t &c, const std::string &name,std::string *val,const std::string &help);
     void set_config( const std::string &name, const std::string &val);
     template<typename T>
     void get_config( const std::string &name, T *val, const std::string &help) ;

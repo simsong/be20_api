@@ -28,7 +28,7 @@
  */
 //const std::string sbuf_t::U10001C("\xf4\x80\x80\x9c");
 std::string sbuf_t::map_file_delimiter(sbuf_t::U10001C);
-sbuf_t *sbuf_t::map_file(const std::string &fname)
+sbuf_t *sbuf_t::map_file(const std::filesystem::path fname)
 {
     int fd = open(fname.c_str(),O_RDONLY|O_BINARY,0);
     if (fd<0){
@@ -42,7 +42,7 @@ sbuf_t *sbuf_t::map_file(const std::string &fname)
  * If there is no mmap, just allocate space and read the file
  */
 
-sbuf_t *sbuf_t::map_file(const std::string &fname, int fd, bool should_close)
+sbuf_t *sbuf_t::map_file(const std::filesystem::path fname, int fd, bool should_close)
 {
     struct stat st;
     if(fstat(fd,&st)){
@@ -70,7 +70,7 @@ sbuf_t *sbuf_t::map_file(const std::string &fname, int fd, bool should_close)
     bool should_free = true;
     bool should_unmap = false;
 #endif
-    return new sbuf_t(pos0_t(fname+sbuf_t::map_file_delimiter),
+    return new sbuf_t(pos0_t(fname.string() + sbuf_t::map_file_delimiter),
                       buf,
                       st.st_size, // bufsize
                       st.st_size, // pagesize

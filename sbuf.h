@@ -3,7 +3,6 @@
 #ifndef SBUF_H
 #define SBUF_H
 
-#include <iostream>
 
 /*
  * sbuf.h:
@@ -25,7 +24,8 @@
  * 2021 - removed copy constructor. For performance we should never copy, but we can move.
  */
 
-#include "pos0.h"
+#include <iostream>
+#include <filesystem>
 #include <cassert>
 #include <cstring>
 #include <string>
@@ -35,6 +35,8 @@
 
 #include <sys/mman.h>
 #include <unistd.h>
+
+#include "pos0.h"
 
 /*
  * NOTE: The crash identified in November 2019 was because access to
@@ -214,11 +216,11 @@ public:
     }
 
     /* Allocate a sbuf from a file mapped into memory. The sbuf must be deleted */
-    static sbuf_t *map_file(const std::string &fname); // map a sbuf from a file, or throw exception
-    static sbuf_t *map_file(const std::string &fname, int fd, bool should_close); // if file is already opened
+    static sbuf_t *map_file(const std::filesystem::path fname); // map a sbuf from a file, or throw exception
+    static sbuf_t *map_file(const std::filesystem::path fname, int fd, bool should_close); // if file is already opened
     inline static const std::string U10001C = "\xf4\x80\x80\x9c";         // default delimeter character in bulk_extractor
     static std::string map_file_delimiter; // character placed
-    static void set_map_file_delimiter(const std::string &new_delim){
+    static void set_map_file_delimiter(const std::string new_delim){
         map_file_delimiter = new_delim;
     }
 

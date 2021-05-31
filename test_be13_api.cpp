@@ -108,17 +108,17 @@ std::string get_exe()
     return std::string(rpath);
 }
 
-std::string tests_dir()
+std::filesystem::path tests_dir()
 {
     /* if srcdir is defined, then return srcdir/tests */
     const char *srcdir = getenv("srcdir");
     if (srcdir) {
-        return std::string(srcdir) + "/tests";
+        return std::filesystem::path(srcdir) / "tests";
     }
 
     /* Otherwise, return relative to this executable */
     std::filesystem::path p( get_exe() );
-    return  p.parent_path().string() + "/tests";
+    return  p.parent_path() / "tests";
 }
 
 
@@ -588,7 +588,7 @@ TEST_CASE("hello_sbuf","[sbuf]") {
 TEST_CASE("map_file","[sbuf]") {
     std::string tempdir = get_tempdir();
     std::ofstream os;
-    std::string fname = tempdir+"/hello.txt";
+    std::filesystem::path fname = tempdir+"/hello.txt";
 
     os.open( fname );
     REQUIRE( os.is_open() );
@@ -828,7 +828,7 @@ TEST_CASE("unicode_escape", "[unicode]") {
 }
 
 TEST_CASE("unicode_detection", "[unicode]") {
-    auto sb16p = sbuf_t::map_file(tests_dir() + "/unilang.htm");
+    auto sb16p = sbuf_t::map_file(tests_dir() / "unilang.htm");
     auto &sb16 = *sb16p;
 
     bool little_endian = false;
@@ -837,7 +837,7 @@ TEST_CASE("unicode_detection", "[unicode]") {
     REQUIRE( little_endian == true);
     delete sb16p;
 
-    auto sb8p = sbuf_t::map_file(tests_dir() + "/unilang8.htm");
+    auto sb8p = sbuf_t::map_file(tests_dir()  / "unilang8.htm");
     auto &sb8 = *sb8p;
     bool t8 = looks_like_utf16(sb8.asString(), little_endian);
     REQUIRE( t8 == false);

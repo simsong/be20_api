@@ -63,7 +63,7 @@ feature_recorder_set::feature_recorder_set( const flags_t &flags_,
     hasher( hash_def(sc_.hash_algorithm, hash_def::hash_func_for_name(sc_.hash_algorithm)))
 {
     namespace fs = std::filesystem;
-    if (sc.outdir.size() == 0){
+    if (sc.outdir.empty()){
         throw std::invalid_argument("feature_recorder_set::feature_recorder_set(): output directory not provided");
     }
 
@@ -78,11 +78,11 @@ feature_recorder_set::feature_recorder_set( const flags_t &flags_,
 
         /* Make sure it is writable */
         if (!fs::is_directory(sc.outdir)){
-            throw std::runtime_error("Could not create directory " + sc.outdir);
+            throw std::runtime_error("Could not create directory " + sc.outdir.string());
         }
 
         if (access(sc.outdir.c_str(),W_OK)!=0) {
-            throw std::invalid_argument("output directory " + sc.outdir + " not writable");
+            throw std::invalid_argument("output directory " + sc.outdir.string() + " not writable");
         }
     }
 
