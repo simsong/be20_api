@@ -13,6 +13,7 @@
 #include "feature_recorder.h"
 #include "atomic_set.h"
 #include "atomic_map.h"
+#include "scanner_config.h"
 
 /** \addtogroup internal_interfaces
  * @{
@@ -55,7 +56,6 @@ private:
 
 
     atomic_set<std::string> seen_set {};       // hex hash values of pages that have been seen
-    size_t   context_window_default {16};           // global option
 
     // map of feature recorders, name->feature recorder
     feature_recorder_map_t frm {};
@@ -72,10 +72,10 @@ public:
      * a bunch of bools.
      */
     struct flags_t {
-        bool disabled {false}; // do not record anything! This is is just used for a path-printer
-        bool pedantic {false}; // make sure that all features written are valid utf-8
-        bool no_alert {false}; // no alert recorder
-        bool only_alert {false};  //  always return the alert recorder
+        bool disabled {false};          // do not record anything! This is is just used for a path-printer
+        bool pedantic {false};          // make sure that all features written are valid utf-8
+        bool no_alert {false};          // no alert recorder
+        bool only_alert {false};        //  always return the alert recorder
         bool create_stop_list_recorders {false}; // static const uint32_t CREATE_STOP_LIST_RECORDERS= 0x04;  //
         bool debug {false};             // enable debug printing
         bool record_files {true};       // record to files
@@ -91,14 +91,15 @@ public:
      * This clearly needs work.
      */
     feature_recorder_set( const flags_t &flags_,
-                          const std::string &hash_algorithm,
-                          const std::string &input_fname_,
-                          const std::string &outdir_);
+                          const scanner_config &sc );
     virtual ~feature_recorder_set();
 
-    /* File management */
-    std::string   get_input_fname()           const { return input_fname;}
-    virtual const std::string &get_outdir()   const { return outdir;}
+    /* Configuration */
+    const scanner_config &sc;
+
+    /* Read-only functions for the scanner-config file management variables */
+    virtual std::string   get_input_fname() const { return sc.input_fname;}
+    virtual std::string   get_outdir()      const { return sc.outdir;}
 
     /* the feature recorder set automatically hashes all of the sbuf's that it processes. */
     typedef std::string (*hash_func_t)(const uint8_t *buf,const size_t bufsize);
@@ -179,11 +180,8 @@ public:
     /* create a feature recorder, and return it as well */
     virtual void create_alert_recorder();
     virtual feature_recorder &create_feature_recorder(feature_recorder_def def); // create a feature recorder
+    virtual feature_recorder &create_feature_recorder(std::string name); // convenience function
 
-    /* convenience constructor for feature recorder with default def */
-    virtual feature_recorder &create_feature_recorder(const std::string name) {
-        return create_feature_recorder(feature_recorder_def(name));
-    }
     // Just return it
     virtual feature_recorder &named_feature_recorder(const std::string name) const; // returns the named feature recorder
     virtual feature_recorder &get_alert_recorder() const ; // returns the alert recorder

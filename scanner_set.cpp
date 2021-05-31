@@ -55,7 +55,7 @@ typedef std::vector<packet_plugin_info> packet_plugin_info_vector_t;
 scanner_set::scanner_set(const scanner_config &sc_,
                          const feature_recorder_set::flags_t &f,
                          class dfxml_writer *writer_):
-    sc(sc_),fs(f, sc_.hash_alg, sc_.input_fname, sc_.outdir), writer(writer_)
+    sc(sc_), fs(f, sc_), writer(writer_)
 {
 }
 

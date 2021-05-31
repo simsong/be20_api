@@ -1,11 +1,13 @@
 /*
  * scanner_config.h:
  *
- * class to hold name=value configurations for all of the scanners.
- */
-
-/* Config is a set of name=value pairs from the command line and the list of all scanners that
+ * class to hold the full configuration of the scanner_set and the feature recorders.
+ *
+ * Includes a set of name=value pairs from the command line and the list of all scanners that
  * are enabled or disabled.
+ *
+ * This class is also used to build the help string.
+ *
  * All of the scanners get the same config, so the names that the scanners want need to be unique.
  * We could have adopted a system where each scanner had its own configuraiton space, but we didn't.
  * Scanner histograms are added to 'histograms' by machinery.
@@ -25,15 +27,18 @@ struct  scanner_config {
     typedef std::map<std::string,std::string>  config_t ; // configuration for scanner passed in
     config_t  namevals {};             //  (input) name=val map
     std::string help_str {};          // help string that is built
+
+    size_t   context_window_default {16};      // global option
+
     //std::stringstream helpstream{};
     //static std::string MAX_DEPTH;
     //static unsigned int default_max_depth;
     virtual ~scanner_config(){};
     scanner_config(){};
     scanner_config( const scanner_config &) = default;
-    std::string input_fname {};         // where input comes from
-    std::string outdir {};              // where output goes
-    std::string hash_alg {"sha1"};            // which hash algorithm are using; default to SHA1
+    std::string input_fname { NO_INPUT };          // where input comes from
+    std::string outdir { NO_OUTDIR };               // where output goes
+    std::string hash_algorithm {"sha1"}; // which hash algorithm are using; default to SHA1
     std::string help() { return help_str; };
     static const std::string   NO_INPUT;  // 'filename' indicator that the FRS has no input file
     static const std::string   NO_OUTDIR; // 'dirname' indicator that the FRS produces no file output

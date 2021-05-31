@@ -57,7 +57,7 @@ std::string random_string(std::size_t length)
     return random_string;
 }
 
-// A single tempdir for testing
+// A single tempdir for all of our testing
 std::string get_tempdir()
 {
     static std::string tempdir;
@@ -377,8 +377,7 @@ TEST_CASE("quote_if_necessary", "[feature_recorder]") {
 
     feature_recorder_set::flags_t flags;
     flags.no_alert = true;
-
-    feature_recorder_set frs( flags, "sha1", scanner_config::NO_INPUT, scanner_config::NO_OUTDIR);
+    feature_recorder_set frs( flags, scanner_config() );
     frs.create_feature_recorder("test");
     feature_recorder &ft = frs.named_feature_recorder("test");
     ft.quote_if_necessary(f1,c1);
@@ -398,7 +397,9 @@ TEST_CASE("quote_if_necessary", "[feature_recorder]") {
 TEST_CASE("fname in outdir", "[feature_recorder]") {
     feature_recorder_set::flags_t flags;
     flags.no_alert = true;
-    feature_recorder_set frs( flags, "sha1", scanner_config::NO_INPUT, get_tempdir());
+    scanner_config sc;
+    sc.outdir = NamedTemporaryDirectory();
+    feature_recorder_set frs( flags, sc );
     frs.create_feature_recorder("test");
     feature_recorder &ft = frs.named_feature_recorder("test");
 
@@ -444,7 +445,7 @@ TEST_CASE("write_features", "[feature_recorder_set]" ) {
         flags.no_alert = true;
         flags.debug    = true;
 
-        feature_recorder_set fs( flags, "sha1", scanner_config::NO_INPUT, tempdir);
+        feature_recorder_set fs( flags, scanner_config());
         feature_recorder &fr = fs.create_feature_recorder("feature_file");
 
         /* Make sure requesting a valid name does not generate an exception and an invalid name generates an exception */
@@ -661,7 +662,6 @@ TEST_CASE("scanner", "[scanner]") {
 TEST_CASE("enable/disable", "[scanner]") {
     scanner_config sc;
     sc.outdir = get_tempdir();
-    sc.hash_alg = "sha1";
 
     /* Enable the scanner */
     const std::string SHA1_TEST = "sha1_test";
@@ -713,7 +713,6 @@ TEST_CASE("enable/disable", "[scanner]") {
 TEST_CASE("run", "[scanner]") {
     scanner_config sc;
     sc.outdir   = get_tempdir();
-    sc.hash_alg = "sha1";               // it's faster than MD5!
     sc.push_scanner_command(std::string("sha1_test"), scanner_config::scanner_command::ENABLE); /* Turn it onn */
 
     struct feature_recorder_set::flags_t f;
@@ -767,7 +766,13 @@ TEST_CASE("run", "[scanner]") {
     }
 
     lines = getLines(fname_fr);
-    REQUIRE( lines.size() == 5);
+    REQUIRE( lines[0]=="# BANNER FILE NOT PROVIDED (-b option)");
+    REQUIRE( lines[1]=="# BE13_API-Version: 2.0.0-dev1");
+    REQUIRE( lines[2]=="# Feature-Recorder: sha1_bufs");
+    REQUIRE( lines[3]=="# Filename: <NO-INPUT>");
+    REQUIRE( lines[4]=="# Feature-File-Version: 1.1");
+    REQUIRE( lines[5]=="0\td3486ae9136e7856bc42212385ea797094475802");
+    REQUIRE( lines.size() == 6);
 
     /* The sha1 scanner makes a single histogram. Make sure we got it. */
     REQUIRE( ss.histogram_count() == 1);

@@ -58,33 +58,31 @@ feature_recorder_set::hash_func_t feature_recorder_set::hash_def::hash_func_for_
  * Create an empty recorder with no outdir.
  */
 feature_recorder_set::feature_recorder_set( const flags_t &flags_,
-                                            const std::string &hash_algorithm,
-                                            const std::string &input_fname_,
-                                            const std::string &outdir_):
-    input_fname(input_fname_),outdir(outdir_),flags(flags_),
-    hasher( hash_def(hash_algorithm, hash_def::hash_func_for_name(hash_algorithm)))
+                                            const scanner_config &sc_):
+    flags(flags_), sc(sc_),
+    hasher( hash_def(sc_.hash_algorithm, hash_def::hash_func_for_name(sc_.hash_algorithm)))
 {
     namespace fs = std::filesystem;
-    if (outdir.size() == 0){
+    if (sc.outdir.size() == 0){
         throw std::invalid_argument("feature_recorder_set::feature_recorder_set(): output directory not provided");
     }
 
     /* Make sure we can write to the outdir if one is provided */
-    if (outdir == scanner_config::NO_OUTDIR){
+    if (sc.outdir == scanner_config::NO_OUTDIR){
         flags.disabled = true;
     } else {
         /* Create the output directory if it doesn't exist */
-        if (!fs::is_directory(outdir)) {
-            fs::create_directory(outdir);
+        if (!fs::is_directory(sc.outdir)) {
+            fs::create_directory(sc.outdir);
         }
 
         /* Make sure it is writable */
-        if (!fs::is_directory(outdir)){
-            throw std::runtime_error("Could not create directory " + outdir);
+        if (!fs::is_directory(sc.outdir)){
+            throw std::runtime_error("Could not create directory " + sc.outdir);
         }
 
-        if (access(outdir.c_str(),W_OK)!=0) {
-            throw std::invalid_argument("output directory " + outdir + " not writable");
+        if (access(sc.outdir.c_str(),W_OK)!=0) {
+            throw std::invalid_argument("output directory " + sc.outdir + " not writable");
         }
     }
 
@@ -178,9 +176,17 @@ feature_recorder &feature_recorder_set::create_feature_recorder(const feature_re
     if (flags.record_sql) {
         fr = new feature_recorder_sql(*this, def);
     }
+    fr->context_window = sc.context_window_default;
     frm.insert(def.name, fr);
     return *fr;                          // as a courtesy
 }
+
+/* convenience constructor for feature recorder with default def */
+feature_recorder &feature_recorder_set::create_feature_recorder(std::string name)
+{
+    return create_feature_recorder(feature_recorder_def(name));
+}
+
 
 /*
  * Get the named feature recorder.
@@ -377,7 +383,7 @@ void feature_recorder_set::db_create_table(const std::string &name)
 sqlite3 *feature_recorder_set::db_create_empty(const std::string &name)
 {
     assert(name.size()>0);
-    std::string dbfname  = outdir + "/" + name +  SQLITE_EXTENSION;
+    std::string dbfname  = sc.outdir + "/" + name +  SQLITE_EXTENSION;
     if(debug) std::cerr << "create_feature_database " << dbfname << "\n";
     sqlite3 *db=0;
     if (sqlite3_open_v2(dbfname.c_str(), &db,

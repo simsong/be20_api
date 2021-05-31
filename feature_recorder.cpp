@@ -111,7 +111,7 @@ std::string feature_recorder::unquote_string(const std::string &s)
     return line.substr(feature_start);  // no context to remove
 }
 
-const std::string &feature_recorder::get_outdir() const // cannot be inline becuase it accesses fs
+const std::string feature_recorder::get_outdir() const // cannot be inline becuase it accesses fs
 {
     return fs.get_outdir();
 }
@@ -121,6 +121,10 @@ const std::string &feature_recorder::get_outdir() const // cannot be inline becu
  */
 const std::string feature_recorder::fname_in_outdir(std::string suffix, int count) const
 {
+    if (fs.get_outdir() == scanner_config::NO_OUTDIR) {
+        throw std::runtime_error("fname_in_outdir called, but outdir==NO_OUTDIR");
+    }
+
     std::string base_name = fs.get_outdir() + "/" + this->name;
     if (suffix.size() > 0){
         base_name += "_"+suffix;
@@ -328,6 +332,7 @@ void feature_recorder::write_buf(const sbuf_t &sbuf,size_t pos,size_t len)
         if (p1>sbuf.bufsize) p1 = sbuf.bufsize;
         assert( p0<=p1 );
         context = sbuf.substr(p0,p1-p0);
+        std::cerr << "*** context=" << context << " feature=" << feature << " context_window " << context_window << "\n";
     }
     this->write(sbuf.pos0+pos, feature, context);
 }

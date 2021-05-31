@@ -44,3 +44,6 @@ TESTS = $(check_PROGRAMS)
 # apitest: test_be13_api
 
 test_be13_api_SOURCES = $(BE13_API_SRC) test_be13_api.cpp catch.hpp
+
+push:
+	make && make check && make distcheck && git push origin

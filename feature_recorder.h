@@ -142,7 +142,7 @@ class feature_recorder {
     /* Instance variables available to subclasses: */
 protected:
     class  feature_recorder_set &fs; // the set in which this feature_recorder resides
-    virtual const std::string &get_outdir() const;      // cannot be inline because it accesses fs
+    virtual const std::string get_outdir() const;      // cannot be inline because it accesses fs
 
 public:;
     /* The main public interface:
@@ -155,8 +155,10 @@ public:;
     feature_recorder_def def {"<NONAME>"};
     bool   validateOrEscapeUTF8_validate { true };     // should we validate or escape UTF8?
 
-    /* State variables for this feature recorder */
-    std::atomic<size_t>       context_window {0};      // context window for this feature recorder
+    /* State variables for this feature recorder.
+     * Defaults come from scanner_set's scanner_config.
+     */
+    std::atomic<size_t>       context_window {0};
     std::atomic<int64_t>      features_written {0};
 
 
