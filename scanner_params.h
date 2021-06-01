@@ -12,6 +12,7 @@
 #include <sstream>
 #include <map>
 #include <ostream>
+#include <cassert>
 
 // Note: Do not include scanner_set.h, because it needs scanner_params.h!
 
@@ -88,7 +89,6 @@ struct scanner_params {
         scanner_info(scanner_t *scanner_,std::string name_):scanner(scanner_),name(name_){
         };
         /* PASSED FROM SCANNER to API: */
-        //int               si_version { CURRENT_SI_VERSION };             // version number for this structure
         scanner_t         *scanner;            // the scanner
         std::string       name;                //   scanner name
         std::string       helpstr {};             // the help string
@@ -120,7 +120,9 @@ struct scanner_params {
 
     /* Scanners can also be asked to assist in printing. */
     enum print_mode_t {MODE_NONE=0,MODE_HEX,MODE_RAW,MODE_HTTP};
-    const int CURRENT_SP_VERSION {4};
+    const int SCANNER_PARAMS_VERSION {20210531};
+    int scanner_params_version {SCANNER_PARAMS_VERSION};
+    void check_version() { assert(this->scanner_params_version == SCANNER_PARAMS_VERSION);}
 
     typedef std::map<std::string,std::string> PrintOptions;
     static print_mode_t getPrintMode(const PrintOptions &po){

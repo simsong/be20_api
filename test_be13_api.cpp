@@ -582,6 +582,33 @@ TEST_CASE("hello_sbuf","[sbuf]") {
     std::string s;
     sb1.getUTF8(6, 5, s);
     REQUIRE(s == "world");
+
+    sbuf_t sb2("This\nis\na\ntest");
+    size_t pos=0;
+    size_t line_start = 0;
+    size_t line_len = 0;
+
+    /* "This */
+    REQUIRE( sb2.getline(pos, line_start, line_len)==true);
+    REQUIRE( line_start==0 );
+    REQUIRE( line_len==4 );
+
+    /* "is" */
+    REQUIRE( sb2.getline(pos, line_start, line_len)==true);
+    REQUIRE( line_start==5 );
+    REQUIRE( line_len==2 );
+
+    /* "a" */
+    REQUIRE( sb2.getline(pos, line_start, line_len)==true);
+    REQUIRE( line_start==8 );
+    REQUIRE( line_len==1 );
+
+    /* "test" */
+    REQUIRE( sb2.getline(pos, line_start, line_len)==true);
+    REQUIRE( line_start==10 );
+    REQUIRE( line_len==4 );
+
+    REQUIRE( sb2.getline(pos, line_start, line_len)==false);
 }
 
 

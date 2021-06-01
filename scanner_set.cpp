@@ -101,6 +101,7 @@ void scanner_set::add_scanner(scanner_t scanner)
     // register_info above, which will add the scanner's scanner_info to the database.
     (*scanner)(sp);
 
+
     // Make sure it was registered
     if (scanner_info_db.find(scanner) == scanner_info_db.end()){
         throw std::runtime_error("a scanner did not register itself");

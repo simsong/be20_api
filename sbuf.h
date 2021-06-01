@@ -230,9 +230,6 @@ public:
         bufsize(strlen(str)),
         pagesize(strlen(str)) {};
 
-
-
-
     /* Properties */
     size_t size() const {return bufsize;} // return the number of bytes
     size_t left(size_t n) const {return n<bufsize ? bufsize-n : 0;}; // how much space is left at n
@@ -261,6 +258,36 @@ public:
 
     /* return true if the sbuf consists solely of ngrams */
     size_t find_ngram_size(size_t max_ngram) const;
+
+    /* get the next line line from the sbuf.
+     * @param sbuf - the sbuf to process
+     * @param pos  - on entry, current position. On exit, new position.
+     *               pos[0] is the start of a line
+     * @param start - the start of the line, from the start of the sbuf.
+     * @param len   - the length of the line; does not include the \n at the end.
+     * @return true - a line was found; false - a line was not found
+     */
+    bool getline(size_t &pos,size_t &line_start,size_t &line_len) {
+        /* Scan forward until pos is at the beginning of a line */
+        if (pos >= this->pagesize) return false;
+        if (pos > 0){
+            while ((pos < this->pagesize) && (*this)[pos-1]!='\n'){
+                ++(pos);
+            }
+            if (pos >= this->pagesize) return false; // didn't find another start of a line
+        }
+        line_start = pos;
+        /* Now scan to end of the line, or the end of the buffer */
+        while (++pos < this->pagesize){
+            if ((*this)[pos]=='\n'){
+                break;
+            }
+        }
+        line_len = (pos-line_start);
+        return true;
+    }
+
+
 
     /****************************************************************
      *** range_exception_t
