@@ -332,7 +332,6 @@ void feature_recorder::write_buf(const sbuf_t &sbuf,size_t pos,size_t len)
         if (p1>sbuf.bufsize) p1 = sbuf.bufsize;
         assert( p0<=p1 );
         context = sbuf.substr(p0,p1-p0);
-        std::cerr << "*** context=" << context << " feature=" << feature << " context_window " << context_window << "\n";
     }
     this->write(sbuf.pos0+pos, feature, context);
 }
