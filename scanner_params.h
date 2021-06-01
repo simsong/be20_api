@@ -96,7 +96,7 @@ struct scanner_params {
         std::string       description {};         //   what do I do?
         std::string       url {};                 //   where I come from
         std::string       scanner_version {};     //   version for the scanner
-        std::string       pathPrefix{};           //   this scanner's path prefix for recursive scanners. e.g. "GZIP"
+        std::string       pathPrefix {};           //   this scanner's path prefix for recursive scanners. e.g. "GZIP"
         uint64_t          flags {};               //   flags
         std::vector<feature_recorder_def>    feature_defs {};   //   feature files that this scanner needs.
         std::vector<histogram_def>  histogram_defs {};      //   histogram definitions that the scanner needs
@@ -224,29 +224,5 @@ inline std::ostream & operator <<(std::ostream &os,const scanner_params &sp){
     os << "scanner_params(" << sp.sbuf << ")";
     return os;
 };
-
-#if 0
-/**
- * the recursion_control_block keeps track of what gets added to
- * the path when there is recursive re-analysis. It's now a structure within the scanner_set
- * because it's controlled by the scanning process.
- */
-
-struct recursion_control_block {
-    /* process_t is a function that processes a scanner_params block.
-     */
-    typedef void process_t(const scanner_params &sp);
-
-    /**
-     * @param callback_ - the function to call back
-     * @param partName_ - the part of the forensic path processed by this scanner.
-     */
-    recursion_control_block(process_t *callback_,std::string partName_):
-        callback(callback_),partName(partName_){}
-    process_t *callback{};
-    std::string partName{};            /* eg "ZIP", "GZIP" */
-};
-
-#endif
 
 #endif

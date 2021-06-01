@@ -178,7 +178,7 @@ public:
      */
 
     /* Allocate from an existing buffer, optionally freeing that buffer */
-    explicit sbuf_t(const pos0_t &pos0_,const uint8_t *buf_,
+    explicit sbuf_t(const pos0_t &pos0_, const uint8_t *buf_,
                     size_t bufsize_,size_t pagesize_,
                     int fd_, bool should_unmap_,bool should_free_,bool should_close_):
         fd(fd_), should_unmap(should_unmap_), should_free(should_free_),
@@ -260,14 +260,13 @@ public:
     size_t find_ngram_size(size_t max_ngram) const;
 
     /* get the next line line from the sbuf.
-     * @param sbuf - the sbuf to process
      * @param pos  - on entry, current position. On exit, new position.
      *               pos[0] is the start of a line
      * @param start - the start of the line, from the start of the sbuf.
      * @param len   - the length of the line; does not include the \n at the end.
      * @return true - a line was found; false - a line was not found
      */
-    bool getline(size_t &pos,size_t &line_start,size_t &line_len) {
+    bool getline(size_t &pos,size_t &line_start,size_t &line_len) const {
         /* Scan forward until pos is at the beginning of a line */
         if (pos >= this->pagesize) return false;
         if (pos > 0){
