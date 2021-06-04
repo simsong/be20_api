@@ -18,6 +18,7 @@
 #include "word_and_context_list.h"
 #include "unicode_escape.h"
 #include "utils.h"
+#include "formatter.h"
 
 //int64_t feature_recorder::offset_add   = 0;
 //std::string  feature_recorder::banner_file;
@@ -111,7 +112,7 @@ std::string feature_recorder::unquote_string(const std::string &s)
     return line.substr(feature_start);  // no context to remove
 }
 
-const std::string feature_recorder::get_outdir() const // cannot be inline becuase it accesses fs
+const std::filesystem::path feature_recorder::get_outdir() const // cannot be inline becuase it accesses fs
 {
     return fs.get_outdir();
 }
@@ -119,25 +120,25 @@ const std::string feature_recorder::get_outdir() const // cannot be inline becua
 /*
  * Returns a filename for this feature recorder with a specific suffix.
  */
-const std::string feature_recorder::fname_in_outdir(std::string suffix, int count) const
+const std::filesystem::path feature_recorder::fname_in_outdir(std::string suffix, int count) const
 {
     if (fs.get_outdir() == scanner_config::NO_OUTDIR) {
         throw std::runtime_error("fname_in_outdir called, but outdir==NO_OUTDIR");
     }
 
-    std::string base_name = fs.get_outdir() + "/" + this->name;
+    std::filesystem::path base_path = fs.get_outdir() /  this->name;
     if (suffix.size() > 0){
-        base_name += "_"+suffix;
+        base_path = base_path.string() + "_" + suffix;
     }
-    if (count == NO_COUNT) return base_name+".txt";
+    if (count == NO_COUNT) return base_path.string() + ".txt";
     if (count != NEXT_COUNT){
-        return base_name+"_"+std::to_string(count)+".txt";
+        return base_path.string() +"_" + std::to_string(count) + ".txt";
     }
     /* Probe for a file that we can create. When we create it, return the name.
      * Yes, this created a TOCTOU error. We should return the open file descriptor.
      */
     for(int i=0;i<1000000;i++){
-        std::string fname = base_name + (i>0 ? "_"+std::to_string(i) : "") + ".txt";
+        std::filesystem::path fname = base_path.string() + (i>0 ? "_"+std::to_string(i) : "") + ".txt";
         int fd = open(fname.c_str(), O_WRONLY | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR);
         if ( fd >= 0 ){
             /* Created the file. close it. and return.*/
@@ -268,7 +269,7 @@ void feature_recorder::write(const pos0_t &pos0, const std::string &feature_, co
     if (flags.no_alertlist==false
         && fs.alert_list
         && fs.alert_list->check_feature_context(*feature_utf8,context)) {
-        std::string alert_fn = fs.get_outdir() + "/ALERTS_found.txt";
+        std::filesystem::path alert_fn = fs.get_outdir() + "/ALERTS_found.txt";
         const std::lock_guard<std::mutex> lock(Mr);                // notice we are locking the alert list
         std::ofstream rf(alert_fn.c_str(),std::ios_base::app);
         if(rf.is_open()){
@@ -387,31 +388,40 @@ std::string valid_dosname(std::string in)
  *        {seq} is 000 through 999.  (1000 files per directory)
  *        {pos0} is where the feature was found.
  *        {ext} is the provided extension.
+
+ * @param sbuf   - the buffer to carve
+ * @param pos    - offset in the buffer to carve
+ * @param len    - how many bytes to carve
+ * @return - the path relative to the outdir
  */
-std::string feature_recorder::carve_data(const sbuf_t &sbuf, const std::string &ext,
-                                         const time_t mtime,
-                                         const size_t offset,
-                                         const size_t len)
+/* Carving to a file depends on the carving mode.
+ *
+ * The purpose of CARVE_ENCODED is to allow us to carve JPEGs when
+ * they are embedded in, say, GZIP files, but not carve JPEGs that
+ * are bare.  The difficulty arises when you have a tool that can
+ * go into, say, ZIP files. In this case, we don't want to carve
+ * every ZIP file, just the (for example) XORed ZIP files. So the
+ * ZIP carver doesn't carve every ZIP file, just the ZIP files
+ * that are in HIBER files.  That is, we want to not carve a path
+ * of ZIP-234234 but we do want to carve a path of
+ * 1000-HIBER-33423-ZIP-2343.  This is implemented by having an
+ * do_not_carve_encoding. the ZIP carver sets it to ZIP so it
+ * won't carve things that are just found in a ZIP file. This
+ * means that it won't carve disembodied ZIP files found in
+ * unallocated space. You might want to do that.  If so, set ZIP's
+ * carve mode to CARVE_ALL.
+ */
+
+#include <iomanip>
+std::string feature_recorder::carve_data(const sbuf_t &sbuf, size_t offset, size_t len,
+                                         std::string ext, time_t mtime)
 {
+    /* If we are in the margin, ignore; it will be processed again */
+    if (offset >= sbuf.pagesize && offset < sbuf.bufsize){
+        throw std::runtime_error("offset out of range");
+    }
     assert(offset < sbuf.bufsize);
 
-    /* Carving to a file depends on the carving mode.
-     *
-     * The purpose of CARVE_ENCODED is to allow us to carve JPEGs when
-     * they are embedded in, say, GZIP files, but not carve JPEGs that
-     * are bare.  The difficulty arises when you have a tool that can
-     * go into, say, ZIP files. In this case, we don't want to carve
-     * every ZIP file, just the (for example) XORed ZIP files. So the
-     * ZIP carver doesn't carve every ZIP file, just the ZIP files
-     * that are in HIBER files.  That is, we want to not carve a path
-     * of ZIP-234234 but we do want to carve a path of
-     * 1000-HIBER-33423-ZIP-2343.  This is implemented by having an
-     * do_not_carve_encoding. the ZIP carver sets it to ZIP so it
-     * won't carve things that are just found in a ZIP file. This
-     * means that it won't carve disembodied ZIP files found in
-     * unallocated space. You might want to do that.  If so, set ZIP's
-     * carve mode to CARVE_ALL.
-     */
     switch(carve_mode){
     case CARVE_NONE:
         return NO_CARVED_FILE;                         // carve nothing
@@ -428,47 +438,49 @@ std::string feature_recorder::carve_data(const sbuf_t &sbuf, const std::string &
 
     /* See if we have previously carved this object, in which case do not carve it again */
     std::string carved_hash_hexvalue = hash(cbuf);
-    if (carve_cache.check_for_presence_and_insert(carved_hash_hexvalue)){
-        return NO_CARVED_FILE;
+    bool in_cache = carve_cache.check_for_presence_and_insert(carved_hash_hexvalue);
+    std::filesystem::path fname;        // carved filename
+    std::string fname_feature;          // what goes into the feature file
+    if (in_cache){
+        fname_feature="<CACHED>";
+    } else {
+        /* Determine the directory and filename */
+        int64_t myfileNumber = carved_file_count++; // atomic operation
+        std::ostringstream seq;
+        seq << std::setw(3) << std::setfill('0') << int(myfileNumber/1000);
+        const std::filesystem::path scannerDir {fs.get_outdir() / name};
+        const std::filesystem::path seqDir {scannerDir  / seq.str() };
+        /* Create the directory.
+         * If it exists, the call fails.
+         * (That's faster than checking to see if it exists and then creating the directory)
+         */
+        std::filesystem::create_directory( scannerDir );
+        std::filesystem::create_directory( seqDir );
+
+        fname  = seqDir / (sbuf.pos0.str() + std::string(".") + ext);
+        fname_feature = fname.string().substr(fs.get_outdir().string().size()+1);
     }
 
-    /* Determine the directory and filename */
-    int64_t myfileNumber = carved_file_count++; // atomic operation
-    std::ostringstream seq;
 
-    seq << std::setw(3) << std::setfill('0') << int(myfileNumber/1000);
+    // write to the feature file
+    std::stringstream ss;
+    ss.str(std::string()); // clear the stringstream
+    ss << "<fileobject>";
+    if (!in_cache) ss << "<filename>" << fname << "</filename>";
+    ss << "<filesize>" << len << "</filesize>";
+    ss << "<hashdigest type='" << fs.hasher.name << "'>" << carved_hash_hexvalue << "</hashdigest></fileobject>";
+    this->write(cbuf.pos0 + offset, fname_feature, ss.str());
 
-    const std::string scannerDir {fs.get_outdir() + "/" + name};
-    const std::string seqDir {scannerDir + "/" + seq.str() };
-    const std::string fname  {seqDir + "/" + sbuf.pos0.str() + "." + ext};
-
-    /* Create the directory.
-     * If it exists, the call fails.
-     * (That's faster than checking to see if it exists and then creating the directory)
-     */
-    std::filesystem::create_directory( scannerDir );
-    std::filesystem::create_directory( seqDir );
-
+    if (in_cache) return fname;               // do not make directories or write out if we are cached
     /* Write the data */
-    std::ofstream os;
-    os.open( fname.c_str(), std::ios::out | std::ios::app | std::ios::binary | std::ios::trunc );
-    if (!os.is_open()) {
-        throw std::runtime_error("cannot open file "+fname);
-    }
-    else {
-        os.write( reinterpret_cast<const char *>(cbuf.buf), cbuf.bufsize );
-        if (os.bad()) {
-            throw std::runtime_error("error writing file "+fname);
-        }
-        os.close();
-    }
-
-    /* Set timestamp if necessary */
+    cbuf.write(fname);
+    /* Set timestamp if necessary. Note that we do not use std::filesystem::last_write_time()
+     * as there seems to be no portable way to use it.
+     */
     if (mtime>0) {
         const struct timeval times[2] = {{mtime,0},{mtime,0}};
         utimes(fname.c_str(),times);
     }
-
     return fname;
 }
 
@@ -482,70 +494,32 @@ void feature_recorder::shutdown()
 {
 }
 
-#include <iomanip>
 #if 0
 /**
- * @param sbuf   - the buffer to carve
- * @param pos    - offset in the buffer to carve
- * @param len    - how many bytes to carve
- *
  */
 std::string feature_recorder::carve_data(const sbuf_t &sbuf, const std::string &ext,
                                          const time_t mtime, const size_t pos, const size_t len )
 {
-    if (fs.disabled) return std::string();           // disabled
-
-    /* If we are in the margin, ignore; it will be processed again */
-    if (pos >= sbuf.pagesize && pos < sbuf.bufsize){
-        return std::string();
-    }
-    assert(pos < sbuf.bufsize);
-
-    /* If the directory doesn't exist, make it.
-     * If two threads try to make the directory,
-     * that's okay, because the second one will fail.
-     */
-
-    sbuf_t cbuf(sbuf,pos,len);          // the buf we are going to carve
-    std::string carved_hash_hexvalue = hash(cbuf);
-
-
     uint64_t this_file_number = file_number_add(in_cache ? 0 : 1); // increment if we are not in the cache
-    std::string dirname1 = fs.get_outdir() + "/" + name;
+    std::filesystem::pathdirname1 = fs.get_outdir() / name;
 
     std::stringstream ss;
     ss << dirname1 << "/" << std::setw(3) << std::setfill('0') << (this_file_number / 1000);
 
-    std::string dirname2 = ss.str();
-    std::string fname         = dirname2 + std::string("/") + valid_dosname(cbuf.pos0.str() + ext);
-    std::string fname_feature = fname.substr(fs.get_outdir().size()+1);
+    std::filesystem::path dirname2      = ss.str();
+    std::filesystem::path fname         = dirname2 / valid_dosname(cbuf.pos0.str() + ext);
+    std::string fname_feature           = fname.substr(fs.get_outdir().size()+1);
 
     /* Record what was found in the feature file.
      */
     if (in_cache){
         fname="";             // no filename
-        fname_feature="<CACHED>";
     }
 
-    // write to the feature file
-    ss.str(std::string()); // clear the stringstream
-    ss << "<fileobject>";
-    if (!in_cache) ss << "<filename>" << fname << "</filename>";
-    ss << "<filesize>" << len << "</filesize>";
-    ss << "<hashdigest type='" << fs.hasher.name << "'>" << carved_hash_hexvalue << "</hashdigest></fileobject>";
-    this->write(cbuf.pos0,fname_feature,ss.str());
-
-    if (in_cache) return fname;               // do not make directories or write out if we are cached
-
     /* Make the directory if it doesn't exist.  */
-    if (access(dirname2.c_str(),R_OK)!=0){
-#ifdef WIN32
-        mkdir(dirname1.c_str());
-        mkdir(dirname2.c_str());
-#else
-        mkdir(dirname1.c_str(),0777);
-        mkdir(dirname2.c_str(),0777);
-#endif
+    if (std::filesystem::exists(dirname2)==false){
+        std::filesystem::create_directory(dirname1);
+        std::filesystem::create_directory(dirname2);
     }
     /* Check to make sure that directory is there. We don't just the return code
      * because there could have been two attempts to make the directory simultaneously,
@@ -553,7 +527,7 @@ std::string feature_recorder::carve_data(const sbuf_t &sbuf, const std::string &
      * remember the error number because the access() call may clear it.
      */
     int oerrno = errno;                 // remember error number
-    if (access(dirname2.c_str(),R_OK)!=0){
+    if (std::filesystem::exists(dirname2)==false){
         std::cerr << "Could not make directory " << dirname2 << ": " << strerror(oerrno) << "\n";
         return std::string();
     }
@@ -574,13 +548,13 @@ std::string feature_recorder::carve_data(const sbuf_t &sbuf, const std::string &
 }
 #endif
 
-/*
- This is based on feature_recorder::carve and append carving record to specified filename
- */
-std::string feature_recorder::carve_records(const sbuf_t &sbuf,
-                                            size_t pos, size_t len, const std::string &filename)
-{
 #if 0
+/*
+ *  This is based on feature_recorder::carve and append carving record to specified filename
+ */
+std::string feature_recorder::carve_record(const sbuf_t &sbuf,
+                                           size_t pos, size_t len, const std::string &filename)
+{
     if(flags & FLAG_DISABLED) return std::string();           // disabled
 
     if(pos >= sbuf.pagesize && pos < sbuf.bufsize){
@@ -593,14 +567,14 @@ std::string feature_recorder::carve_records(const sbuf_t &sbuf,
 
     /* See if this is in the cache */
     bool in_cache = carve_cache.check_for_presence_and_insert(carved_hash_hexvalue);
-    std::string dirname1 = fs.get_outdir()  + "/" + name;
+    std::filesystem::path dirname1 = fs.get_outdir()  / name;
 
     std::stringstream ss;
     ss << dirname1;
 
-    std::string dirname2 = ss.str();
-    std::string fname = dirname2 + std::string("/") + valid_dosname(filename);
-    std::string fname_feature = fname.substr(fs.get_outdir().size()+1);
+    std::filesystem::path dirname2 = ss.str();
+    std::filesystem::path fname = dirname2 / valid_dosname(filename);
+    std::filesystem::path fname_feature = fname.substr(fs.get_outdir().size()+1);
 
     //    std::string fname = dirname2 + std::string("/") + valid_dosname(cbuf.pos0.str() + ext);
     //std::string fname_feature = fname.substr(fs.get_outdir().size()+1);
@@ -649,9 +623,8 @@ std::string feature_recorder::carve_records(const sbuf_t &sbuf,
     }
     ::close(fd);
     return fname;
-#endif
-    return std::string();
 }
+#endif
 
 #if 0
 /**

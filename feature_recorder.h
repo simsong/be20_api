@@ -100,6 +100,7 @@ struct feature_recorder_def {
 
     /** @} */
     feature_recorder_def(std::string name_):name(name_){} // flagless constructor
+    feature_recorder_def(std::string name_, flags_t flags_):name(name_),flags(flags_){} // construct with flags
     bool operator==(const feature_recorder_def &a) const {
         return (this->name==a.name) && (this->flags == a.flags);
     };
@@ -142,7 +143,7 @@ class feature_recorder {
     /* Instance variables available to subclasses: */
 protected:
     class  feature_recorder_set &fs; // the set in which this feature_recorder resides
-    virtual const std::string get_outdir() const;      // cannot be inline because it accesses fs
+    virtual const std::filesystem::path get_outdir() const;      // cannot be inline because it accesses fs
 
 public:;
     /* The main public interface:
@@ -190,9 +191,10 @@ public:;
      * If count==NEXT_COUNT, create a zero-length file and return that file's name (we use the file system for atomic locks)
      */
 
-    const std::string fname_in_outdir(std::string suffix, int count) const; // returns the name of a dir in the outdir for this feature recorder
+    // returns the name of a dir in the outdir for this feature recorder
+    const std::filesystem::path fname_in_outdir(std::string suffix, int count) const;
     enum count_mode_t {
-        NO_COUNT=0,
+        NO_COUNT   = 0,
         NEXT_COUNT = -1
     };
 
@@ -232,9 +234,9 @@ public:;
      * Carving should not be passed on when chaining.
      */
     enum carve_mode_t {
-        CARVE_NONE=0,
-        CARVE_ENCODED=1,
-        CARVE_ALL=2
+        CARVE_NONE=0,          // don't carve at all, even if the carve function is called
+        CARVE_ENCODED=1,       // only carve if the data being carved is encoded (e.g. BASE64 or GZIP is in path)
+        CARVE_ALL=2            // carve whenever the carve function is called.
     };
 
     std::atomic<carve_mode_t>  carve_mode { CARVE_ENCODED};
@@ -245,14 +247,17 @@ public:;
     static const std::string   NO_CARVED_FILE;
 
     // Carve data or a record to a file; returns filename of carved file or empty string if nothing carved
+    // carve_data - sends to its own file.
+    // carve_records - send all to the same file.
     // if mtime>0, set the file's mtime to be mtime
     // if offset>0, start with that offset
     // if offset>0, carve that many bytes, even into the margin (otherwise stop at the margin)
-    virtual std::string carve_data(const sbuf_t &sbuf, const std::string &ext,
-                                   const time_t mtime=0,
-                                   const size_t offset=0,
-                                   const size_t len=0 );
-    virtual std::string carve_records(const sbuf_t &sbuf, size_t offset, size_t len, const std::string &name);
+    virtual std::string carve_data(const sbuf_t &sbuf, size_t offset, size_t len,
+                                   std::string ext, time_t mtime=0 );
+    virtual std::string carve_data(const sbuf_t &sbuf, std::string ext) {
+        return carve_data(sbuf, 0, sbuf.bufsize, ext);
+    }
+    //virtual std::string carve_record(const sbuf_t &sbuf, size_t offset, size_t len, const std::string &name);
 
     /*
      * Each feature_recorder can have multiple histograms. They are generated on-the-fly for the file-based feature-recorder,

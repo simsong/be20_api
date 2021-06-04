@@ -98,8 +98,8 @@ public:
     const scanner_config &sc;
 
     /* Read-only functions for the scanner-config file management variables */
-    virtual std::string   get_input_fname() const { return sc.input_fname;}
-    virtual std::string   get_outdir()      const { return sc.outdir;}
+    virtual std::filesystem::path   get_input_fname() const { return sc.input_fname;}
+    virtual std::filesystem::path   get_outdir()      const { return sc.outdir;}
 
     /* the feature recorder set automatically hashes all of the sbuf's that it processes. */
     typedef std::string (*hash_func_t)(const uint8_t *buf,const size_t bufsize);

@@ -21,7 +21,7 @@ feature_recorder &scanner_params::named_feature_recorder(const std::string featu
 }
 
 
-const std::string scanner_params::get_input_fname() const
+const std::filesystem::path scanner_params::get_input_fname() const
 {
     return ss.get_input_fname();
 }

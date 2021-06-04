@@ -26,6 +26,7 @@ private:
     //std::string  fname {};              // feature filename
     std::mutex   Mios {};               // mutex for IOS
     std::fstream ios {};                // where features are written
+    bool debug {false};                 // for debugging
 
     void   banner_stamp(std::ostream &os,const std::string &header) const; // stamp banner, and header
 

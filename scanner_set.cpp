@@ -23,6 +23,7 @@
 #include "dfxml/src/hash_t.h"
 #include "dfxml/src/dfxml_writer.h"
 #include "aftimer.h"
+#include "formatter.h"
 
 /****************************************************************
  *** SCANNER SET IMPLEMENTATION (previously the PLUG-IN SYSTEM)
@@ -104,7 +105,7 @@ void scanner_set::add_scanner(scanner_t scanner)
 
     // Make sure it was registered
     if (scanner_info_db.find(scanner) == scanner_info_db.end()){
-        throw std::runtime_error("a scanner did not register itself");
+        throw std::runtime_error("scanner_set::add_scanner: a scanner did not register itself");
     }
 
     // Enable the scanner if it is not disabled by default.
@@ -404,7 +405,7 @@ void scanner_set::info_scanners(std::ostream &out,
 }
 
 
-const std::string scanner_set::get_input_fname() const
+const std::filesystem::path scanner_set::get_input_fname() const
 {
     return sc.input_fname;
 }
@@ -626,6 +627,10 @@ void scanner_set::process_sbuf(class sbuf_t *sbufp)
     return;
 }
 
+std::string scanner_set::hash(const sbuf_t &sbuf) const
+{
+    return fs.hasher.func(sbuf.buf, sbuf.bufsize);
+}
 
 /**
  * Process a pcap packet.

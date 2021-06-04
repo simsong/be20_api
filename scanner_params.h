@@ -211,7 +211,7 @@ struct scanner_params {
     const uint32_t              depth {0};     //  how far down are we? / only valid in SCAN_PHASE
     std::stringstream           *sxml{};       //  on scanning and shutdown: CDATA added to XML stream if provided
     //callback_t                  *callback{};   // what a recursive scanner should call. The callback has the responsibility of freeing the sbuf.
-    std::string const get_input_fname() const; // not sure why this is needed?
+    std::filesystem::path const get_input_fname() const; // not sure why this is needed?
 
     //class feature_recorder_set  &fs;           // where to put the results / only valid in SCAN_PHASE
     //register_info_t             register_info; // callback function to register the scanner
@@ -224,5 +224,7 @@ inline std::ostream & operator <<(std::ostream &os,const scanner_params &sp){
     os << "scanner_params(" << sp.sbuf << ")";
     return os;
 };
+
+#include "scanner_set.h"
 
 #endif

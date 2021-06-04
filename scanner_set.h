@@ -163,6 +163,9 @@ public:;
     virtual feature_recorder &named_feature_recorder(const std::string name) const; // returns the feature recorder
     virtual std::vector<std::string> feature_file_list() const;   // returns the list of feature files
 
+    // hash support
+    virtual std::string hash(const sbuf_t &sbuf) const;
+
     // report on the loaded scanners
     void     info_scanners(std::ostream &out,
                            bool detailed_info,bool detailed_settings,
@@ -173,7 +176,6 @@ public:;
      * Various scanners are enabled and their histograms are created
      */
 
-
     void    apply_scanner_commands();   // applies all of the enable/disable commands and create the feature recorders
     bool    is_scanner_enabled(const std::string &name); // report if it is enabled or not
     std::vector<std::string>   get_enabled_scanners() const; // put names of the enabled scanners into the vector
@@ -181,7 +183,7 @@ public:;
 
     //void    load_scanner_packet_handlers(); // after all scanners are loaded, this sets up the packet handlers.
 
-    const std::string       get_input_fname() const;
+    const std::filesystem::path       get_input_fname() const;
     scanner_params::phase_t get_current_phase() const { return current_phase;};
     size_t   histogram_count() const { return fs.histogram_count();};       // passthrough, mostly for debugging
     size_t   feature_recorder_count() const { return fs.feature_recorder_count();};

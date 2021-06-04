@@ -477,6 +477,7 @@ public:
     void hex_dump(std::ostream &os) const; /* dump all */
     ssize_t  write(int fd,size_t loc,size_t len) const; /* write to a file descriptor, returns # bytes written */
     ssize_t  write(FILE *f,size_t loc,size_t len) const; /* write to a file descriptor, returns # bytes written */
+    void     write(std::filesystem::path path) const; // throws runtime_error if it can't write
 
     virtual ~sbuf_t() {
         if (children != 0 ){

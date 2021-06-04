@@ -11,6 +11,8 @@
 #include "sbuf.h"
 //#include "bulk_extractor_i.h"
 #include "unicode_escape.h"
+#include "formatter.h"
+
 
 /****************************************************************
  *** SBUF_T
@@ -173,6 +175,24 @@ ssize_t sbuf_t::write(FILE *f,size_t loc,size_t len) const
     if(loc+len>bufsize) len=bufsize-loc; // clip at the end
     return ::fwrite(buf+loc,1,len,f);
 }
+
+
+/* Write to path */
+void sbuf_t::write(std::filesystem::path path) const
+{
+    std::ofstream os;
+    os.open( path, std::ios::out | std::ios::binary | std::ios::trunc );
+    if (!os.is_open()) {
+        perror(path.c_str());
+        throw std::runtime_error(Formatter() << "cannot open file for writing:" << path);
+    }
+    os.write(reinterpret_cast<const char *>(buf), bufsize);
+    os.close();
+    if (os.bad()) {
+        throw std::runtime_error( Formatter() << "error writing file " << path);
+    }
+}
+
 
 /* Return a substring */
 const std::string sbuf_t::substr(size_t loc,size_t len) const

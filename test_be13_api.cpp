@@ -401,19 +401,33 @@ TEST_CASE("fname in outdir", "[feature_recorder]") {
     sc.outdir = NamedTemporaryDirectory();
     feature_recorder_set frs( flags, sc );
     frs.create_feature_recorder("test");
-    feature_recorder &ft = frs.named_feature_recorder("test");
+    feature_recorder &fr = frs.named_feature_recorder("test");
 
-    const std::string n = ft.fname_in_outdir("foo", feature_recorder::NO_COUNT);
+    const std::string n = fr.fname_in_outdir("foo", feature_recorder::NO_COUNT);
     std::filesystem::path p(n);
     REQUIRE( p.filename()=="test_foo.txt");
 
-    const std::string n1 = ft.fname_in_outdir("bar", feature_recorder::NEXT_COUNT);
+    const std::string n1 = fr.fname_in_outdir("bar", feature_recorder::NEXT_COUNT);
     std::filesystem::path p1(n1);
     REQUIRE( p1.filename()=="test_bar.txt");
 
-    const std::string n2 = ft.fname_in_outdir("bar", feature_recorder::NEXT_COUNT);
+    const std::string n2 = fr.fname_in_outdir("bar", feature_recorder::NEXT_COUNT);
     std::filesystem::path p2(n2);
     REQUIRE( p2.filename()=="test_bar_1.txt");
+
+    fr.carve_mode = feature_recorder::CARVE_ALL;
+
+    /* check carving */
+    auto sbuf1 = sbuf_t("Hello World!\n");
+    fr.carve_data(sbuf1, ".carve_data");
+
+    /* Check record record carving */
+    auto sbuf2 = sbuf_t("[record 001][record 002]");
+    fr.carve_data(sbuf2, 0, 12, ".carve_records");
+    fr.carve_data(sbuf2, 12, 12, ".carve_records");
+
+    std::cerr << "carved data in " << sc.outdir << "\n";
+
 }
 
 /****************************************************************
@@ -432,7 +446,6 @@ TEST_CASE("feature_recorder_def", "[feature_recorder_set]") {
     REQUIRE ( d1.name == d3.name );
     REQUIRE ( d1.flags != d3.flags );
     REQUIRE ( d1 != d3 );
-    //REQUIRE ( d1 < d4 );
 }
 
 
@@ -739,8 +752,10 @@ TEST_CASE("enable/disable", "[scanner]") {
 /* This test runs a scan on the hello_sbuf() with the sha1 scanner. */
 TEST_CASE("run", "[scanner]") {
     scanner_config sc;
+
     sc.outdir   = get_tempdir();
     sc.push_scanner_command(std::string("sha1_test"), scanner_config::scanner_command::ENABLE); /* Turn it onn */
+
 
     struct feature_recorder_set::flags_t f;
     scanner_set ss(sc, f);
