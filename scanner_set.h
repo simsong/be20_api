@@ -119,10 +119,12 @@ public:;
     virtual ~scanner_set(){};
 
     /* PHASE_INIT */
-    // Add scanners to the scanner set.
+    /* Add scanners to the scanner set. */
 
-    /* Debug for feature recorders. This used to be a flag, but Stroustrup (2013) recommends just having
-     * a bunch of bools.
+    /* Debug for feature recorders.
+     * This used to be a flag, but Stroustrup (2013) recommends just having a bunch of bools.
+     * Each one can be set automatically by setting the enviornment variable
+     * SCANNER_SET_DEBUG_<name>, e.g. export SCANNER_SET_DEBUG_PRINT_STEPS=1
      */
     struct debug_flags_t {
         bool debug_print_steps {false}; // prints as each scanner is started
@@ -198,6 +200,10 @@ public:;
     void     process_sbuf(sbuf_t *sbuf);     // process the sbuf, then delete it.
     void     process_packet(const be13::packet_info &pi);
     uint32_t get_max_depth_seen() const; // max seen during scan
+
+    // Management of previously seen data
+    atomic_set<std::string> seen_set {};       // hex hash values of sbuf pages that have been seen
+    virtual bool check_previously_processed(const sbuf_t &sbuf);
 
     /* PHASE_SHUTDOWN */
     // explicit shutdown, called automatically on delete if it hasn't be called

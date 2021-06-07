@@ -12,6 +12,7 @@
 //#include "bulk_extractor_i.h"
 #include "unicode_escape.h"
 #include "formatter.h"
+#include "dfxml/src/hash_t.h"
 
 
 /****************************************************************
@@ -435,4 +436,15 @@ void sbuf_t::getUTF16(size_t i, byte_order_t bo, std::wstring &utf16_string) con
         // accept the code unit
         utf16_string.push_back(code_unit);
     }
+}
+
+
+std::string sbuf_t::hash() const
+{
+    const std::lock_guard<std::mutex> lock(Mhash); // protect this function
+    if (hash_.size()==0){
+        /* hasn't been hashed yet, so hash it */
+        hash_ = dfxml::sha1_generator::hash_buf(buf,bufsize).hexdigest();
+    }
+    return hash_;
 }

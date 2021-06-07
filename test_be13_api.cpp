@@ -592,6 +592,9 @@ TEST_CASE("hello_sbuf","[sbuf]") {
     REQUIRE( sb1.find('o', 0) == 4);
     REQUIRE( sb1.find("world") == 6);
 
+    REQUIRE( sb1.hash() != "" );
+    REQUIRE( sb1.hash() == sbuf_t(hello8).hash() );
+
     std::string s;
     sb1.getUTF8(6, 5, s);
     REQUIRE(s == "world");

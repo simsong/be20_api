@@ -20,10 +20,10 @@ class feature_recorder_sql : public feature_recorder {
         besql_stmt &operator=(const besql_stmt &)=delete;
         std::mutex Mstmt {};
         sqlite3_stmt *stmt {};      // the prepared statement
-        besql_stmt(sqlite3 *db3,const char *sql);
+        besql_stmt(sqlite3 *db3, const char *sql);
         virtual ~besql_stmt();
         void insert_feature(const pos0_t &pos, // insert it into this table!
-                            const std::string &feature,const std::string &feature8, const std::string &context);
+                            const std::string &feature, const std::string &feature8, const std::string &context);
     };
 #if defined(HAVE_SQLITE3_H) and defined(HAVE_LIBSQLITE3)
     //virtual void dump_histogram_sqlite3(const histogram_def &def,void *user,feature_recorder::dump_callback_t cb) const;
