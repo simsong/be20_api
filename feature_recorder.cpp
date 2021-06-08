@@ -698,12 +698,10 @@ void feature_recorder::histograms_add_feature(const std::string &feature)
  * SQLite3 to create the histograms.
  */
 
-#if 0
 void feature_recorder::histogram_flush(AtomicUnicodeHistogram &h)
 {
-    throw std::runtime_error("feature_recorder::histogram_flush should not be called");
+    //throw std::runtime_error("feature_recorder::histogram_flush should not be called");
 }
-#endif
 
 
 
