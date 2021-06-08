@@ -32,6 +32,7 @@
 #include <fstream>
 #include <exception>
 #include <atomic>
+#include <mutex>
 
 #include <sys/mman.h>
 #include <unistd.h>
@@ -90,8 +91,8 @@ public:;
     const pos0_t  pos0       {};                 /* the path of buf[0] */
 private:
     const sbuf_t  *parent    {nullptr};          // parent sbuf references data in another.
-    mutable std::mutex Mhash;                    // mutext for hashing
-    mutable std::string hash_;                               // the hash of the sbuf data, or "" if it hasn't been hashed yet
+    mutable std::mutex Mhash {};                  // mutext for hashing
+    mutable std::string hash_ {};                 // the hash of the sbuf data, or "" if it hasn't been hashed yet
 public:
     mutable std::atomic<int>   children {0};     // number of child sbufs; incremented when data in *buf is used by a child
     const unsigned int depth() const { return pos0.depth; }

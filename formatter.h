@@ -27,7 +27,7 @@ public:
     std::string operator >> (ConvertToString) { return stream_.str(); }
 
 private:
-    std::stringstream stream_;
+    std::stringstream stream_ {};
 
     Formatter(const Formatter &);
     Formatter & operator = (Formatter &);

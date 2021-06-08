@@ -266,7 +266,7 @@ public:;
     std::vector<std::unique_ptr<AtomicUnicodeHistogram>> histograms {};
 
     /* These must be specialized */
-    virtual void histogram_flush(AtomicUnicodeHistogram &h); // flush a specific histogram
+    //virtual void histogram_flush(AtomicUnicodeHistogram &h); // flush a specific histogram
     virtual void histograms_add_feature(const std::string &feature); // propose a feature to all of the histograms
 
     virtual size_t histogram_count() { return histograms.size();}     // how many histograms it has
