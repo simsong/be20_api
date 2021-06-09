@@ -37,7 +37,7 @@ void  scan_sha1_test(struct scanner_params &sp)
         // the histogram only gets inserted once.
         histogram_def hd("test_histogram","sha1_bufs", "^(.....)", "", "first5", histogram_def::flags_t(true,false));
         info->histogram_defs.push_back(hd);
-        sp.register_info(info);
+        sp.info = info;
         return;
     }
 

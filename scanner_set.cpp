@@ -65,6 +65,7 @@ scanner_set::scanner_set(const scanner_config &sc_,
     if (getenv("SCANNER_SET_DEBUG_DECODING")) debug_flags.debug_decoding = true;
     if (getenv("SCANNER_SET_DEBUG_INFO")) debug_flags.debug_info = true;
     if (getenv("SCANNER_SET_DEBUG_EXIT_EARLY")) debug_flags.debug_exit_early = true;
+    if (getenv("SCANNER_SET_DEBUG_REGISTER")) debug_flags.debug_register = true;
 }
 
 
@@ -73,18 +74,6 @@ scanner_set::scanner_set(const scanner_config &sc_,
  ** PHASE_INIT:
  ** Add scanners to the scanner set.
  ****************************************************************/
-
-
-/* Callback for a scanner to register its info with the scanner set.
- * This does not create the feature recorders! That happens below
- */
-void scanner_set::register_info(const scanner_params::scanner_info *si)
-{
-    if (scanner_info_db.find( si->scanner) != scanner_info_db.end()){
-        throw std::runtime_error("A scanner tried to register itself that is already registered");
-    }
-    scanner_info_db[si->scanner] = si;
-}
 
 
 /****************************************************************
@@ -106,14 +95,21 @@ void scanner_set::add_scanner(scanner_t scanner)
     scanner_params::PrintOptions po;
     scanner_params sp(*this, scanner_params::PHASE_INIT, nullptr, po, nullptr);
 
-    // Send the scanner the PHASE_INIT message, which will cause it to call
-    // register_info above, which will add the scanner's scanner_info to the database.
+    // Send the scanner the PHASE_INIT message, which will cause it to fill in the sp.info field.
     (*scanner)(sp);
+
+    // The scanner should have set the info field.
+    if (sp.info==nullptr){
+        throw std::runtime_error("scanner_set::add_scanner: a scanner did not set the sp.info field.  Re-run with SCANNER_SET_DEBUG_REGISTER to find those that did.");
+    }
+    if (debug_flags.debug_register){
+        std::cerr << "add_scanner( " << sp.info.name << ")\n";
+    }
+    scanner_info_db[si->scanner] = sp.info;
 
 
     // Make sure it was registered
     if (scanner_info_db.find(scanner) == scanner_info_db.end()){
-        throw std::runtime_error("scanner_set::add_scanner: a scanner did not register itself");
     }
 
     // Enable the scanner if it is not disabled by default.

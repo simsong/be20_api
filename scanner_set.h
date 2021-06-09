@@ -84,7 +84,6 @@ class scanner_set {
     };
     atomic_map<scanner_t *,struct stats *> scanner_stats {}; // maps scanner name to performance stats
 
-
     // a pointer to every scanner info in all of the scanners.
     // This provides all_scanners
 
@@ -92,8 +91,8 @@ class scanner_set {
     // it cannot be const, because it is modified when scanners add their help.
 public:
     scanner_config sc;
-private:
 
+private:
     /* The feature recorder set where the scanners outputs are stored */
     class  feature_recorder_set fs;
 
@@ -134,7 +133,8 @@ public:;
         bool debug_decoding {false};    // scanners should dump information on decoding as they see them
         bool debug_info {false};        // print extra info
         bool debug_exit_early {false};  // just print the size of the volume and exit
-        bool debug_allocate_512MiB;     // allocate 512MiB but don't set any flags
+        bool debug_allocate_512MiB {false};     // allocate 512MiB but don't set any flags
+        bool debug_register {false};            // print when scanners register
     } debug_flags {};
 
     /* Scanners can be compiled in (which are passed to the constructor), loaded one-by-one from meory,
@@ -145,7 +145,6 @@ public:;
      * Each scanner is called with scanner_params and a scanner control block as arguments.
      * See "scanner_params.h".
      */
-    void    register_info(const scanner_params::scanner_info *);
     void    add_scanner(scanner_t scanner);      // load a specific scanner in memory
     void    add_scanners(scanner_t * const *scanners_builtin); // load a nullptr array of scanners.
     void    add_scanner_file(std::string fn);    // load a scanner from a shared library file
