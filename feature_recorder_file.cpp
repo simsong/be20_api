@@ -45,8 +45,8 @@
  *
  */
 //TODO - make it register itself with the feature recorder set. and do the stuff that's in init.
-feature_recorder_file::feature_recorder_file(class feature_recorder_set &fs_, const feature_recorder_def def):
-    feature_recorder(fs_, def)
+feature_recorder_file::feature_recorder_file(class feature_recorder_set &fs_, const feature_recorder_def def_):
+    feature_recorder(fs_, def_)
 {
     /* If the feature recorder set is disabled, just return. */
     if ( fs.flags.disabled ) return;

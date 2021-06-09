@@ -288,7 +288,7 @@ std::ostream & operator <<(std::ostream &os,const sbuf_t &t){
         char ascii_str[9];
 
         hexbuf(hex_str,sizeof(hex_str),t.buf, 8, 0);
-        for(int i=0;i<sizeof(ascii_str)-1;i++){
+        for(size_t i=0;i<sizeof(ascii_str)-1;i++){
             ascii_str[i] = isprint(t.get8u(i)) ? t.get8u(i) : '.';
         }
         ascii_str[sizeof(ascii_str)-1] = '\000';

@@ -17,8 +17,8 @@
 #include "feature_recorder_sql.h"
 #include "feature_recorder_set.h"
 
-feature_recorder_sql::feature_recorder_sql(class feature_recorder_set &fs_, const feature_recorder_def def):
-    feature_recorder(fs_, def)
+feature_recorder_sql::feature_recorder_sql(class feature_recorder_set &fs_, const feature_recorder_def def_):
+    feature_recorder(fs_, def_)
 {
     /*
      * If the feature recorder set is disabled, just return.

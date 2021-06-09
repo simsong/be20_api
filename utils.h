@@ -14,6 +14,7 @@
 #include <sys/time.h>
 #include <unistd.h>
 
+#include <exception>
 #include <string>
 #include <vector>
 #include <filesystem>
@@ -137,7 +138,9 @@ inline bool validASCIIName(const std::string &name)
 
 inline std::filesystem::path NamedTemporaryDirectory() {
     char tmpl[] = "/tmp/dirXXXXXX";
-    mkdtemp(tmpl);
+    if (mkdtemp(tmpl)==nullptr) {
+        throw std::runtime_error("NamedTemporaryDirectory: Cannot create directory");
+    }
     return std::filesystem::path(tmpl);
 }
 

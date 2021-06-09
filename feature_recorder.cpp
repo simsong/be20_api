@@ -687,7 +687,7 @@ void feature_recorder::histograms_add_feature(const std::string &feature)
 
 void feature_recorder::histogram_flush(AtomicUnicodeHistogram &h)
 {
-    throw std::runtime_error("feature_recorder::histogram_flush should not be called");
+    std::cerr << "feature_recorder::histogram_flush should not be called yet.\n";
 }
 
 
