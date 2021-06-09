@@ -137,7 +137,7 @@ inline bool validASCIIName(const std::string &name)
 }
 
 inline std::filesystem::path NamedTemporaryDirectory() {
-    char tmpl[] = "/tmp/dirXXXXXX";
+    char tmpl[] = "/tmp/be_dirXXXXXX";
     if (mkdtemp(tmpl)==nullptr) {
         throw std::runtime_error("NamedTemporaryDirectory: Cannot create directory");
     }

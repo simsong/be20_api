@@ -32,6 +32,7 @@
 #include <fstream>
 #include <exception>
 #include <atomic>
+#include <mutex>
 
 #include <sys/mman.h>
 #include <unistd.h>
@@ -53,9 +54,6 @@
  * would require substantial rewriting of several scanners that (at
  * the current time) do not appear to have bugs.
  */
-
-//Don't turn this on; it currently makes scan_net crash.
-
 
 /**
  * \class sbuf_t
@@ -93,6 +91,8 @@ public:;
     const pos0_t  pos0       {};                 /* the path of buf[0] */
 private:
     const sbuf_t  *parent    {nullptr};          // parent sbuf references data in another.
+    mutable std::mutex Mhash {};                  // mutext for hashing
+    mutable std::string hash_ {};                 // the hash of the sbuf data, or "" if it hasn't been hashed yet
 public:
     mutable std::atomic<int>   children {0};     // number of child sbufs; incremented when data in *buf is used by a child
     const unsigned int depth() const { return pos0.depth; }
@@ -286,8 +286,6 @@ public:
         return true;
     }
 
-
-
     /****************************************************************
      *** range_exception_t
      *** An sbuf_range_exception object is thrown if the attempted sbuf access is out of range.
@@ -465,6 +463,9 @@ public:
         }
         return NULL;
     }
+
+    // Return the hash of the buffer's contents. The hash function doesn't matter; we use SHA1 currently
+    std::string hash() const;
 
 
     /**

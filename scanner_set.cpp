@@ -58,7 +58,15 @@ scanner_set::scanner_set(const scanner_config &sc_,
                          class dfxml_writer *writer_):
     sc(sc_), fs(f, sc_), writer(writer_)
 {
+    if (getenv("SCANNER_SET_DEBUG_PRINT_STEPS")) debug_flags.debug_print_steps = true;
+    if (getenv("SCANNER_SET_DEBUG_NO_SCANNERS")) debug_flags.debug_no_scanners = true;
+    if (getenv("SCANNER_SET_DEBUG_SCANNER")) debug_flags.debug_scanner = true;
+    if (getenv("SCANNER_SET_DEBUG_DUMP_DATA")) debug_flags.debug_dump_data = true;
+    if (getenv("SCANNER_SET_DEBUG_DECODING")) debug_flags.debug_decoding = true;
+    if (getenv("SCANNER_SET_DEBUG_INFO")) debug_flags.debug_info = true;
+    if (getenv("SCANNER_SET_DEBUG_EXIT_EARLY")) debug_flags.debug_exit_early = true;
 }
+
 
 
 /****************************************************************
@@ -426,6 +434,20 @@ void scanner_set::phase_scan()
 }
 
 
+/****************************************************************
+ *** Data handling
+ ****************************************************************/
+
+
+/*
+ * uses hash to determine if a block was prevously seen.
+ * Hopefully sbuf.buf() is zero-copy.
+ */
+bool scanner_set::check_previously_processed(const sbuf_t &sbuf)
+{
+    return seen_set.check_for_presence_and_insert( sbuf.hash() );
+}
+
 
 /****************************************************************
  *** PHASE_SHUTDOWN methods.
@@ -510,7 +532,7 @@ void scanner_set::process_sbuf(class sbuf_t *sbufp)
         update_maximum<unsigned int>(max_depth_seen, sbuf.depth() );
 
         /* Determine if we have seen this buffer before */
-        bool seen_before = fs.check_previously_processed(sbuf);
+        bool seen_before = check_previously_processed(sbuf);
         if (seen_before) {
             dfxml::sha1_t sha1 = dfxml::sha1_generator::hash_buf(sbuf.buf, sbuf.bufsize);
             std::stringstream ss;

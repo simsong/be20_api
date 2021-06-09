@@ -55,8 +55,6 @@ private:
     const std::string     outdir {};      // where output goes; must know.
 
 
-    atomic_set<std::string> seen_set {};       // hex hash values of pages that have been seen
-
     // map of feature recorders, name->feature recorder
     feature_recorder_map_t frm {};
 
@@ -207,10 +205,6 @@ public:
     /****************************************************************
      *** External Functions
      ****************************************************************/
-
-    // Management of previously seen data
-    virtual bool check_previously_processed(const sbuf_t &sbuf);
-
 
 };
 

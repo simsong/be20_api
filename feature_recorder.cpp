@@ -439,49 +439,62 @@ std::string feature_recorder::carve_data(const sbuf_t &sbuf, size_t offset, size
     /* See if we have previously carved this object, in which case do not carve it again */
     std::string carved_hash_hexvalue = hash(cbuf);
     bool in_cache = carve_cache.check_for_presence_and_insert(carved_hash_hexvalue);
-    std::filesystem::path fname;        // carved filename
-    std::string fname_feature;          // what goes into the feature file
+    std::string            carved_path;               // carved path reported in feature file, relative to outdir
+    std::filesystem::path  carved_complete_path;
+    //std::string fname_feature;          // what goes into the feature file
     if (in_cache){
-        fname_feature="<CACHED>";
+        carved_path = "<CACHED>";
     } else {
         /* Determine the directory and filename */
         int64_t myfileNumber = carved_file_count++; // atomic operation
         std::ostringstream seq;
         seq << std::setw(3) << std::setfill('0') << int(myfileNumber/1000);
-        const std::filesystem::path scannerDir {fs.get_outdir() / name};
-        const std::filesystem::path seqDir {scannerDir  / seq.str() };
+        const std::string thousands     { seq.str() };
+
+        std::ostringstream num;
+        num << std::setw(8) << std::setfill('0') << int(myfileNumber);
+        const std::string units         { num.str() };
+
         /* Create the directory.
          * If it exists, the call fails.
          * (That's faster than checking to see if it exists and then creating the directory)
          */
-        std::filesystem::create_directory( scannerDir );
-        std::filesystem::create_directory( seqDir );
+        std::filesystem::create_directory( fs.get_outdir() / name );
+        std::filesystem::create_directory( fs.get_outdir() / name / thousands);
 
-        fname  = seqDir / (sbuf.pos0.str() + std::string(".") + ext);
-        fname_feature = fname.string().substr(fs.get_outdir().string().size()+1);
+        // const std::filesystem::path scannerDir { fs.get_outdir() / name};
+        carved_path          = name + "/" + thousands + "/" + units + ext;
+        carved_complete_path = fs.get_outdir() / name / thousands / (units + ext);
+
+        //fname  = seqDir / (sbuf.pos0.str() + std::string(".") + ext);
+        //fname_feature = fname.string().substr(fs.get_outdir().string().size()+1);
     }
 
 
     // write to the feature file
-    std::stringstream ss;
-    ss.str(std::string()); // clear the stringstream
-    ss << "<fileobject>";
-    if (!in_cache) ss << "<filename>" << fname << "</filename>";
-    ss << "<filesize>" << len << "</filesize>";
-    ss << "<hashdigest type='" << fs.hasher.name << "'>" << carved_hash_hexvalue << "</hashdigest></fileobject>";
-    this->write(cbuf.pos0 + offset, fname_feature, ss.str());
+    std::stringstream xml;
+    xml.str(std::string()); // clear the stringstream
+    xml << "<fileobject>";
+    if (!in_cache) xml << "<filename>" << carved_path << "</filename>";
+    xml <<    "<filesize>" << len << "</filesize>";
+    xml <<    "<hashdigest type='" << fs.hasher.name << "'>" << carved_hash_hexvalue << "</hashdigest>";
+    xml << "</fileobject>";
+    this->write(cbuf.pos0 + offset, carved_path, xml.str());
 
-    if (in_cache) return fname;               // do not make directories or write out if we are cached
-    /* Write the data */
-    cbuf.write(fname);
-    /* Set timestamp if necessary. Note that we do not use std::filesystem::last_write_time()
-     * as there seems to be no portable way to use it.
-     */
-    if (mtime>0) {
-        const struct timeval times[2] = {{mtime,0},{mtime,0}};
-        utimes(fname.c_str(),times);
+    if (!in_cache) {
+        /* Write the data */
+
+        cbuf.write( carved_complete_path );
+
+        /* Set timestamp if necessary. Note that we do not use std::filesystem::last_write_time()
+         * as there seems to be no portable way to use it.
+         */
+        if (mtime>0) {
+            const struct timeval times[2] = {{mtime,0},{mtime,0}};
+            utimes(carved_complete_path.c_str(), times);
+        }
     }
-    return fname;
+    return carved_path;
 }
 
 const std::string feature_recorder::hash(const sbuf_t &sbuf) const

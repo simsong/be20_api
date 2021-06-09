@@ -222,21 +222,6 @@ void feature_recorder_set::feature_recorders_shutdown()
 
 
 /****************************************************************
- *** Data handling
- ****************************************************************/
-
-
-/*
- * uses md5 to determine if a block was prevously seen.
- * Hopefully sbuf.buf() is zero-copy.
- */
-bool feature_recorder_set::check_previously_processed(const sbuf_t &sbuf)
-{
-    std::string sha1 = dfxml::sha1_generator::hash_buf(sbuf.buf,sbuf.bufsize).hexdigest();
-    return seen_set.check_for_presence_and_insert(sha1);
-}
-
-/****************************************************************
  *** Stats
  ****************************************************************/
 
