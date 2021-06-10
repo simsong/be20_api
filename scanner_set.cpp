@@ -101,10 +101,10 @@ void scanner_set::add_scanner(scanner_t scanner)
     // The scanner should have set the info field.
     if (sp.info==nullptr){
         throw std::runtime_error("scanner_set::add_scanner: a scanner did not set the sp.info field.  "
-                                 "Re-run with SCANNER_SET_DEBUG_REGISTER to find those that did.");
+                                 "Re-run with SCANNER_SET_DEBUG_REGISTER=1 to find those that did.");
     }
     if (debug_flags.debug_register){
-        std::cerr << "add_scanner( " << sp.info->name << ")\n";
+        std::cerr << "add_scanner( " << sp.info->name << " )\n";
     }
     scanner_info_db[scanner] = sp.info;
 

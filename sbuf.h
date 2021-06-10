@@ -178,9 +178,8 @@ public:
      */
 
     /* Allocate from an existing buffer, optionally freeing that buffer */
-    explicit sbuf_t(const pos0_t &pos0_, const uint8_t *buf_,
-                    size_t bufsize_,size_t pagesize_,
-                    int fd_, bool should_unmap_,bool should_free_,bool should_close_):
+    explicit sbuf_t(const pos0_t &pos0_, const uint8_t *buf_, size_t bufsize_,size_t pagesize_,
+                    int fd_, bool should_unmap_, bool should_free_, bool should_close_):
         fd(fd_), should_unmap(should_unmap_), should_free(should_free_),
         should_close(should_close_),
         pos0(pos0_),buf(buf_),bufsize(bufsize_), pagesize(min(pagesize_,bufsize_)){
@@ -195,7 +194,11 @@ public:
                     size_t pagesize_,
                     uint64_t page_number_,
                     bool should_free_):
-        should_free(should_free_), page_number(page_number_),pos0(pos0_),buf(buf_),bufsize(bufsize_),
+        should_free(should_free_),
+        page_number(page_number_),
+        pos0(pos0_),
+        buf(buf_),
+        bufsize(bufsize_),
         pagesize(min(pagesize_,bufsize_)){
     };
 
@@ -223,6 +226,9 @@ public:
     static void set_map_file_delimiter(const std::string new_delim){
         map_file_delimiter = new_delim;
     }
+
+    /* Allocate a sbuf by copying memory in the current sbuf. The sbuf must be deleted. */
+    sbuf_t *sbuf_malloc(size_t offset, size_t len) const;
 
     /* Allocate an sbuf from a null-terminated string. Used for debugging mostly */
     explicit sbuf_t(const char *str):

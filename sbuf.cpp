@@ -84,6 +84,22 @@ sbuf_t *sbuf_t::map_file(const std::filesystem::path fname, int fd, bool should_
 }
 
 /*
+ * Allocate a new sbuf with a malloc and copy of the buffer
+ */
+sbuf_t *sbuf_t::sbuf_malloc(size_t offset, size_t len) const
+{
+    if (offset > bufsize) offset=bufsize; // if offset is past the end of the buffer, put it at the end of the buffer
+    if (offset+len > bufsize) len = (bufsize-offset); // if the length plus the offset is to big, bring it in
+    u_char *nbuf = (u_char *)malloc(len);
+    if (buf==0){
+        throw std::bad_alloc();
+    }
+    memcpy(nbuf, buf + offset, len);
+    return new sbuf_t(pos0+offset, nbuf, len, len, 0, false, true, false);
+}
+
+
+/*
  * Returns self or the highest parent of self, whichever is higher
  */
 const sbuf_t *sbuf_t::highest_parent() const

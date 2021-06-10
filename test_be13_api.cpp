@@ -625,6 +625,11 @@ TEST_CASE("hello_sbuf","[sbuf]") {
     REQUIRE( line_len==4 );
 
     REQUIRE( sb2.getline(pos, line_start, line_len)==false);
+
+    sbuf_t *sb3 = sb1.sbuf_malloc(6,5);
+    REQUIRE( sb3->asString() == "world" );
+    delete sb3;
+
 }
 
 
