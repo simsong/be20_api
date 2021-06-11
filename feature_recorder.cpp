@@ -413,37 +413,27 @@ std::string valid_dosname(std::string in)
  */
 
 #include <iomanip>
-std::string feature_recorder::carve_data(const sbuf_t &sbuf, size_t offset, size_t len,
-                                         std::string ext, time_t mtime)
+std::string feature_recorder::carve_record(const sbuf_t &header, const sbuf_t &data, std::string ext, time_t mtime)
 {
-    /* If we are in the margin, ignore; it will be processed again */
-    if (offset >= sbuf.pagesize && offset < sbuf.bufsize){
-        throw std::runtime_error("offset out of range");
-    }
-    assert(offset < sbuf.bufsize);
-
     switch(carve_mode){
     case CARVE_NONE:
         return NO_CARVED_FILE;                         // carve nothing
     case CARVE_ENCODED:
-        if (sbuf.pos0.path.size() == 0 ) return NO_CARVED_FILE; // not encoded
-        if (sbuf.pos0.alphaPart() == do_not_carve_encoding) return std::string(); // ignore if it is just encoded with this
+        if (data.pos0.path.size() == 0 ) return NO_CARVED_FILE; // not encoded
+        if (data.pos0.alphaPart() == do_not_carve_encoding) return std::string(); // ignore if it is just encoded with this
         break;                                      // otherwise carve
     case CARVE_ALL:
         break;
     }
 
-    /* Create the object that we are trying to carve */
-    sbuf_t cbuf(sbuf, offset, len);
-
     /* See if we have previously carved this object, in which case do not carve it again */
-    std::string carved_hash_hexvalue = hash(cbuf);
+    std::string carved_hash_hexvalue = hash(data);
     bool in_cache = carve_cache.check_for_presence_and_insert(carved_hash_hexvalue);
-    std::string            carved_path;               // carved path reported in feature file, relative to outdir
-    std::filesystem::path  carved_complete_path;
+    std::string            carved_relative_path;               // carved path reported in feature file, relative to outdir
+    std::filesystem::path  carved_absolute_path;
     //std::string fname_feature;          // what goes into the feature file
     if (in_cache){
-        carved_path = "<CACHED>";
+        carved_relative_path = "<CACHED>";
     } else {
         /* Determine the directory and filename */
         int64_t myfileNumber = carved_file_count++; // atomic operation
@@ -463,8 +453,8 @@ std::string feature_recorder::carve_data(const sbuf_t &sbuf, size_t offset, size
         std::filesystem::create_directory( fs.get_outdir() / name / thousands);
 
         // const std::filesystem::path scannerDir { fs.get_outdir() / name};
-        carved_path          = name + "/" + thousands + "/" + units + ext;
-        carved_complete_path = fs.get_outdir() / name / thousands / (units + ext);
+        carved_relative_path          = name + "/" + thousands + "/" + units + ext;
+        carved_absolute_path = fs.get_outdir() / name / thousands / (units + ext);
 
         //fname  = seqDir / (sbuf.pos0.str() + std::string(".") + ext);
         //fname_feature = fname.string().substr(fs.get_outdir().string().size()+1);
@@ -475,26 +465,36 @@ std::string feature_recorder::carve_data(const sbuf_t &sbuf, size_t offset, size
     std::stringstream xml;
     xml.str(std::string()); // clear the stringstream
     xml << "<fileobject>";
-    if (!in_cache) xml << "<filename>" << carved_path << "</filename>";
-    xml <<    "<filesize>" << len << "</filesize>";
+    if (!in_cache) xml << "<filename>" << carved_relative_path << "</filename>";
+    xml <<    "<filesize>" << header.bufsize + data.bufsize << "</filesize>";
     xml <<    "<hashdigest type='" << fs.hasher.name << "'>" << carved_hash_hexvalue << "</hashdigest>";
     xml << "</fileobject>";
-    this->write(cbuf.pos0 + offset, carved_path, xml.str());
+    this->write(data.pos0, carved_relative_path, xml.str());
 
     if (!in_cache) {
         /* Write the data */
-
-        cbuf.write( carved_complete_path );
+        std::ofstream os;
+        os.open( carved_absolute_path, std::ios::out | std::ios::binary | std::ios::trunc );
+        if (!os.is_open()) {
+            perror(carved_absolute_path.c_str());
+            throw std::runtime_error(Formatter() << "cannot open file for writing:" << carved_absolute_path);
+        }
+        header.write(os);
+        data.write(os);
+        os.close();
+        if (os.bad()) {
+            throw std::runtime_error( Formatter() << "error writing file " << carved_absolute_path);
+        }
 
         /* Set timestamp if necessary. Note that we do not use std::filesystem::last_write_time()
          * as there seems to be no portable way to use it.
          */
         if (mtime>0) {
             const struct timeval times[2] = {{mtime,0},{mtime,0}};
-            utimes(carved_complete_path.c_str(), times);
+            utimes(carved_absolute_path.c_str(), times);
         }
     }
-    return carved_path;
+    return carved_relative_path;
 }
 
 const std::string feature_recorder::hash(const sbuf_t &sbuf) const

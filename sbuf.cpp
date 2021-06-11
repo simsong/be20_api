@@ -178,7 +178,7 @@ void sbuf_t::hex_dump(std::ostream &os,uint64_t start,uint64_t len) const
 }
 
 /* Write to a file descriptor */
-ssize_t sbuf_t::write(int fd_,size_t loc,size_t len) const
+ssize_t sbuf_t::write(int fd_, size_t loc, size_t len) const
 {
     if(loc>=bufsize) return 0;          // cannot write
     if(loc+len>bufsize) len=bufsize-loc; // clip at the end
@@ -186,11 +186,21 @@ ssize_t sbuf_t::write(int fd_,size_t loc,size_t len) const
 }
 
 /* Write to a FILE */
-ssize_t sbuf_t::write(FILE *f,size_t loc,size_t len) const
+ssize_t sbuf_t::write(FILE *f, size_t loc, size_t len) const
 {
     if(loc>=bufsize) return 0;          // cannot write
     if(loc+len>bufsize) len=bufsize-loc; // clip at the end
     return ::fwrite(buf+loc,1,len,f);
+}
+
+/* Write to an output stream */
+ssize_t sbuf_t::write(std::ostream &os) const
+{
+    os.write(reinterpret_cast<const char *>(buf), bufsize);
+    if (os.bad()){
+        return 0;
+    }
+    return bufsize;
 }
 
 
@@ -201,9 +211,9 @@ void sbuf_t::write(std::filesystem::path path) const
     os.open( path, std::ios::out | std::ios::binary | std::ios::trunc );
     if (!os.is_open()) {
         perror(path.c_str());
-        throw std::runtime_error(Formatter() << "cannot open file for writing:" << path);
+        throw std::runtime_error( Formatter() << "cannot open file for writing:" << path);
     }
-    os.write(reinterpret_cast<const char *>(buf), bufsize);
+    this->write(os);
     os.close();
     if (os.bad()) {
         throw std::runtime_error( Formatter() << "error writing file " << path);

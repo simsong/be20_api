@@ -252,12 +252,14 @@ public:;
     // if mtime>0, set the file's mtime to be mtime
     // if offset>0, start with that offset
     // if offset>0, carve that many bytes, even into the margin (otherwise stop at the margin)
-    virtual std::string carve_data(const sbuf_t &sbuf, size_t offset, size_t len,
-                                   std::string ext, time_t mtime=0 );
-    virtual std::string carve_data(const sbuf_t &sbuf, std::string ext) {
-        return carve_data(sbuf, 0, sbuf.bufsize, ext);
+
+    // 'record carving', which basically means write out the header (now in an sbuf) in addition to the data
+    virtual std::string carve_record(const sbuf_t &header, const sbuf_t &sbuf, std::string ext, time_t mtime=0 );
+
+    // carve the data in the sbuf to a file that ends with ext. If mtime>0, set the time of the file to be mtime
+    virtual std::string carve_data(const sbuf_t &sbuf, std::string ext, time_t mtime=0) {
+        return carve_record(sbuf_t(), sbuf, ext, mtime);
     }
-    //virtual std::string carve_record(const sbuf_t &sbuf, size_t offset, size_t len, const std::string &name);
 
     /*
      * Each feature_recorder can have multiple histograms. They are generated on-the-fly for the file-based feature-recorder,

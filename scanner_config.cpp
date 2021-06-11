@@ -38,7 +38,7 @@ void scanner_config::get_config(const std::string &n,unsigned char *val_,const s
 {
     unsigned int val = *val_;
     get_config(n, &val, help);
-    *val_ = (unsigned char)val;
+    *val_ = val;
 }
 template<>
 void scanner_config::get_config(const std::string &n,signed char *val_,const std::string &help)

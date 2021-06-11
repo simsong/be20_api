@@ -422,10 +422,9 @@ TEST_CASE("fname in outdir", "[feature_recorder]") {
     fr.carve_data(sbuf1, ".carve_data");
 
     /* Check record record carving */
+    auto hbuf1 = sbuf_t("Header\n");
     auto sbuf2 = sbuf_t("[record 001][record 002]");
-    fr.carve_data(sbuf2, 0, 12, ".carve_records");
-    fr.carve_data(sbuf2, 12, 12, ".carve_records");
-
+    fr.carve_record(hbuf1, sbuf2, ".carve_records");
     std::cerr << "carved data in " << sc.outdir << "\n";
 
 }
