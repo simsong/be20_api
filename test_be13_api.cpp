@@ -415,7 +415,7 @@ TEST_CASE("fname in outdir", "[feature_recorder]") {
     std::filesystem::path p2(n2);
     REQUIRE( p2.filename()=="test_bar_1.txt");
 
-    fr.carve_mode = feature_recorder::CARVE_ALL;
+    fr.carve_mode = feature_recorder_def::CARVE_ALL;
 
     /* check carving */
     auto sbuf1 = sbuf_t("Hello World!\n");

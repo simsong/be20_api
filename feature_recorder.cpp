@@ -416,13 +416,13 @@ std::string valid_dosname(std::string in)
 std::string feature_recorder::carve_record(const sbuf_t &header, const sbuf_t &data, std::string ext, time_t mtime)
 {
     switch(carve_mode){
-    case CARVE_NONE:
+    case feature_recorder_def::CARVE_NONE:
         return NO_CARVED_FILE;                         // carve nothing
-    case CARVE_ENCODED:
+    case feature_recorder_def::CARVE_ENCODED:
         if (data.pos0.path.size() == 0 ) return NO_CARVED_FILE; // not encoded
         if (data.pos0.alphaPart() == do_not_carve_encoding) return std::string(); // ignore if it is just encoded with this
         break;                                      // otherwise carve
-    case CARVE_ALL:
+    case feature_recorder_def::CARVE_ALL:
         break;
     }
 

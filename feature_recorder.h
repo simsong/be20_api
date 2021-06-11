@@ -60,6 +60,19 @@ struct feature_recorder_def {
     uint32_t    max_feature_size { 1024*1024 }; // 1024*1024 was in BE1.4
 
     /**
+     * Carving modes.
+     *
+     * Carving writes the filename to the feature file; the context is the file's hash using the provided function.
+     * Automatically de-duplicates.
+     * Carving is implemented in the abstract class becuase all feature recorders have access to it.
+     */
+    enum carve_mode_t {
+        CARVE_NONE=0,          // don't carve at all, even if the carve function is called
+        CARVE_ENCODED=1,       // only carve if the data being carved is encoded (e.g. BASE64 or GZIP is in path)
+        CARVE_ALL=2            // carve whenever the carve function is called.
+    } default_carve_mode {CARVE_ALL};
+
+    /**
      * \name Flags that control scanners
      * @{
      * These flags control scanners.  Set them with flag_set().
@@ -226,20 +239,7 @@ public:;
      */
     virtual void write_buf(const sbuf_t &sbuf, size_t pos, size_t len); /* writes with context */
 
-    /**
-     * support for carving.
-     * Carving writes the filename to the feature file; the context is the file's hash using the provided function.
-     * Automatically de-duplicates.
-     * Carving is implemented in the abstract class becuase all feature recorders have access to it.
-     * Carving should not be passed on when chaining.
-     */
-    enum carve_mode_t {
-        CARVE_NONE=0,          // don't carve at all, even if the carve function is called
-        CARVE_ENCODED=1,       // only carve if the data being carved is encoded (e.g. BASE64 or GZIP is in path)
-        CARVE_ALL=2            // carve whenever the carve function is called.
-    };
-
-    std::atomic<carve_mode_t>  carve_mode { CARVE_ENCODED};
+    std::atomic<feature_recorder_def::carve_mode_t>  carve_mode { feature_recorder_def::CARVE_ALL };
     std::atomic<int64_t>       carved_file_count {0}; // starts at 0; gets incremented by carve();
     atomic_set<std::string>    carve_cache {};        // hashes of files that have been cached, so the same file is not carved twice
     std::string  do_not_carve_encoding {};            // do not carve files with this encoding.

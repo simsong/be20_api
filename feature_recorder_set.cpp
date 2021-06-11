@@ -177,6 +177,7 @@ feature_recorder &feature_recorder_set::create_feature_recorder(const feature_re
         fr = new feature_recorder_sql(*this, def);
     }
     fr->context_window = sc.context_window_default;
+    fr->carve_mode = def.default_carve_mode; // set the default
     frm.insert(def.name, fr);
     return *fr;                          // as a courtesy
 }
