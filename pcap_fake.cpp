@@ -5,6 +5,7 @@
  * A fake libpcap implementation that can only read files without a filter.
  */
 
+// config.h is needed solely to find out if we need pcap_fake.h or not.
 #include "config.h"
 
 #ifndef HAVE_LIBPCAP

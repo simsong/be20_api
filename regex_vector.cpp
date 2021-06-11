@@ -1,6 +1,5 @@
 /* -*- mode: C++; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 
-#include "config.h"
 #include "regex_vector.h"
 
 /* rewritten to use C++11's regex */

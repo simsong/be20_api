@@ -7,7 +7,7 @@
  * Don't use this in production systems! It has a histogram that isn't useful for most applications.
  */
 
-#include "config.h"
+#include "config.h"                     // needed for hash_t
 
 #include <iostream>
 #include <sys/types.h>

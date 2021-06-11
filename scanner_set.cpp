@@ -8,11 +8,8 @@
 #include <vector>
 #include <string>
 
+/* needed solely for loading shared libraries */
 #include "config.h"
-
-#ifdef HAVE_ERR_H
-#include <err.h>
-#endif
 
 #ifdef HAVE_DLFCN_H
 #include <dlfcn.h>
@@ -38,6 +35,7 @@
  */
 
 
+#if 0
 /* object for keeping track of packet callbacks */
 class packet_plugin_info {
 public:
@@ -49,6 +47,7 @@ public:
 /* Vector of callbacks */
 typedef std::vector<packet_plugin_info> packet_plugin_info_vector_t;
 //packet_plugin_info_vector_t  packet_handlers;   // pcap callback handlers
+#endif
 
 /****************************************************************
  * create the scanner set

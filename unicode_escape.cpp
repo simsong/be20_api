@@ -32,7 +32,6 @@
 #include <iterator>
 
 
-#include "config.h"
 #include "unicode_escape.h"
 #include "utf8.h"
 

@@ -17,7 +17,7 @@
 // Note: Do not include scanner_set.h, because it needs scanner_params.h!
 
 #include "histogram_def.h"
-#include "packet_info.h"
+//#include "packet_info.h"
 #include "sbuf.h"
 #include "scanner_config.h"
 #include "feature_recorder.h"

@@ -115,7 +115,7 @@ struct feature_recorder_def {
     feature_recorder_def(std::string name_):name(name_){} // flagless constructor
     feature_recorder_def(std::string name_, flags_t flags_):name(name_),flags(flags_){} // construct with flags
     bool operator==(const feature_recorder_def &a) const {
-        return (this->name==a.name) && (this->flags == a.flags);
+        return (this->name==a.name) && (this->flags == a.flags) && (this->default_carve_mode == a.default_carve_mode);
     };
     bool operator!=(const feature_recorder_def &a) const {
         return !( *this == a);
@@ -253,12 +253,12 @@ public:;
     // if offset>0, start with that offset
     // if offset>0, carve that many bytes, even into the margin (otherwise stop at the margin)
 
-    // 'record carving', which basically means write out the header (now in an sbuf) in addition to the data
-    virtual std::string carve_record(const sbuf_t &header, const sbuf_t &sbuf, std::string ext, time_t mtime=0 );
+    // 'record carving', which basically means write out the header (now in an sbuf) in addition to the data (an sbuf)
+    virtual std::string carve(const sbuf_t &header, const sbuf_t &sbuf, std::string ext, time_t mtime=0 );
 
     // carve the data in the sbuf to a file that ends with ext. If mtime>0, set the time of the file to be mtime
-    virtual std::string carve_data(const sbuf_t &sbuf, std::string ext, time_t mtime=0) {
-        return carve_record(sbuf_t(), sbuf, ext, mtime);
+    virtual std::string carve(const sbuf_t &sbuf, std::string ext, time_t mtime=0) {
+        return carve(sbuf_t(), sbuf, ext, mtime);
     }
 
     /*

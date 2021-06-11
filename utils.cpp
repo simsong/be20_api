@@ -22,12 +22,13 @@
 #include <mutex>
 #include <sstream>
 
-#ifdef HAVE_UNISTD_H
-#include <unistd.h>
-#endif
+//#ifdef HAVE_UNISTD_H
+//#include <unistd.h>
+//#endif
 
 
 
+#if 0
 #ifndef HAVE_ERR
 void err(int eval,const char *fmt,...)
 {
@@ -73,6 +74,7 @@ void warnx(const char *fmt,...)
     vfprintf(stderr,fmt,ap);
     va_end(ap);
 }
+#endif
 #endif
 
 /** Extract a buffer...

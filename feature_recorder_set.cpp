@@ -1,6 +1,6 @@
 /* -*- mode: C++; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 
-#include "config.h"
+#include "config.h"                     // needed for hash_t and feature_recorder_sql.h
 
 #include "scanner_config.h"
 #include "feature_recorder_set.h"
@@ -9,6 +9,13 @@
 
 #include "dfxml/src/dfxml_writer.h"
 #include "dfxml/src/hash_t.h"
+
+#ifndef HAVE_LIBSQLITE3
+#ifdef HAVE_SQLITE3_H
+#warn Disabling HAVE_SQLITE3_H because HAVE_LIBSQLITE3 is not true
+#undef HAVE_SQLITE3_H
+#endif
+#endif
 
 /**
  * feature_recorder_set:
@@ -96,7 +103,7 @@ feature_recorder_set::feature_recorder_set( const flags_t &flags_,
     //message_enabled_scanners(scanner_params::PHASE_INIT); // tell all enabled scanners to init
 
 #if 0
-#if defined(HAVE_SQLITE3_H) and defined(HAVE_LIBSQLITE3)
+#if defined(HAVE_SQLITE3_H)
     if (flag_set(ENABLE_SQLITE3_RECORDERS)) {
         db_create();
     }
@@ -119,7 +126,7 @@ feature_recorder_set::~feature_recorder_set()
 {
     frm.delete_all();
 #if 0
-#if defined(HAVE_SQLITE3_H) and defined(HAVE_LIBSQLITE3)
+#if defined(HAVE_SQLITE3_H)
     db_close();
 #endif
 #endif
@@ -173,9 +180,11 @@ feature_recorder &feature_recorder_set::create_feature_recorder(const feature_re
     if (flags.record_files) {
         fr = new feature_recorder_file(*this, def);
     }
+#ifdef HAVE_SQLITE3_H
     if (flags.record_sql) {
         fr = new feature_recorder_sql(*this, def);
     }
+#endif
     fr->context_window = sc.context_window_default;
     fr->carve_mode = def.default_carve_mode; // set the default
     frm.insert(def.name, fr);
@@ -293,7 +302,6 @@ std::vector<std::string> feature_recorder_set::feature_file_list() const
 
 
 #if 0
-//#if defined(HAVE_SQLITE3_H) and defined(HAVE_LIBSQLITE3)
 
 /*** SQL Support ***/
 

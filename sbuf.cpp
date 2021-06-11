@@ -1,4 +1,6 @@
 /* -*- mode: C++; c-basic-offset: 4; indent-tabs-mode: nil -*- */
+
+// config.h needed solely for mmap
 #include "config.h"
 
 #include <ctype.h>

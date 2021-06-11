@@ -7,7 +7,6 @@
  * does not handle 32-bit regular expressions.
  */
 
-#include "config.h"
 #include "unicode_escape.h"
 #include "utf8.h"
 

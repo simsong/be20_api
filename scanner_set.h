@@ -52,7 +52,7 @@
  * TODO: or it can be called with a threadpool.
  */
 
-#include "packet_info.h"
+//#include "packet_info.h"
 #include "feature_recorder_set.h"
 #include "scanner_params.h"             // needed for scanner_t
 
@@ -197,7 +197,7 @@ public:;
     /* PHASE SCAN */
     void     phase_scan();              // start the scan phase
     void     process_sbuf(sbuf_t *sbuf);     // process the sbuf, then delete it.
-    void     process_packet(const be13::packet_info &pi);
+    //void     process_packet(const be13::packet_info &pi);
     uint32_t get_max_depth_seen() const; // max seen during scan
 
     // Management of previously seen data

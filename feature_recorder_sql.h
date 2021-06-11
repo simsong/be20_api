@@ -12,7 +12,6 @@
 
 #ifdef HAVE_SQLITE3_H
 #include <sqlite3.h>
-#endif
 
 class feature_recorder_sql : public feature_recorder {
     struct besql_stmt {
@@ -34,3 +33,4 @@ public:
     virtual void histogram_flush(AtomicUnicodeHistogram &h) override; // flush a specific histogram
 
 };
+#endif

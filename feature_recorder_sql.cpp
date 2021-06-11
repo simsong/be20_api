@@ -13,6 +13,7 @@
 #include <cstring>
 #include <unistd.h>
 
+
 #include "sbuf.h"
 #include "feature_recorder_sql.h"
 #include "feature_recorder_set.h"
@@ -186,6 +187,4 @@ void feature_recorder_sql::histogram_flush(AtomicUnicodeHistogram &h)
 {
     /* SQL histograms don't need flushing. This is a stub function */
 }
-
-
 #endif

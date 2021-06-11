@@ -1,4 +1,3 @@
-#include "config.h"
 #include "histogram_def.h"
 
 bool histogram_def::match(std::u32string u32key, std::string *displayString) const
