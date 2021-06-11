@@ -561,27 +561,6 @@ std::string feature_recorder::carve_data(const sbuf_t &sbuf, const std::string &
 }
 #endif
 
-#if 0
-/**
- * Currently, we need strptime() and utimes() to set the time.
- */
-void feature_recorder::set_carve_mtime(const std::string &fname, const std::string &mtime_iso8601)
-{
-    if(flags & FLAG_DISABLED) return;           // disabled
-#if defined(HAVE_STRPTIME) && defined(HAVE_UTIMES)
-    if(fname.size()){
-        struct tm tm;
-        if(strptime(mtime_iso8601.c_str(),"%Y-%m-%dT%H:%M:%S",&tm)){
-            time_t t = mktime(&tm);
-            if(t>0){
-                const struct timeval times[2] = {{t,0},{t,0}};
-                utimes(fname.c_str(),times);
-            }
-        }
-    }
-#endif
-}
-#endif
 
 /****************************************************************
  ** Histogram Support
