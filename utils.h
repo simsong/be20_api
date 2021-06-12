@@ -74,7 +74,8 @@ inline std::string safe_utf16to8(std::wstring s){ // needs to be cleaned up
     return utf8_line;
 }
 
-inline std::wstring safe_utf8to16(std::string s){ // needs to be cleaned up
+// This needs to be cleaned up:
+inline std::wstring safe_utf8to16(std::string s){
     std::wstring utf16_line;
     try {
         utf8::utf8to16(s.begin(),s.end(),back_inserter(utf16_line));
@@ -115,7 +116,7 @@ inline std::string microsoftDateToISODate(const uint64_t &time)
 }
 
 /* Convert Unix timestamp to ISO format */
-inline std::string unixTimeToISODate(const uint64_t &t)
+inline std::string unixTimeToISODate(const uint64_t t)
 {
     struct tm time_tm;
     time_t tmp=t;
@@ -126,11 +127,11 @@ inline std::string unixTimeToISODate(const uint64_t &t)
 }
 
 /* Many internal windows and Linux structures require a valid printable name in ASCII */
-inline bool validASCIIName(const std::string &name)
+inline bool validASCIIName(const std::string name)
 {
     for ( auto ch:name){
         if (ch & 0x80)  return false; // high bit should not be set
-        if (ch < ' ')   return false;  // should not be control character
+        if (ch < ' ')   return false; // should not be control character
         if (ch == 0x7f) return false; // DEL is not printable
     }
     return true;

@@ -123,7 +123,7 @@ public:
      *** Child allocators --- allocate an sbuf from another sbuf
      ****************************************************************/
 
-    /** Move constructor */
+    /** Move constructor is properly implemented. */
     sbuf_t(sbuf_t &&that) noexcept:
         page_number(that.page_number),
         pos0(that.pos0),
@@ -144,18 +144,7 @@ public:
         parent->add_child(*this);
     }
 
-    /**
-     * make an sbuf from a parent but with an indent.
-     */
-    sbuf_t(const sbuf_t &that_sbuf, size_t off):
-        page_number(that_sbuf.page_number),pos0(that_sbuf.pos0+off),
-        parent(that_sbuf.highest_parent()),
-        buf(that_sbuf.buf+off),
-        bufsize(that_sbuf.bufsize > off ? that_sbuf.bufsize-off : 0),
-        pagesize(that_sbuf.pagesize > off ? that_sbuf.pagesize-off : 0){
-    }
-
-    /** Allocate from an existing sbuf.
+    /** Allocate from within an existing sbuf.
      * The allocated buf MUST be freed before the source, since no copy is made...
      */
     explicit sbuf_t(const sbuf_t &sbuf, size_t off, size_t len):
@@ -167,8 +156,19 @@ public:
         parent->add_child(*this);
     };
 
+    /**
+     * make an sbuf from a parent but with an indent. This should be folded into the above.
+     */
+    explicit sbuf_t(const sbuf_t &that_sbuf, size_t off):
+        page_number(that_sbuf.page_number),pos0(that_sbuf.pos0+off),
+        parent(that_sbuf.highest_parent()),
+        buf(that_sbuf.buf+off),
+        bufsize(that_sbuf.bufsize > off ? that_sbuf.bufsize-off : 0),
+        pagesize(that_sbuf.pagesize > off ? that_sbuf.pagesize-off : 0){
+    }
+
     /****************************************************************
-     *** Allocators that allocate from memory
+     *** Allocators that allocate from memory not already in an sbuf.
      ****************************************************************/
 
     /* Allocators */
@@ -177,29 +177,14 @@ public:
      * This should probably be a subclass mutable_sbuf_t() for clarity.
      */
 
-    /* Allocate from an existing buffer, optionally freeing that buffer */
+    /* Allocate from an existing buffer, optionally disposing of the memory unmapping or freeing,
+     * and optionally closing an associated file descriptor.
+     */
     explicit sbuf_t(const pos0_t &pos0_, const uint8_t *buf_, size_t bufsize_,size_t pagesize_,
                     int fd_, bool should_unmap_, bool should_free_, bool should_close_):
         fd(fd_), should_unmap(should_unmap_), should_free(should_free_),
         should_close(should_close_),
         pos0(pos0_),buf(buf_),bufsize(bufsize_), pagesize(min(pagesize_,bufsize_)){
-    };
-
-    /* Similar to above, but with no fd.
-     * used for by iterators for sbuf creation.
-     */
-    explicit sbuf_t(const pos0_t &pos0_,
-                    const uint8_t *buf_,
-                    size_t bufsize_,
-                    size_t pagesize_,
-                    uint64_t page_number_,
-                    bool should_free_):
-        should_free(should_free_),
-        page_number(page_number_),
-        pos0(pos0_),
-        buf(buf_),
-        bufsize(bufsize_),
-        pagesize(min(pagesize_,bufsize_)){
     };
 
     /**

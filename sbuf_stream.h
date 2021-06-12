@@ -11,6 +11,7 @@
 /**
  * sbuf_stream provides the get services of sbuf_t but wrapped in a Stream interface.
  * Note that sbuf_stream is not particularly optimized; it is simply a wrapper.
+ * Right now this is only used by scan_winprefetch. It could become a general iterator.
  */
 class sbuf_stream {
 private:
