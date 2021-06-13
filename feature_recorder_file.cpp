@@ -266,17 +266,6 @@ void feature_recorder_file::printf(const char *fmt, ...)
 #endif
 
 #if 0
-/* Hook for writing histogram
- */
-static int callback_counter(void *param, int argc, char **argv, char **azColName)
-{
-    int *counter = reinterpret_cast<int *>(param);
-    (*counter)++;
-    return 0;
-}
-#endif
-
-#if 0
 static void dump_hist(sqlite3_context *ctx,int argc,sqlite3_value**argv)
 {
     const histogram_def *def = reinterpret_cast<const histogram_def *>(sqlite3_user_data(ctx));

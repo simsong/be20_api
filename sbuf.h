@@ -163,7 +163,9 @@ public:
     explicit sbuf_t(const sbuf_t& that_sbuf, size_t off)
         : page_number(that_sbuf.page_number), pos0(that_sbuf.pos0 + off), parent(that_sbuf.highest_parent()),
           buf(that_sbuf.buf + off), bufsize(that_sbuf.bufsize > off ? that_sbuf.bufsize - off : 0),
-          pagesize(that_sbuf.pagesize > off ? that_sbuf.pagesize - off : 0) {}
+          pagesize(that_sbuf.pagesize > off ? that_sbuf.pagesize - off : 0) {
+        parent->add_child(*this);
+    }
 
     /****************************************************************
      *** Allocators that allocate from memory not already in an sbuf.

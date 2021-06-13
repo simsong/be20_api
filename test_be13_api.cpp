@@ -396,6 +396,19 @@ TEST_CASE("fname in outdir", "[feature_recorder]") {
     auto sbuf2 = sbuf_t("[record 001][record 002]");
     fr.carve(hbuf1, sbuf2, ".carve_records");
     std::cerr << "carved data in " << sc.outdir << "\n";
+
+    /* Check children */
+    REQUIRE( sbuf1.asString() == std::string("Hello World!\n"));
+    REQUIRE( sbuf1.children == 0 );
+    {
+        auto sbuf1c = sbuf1+1;
+        REQUIRE( sbuf1c.asString() == std::string("ello World!\n"));
+        REQUIRE( sbuf1.children == 1 );
+        REQUIRE( sbuf1c.children == 0 );
+    }
+    REQUIRE( sbuf1.children == 0 );
+
+
 }
 
 /****************************************************************

@@ -143,7 +143,13 @@ feature_recorder& feature_recorder_set::create_feature_recorder(const feature_re
 
     auto it = frm.find(def.name);
     if (it != frm.end()) {
-        throw FeatureRecorderAlreadyExists{std::string("feature recorder '") + def.name + "'already exists: "};
+        // we have a feature recorder with the same name. See if it has the same definition!
+        feature_recorder &fr = *it->second;
+        if (fr.def == def){
+            return fr;
+        }
+        throw FeatureRecorderAlreadyExists{std::string("feature recorder '")
+                + def.name + "' already exists but with a different definition."};
     }
 
     feature_recorder* fr = nullptr;
