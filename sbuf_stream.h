@@ -3,6 +3,8 @@
 #define SBUF_STREAM_H
 
 
+#include "sbuf.h"
+
 /** \addtogroup bulk_extractor_APIs
  * @{
  */
@@ -15,7 +17,7 @@
  */
 class sbuf_stream {
 private:
-    const sbuf_t sbuf;
+    const sbuf_t &sbuf;
     size_t offset;
 public:
     sbuf_stream(const sbuf_t &sbuf_);

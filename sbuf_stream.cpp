@@ -175,8 +175,8 @@ void sbuf_stream::getUTF8(size_t num_octets_requested, std::string &utf8_string)
 void sbuf_stream::getUTF8( std::string &utf8_string) {
     sbuf.getUTF8(offset, utf8_string);
     size_t num_bytes = utf8_string.length();
+    // if anything was read then also skip \0
     if (num_bytes > 0) {
-        // if anything was read then also skip \0
         num_bytes ++;
     }
     offset += num_bytes;
@@ -198,5 +198,3 @@ void sbuf_stream::getUTF16( std::wstring &utf16_string) {
     offset += num_bytes;
     return;
 }
-
-

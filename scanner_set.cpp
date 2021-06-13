@@ -564,7 +564,7 @@ void scanner_set::process_sbuf(class sbuf_t *sbufp)
                 continue;
             }
 
-            if ( sbuf.depth() > 0 && it.second->scanner_flags.depth_0) {
+            if ( sbuf.depth() > 0 && it.second->scanner_flags.depth0_only) {
                 // depth >0 and this scanner only run at depth 0
                 continue;
             }

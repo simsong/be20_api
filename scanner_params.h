@@ -67,7 +67,7 @@ struct scanner_params {
             bool  scan_ngram_buffer {false}; //  Scanner can run even if the entire gets buffer is filled with constant n-grams
             bool  scan_seen_before {false}; //  Scanner can run even if buffer has seen before
             bool  fast_find {false}; //  This scanner is a very fast FIND scanner
-            bool  depth_0 {false}; //  scanner only runs at depth 0 by default
+            bool  depth0_only {false}; //  scanner only runs at depth 0 by default
 
             const std::string asString() const {
                 std::string ret;
@@ -80,7 +80,7 @@ struct scanner_params {
                 if ( scan_ngram_buffer )   ret += " SCAN_NGRAM_BUFFER";
                 if ( scan_seen_before )   ret += " SCAN_SEEN_BEFORE";
                 if ( fast_find )      ret += " FAST_FIND";
-                if ( depth_0 )        ret += " DEPTH_0";
+                if ( depth0_only )        ret += " DEPTH0_ONLY";
                 return ret;
             }
         } scanner_flags {};
