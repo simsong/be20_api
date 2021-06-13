@@ -11,8 +11,8 @@
 //#define __STDC_FORMAT_MACROS
 //#endif
 
-#include "utils.h"
 #include "config.h"
+#include "utils.h"
 
 #include <cerrno>
 #include <cstdarg>

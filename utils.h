@@ -9,6 +9,10 @@
 #ifndef UTILS_H
 #define UTILS_H
 
+#ifndef PACKAGE_NAME
+#error utils.h requires that autoconf-generated config.h be included first
+#endif
+
 #include <cstdint>
 #include <sys/time.h>
 #include <sys/types.h>

@@ -407,6 +407,21 @@ public:
     /** @} */
 
     /**
+     * Signed get interfaces simply call the unsigned interfaces and
+     * the return gets cast.
+     */
+     int8_t get8i(size_t i)    const { return get8u(i);}
+    int16_t get16i(size_t i)   const { return get16u(i);}
+    int32_t get32i(size_t i)   const { return get32u(i);}
+    int64_t get64i(size_t i)   const { return get64u(i);}
+     int8_t get8iBE(size_t i)  const { return get8uBE(i);}
+    int16_t get16iBE(size_t i) const { return get16uBE(i);}
+    int32_t get32iBE(size_t i) const { return get32uBE(i);}
+    int64_t get64iBE(size_t i) const { return get64uBE(i);}
+
+
+
+    /**
      * \name signed int, byte-order specified readers
      * @{
      * these get functions safely return a signed integer value for the offset
