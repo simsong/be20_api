@@ -506,17 +506,15 @@ void update_maximum(std::atomic<T>& maximum_value, T const& value) noexcept
  */
 void scanner_set::process_sbuf(class sbuf_t *sbufp)
 {
-    const class sbuf_t &sbuf = *sbufp;  // don't allow modification
+    assert(sbufp != nullptr);
+    assert(sbufp->children == 0);         // we are going to free it, so it better not have any children.
 
     /* If we  have not transitioned to PHASE::SCAN, error */
     if (current_phase != scanner_params::PHASE_SCAN){
         throw std::runtime_error("process_sbuf can only be run in scanner_params::PHASE_SCAN");
     }
 
-    /**
-     * upperstr - Turns an ASCII string into upper case (should be UTF-8)
-     */
-
+    const class sbuf_t &sbuf = *sbufp;  // don't allow modification
     const pos0_t &pos0 = sbuf.pos0;
 
     /* If we are too deep, error out */

@@ -816,7 +816,7 @@ TEST_CASE("run", "[scanner]") {
 
     lines = getLines(fname_fr);
     REQUIRE( lines[0]=="# BANNER FILE NOT PROVIDED (-b option)");
-    REQUIRE( lines[1]=="# BE13_API-Version: 2.0.0-dev1");
+    REQUIRE( lines[1][0]=='#' );
     REQUIRE( lines[2]=="# Feature-Recorder: sha1_bufs");
     REQUIRE( lines[3]=="# Filename: <NO-INPUT>");
     REQUIRE( lines[4]=="# Feature-File-Version: 1.1");
