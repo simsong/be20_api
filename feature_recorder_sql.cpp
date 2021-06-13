@@ -13,19 +13,17 @@
 #include <cstring>
 #include <unistd.h>
 
-
-#include "sbuf.h"
-#include "feature_recorder_sql.h"
 #include "feature_recorder_set.h"
+#include "feature_recorder_sql.h"
+#include "sbuf.h"
 
-feature_recorder_sql::feature_recorder_sql(class feature_recorder_set &fs_, const feature_recorder_def def_):
-    feature_recorder(fs_, def_)
-{
+feature_recorder_sql::feature_recorder_sql(class feature_recorder_set& fs_, const feature_recorder_def def_)
+    : feature_recorder(fs_, def_) {
     /*
      * If the feature recorder set is disabled, just return.
      */
     if (fs.flags.disabled) return;
-    /* write to a database? Create tables if necessary and create a prepared statement */
+        /* write to a database? Create tables if necessary and create a prepared statement */
 
 #if 0
     char buf[1024];
@@ -35,13 +33,11 @@ feature_recorder_sql::feature_recorder_sql(class feature_recorder_set &fs_, cons
 #endif
 }
 
-feature_recorder_sql::~feature_recorder_sql()
-{
-}
-
+feature_recorder_sql::~feature_recorder_sql() {}
 
 #if 0
-#define DB_INSERT_STMT "INSERT INTO f_%s (offset,path,feature_eutf8,feature_utf8,context_eutf8) VALUES (?1, ?2, ?3, ?4, ?5)"
+#define DB_INSERT_STMT                                                                                                 \
+    "INSERT INTO f_%s (offset,path,feature_eutf8,feature_utf8,context_eutf8) VALUES (?1, ?2, ?3, ?4, ?5)"
 const char *feature_recorder::db_insert_stmt = DB_INSERT_STMT;
 
 void feature_recorder::besql_stmt::insert_feature(const pos0_t &pos,
@@ -183,8 +179,7 @@ void feature_recorder::write(const pos0_t &pos0, const std::string &feature, con
 }
 #endif
 
-void feature_recorder_sql::histogram_flush(AtomicUnicodeHistogram &h)
-{
+void feature_recorder_sql::histogram_flush(AtomicUnicodeHistogram& h) {
     /* SQL histograms don't need flushing. This is a stub function */
 }
 #endif

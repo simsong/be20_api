@@ -31,6 +31,9 @@ clean-local:
 clean-gcov:
 	rm -f *.gcov *.gcda *.gcno
 
+clang-format:
+	clang-format* -i *h *cpp
+
 AUTOMAKE_OPTIONS = subdir-objects
 
 #noinst_LIBRARIES = libbe13api.a

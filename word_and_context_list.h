@@ -27,53 +27,51 @@
  * Typically this is used for stop lists and alert lists.
  */
 
-#include <unordered_set>
-#include <unordered_map>
 #include <algorithm>
-#include <set>
-#include <map>                          // brings in map and multimap
-#include <string>
 #include <iostream>
+#include <map> // brings in map and multimap
+#include <set>
+#include <string>
+#include <unordered_map>
+#include <unordered_set>
 
 #include "regex_vector.h"
 
 class context {
 public:
-    static void extract_before_after(const std::string &feature,const std::string &ctx,
-                                     std::string &before,std::string &after){
-	if(feature.size() <= ctx.size()){
-	    /* The most simple algorithm is a sliding window */
-	    for(size_t i = 0;i<ctx.size() - feature.size();i++){
-		if(ctx.substr(i,feature.size())==feature){
-		    before = ctx.substr(0,i);
-		    after  = ctx.substr(i+feature.size());
-		    return;
-		}
-	    }
-	}
-	before.clear();			// can't be done
-	after.clear();
+    static void extract_before_after(const std::string& feature, const std::string& ctx, std::string& before,
+                                     std::string& after) {
+        if (feature.size() <= ctx.size()) {
+            /* The most simple algorithm is a sliding window */
+            for (size_t i = 0; i < ctx.size() - feature.size(); i++) {
+                if (ctx.substr(i, feature.size()) == feature) {
+                    before = ctx.substr(0, i);
+                    after = ctx.substr(i + feature.size());
+                    return;
+                }
+            }
+        }
+        before.clear(); // can't be done
+        after.clear();
     }
 
     // constructors to make a context with nothing before or after, with just a context, or with all three
-    context(const std::string &f):feature(f),before(),after(){}
-    context(const std::string &f,const std::string &c):feature(f),before(),after(){
-	extract_before_after(f,c,before,after);
+    context(const std::string& f) : feature(f), before(), after() {}
+    context(const std::string& f, const std::string& c) : feature(f), before(), after() {
+        extract_before_after(f, c, before, after);
     }
-    context(const std::string &f,const std::string &b,const std::string &a):feature(f),before(b),after(a){}
+    context(const std::string& f, const std::string& b, const std::string& a) : feature(f), before(b), after(a) {}
     std::string feature;
     std::string before;
     std::string after;
 };
 
-inline std::ostream & operator <<(std::ostream &os,const class context &c)
-{
-    os << "context[" << c.before << "|" << c.feature  << "|" << c.after << "]";
+inline std::ostream& operator<<(std::ostream& os, const class context& c) {
+    os << "context[" << c.before << "|" << c.feature << "|" << c.after << "]";
     return os;
 }
-inline bool operator ==(const class context &a,const class context &b)
-{
-    return (a.feature==b.feature) && (a.before==b.before) && (a.after==b.after);
+inline bool operator==(const class context& a, const class context& b) {
+    return (a.feature == b.feature) && (a.before == b.before) && (a.after == b.after);
 }
 
 /**
@@ -82,44 +80,43 @@ inline bool operator ==(const class context &a,const class context &b)
  */
 class word_and_context_list {
 private:
-    typedef std::unordered_multimap<std::string,context> stopmap_t;
-    stopmap_t fcmap;			// maps features to contexts; for finding them
+    typedef std::unordered_multimap<std::string, context> stopmap_t;
+    stopmap_t fcmap; // maps features to contexts; for finding them
 
-    typedef std::unordered_set< std::string > stopset_t;
-    stopset_t context_set;			// presence of a pair in fcmap
+    typedef std::unordered_set<std::string> stopset_t;
+    stopset_t context_set; // presence of a pair in fcmap
 
     regex_vector patterns;
+
 public:
     /**
      * rstrcmp is like strcmp, except it compares std::strings right-aligned
      * and only compares the minimum sized std::string of the two.
      */
-    static int rstrcmp(const std::string &a,const std::string &b);
+    static int rstrcmp(const std::string& a, const std::string& b);
 
-    word_and_context_list():fcmap(),context_set(),patterns(){ }
-    size_t size(){ return fcmap.size() + patterns.size(); }
-    void   add_regex( const std::string &pat );	// not threadsafe
-    bool   add_fc( const std::string &f,const std::string &c ); // not threadsafe
-    int    readfile( const std::string &fname );	// not threadsafe
+    word_and_context_list() : fcmap(), context_set(), patterns() {}
+    size_t size() { return fcmap.size() + patterns.size(); }
+    void add_regex(const std::string& pat);                  // not threadsafe
+    bool add_fc(const std::string& f, const std::string& c); // not threadsafe
+    int readfile(const std::string& fname);                  // not threadsafe
 
     // return true if the probe with context is in the list or in the stopmap
-    bool   check( const std::string &probe,const std::string &before, const std::string &after ) const; // threadsafe
-    bool   check_feature_context( const std::string &probe,const std::string &context ) const; // threadsafe
-    void   dump();
+    bool check(const std::string& probe, const std::string& before, const std::string& after) const; // threadsafe
+    bool check_feature_context(const std::string& probe, const std::string& context) const;          // threadsafe
+    void dump();
 };
 
-
 /* like strcmp, but runs in reverse */
-inline int word_and_context_list::rstrcmp(const std::string &a,const std::string &b)
-{
+inline int word_and_context_list::rstrcmp(const std::string& a, const std::string& b) {
     size_t alen = a.size();
     size_t blen = b.size();
     size_t len = alen < blen ? alen : blen;
-    for( size_t i=0;i<len;i++){
-	size_t apos = alen - len + i;
-	size_t bpos = blen - len + i;
-	if(a[apos] < b[bpos]) return -1;
-	if(a[apos] > b[bpos]) return 1;
+    for (size_t i = 0; i < len; i++) {
+        size_t apos = alen - len + i;
+        size_t bpos = blen - len + i;
+        if (a[apos] < b[bpos]) return -1;
+        if (a[apos] > b[bpos]) return 1;
     }
     return 0;
 }

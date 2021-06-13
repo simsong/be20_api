@@ -10,45 +10,36 @@
 #include "unicode_escape.h"
 #include "utf8.h"
 
+#include <cwctype>
 #include <fstream>
 #include <iostream>
-#include <cwctype>
 #include <regex>
 #include <string>
 
 #include "atomic_unicode_histogram.h"
 
-std::ostream & operator << (std::ostream &os, const AtomicUnicodeHistogram::FrequencyReportVector &rep)
-{
-    for(const auto &it:rep){
-        os << it;
-    }
+std::ostream& operator<<(std::ostream& os, const AtomicUnicodeHistogram::FrequencyReportVector& rep) {
+    for (const auto& it : rep) { os << it; }
     return os;
 }
 
-
 /* Output is in UTF-8 */
-std::ostream & operator << (std::ostream &os, const AtomicUnicodeHistogram::auh_t::AMReportElement &e)
-{
-    os << "n=" << e.value.count << "\t" << validateOrEscapeUTF8( e.key, true, false, false);
-    if (e.value.count16>0) os << "\t(utf16=" << e.value.count16<<")";
+std::ostream& operator<<(std::ostream& os, const AtomicUnicodeHistogram::auh_t::AMReportElement& e) {
+    os << "n=" << e.value.count << "\t" << validateOrEscapeUTF8(e.key, true, false, false);
+    if (e.value.count16 > 0) os << "\t(utf16=" << e.value.count16 << ")";
     os << "\n";
     return os;
 }
-
 
 /* Create a histogram report.
  * @param topN - if >0, return only this many.
  * Return only the topN.
  */
-AtomicUnicodeHistogram::auh_t::report AtomicUnicodeHistogram::makeReport(size_t topN)
-{
-    auh_t::report rep = h.dump( true );
+AtomicUnicodeHistogram::auh_t::report AtomicUnicodeHistogram::makeReport(size_t topN) {
+    auh_t::report rep = h.dump(true);
 
     /* If we only want some of them, delete the extra */
-    if ( (topN > 0)  && ( topN < rep.size()) ){
-        rep.resize( topN );
-    }
+    if ((topN > 0) && (topN < rep.size())) { rep.resize(topN); }
     return rep;
 }
 
@@ -64,33 +55,27 @@ AtomicUnicodeHistogram::auh_t::report AtomicUnicodeHistogram::makeReport(size_t 
  * def.flags.lower  - also convert to lowercase using Unicode rules.
  */
 
-
-
 // https://stackoverflow.com/questions/37989081/how-to-use-unicode-range-in-c-regex
 
 // debug_histogram_malloc_fail_frequency allows us to simulate low-memory situations for testing the code.
 uint32_t AtomicUnicodeHistogram::debug_histogram_malloc_fail_frequency = 0;
-void AtomicUnicodeHistogram::clear()
-{
-    h.clear();
-}
+void AtomicUnicodeHistogram::clear() { h.clear(); }
 
-void AtomicUnicodeHistogram::add(const std::string &key_unknown_encoding)
-{
-    if (key_unknown_encoding.size()==0) return;		// don't deal with zero-length keys
+void AtomicUnicodeHistogram::add(const std::string& key_unknown_encoding) {
+    if (key_unknown_encoding.size() == 0) return; // don't deal with zero-length keys
 
     /* On input, the key may be UTF8 or UTF16. See if we can figure it out */
-    bool found_utf16   = false;         // did we find a utf16?
-    bool little_endian = false;         // was it little_endian?
-    std::u32string u32key;              // u32key. Doesn't matter if LE or BE, because we never write it out.
+    bool found_utf16 = false;   // did we find a utf16?
+    bool little_endian = false; // was it little_endian?
+    std::u32string u32key;      // u32key. Doesn't matter if LE or BE, because we never write it out.
 
-    if (looks_like_utf16( key_unknown_encoding, little_endian)){
+    if (looks_like_utf16(key_unknown_encoding, little_endian)) {
         // We have an endian-guessing implementation that converts from 16 to 8, so convert from 16 to 8
         // and then convert it to utf32
-        u32key = convert_utf8_to_utf32( convert_utf16_to_utf8(key_unknown_encoding, little_endian));
+        u32key = convert_utf8_to_utf32(convert_utf16_to_utf8(key_unknown_encoding, little_endian));
         found_utf16 = true;
     } else {
-        u32key = convert_utf8_to_utf32( key_unknown_encoding );
+        u32key = convert_utf8_to_utf32(key_unknown_encoding);
     }
 
     /* At this point we have UTF-32, which we treat as raw unicode characters.
@@ -113,15 +98,15 @@ void AtomicUnicodeHistogram::add(const std::string &key_unknown_encoding)
     std::string u8key = convert_utf32_to_utf8(u32key);
     std::string displayString;
 
-    if (def.match( u8key, &displayString )){
+    if (def.match(u8key, &displayString)) {
         /* Escape as necessary */
-        displayString = validateOrEscapeUTF8( displayString, true, true, false);
+        displayString = validateOrEscapeUTF8(displayString, true, true, false);
 
         /* For debugging low-memory handling logic,
          * specify DEBUG_MALLOC_FAIL to make malloc occasionally fail
          */
-        if (debug_histogram_malloc_fail_frequency){
-            if ((h.size() % debug_histogram_malloc_fail_frequency)==(debug_histogram_malloc_fail_frequency-1)){
+        if (debug_histogram_malloc_fail_frequency) {
+            if ((h.size() % debug_histogram_malloc_fail_frequency) == (debug_histogram_malloc_fail_frequency - 1)) {
                 throw std::bad_alloc();
             }
         }
@@ -129,17 +114,15 @@ void AtomicUnicodeHistogram::add(const std::string &key_unknown_encoding)
         /* Add the key to the histogram. Note that this is threadsafe */
         h.insertIfNotContains(displayString, HistogramTally());
         h[displayString].count++;
-        if (found_utf16){
-            h[displayString].count16++;  // track how many UTF16s were converted
+        if (found_utf16) {
+            h[displayString].count16++; // track how many UTF16s were converted
         }
     }
 }
 
-size_t AtomicUnicodeHistogram::bytes()               // returns the total number of bytes of the histogram,.
+size_t AtomicUnicodeHistogram::bytes() // returns the total number of bytes of the histogram,.
 {
     size_t count = sizeof(*this);
-    for(auto it:h){
-        count += sizeof(it.first) + it.first.size() + it.second.bytes();
-    }
+    for (auto it : h) { count += sizeof(it.first) + it.first.size() + it.second.bytes(); }
     return count;
 }

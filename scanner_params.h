@@ -7,24 +7,24 @@
  * Interface for individual scanners.
  */
 
-#include <string>
-#include <set>
-#include <sstream>
+#include <cassert>
 #include <map>
 #include <ostream>
-#include <cassert>
+#include <set>
+#include <sstream>
+#include <string>
 
 // Note: Do not include scanner_set.h, because it needs scanner_params.h!
 
 #include "histogram_def.h"
 //#include "packet_info.h"
-#include "sbuf.h"
-#include "scanner_config.h"
 #include "feature_recorder.h"
 #include "feature_recorder_set.h"
+#include "sbuf.h"
+#include "scanner_config.h"
 
 /** A scanner is a function that takes a reference to scanner params and a recrusion control block */
-typedef void scanner_t(struct scanner_params &sp);
+typedef void scanner_t(struct scanner_params& sp);
 
 /**
  * \class scanner_params
@@ -50,98 +50,90 @@ struct scanner_params {
      *
      */
     struct scanner_info {
-        //std::stringstream helpstream {}; // where scanner info help messages are saved.
+        // std::stringstream helpstream {}; // where scanner info help messages are saved.
 
         // default copy construction and assignment are meaningless
         // and not implemented
-        //scanner_info(const scanner_info &i)=delete;
-        //scanner_info &operator=(const scanner_info &i)=delete;
+        // scanner_info(const scanner_info &i)=delete;
+        // scanner_info &operator=(const scanner_info &i)=delete;
 
         struct scanner_flags_t {
-            bool  default_enabled {true}; //  enabled by default
-            bool  no_usage {false}; //  do not show scanner in usage
-            bool  no_all {false}; //  do not enable with -eall
-            bool  find_scanner {false}; //  this scanner uses the find_list
-            bool  recurse {false}; //  this scanner will recurse
-            bool  recurse_expand {false}; //  recurses AND result is >= original size
-            bool  scan_ngram_buffer {false}; //  Scanner can run even if the entire gets buffer is filled with constant n-grams
-            bool  scan_seen_before {false}; //  Scanner can run even if buffer has seen before
-            bool  fast_find {false}; //  This scanner is a very fast FIND scanner
-            bool  depth0_only {false}; //  scanner only runs at depth 0 by default
+            bool default_enabled{true}; //  enabled by default
+            bool no_usage{false};       //  do not show scanner in usage
+            bool no_all{false};         //  do not enable with -eall
+            bool find_scanner{false};   //  this scanner uses the find_list
+            bool recurse{false};        //  this scanner will recurse
+            bool recurse_expand{false}; //  recurses AND result is >= original size
+            bool scan_ngram_buffer{
+                false}; //  Scanner can run even if the entire gets buffer is filled with constant n-grams
+            bool scan_seen_before{false}; //  Scanner can run even if buffer has seen before
+            bool fast_find{false};        //  This scanner is a very fast FIND scanner
+            bool depth0_only{false};      //  scanner only runs at depth 0 by default
 
             const std::string asString() const {
                 std::string ret;
                 ret += default_enabled ? "ENABLED" : "DISABLED";
-                if ( no_usage )       ret += " NO_USAGE";
-                if ( no_all )         ret += " NO_ALL";
-                if ( find_scanner )   ret += " FIND_SCANNER";
-                if ( recurse )        ret += " RECURSE";
-                if ( recurse_expand ) ret += " RECURSE_EXPAND";
-                if ( scan_ngram_buffer )   ret += " SCAN_NGRAM_BUFFER";
-                if ( scan_seen_before )   ret += " SCAN_SEEN_BEFORE";
-                if ( fast_find )      ret += " FAST_FIND";
-                if ( depth0_only )        ret += " DEPTH0_ONLY";
+                if (no_usage) ret += " NO_USAGE";
+                if (no_all) ret += " NO_ALL";
+                if (find_scanner) ret += " FIND_SCANNER";
+                if (recurse) ret += " RECURSE";
+                if (recurse_expand) ret += " RECURSE_EXPAND";
+                if (scan_ngram_buffer) ret += " SCAN_NGRAM_BUFFER";
+                if (scan_seen_before) ret += " SCAN_SEEN_BEFORE";
+                if (fast_find) ret += " FAST_FIND";
+                if (depth0_only) ret += " DEPTH0_ONLY";
                 return ret;
             }
-        } scanner_flags {};
+        } scanner_flags{};
 
         // constructor. We must have the name and the pointer. Everything else is optional
-        scanner_info(scanner_t *scanner_,std::string name_):scanner(scanner_),name(name_){
-        };
+        scanner_info(scanner_t* scanner_, std::string name_) : scanner(scanner_), name(name_){};
         /* PASSED FROM SCANNER to API: */
-        scanner_t         *scanner;            // the scanner
-        std::string       name;                //   scanner name
-        std::string       helpstr {};             // the help string
-        std::string       author {};              //   who wrote me?
-        std::string       description {};         //   what do I do?
-        std::string       url {};                 //   where I come from
-        std::string       scanner_version {};     //   version for the scanner
-        std::string       pathPrefix {};           //   this scanner's path prefix for recursive scanners. e.g. "GZIP"
-        uint64_t          flags {};               //   flags
-        std::vector<feature_recorder_def>    feature_defs {};   //   feature files that this scanner needs.
-        std::vector<histogram_def>  histogram_defs {};      //   histogram definitions that the scanner needs
-        //void              *packet_user {};        //   data for network callback
-        //be13::packet_callback_t *packet_cb {};    //   callback for processing network packets, or NULL
+        scanner_t* scanner;            // the scanner
+        std::string name;              //   scanner name
+        std::string helpstr{};         // the help string
+        std::string author{};          //   who wrote me?
+        std::string description{};     //   what do I do?
+        std::string url{};             //   where I come from
+        std::string scanner_version{}; //   version for the scanner
+        std::string pathPrefix{};      //   this scanner's path prefix for recursive scanners. e.g. "GZIP"
+        uint64_t flags{};              //   flags
+        std::vector<feature_recorder_def> feature_defs{}; //   feature files that this scanner needs.
+        std::vector<histogram_def> histogram_defs{};      //   histogram definitions that the scanner needs
+        // void              *packet_user {};        //   data for network callback
+        // be13::packet_callback_t *packet_cb {};    //   callback for processing network packets, or NULL
 
         // Move constructor
-        scanner_info(scanner_info &&source ) :
-            scanner(source.scanner),
-            name(source.name),
-            helpstr(source.helpstr),
-            description(source.description),
-            url(source.url),
-            scanner_version(source.scanner_version),
-            pathPrefix(source.pathPrefix),
-            flags(source.flags),
-            feature_defs(source.feature_defs),
-            histogram_defs(source.histogram_defs) {
-        }
+        scanner_info(scanner_info&& source)
+            : scanner(source.scanner), name(source.name), helpstr(source.helpstr), description(source.description),
+              url(source.url), scanner_version(source.scanner_version), pathPrefix(source.pathPrefix),
+              flags(source.flags), feature_defs(source.feature_defs), histogram_defs(source.histogram_defs) {}
     };
 
     /* Scanners can also be asked to assist in printing. */
-    enum print_mode_t {MODE_NONE=0,MODE_HEX,MODE_RAW,MODE_HTTP};
-    const int SCANNER_PARAMS_VERSION {20210531};
-    int scanner_params_version {SCANNER_PARAMS_VERSION};
-    void check_version() { assert(this->scanner_params_version == SCANNER_PARAMS_VERSION);}
+    enum print_mode_t { MODE_NONE = 0, MODE_HEX, MODE_RAW, MODE_HTTP };
+    const int SCANNER_PARAMS_VERSION{20210531};
+    int scanner_params_version{SCANNER_PARAMS_VERSION};
+    void check_version() { assert(this->scanner_params_version == SCANNER_PARAMS_VERSION); }
 
-    typedef std::map<std::string,std::string> PrintOptions;
-    static print_mode_t getPrintMode(const PrintOptions &po){
+    typedef std::map<std::string, std::string> PrintOptions;
+    static print_mode_t getPrintMode(const PrintOptions& po) {
         PrintOptions::const_iterator p = po.find("print_mode_t");
-        if(p != po.end()){
-            if(p->second=="MODE_NONE") return MODE_NONE;
-            if(p->second=="MODE_HEX") return MODE_HEX;
-            if(p->second=="MODE_RAW") return MODE_RAW;
-            if(p->second=="MODE_HTTP") return MODE_HTTP;
+        if (p != po.end()) {
+            if (p->second == "MODE_NONE") return MODE_NONE;
+            if (p->second == "MODE_HEX") return MODE_HEX;
+            if (p->second == "MODE_RAW") return MODE_RAW;
+            if (p->second == "MODE_HTTP") return MODE_HTTP;
         }
         return MODE_NONE;
     }
-    static void setPrintMode(PrintOptions &po,int mode){
-        switch(mode){
+    static void setPrintMode(PrintOptions& po, int mode) {
+        switch (mode) {
         default:
-        case MODE_NONE:po["print_mode_t"]="MODE_NONE";return;
-        case MODE_HEX:po["print_mode_t"]="MODE_HEX";return;
-        case MODE_RAW:po["print_mode_t"]="MODE_RAW";return;
-        case MODE_HTTP:po["print_mode_t"]="MODE_HTTP";return;
+        case MODE_NONE: po["print_mode_t"] = "MODE_NONE"; return;
+        case MODE_HEX: po["print_mode_t"] = "MODE_HEX"; return;
+        case MODE_RAW: po["print_mode_t"] = "MODE_RAW"; return;
+        case MODE_HTTP: po["print_mode_t"] = "MODE_HTTP"; return;
         }
     }
 
@@ -151,7 +143,8 @@ struct scanner_params {
         PHASE_INIT,    // called in main thread when scanner loads
         PHASE_ENABLED, // enable/disable commands called
         PHASE_SCAN,    // called in worker thread for every ENABLED scanner to scan an sbuf
-        PHASE_SHUTDOWN // called in main thread for every ENABLED scanner when scanner is shutting down. Allows XML closing.
+        PHASE_SHUTDOWN // called in main thread for every ENABLED scanner when scanner is shutting down. Allows XML
+                       // closing.
     };
 
     /*
@@ -159,31 +152,25 @@ struct scanner_params {
      *
      * Scanner_params are made whenever a scanner needs to be called. These constructors cover all of those cases.
      */
-    scanner_params(const scanner_params &)=delete;
-    scanner_params &operator=(const scanner_params &)=delete;
-
+    scanner_params(const scanner_params&) = delete;
+    scanner_params& operator=(const scanner_params&) = delete;
 
     /* A scanner params with all of the instance variables, typically for scanning  */
-    scanner_params(class scanner_set &ss_, phase_t phase_, const sbuf_t *sbuf_,
-                   PrintOptions print_options_, std::stringstream *xmladd):
-        ss(ss_),phase(phase_),sbuf(sbuf_),print_options(print_options_),sxml(xmladd){ }
+    scanner_params(class scanner_set& ss_, phase_t phase_, const sbuf_t* sbuf_, PrintOptions print_options_,
+                   std::stringstream* xmladd)
+        : ss(ss_), phase(phase_), sbuf(sbuf_), print_options(print_options_), sxml(xmladd) {}
 
     /* User-servicable parts; these are here for scanners */
     virtual ~scanner_params(){};
-    virtual feature_recorder &named_feature_recorder(const std::string feature_recorder_name) const;
+    virtual feature_recorder& named_feature_recorder(const std::string feature_recorder_name) const;
 
     /** Construct a scanner_params for recursion from an existing sp and a new sbuf.
      * Defaults to phase1.
      * This is the complicated one!
      */
-    scanner_params(const scanner_params &sp_existing, const sbuf_t *sbuf_new):
-        ss(sp_existing.ss),
-        phase(sp_existing.phase),
-        sbuf(sbuf_new),
-        print_options(sp_existing.print_options),
-        depth(sp_existing.depth+1),
-        sxml(sp_existing.sxml)
-        { };
+    scanner_params(const scanner_params& sp_existing, const sbuf_t* sbuf_new)
+        : ss(sp_existing.ss), phase(sp_existing.phase), sbuf(sbuf_new), print_options(sp_existing.print_options),
+          depth(sp_existing.depth + 1), sxml(sp_existing.sxml){};
 #if 0
     /* A scanner params with no print options */
     scanner_params(phase_t phase_, const sbuf_t &sbuf_, class feature_recorder_set &fs_):
@@ -194,23 +181,21 @@ struct scanner_params {
                    std::stringstream *xmladd):
         phase(phase_),sbuf(sbuf_),fs(fs_),sxml(xmladd){ }
 
-
 #endif
 
-    class scanner_set           &ss;           // the scanner set calling this scanner. Includes the scanner_config and feature_
-    scanner_info                *info {nullptr}; // filled in by callback in PHASE_INIT
-    const phase_t               phase {};         // what scanner should do
-    const sbuf_t                *sbuf {nullptr};         // what to scan / only valid in SCAN_PHASE
-    PrintOptions                print_options {}; // how to print. Default is that there are no options
-    const uint32_t              depth {0};     //  how far down are we? / only valid in SCAN_PHASE
-    std::stringstream           *sxml{};       //  on scanning and shutdown: CDATA added to XML stream if provided
+    class scanner_set& ss;        // the scanner set calling this scanner. Includes the scanner_config and feature_
+    scanner_info* info{nullptr};  // filled in by callback in PHASE_INIT
+    const phase_t phase{};        // what scanner should do
+    const sbuf_t* sbuf{nullptr};  // what to scan / only valid in SCAN_PHASE
+    PrintOptions print_options{}; // how to print. Default is that there are no options
+    const uint32_t depth{0};      //  how far down are we? / only valid in SCAN_PHASE
+    std::stringstream* sxml{};    //  on scanning and shutdown: CDATA added to XML stream if provided
     std::filesystem::path const get_input_fname() const; // not sure why this is needed?
 
-    virtual void recurse(sbuf_t *sbuf) const; // recursive call by scanner
-
+    virtual void recurse(sbuf_t* sbuf) const; // recursive call by scanner
 };
 
-inline std::ostream & operator <<(std::ostream &os,const scanner_params &sp){
+inline std::ostream& operator<<(std::ostream& os, const scanner_params& sp) {
     os << "scanner_params(" << sp.sbuf << ")";
     return os;
 };

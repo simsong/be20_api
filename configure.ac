@@ -33,6 +33,9 @@ AC_LANG_PUSH(C++)
 AX_CXX_COMPILE_STDCXX([17], [noext], [mandatory])
 AC_LANG_POP()
 
+# Add macro for clang-tidy
+CPPFLAGS="$CPPFLAGS -DCMAKE_EXPORT_COMPILE_COMMANDS=ON"
+
 # Turn on all warnings
 m4_include([m4/slg_gcc_all_warnings.m4])
 

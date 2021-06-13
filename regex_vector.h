@@ -10,12 +10,12 @@
 
 #include <cassert>
 #include <cstring>
-#include <string>
-#include <iostream>
 #include <fstream>
-#include <vector>
-#include <set>
+#include <iostream>
 #include <regex>
+#include <set>
+#include <string>
+#include <vector>
 
 /**
  * The regex_vector is a vector of character regexes with a few additional convenience functions.
@@ -23,21 +23,21 @@
  */
 class regex_vector {
     std::vector<std::string> regex_strings; // the original regex strings
-    std::vector<std::regex>  regex_chars;
-    regex_vector(const regex_vector &) = delete;
-    regex_vector &operator=(const regex_vector &) = delete;
+    std::vector<std::regex> regex_chars;
+    regex_vector(const regex_vector&) = delete;
+    regex_vector& operator=(const regex_vector&) = delete;
 
- public:
-    regex_vector():regex_strings(),regex_chars(){};
+public:
+    regex_vector() : regex_strings(), regex_chars(){};
     // is this a regular expression with meta characters?
-    static bool has_metachars(const std::string &str);
-    const std::string regex_engine();                // which engine is in use
+    static bool has_metachars(const std::string& str);
+    const std::string regex_engine(); // which engine is in use
 
     /* Add a string */
-    void push_back( const std::string &val) {
+    void push_back(const std::string& val) {
         regex_strings.push_back(val);
         regex_chars.push_back(std::regex(val, std::regex_constants::icase));
-        assert( regex_strings.size() == regex_chars.size() );
+        assert(regex_strings.size() == regex_chars.size());
     }
 
     auto size() { return regex_chars.size(); }
@@ -46,7 +46,7 @@ class regex_vector {
      * Read regular expressions from a file: returns 0 if successful, -1 if failure.
      * @param fname - the file to read.
      */
-    int  readfile(const std::string &fname); // read a file of regexes, one per line
+    int readfile(const std::string& fname); // read a file of regexes, one per line
 
     /** Run Return true if any of the regexes match.
      * search_all() is threadsafe.
@@ -54,10 +54,11 @@ class regex_vector {
      * *found - set to the found string if something is found.
      */
 
-    bool search_all(const std::string &probe, std::string *found, size_t *offset=nullptr, size_t *len=nullptr) const;
-    void dump(std::ostream &os) const;
+    bool search_all(const std::string& probe, std::string* found, size_t* offset = nullptr,
+                    size_t* len = nullptr) const;
+    void dump(std::ostream& os) const;
 };
 
-std::ostream & operator << (std::ostream &os, const class regex_vector &rv);
+std::ostream& operator<<(std::ostream& os, const class regex_vector& rv);
 
 #endif

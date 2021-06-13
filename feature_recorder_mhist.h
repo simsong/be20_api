@@ -9,7 +9,7 @@
  */
 
 /* in-memory histograms */
-typedef atomic_histogram<std::string,uint64_t> mhistogram_t;             // memory histogram
-typedef std::map<histogram_def,mhistogram_t *> mhistograms_t;
+typedef atomic_histogram<std::string, uint64_t> mhistogram_t; // memory histogram
+typedef std::map<histogram_def, mhistogram_t*> mhistograms_t;
 
-static constexpr int MAX_HISTOGRAM_FILES = 10;  // don't make more than 10 files in low-memory conditions
+static constexpr int MAX_HISTOGRAM_FILES = 10; // don't make more than 10 files in low-memory conditions
