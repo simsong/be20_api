@@ -93,7 +93,7 @@ public:
     } flags{};
 
     const unsigned int depth() const { return pos0.depth; }
-    const uint8_t* getbuf();       // returns the buffer UNSAFE but trackable. Enable DEBUG_SBUF_GETBUF to print on each
+    const uint8_t* get_buf() const;       // returns the buffer UNSAFE but trackable. Enable DEBUG_SBUF_GETBUF to print on each
     /****************************************************************
      *** Allocators that allocate from memory not already in an sbuf.
      ****************************************************************/

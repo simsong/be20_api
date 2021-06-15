@@ -68,6 +68,11 @@ sbuf_t::~sbuf_t()
     sbuf_count -= 1;
 }
 
+const uint8_t* sbuf_t::get_buf() const
+{
+    return buf;
+}
+
 void sbuf_t::add_child(const sbuf_t& child) const
 {
     children   += 1;

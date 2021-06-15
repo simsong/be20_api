@@ -459,7 +459,7 @@ TEST_CASE("write_features", "[feature_recorder_set]") {
         fr.write(p + 10, "two", "context");
 
         const sbuf_t* sb16 = hello16_sbuf();
-        REQUIRE(sb16->size()+1 == strlen(hello8) * 2);
+        REQUIRE(sb16->size()-1 == strlen(hello8) * 2); // -1 to remove the \000
         delete sb16;
     }
 #if 0
