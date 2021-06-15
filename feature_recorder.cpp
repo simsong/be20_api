@@ -458,7 +458,7 @@ std::string feature_recorder::carve(const sbuf_t& header, const sbuf_t& data, st
 }
 
 const std::string feature_recorder::hash(const sbuf_t& sbuf) const {
-    return (*fs.hasher.func)(reinterpret_cast<const uint8_t*>(sbuf.buf), sbuf.bufsize);
+    return sbuf.hash(fs.hasher.func);
 }
 
 void feature_recorder::shutdown() {}

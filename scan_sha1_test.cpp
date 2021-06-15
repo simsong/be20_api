@@ -41,7 +41,7 @@ void scan_sha1_test(struct scanner_params& sp) {
     }
 
     if (sp.phase == scanner_params::PHASE_SCAN) {
-        auto hexdigest = dfxml::sha1_generator::hash_buf(sp.sbuf->buf, sp.sbuf->bufsize).hexdigest();
+        auto hexdigest = sp.sbuf->hash();
 
         /* Perhaps we want to cache getting the recorders? */
         feature_recorder& sha1_recorder = sp.named_feature_recorder("sha1_bufs");

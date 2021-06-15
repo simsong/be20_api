@@ -95,7 +95,7 @@ public:
     virtual std::filesystem::path get_outdir() const { return sc.outdir; }
 
     /* the feature recorder set automatically hashes all of the sbuf's that it processes. */
-    typedef std::string (*hash_func_t)(const uint8_t* buf, const size_t bufsize);
+    typedef std::string (*hash_func_t)(const uint8_t* buf, size_t bufsize);
     struct hash_def {
         hash_def(std::string name_, hash_func_t func_) : name(name_), func(func_){};
         std::string name; // name of hash

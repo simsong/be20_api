@@ -107,11 +107,10 @@ std::filesystem::path tests_dir() {
 const char* hello8 = "Hello world!";
 const char* hello_sha1 = "d3486ae9136e7856bc42212385ea797094475802";
 
-const char* hello16 = "H\000e\000l\000l\000o\000 \000w\000o\000r\000l\000d\000!\000";
-const uint8_t* hello16_buf = reinterpret_cast<const uint8_t*>(hello16);
+const uint8_t hello16[] = {"H\000e\000l\000l\000o\000 \000w\000o\000r\000l\000d\000!\000"};
 const sbuf_t* hello16_sbuf() {
     pos0_t p0("hello16");
-    return new sbuf_t(p0, hello16_buf, strlen(hello8) * 2, strlen(hello8) * 2, 0, false, false, false);
+    return sbuf_t::sbuf_new(p0, hello16, sizeof(hello16), sizeof(hello16));
 }
 
 /* Read all of the lines of a file and return them as a vector */
@@ -401,10 +400,11 @@ TEST_CASE("fname in outdir", "[feature_recorder]") {
     REQUIRE( sbuf1.asString() == std::string("Hello World!\n"));
     REQUIRE( sbuf1.children == 0 );
     {
-        auto sbuf1c = sbuf1+1;
-        REQUIRE( sbuf1c.asString() == std::string("ello World!\n"));
+        auto sbuf1c = sbuf1.subsbuf(1);
         REQUIRE( sbuf1.children == 1 );
-        REQUIRE( sbuf1c.children == 0 );
+        REQUIRE( sbuf1c->asString() == std::string("ello World!\n"));
+        REQUIRE( sbuf1c->children == 0 );
+        delete sbuf1c;
     }
     REQUIRE( sbuf1.children == 0 );
 
@@ -459,7 +459,7 @@ TEST_CASE("write_features", "[feature_recorder_set]") {
         fr.write(p + 10, "two", "context");
 
         const sbuf_t* sb16 = hello16_sbuf();
-        REQUIRE(sb16->size() == strlen(hello8) * 2);
+        REQUIRE(sb16->size()+1 == strlen(hello8) * 2);
         delete sb16;
     }
 #if 0
@@ -603,7 +603,7 @@ TEST_CASE("hello_sbuf", "[sbuf]") {
 
     REQUIRE(sb2.getline(pos, line_start, line_len) == false);
 
-    sbuf_t* sb3 = sb1.sbuf_malloc(6, 5);
+    sbuf_t* sb3 = sb1.subsbuf(6, 5);
     REQUIRE(sb3->asString() == "world");
     delete sb3;
 }

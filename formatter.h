@@ -5,8 +5,8 @@
 
 class Formatter {
 public:
-    Formatter() {}
-    ~Formatter() {}
+    Formatter() {};
+    ~Formatter() {};
 
     template <typename Type> Formatter& operator<<(const Type& value) {
         stream_ << value;
@@ -21,7 +21,6 @@ public:
 
 private:
     std::stringstream stream_{};
-
     Formatter(const Formatter&);
     Formatter& operator=(Formatter&);
 };

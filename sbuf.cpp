@@ -11,7 +11,6 @@
 #include <filesystem>
 
 #include "sbuf.h"
-//#include "bulk_extractor_i.h"
 #include "dfxml/src/hash_t.h"
 #include "formatter.h"
 #include "unicode_escape.h"
@@ -27,75 +26,172 @@
 #define O_BINARY 0
 #endif
 
+/* Keep track of how many sbufs we have */
+std::atomic<int> sbuf_t::sbuf_count = 0;
+
+sbuf_t::sbuf_t()
+{
+
+}
+
+/* Core allocator used by all others */
+sbuf_t::sbuf_t(pos0_t pos0_, uint64_t page_number_, const sbuf_t *parent_,
+               const uint8_t* buf_, size_t bufsize_, size_t pagesize_,
+               int fd_, flags_t flags_):
+    pos0(pos0_), page_number(page_number_),
+    bufsize(bufsize_), pagesize(pagesize_),
+    flags(flags_), fd(fd_), parent(parent_), buf(buf_)
+{
+    if (parent) {
+        parent->add_child(*this);
+    }
+    sbuf_count += 1;
+}
+
+sbuf_t::~sbuf_t()
+{
+    if (children != 0) {
+        std::runtime_error(Formatter() << "sbuf.cpp: error: sbuf children=" << children);
+    }
+    if (parent) parent->del_child(*this);
+    if (fd>0) {
+#ifdef HAVE_MMAP
+        munmap((void*)buf, bufsize);
+#else
+        std::runtime_error(Formatter() << "sbuf.cpp: fd>0 and HAVE_MMAP is not defined");
+#endif
+        ::close(fd);
+    }
+    if (malloced != nullptr) {
+        free( malloced );
+    }
+    sbuf_count -= 1;
+}
+
+void sbuf_t::add_child(const sbuf_t& child) const
+{
+    children   += 1;
+    references += 1;
+}
+
+void sbuf_t::del_child(const sbuf_t& child) const
+{
+    children   -= 1;
+    assert(children >= 0);
+    references -= 1;
+    // I'm not sure how to delete us when there are no children left. Perhaps we could be added to a list to be wiped?
+    //dereference();                      // child no longer has my reference
+}
+
+#if 0
+void sbuf_t::dereference()
+{
+    references--;
+    if (references==0) {
+        delete this;
+    }
+}
+#endif
+
+/****************************************************************
+ ** Allocators.
+ ****************************************************************/
+
+
+/* a new sbuf with the data from one but the pos from another. */
+sbuf_t* sbuf_t::sbuf_new(const pos0_t& pos0_, const uint8_t* buf_, size_t bufsize_, size_t pagesize_)
+{
+    return new sbuf_t(pos0_, 0, nullptr, // pos0, page_number, parent
+                      buf_, bufsize_, pagesize_, // buf, bufsize, pagesize
+                      NO_FD, flags_t()); // fd, flags
+}
+
+
+/** Allocate a subset of an sbuf's memory to a child sbuf.
+ * from within an existing sbuf.
+ * The allocated buf MUST be freed before the parent, since no copy is
+ * made...
+ */
+sbuf_t *sbuf_t::subsbuf(size_t off, size_t len) const
+{
+    if (off > bufsize) throw range_exception_t(); // check to make sure off is in the buffer
+    if (off+len > bufsize) throw range_exception_t(); // check to make sure off+len is in the buffer
+
+    size_t new_pagesize = pagesize;
+    if (off > pagesize) {
+        new_pagesize -= off;            // we only have this much left
+    }
+    if (new_pagesize > len) {
+        new_pagesize = len;             // we only have this much left
+    }
+
+
+    return new sbuf_t(pos0 + off, page_number, highest_parent(),
+                      buf + off, len, new_pagesize,
+                      NO_FD, flags_t());
+}
+
+sbuf_t *sbuf_t::subsbuf(size_t off) const
+{
+    return subsbuf(off, bufsize - off);
+}
+
+
 /**
  *  Map a file; falls back to read if mmap is not available
  */
-// const std::string sbuf_t::U10001C("\xf4\x80\x80\x9c");
 std::string sbuf_t::map_file_delimiter(sbuf_t::U10001C);
-sbuf_t* sbuf_t::map_file(const std::filesystem::path fname) {
-    int fd = open(fname.c_str(), O_RDONLY | O_BINARY, 0);
-    if (fd < 0) { throw std::filesystem::filesystem_error(fname, std::error_code(errno, std::generic_category())); }
-    return sbuf_t::map_file(fname, fd, true);
-}
 
 /* Map a file when we are given an open fd.
  * The fd is not closed when the file is unmapped.
  * If there is no mmap, just allocate space and read the file
  */
 
-sbuf_t* sbuf_t::map_file(const std::filesystem::path fname, int fd, bool should_close) {
+sbuf_t* sbuf_t::map_file(const std::filesystem::path fname) {
+    flags_t flags;
     struct stat st;
-    if (fstat(fd, &st)) {
-        close(fd);
+    int mfd = ::open(fname.c_str(), O_RDONLY);
+    if (fstat(mfd, &st)) {
+        close(mfd);
         throw std::filesystem::filesystem_error("fstat", std::error_code(errno, std::generic_category()));
     }
 
 #ifdef HAVE_MMAP
-    uint8_t* buf = (uint8_t*)mmap(0, st.st_size, PROT_READ, MAP_FILE | MAP_SHARED, fd, 0);
-    bool should_free = false;
-    bool should_unmap = true;
+    uint8_t* mbuf = (uint8_t*)mmap(0, st.st_size, PROT_READ, MAP_FILE | MAP_SHARED, mfd, 0);
 #else
-    uint8_t* buf = (uint8_t*)malloc(st.st_size);
-    if (buf == 0) { /* malloc failed */
+    mmalloced = malloc(st.st_size);
+    if (mmalloced == nullptr) { /* malloc failed */
         return 0;
     }
-    lseek(fd, 0, SEEK_SET); // go to beginning of file
-    size_t r = (size_t)read(fd, (void*)buf, st.st_size);
+    uint8_t* mbuf = reinterpret_cast<uint8_t*>(malloced);
+    lseek(mfd, 0, SEEK_SET); // go to beginning of file
+    size_t r = (size_t)read(mfd, (void*)mbuf, st.st_size);
     if (r != (size_t)st.st_size) {
-        free((void*)buf); /* read failed */
+        free(malloced); /* read failed */
         return 0;
     }
-    close(fd);
-    fd = 0;
-    bool should_free = true;
-    bool should_unmap = false;
+    close(mfd);
+    mfd = NO_FD;
 #endif
-    return new sbuf_t(pos0_t(fname.string() + sbuf_t::map_file_delimiter), buf,
-                      st.st_size, // bufsize
-                      st.st_size, // pagesize
-                      fd,         // fd
-                      should_unmap, should_free, should_close);
+    return new sbuf_t(pos0_t(fname.string() + sbuf_t::map_file_delimiter), 0, nullptr,
+                      mbuf, st.st_size, st.st_size,
+                      mfd, flags);
 }
 
-/*
- * Allocate a new sbuf with a malloc and copy of the buffer
- */
-sbuf_t* sbuf_t::sbuf_malloc(size_t offset, size_t len) const {
-    if (offset > bufsize) offset = bufsize; // if offset is past the end of the buffer, put it at the end of the buffer
-    if (offset + len > bufsize) len = (bufsize - offset); // if the length plus the offset is to big, bring it in
-    u_char* nbuf = (u_char*)malloc(len);
-    if (buf == 0) { throw std::bad_alloc(); }
-    memcpy(nbuf, buf + offset, len);
-    return new sbuf_t(pos0 + offset, nbuf, len, len, 0, false, true, false);
-}
 
 /*
- * Returns self or the highest parent of self, whichever is higher
+ * Allocate a new sbuf with a malloc and return a writable buffer.
+ * In the future we will add guard bytes. Byte 0 is at pos0.
+ * There's no parent, because this sbuf owns the memory.
  */
-const sbuf_t* sbuf_t::highest_parent() const {
-    const sbuf_t* hp = this;
-    while (hp->parent != 0) { hp = hp->parent; }
-    return hp;
+sbuf_t* sbuf_t::sbuf_malloc(pos0_t pos0_, size_t len_)
+{
+    void *new_malloced = malloc(len_);
+    sbuf_t *ret = new sbuf_t(pos0_, 0, nullptr,
+                             reinterpret_cast<const uint8_t *>(new_malloced), len_, len_,
+                             NO_FD, flags_t());
+    ret->malloced = new_malloced;
+    return ret;
 }
 
 /**
@@ -220,40 +316,6 @@ void sbuf_t::hex_dump(std::ostream& os) const { hex_dump(os, 0, bufsize); }
 #define NSRL_HEXBUF_SPACE4 0x04
 #endif
 
-static int hexcharvals[256] = {-1, 0};
-static const char* hexbuf(char* dst, int dst_len, const unsigned char* bin, int bytes, int flag) {
-    int charcount = 0;
-    const char* start = dst; // remember where the start of the string is
-    const char* fmt = (flag & NSRL_HEXBUF_UPPERCASE) ? "%02X" : "%02x";
-
-    if (hexcharvals[0] == -1) {
-        /* Need to initialize this */
-        for (int i = 0; i < 256; i++) { hexcharvals[i] = 0; }
-        for (int i = 0; i < 10; i++) { hexcharvals['0' + i] = i; }
-        for (int i = 10; i < 16; i++) {
-            hexcharvals['A' + i - 10] = i;
-            hexcharvals['a' + i - 10] = i;
-        }
-    }
-
-    *dst = 0; // begin with null termination
-    while (bytes > 0 && dst_len > 3) {
-        sprintf(dst, fmt, *bin); // convert the next byte
-        dst += 2;
-        bin += 1;
-        dst_len -= 2;
-        bytes--;
-        charcount++; // how many characters
-
-        if ((flag & NSRL_HEXBUF_SPACE2) || ((flag & NSRL_HEXBUF_SPACE4) && charcount % 2 == 0)) {
-            *dst++ = ' ';
-            *dst = '\000';
-            dst_len -= 1;
-        }
-    }
-    return start; // return the start
-}
-
 /* Determine if the sbuf consists of a repeating ngram */
 size_t sbuf_t::find_ngram_size(const size_t max_ngram) const {
     for (size_t ngram_size = 1; ngram_size < max_ngram; ngram_size++) {
@@ -266,17 +328,60 @@ size_t sbuf_t::find_ngram_size(const size_t max_ngram) const {
     return 0; // no ngram size
 }
 
+bool sbuf_t::getline(size_t& pos, size_t& line_start, size_t& line_len) const
+{
+    /* Scan forward until pos is at the beginning of a line */
+    if (pos >= this->pagesize) return false;
+    if (pos > 0) {
+        while ((pos < this->pagesize) && (*this)[pos - 1] != '\n') { ++(pos); }
+        if (pos >= this->pagesize) return false; // didn't find another start of a line
+    }
+    line_start = pos;
+    /* Now scan to end of the line, or the end of the buffer */
+    while (++pos < this->pagesize) {
+        if ((*this)[pos] == '\n') { break; }
+    }
+    line_len = (pos - line_start);
+    return true;
+}
+
+ssize_t sbuf_t::find(uint8_t ch, size_t start) const
+{
+    for (; start < pagesize; start++) {
+        if (buf[start] == ch) return start;
+    }
+    return -1;
+}
+
+ssize_t sbuf_t::find(const char* str, size_t start ) const
+{
+    if (str[0] == 0) return -1; // nothing to search for
+
+    for (; start < pagesize; start++) {
+        const uint8_t* p = (const uint8_t*)memchr(buf + start, str[0], bufsize - start);
+        if (p == 0) return -1; // first character not present,
+        size_t loc = p - buf;
+        for (size_t i = 0; loc + i < bufsize && str[i]; i++) {
+            if (buf[loc + i] != str[i]) break;
+            if (str[i + 1] == 0) return loc; // next char is null, so we are found!
+        }
+        start = loc + 1; // advance to character after found character
+    }
+    return -1;
+}
+
 std::ostream& operator<<(std::ostream& os, const sbuf_t& t) {
-    char hex_str[17];
-    char ascii_str[9];
-
-    hexbuf(hex_str, sizeof(hex_str), t.buf, 8, 0);
-    for (size_t i = 0; i < sizeof(ascii_str) - 1; i++) { ascii_str[i] = isprint(t.get8u(i)) ? t.get8u(i) : '.'; }
-    ascii_str[sizeof(ascii_str) - 1] = '\000';
-
     os << "sbuf[page_number=" << t.page_number << " pos0=" << t.pos0 << " "
-       << "buf[0..8]=0x" << hex_str << "= \"" << ascii_str << "\""
-       << " bufsize=" << t.bufsize << " pagesize=" << t.pagesize << "]";
+       << "buf[0..8]=0x";
+
+    for (size_t i=0; i < std::min( 8UL, t.bufsize); i++){
+        os << hexch(t[i]);
+    }
+    os << "= \"" ;
+    for (size_t i=0; i < std::min( 8UL, t.bufsize); i++){
+        os << t[i];
+    }
+    os << "\" bufsize=" << t.bufsize << " pagesize=" << t.pagesize << "]";
     return os;
 }
 
@@ -422,4 +527,9 @@ std::string sbuf_t::hash() const {
         hash_ = dfxml::sha1_generator::hash_buf(buf, bufsize).hexdigest();
     }
     return hash_;
+}
+
+/* Similar to above, but does not cache */
+std::string sbuf_t::hash(hash_func_t func) const {
+    return func(buf, bufsize);
 }

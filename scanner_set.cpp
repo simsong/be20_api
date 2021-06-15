@@ -462,10 +462,9 @@ void scanner_set::process_sbuf(class sbuf_t* sbufp) {
         /* Determine if we have seen this buffer before */
         bool seen_before = check_previously_processed(sbuf);
         if (seen_before) {
-            dfxml::sha1_t sha1 = dfxml::sha1_generator::hash_buf(sbuf.buf, sbuf.bufsize);
             std::stringstream ss;
             ss << "<buflen>" << sbuf.bufsize << "</buflen>";
-            if (dup_data_alerts) { fs.get_alert_recorder().write(sbuf.pos0, "DUP SBUF " + sha1.hexdigest(), ss.str()); }
+            if (dup_data_alerts) { fs.get_alert_recorder().write(sbuf.pos0, "DUP SBUF " + sbuf.hash(), ss.str()); }
             dup_bytes_encountered += sbuf.bufsize;
         }
 
@@ -560,7 +559,7 @@ void scanner_set::process_sbuf(class sbuf_t* sbufp) {
     return;
 }
 
-std::string scanner_set::hash(const sbuf_t& sbuf) const { return fs.hasher.func(sbuf.buf, sbuf.bufsize); }
+std::string scanner_set::hash(const sbuf_t& sbuf) const { return sbuf.hash(fs.hasher.func); }
 
 /**
  * Process a pcap packet.
