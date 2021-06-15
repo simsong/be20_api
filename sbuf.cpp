@@ -29,9 +29,9 @@
 /* Keep track of how many sbufs we have */
 std::atomic<int> sbuf_t::sbuf_count = 0;
 
+/* Make an empty sbuf */
 sbuf_t::sbuf_t()
 {
-
 }
 
 /* Core allocator used by all others */
@@ -47,6 +47,19 @@ sbuf_t::sbuf_t(pos0_t pos0_, uint64_t page_number_, const sbuf_t *parent_,
     }
     sbuf_count += 1;
 }
+
+// start at offset and get the rest of the sbuf as a child
+sbuf_t::sbuf_t(const sbuf &src, size_t offset)
+{
+TODO
+}
+
+// start at offset and get the rest of the sbuf as a child, but only for this fa
+sbuf_t::sbuf_t(const sbuf &src, size_t offset, size_t len);
+{
+TODO
+}
+
 
 sbuf_t::~sbuf_t()
 {

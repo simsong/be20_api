@@ -104,8 +104,10 @@ public:
      * This should probably be a subclass mutable_sbuf_t() for clarity.
      */
 
-    /* We occasionally require an empty sbuf. */
-    explicit sbuf_t();
+
+    explicit sbuf_t();    // We occasionally require an empty sbuf.
+    explicit sbuf_t(const sbuf &src, size_t offset); // start at offset and get the rest of the sbuf as a child
+    explicit sbuf_t(const sbuf &src, size_t offset, size_t len); // start at offset and get the rest of the sbuf as a child, but only for this fa
 
     /* Allocate from an existing buffer, automatically calling free(buf_)
      * when the sbuf is deleted.
@@ -116,7 +118,7 @@ public:
      * Throws std::bad_alloc() if memory is not available.
      * Use malloc_buf() to get the buffer.
      */
-    static sbuf_t* sbuf_malloc(const pos0_t& pos0_, size_t len_ );
+    static sbuf_t* sbuf_malloc(const pos0_t pos0_, size_t len_ );
     uint8_t *malloc_buf() const;
 
     /****************************************************************
@@ -181,10 +183,6 @@ public:
     inline static const std::string U10001C = "\xf4\x80\x80\x9c"; // default delimeter character in bulk_extractor
     static std::string map_file_delimiter;                        // character placed
     static void set_map_file_delimiter(const std::string new_delim) { map_file_delimiter = new_delim; }
-
-    /* Allocate a bunch of memory with malloc and buf[0] having the address of pos0.
-     */
-    static sbuf_t* sbuf_malloc(pos0_t pos0, size_t len);
 
     /* Allocate an sbuf from a null-terminated string. Used exclusively for debugging and unit-tests.
      */
