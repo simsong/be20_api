@@ -106,10 +106,9 @@ public:
 
     explicit sbuf_t();    // We occasionally require an empty sbuf.
     explicit sbuf_t(const sbuf_t &src, size_t offset); // start at offset and get the rest of the sbuf as a child
-    explicit sbuf_t(const sbuf_t &src, size_t offset, size_t len); // start at offset and get the rest of the sbuf as a child, but only for this fa
+    explicit sbuf_t(const sbuf_t &src, size_t offset, size_t len); // start at offset for a given len
 
-    /* Allocate from an existing buffer, automatically calling free(buf_)
-     * when the sbuf is deleted.
+    /* Allocate from an existing buffer, automatically calling free(buf_) when the sbuf is deleted.
      */
     static sbuf_t* sbuf_new(const pos0_t pos0_, const uint8_t* buf_, size_t bufsize_, size_t pagesize_);
 
@@ -393,7 +392,8 @@ public:
     /**
      * \name string readers
      * @{
-     * These get functions safely read string
+     * These get functions safely read string.
+     * TODO: rework them so that they return the utf8_string, rather than modifying what's called.
      */
     void getUTF8(size_t i, size_t num_octets_requested, std::string& utf8_string) const;
     void getUTF8(size_t i, std::string& utf8_string) const;
