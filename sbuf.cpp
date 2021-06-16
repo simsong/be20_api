@@ -35,29 +35,16 @@ sbuf_t::sbuf_t()
 }
 
 /* Core allocator used by all others */
-sbuf_t::sbuf_t(pos0_t pos0_, uint64_t page_number_, const sbuf_t *parent_,
+sbuf_t::sbuf_t(pos0_t pos0_, const sbuf_t *parent_,
                const uint8_t* buf_, size_t bufsize_, size_t pagesize_,
                int fd_, flags_t flags_):
-    pos0(pos0_), page_number(page_number_),
-    bufsize(bufsize_), pagesize(pagesize_),
+    pos0(pos0_), bufsize(bufsize_), pagesize(pagesize_),
     flags(flags_), fd(fd_), parent(parent_), buf(buf_)
 {
     if (parent) {
         parent->add_child(*this);
     }
     sbuf_count += 1;
-}
-
-// start at offset and get the rest of the sbuf as a child
-sbuf_t::sbuf_t(const sbuf &src, size_t offset)
-{
-TODO
-}
-
-// start at offset and get the rest of the sbuf as a child, but only for this fa
-sbuf_t::sbuf_t(const sbuf &src, size_t offset, size_t len);
-{
-TODO
 }
 
 
@@ -117,9 +104,9 @@ void sbuf_t::dereference()
 
 
 /* a new sbuf with the data from one but the pos from another. */
-sbuf_t* sbuf_t::sbuf_new(const pos0_t& pos0_, const uint8_t* buf_, size_t bufsize_, size_t pagesize_)
+sbuf_t* sbuf_t::sbuf_new(pos0_t pos0_, const uint8_t* buf_, size_t bufsize_, size_t pagesize_)
 {
-    return new sbuf_t(pos0_, 0, nullptr, // pos0, page_number, parent
+    return new sbuf_t(pos0_, nullptr, // pos0, parent
                       buf_, bufsize_, pagesize_, // buf, bufsize, pagesize
                       NO_FD, flags_t()); // fd, flags
 }
@@ -130,7 +117,7 @@ sbuf_t* sbuf_t::sbuf_new(const pos0_t& pos0_, const uint8_t* buf_, size_t bufsiz
  * The allocated buf MUST be freed before the parent, since no copy is
  * made...
  */
-sbuf_t *sbuf_t::subsbuf(size_t off, size_t len) const
+sbuf_t *sbuf_t::new_slice(size_t off, size_t len) const
 {
     if (off > bufsize) throw range_exception_t(); // check to make sure off is in the buffer
     if (off+len > bufsize) throw range_exception_t(); // check to make sure off+len is in the buffer
@@ -143,15 +130,37 @@ sbuf_t *sbuf_t::subsbuf(size_t off, size_t len) const
         new_pagesize = len;             // we only have this much left
     }
 
-
-    return new sbuf_t(pos0 + off, page_number, highest_parent(),
+    return new sbuf_t(pos0 + off, highest_parent(),
                       buf + off, len, new_pagesize,
                       NO_FD, flags_t());
 }
 
-sbuf_t *sbuf_t::subsbuf(size_t off) const
+sbuf_t sbuf_t::slice(size_t off, size_t len) const
 {
-    return subsbuf(off, bufsize - off);
+    if (off > bufsize) throw range_exception_t(); // check to make sure off is in the buffer
+    if (off+len > bufsize) throw range_exception_t(); // check to make sure off+len is in the buffer
+
+    size_t new_pagesize = pagesize;
+    if (off > pagesize) {
+        new_pagesize -= off;            // we only have this much left
+    }
+    if (new_pagesize > len) {
+        new_pagesize = len;             // we only have this much left
+    }
+
+    return sbuf_t(pos0 + off, highest_parent(),
+                      buf + off, len, new_pagesize,
+                      NO_FD, flags_t());
+}
+
+sbuf_t *sbuf_t::new_slice(size_t off) const
+{
+    return new_slice(off, bufsize - off);
+}
+
+sbuf_t sbuf_t::slice(size_t off) const
+{
+    return slice(off, bufsize - off);
 }
 
 
@@ -191,7 +200,7 @@ sbuf_t* sbuf_t::map_file(const std::filesystem::path fname) {
     close(mfd);
     mfd = NO_FD;
 #endif
-    return new sbuf_t(pos0_t(fname.string() + sbuf_t::map_file_delimiter), 0, nullptr,
+    return new sbuf_t(pos0_t(fname.string() + sbuf_t::map_file_delimiter), nullptr,
                       mbuf, st.st_size, st.st_size,
                       mfd, flags);
 }
@@ -205,7 +214,7 @@ sbuf_t* sbuf_t::map_file(const std::filesystem::path fname) {
 sbuf_t* sbuf_t::sbuf_malloc(pos0_t pos0_, size_t len_)
 {
     void *new_malloced = malloc(len_);
-    sbuf_t *ret = new sbuf_t(pos0_, 0, nullptr,
+    sbuf_t *ret = new sbuf_t(pos0_, nullptr,
                              reinterpret_cast<const uint8_t *>(new_malloced), len_, len_,
                              NO_FD, flags_t());
     ret->malloced = new_malloced;
@@ -389,7 +398,7 @@ ssize_t sbuf_t::find(const char* str, size_t start ) const
 }
 
 std::ostream& operator<<(std::ostream& os, const sbuf_t& t) {
-    os << "sbuf[page_number=" << t.page_number << " pos0=" << t.pos0 << " "
+    os << "sbuf[pos0=" << t.pos0 << " "
        << "buf[0..8]=0x";
 
     for (size_t i=0; i < std::min( 8UL, t.bufsize); i++){

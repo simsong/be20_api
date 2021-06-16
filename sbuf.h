@@ -84,7 +84,6 @@
 class sbuf_t {
 public:
     const pos0_t   pos0{};          /* the path of buf[0] */
-    const uint64_t page_number{0};  /* from iterator when sbuf is created */
     // buf is now private. See below.
     const size_t   bufsize{0};       // size of the buffer
     const size_t   pagesize{0};      // page data; the rest is the 'margin'. pagesize <= bufsize
@@ -106,13 +105,13 @@ public:
 
 
     explicit sbuf_t();    // We occasionally require an empty sbuf.
-    explicit sbuf_t(const sbuf &src, size_t offset); // start at offset and get the rest of the sbuf as a child
-    explicit sbuf_t(const sbuf &src, size_t offset, size_t len); // start at offset and get the rest of the sbuf as a child, but only for this fa
+    explicit sbuf_t(const sbuf_t &src, size_t offset); // start at offset and get the rest of the sbuf as a child
+    explicit sbuf_t(const sbuf_t &src, size_t offset, size_t len); // start at offset and get the rest of the sbuf as a child, but only for this fa
 
     /* Allocate from an existing buffer, automatically calling free(buf_)
      * when the sbuf is deleted.
      */
-    static sbuf_t* sbuf_new(const pos0_t& pos0_, const uint8_t* buf_, size_t bufsize_, size_t pagesize_);
+    static sbuf_t* sbuf_new(const pos0_t pos0_, const uint8_t* buf_, size_t bufsize_, size_t pagesize_);
 
     /* Allocate writable memory, with buf[0] being at pos0_..
      * Throws std::bad_alloc() if memory is not available.
@@ -133,8 +132,8 @@ public:
 
     /** Move constructor is properly implemented. */
     sbuf_t(sbuf_t&& that) noexcept
-        : pos0(that.pos0), page_number(that.page_number),
-          bufsize(that.bufsize), pagesize(that.pagesize), parent(that.parent), buf(that.buf), malloced(that.malloced) {
+        : pos0(that.pos0), bufsize(that.bufsize), pagesize(that.pagesize),
+          parent(that.parent), buf(that.buf), malloced(that.malloced) {
         parent->del_child(that);
         parent->add_child(*this);
     }
@@ -144,7 +143,7 @@ public:
      */
 #if 0
     sbuf_t new_sbuf(const pos0_t& that_pos0, const sbuf_t& that_sbuf);
-        : page_number(that_sbuf.page_number), pos0(that_pos0), parent(that_sbuf.highest_parent()), buf(that_sbuf.buf),
+    : pos0(that_pos0), parent(that_sbuf.highest_parent()), buf(that_sbuf.buf),
           bufsize(that_sbuf.bufsize), pagesize(that_sbuf.pagesize) {
         parent->add_child(*this);
     }
@@ -152,15 +151,18 @@ public:
 
     /** Allocate a subset of an sbuf's memory to a child sbuf.  from
      * within an existing sbuf.  The allocated buf MUST be freed
-     * before the parent, since no copy is made...
+     * before the parent, since no copy is made. slice() returns an object on the stack,
+     * whereas new_slice() returns a new object
      */
-    sbuf_t *subsbuf(size_t off, size_t len) const;
+    sbuf_t slice(size_t off, size_t len) const;
+    sbuf_t *new_slice(size_t off, size_t len) const;
 
     /**
      * make an sbuf from a parent but from off to the end of the buffer.
      * This calls the above one.
      */
-    sbuf_t *subsbuf(size_t off) const;
+    sbuf_t slice(size_t off) const;
+    sbuf_t *new_slice(size_t off) const;
     virtual ~sbuf_t();
 #if 0
     /**
@@ -192,9 +194,12 @@ public:
     /* Properties */
     size_t size() const { return bufsize; }                                // return the number of bytes
     size_t left(size_t n) const { return n < bufsize ? bufsize - n : 0; }; // how much space is left at n
+
+    /* Child management */
     void add_child(const sbuf_t& child) const; //
     void del_child(const sbuf_t& child) const; //
 
+    /* Forensic API */
     /** Find the offset of a byte */
     size_t offset(const uint8_t* loc) const {
         if (loc < buf) { throw range_exception_t(); }
@@ -470,7 +475,7 @@ public:
     static std::atomic<int> sbuf_count; // how many are in use
 private:
     // explicit allocation is only allowed in internal implementation
-    explicit sbuf_t(pos0_t pos0_, uint64_t page_number_, const sbuf_t *parent_,
+    explicit sbuf_t(pos0_t pos0_, const sbuf_t *parent_,
                     const uint8_t* buf_, size_t bufsize_, size_t pagesize_,
                     int fd_, flags_t flags_);
 

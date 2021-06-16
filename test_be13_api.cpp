@@ -400,7 +400,7 @@ TEST_CASE("fname in outdir", "[feature_recorder]") {
     REQUIRE( sbuf1.asString() == std::string("Hello World!\n"));
     REQUIRE( sbuf1.children == 0 );
     {
-        auto sbuf1c = sbuf1.subsbuf(1);
+        auto sbuf1c = sbuf1.new_slice(1);
         REQUIRE( sbuf1.children == 1 );
         REQUIRE( sbuf1c->asString() == std::string("ello World!\n"));
         REQUIRE( sbuf1c->children == 0 );
@@ -603,7 +603,7 @@ TEST_CASE("hello_sbuf", "[sbuf]") {
 
     REQUIRE(sb2.getline(pos, line_start, line_len) == false);
 
-    sbuf_t* sb3 = sb1.subsbuf(6, 5);
+    sbuf_t* sb3 = sb1.new_slice(6, 5);
     REQUIRE(sb3->asString() == "world");
     delete sb3;
 }
