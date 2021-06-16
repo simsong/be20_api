@@ -5,7 +5,6 @@ BE13_API_SRC= \
 	$(BE13_API_DIR)/atomic_set.h \
 	$(BE13_API_DIR)/atomic_unicode_histogram.cpp \
 	$(BE13_API_DIR)/atomic_unicode_histogram.h \
-	$(BE13_API_DIR)/bulk_extractor_i.h \
 	$(BE13_API_DIR)/char_class.h \
 	$(BE13_API_DIR)/feature_recorder.cpp \
 	$(BE13_API_DIR)/feature_recorder.h \

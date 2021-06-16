@@ -14,8 +14,8 @@
 
 #define CATCH_CONFIG_MAIN
 #define CATCH_CONFIG_CONSOLE_WIDTH 120
-#include "config.h" // supposed to come after bulk_extractor_i.h
 
+#include "config.h" //
 #include "catch.hpp"
 
 #include <algorithm>

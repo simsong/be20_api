@@ -150,8 +150,11 @@ public:
 
     /** Allocate a subset of an sbuf's memory to a child sbuf.  from
      * within an existing sbuf.  The allocated buf MUST be freed
-     * before the parent, since no copy is made. slice() returns an object on the stack,
-     * whereas new_slice() returns a new object
+     * before the parent, since no copy is made.
+     *
+     * slice() returns an object on the stack.
+     *
+     * new_slice() returns a new object that must be deleted.
      */
     sbuf_t slice(size_t off, size_t len) const;
     sbuf_t *new_slice(size_t off, size_t len) const;
@@ -163,23 +166,6 @@ public:
     sbuf_t slice(size_t off) const;
     sbuf_t *new_slice(size_t off) const;
     virtual ~sbuf_t();
-#if 0
-    /**
-     * the + operator returns a new sbuf that is i bytes in and, therefore, i
-     * bytes smaller. Note:
-     *
-     * 1. We assume that pagesize is always smaller than or equal to bufsize.
-     *
-     * 2. The child sbuf uses the parent's memory. If the parent gets deleted,
-     * the child points to invalid data.
-     *
-     * 3. If i is bigger than pagesize, then an sbuf is returned with
-     *    0 bytes in the page and all of the margin.
-     *
-     *    (Because we won't return what's in the margin as page data.)
-     */
-    sbuf_t operator+(size_t off) const { return *this->new_sbuf(off); }
-#endif
 
     inline static const std::string U10001C = "\xf4\x80\x80\x9c"; // default delimeter character in bulk_extractor
     static std::string map_file_delimiter;                        // character placed
