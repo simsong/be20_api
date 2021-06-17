@@ -234,7 +234,7 @@ sbuf_t* sbuf_t::sbuf_malloc(pos0_t pos0_, size_t len_)
     return ret;
 }
 
-sbuf_t::wbuf(size_t i, uint8_t val)
+void sbuf_t::wbuf(size_t i, uint8_t val)
 {
     if (flags.writable==false) {
         throw std::runtime_error("Attempt to write to unwritable sbuf");
