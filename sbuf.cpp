@@ -111,6 +111,17 @@ sbuf_t* sbuf_t::sbuf_new(pos0_t pos0_, const uint8_t* buf_, size_t bufsize_, siz
                       NO_FD, flags_t()); // fd, flags
 }
 
+sbuf_t* sbuf_t::sbuf_new(pos0_t pos0_, const std::string &str)
+{
+    u_char *buf_ = reinterpret_cast<u_char *>(malloc(str.size()));
+    if (buf_==nullptr){
+        throw std::bad_alloc();
+    }
+    return new sbuf_t(pos0_, nullptr, // pos0, parent
+                      buf_, str.size(), str.size(), // buf, bufsize, pagesize
+                      NO_FD, flags_t()); // fd, flags
+}
+
 
 /** Allocate a subset of an sbuf's memory to a child sbuf.
  * from within an existing sbuf.
@@ -214,11 +225,27 @@ sbuf_t* sbuf_t::map_file(const std::filesystem::path fname) {
 sbuf_t* sbuf_t::sbuf_malloc(pos0_t pos0_, size_t len_)
 {
     void *new_malloced = malloc(len_);
+    flags_t f {};
+    f.writable = true;
     sbuf_t *ret = new sbuf_t(pos0_, nullptr,
                              reinterpret_cast<const uint8_t *>(new_malloced), len_, len_,
-                             NO_FD, flags_t());
+                             NO_FD, f);
     ret->malloced = new_malloced;
     return ret;
+}
+
+sbuf_t::wbuf(size_t i, uint8_t val)
+{
+    if (flags.writable==false) {
+        throw std::runtime_error("Attempt to write to unwritable sbuf");
+    }
+    if (i<0 ){
+        throw std::runtime_error("Attempt to write sbuf i<0");
+    }
+    if (i>bufsize ){
+        throw std::runtime_error("Attempt to write sbuf i>bufsize");
+    }
+    buf[i] = val;
 }
 
 /**

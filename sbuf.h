@@ -88,6 +88,7 @@ public:
     const size_t   bufsize{0};       // size of the buffer
     const size_t   pagesize{0};      // page data; the rest is the 'margin'. pagesize <= bufsize
     struct flags_t {
+        bool writable {false};
         bool debug_sbuf_getbuf{false}; // print when sbufgetbuf is called
     } flags{};
 
@@ -111,13 +112,19 @@ public:
     /* Allocate from an existing buffer, automatically calling free(buf_) when the sbuf is deleted.
      */
     static sbuf_t* sbuf_new(const pos0_t pos0_, const uint8_t* buf_, size_t bufsize_, size_t pagesize_);
+    /* Allocate from a string, copying the string into an allocated buffer, and automatically calling free(buf_) when the sbuf is deleted.
+     */
+    static sbuf_t* sbuf_new(const pos0_t pos0_, const std::string &str);
+
+
 
     /* Allocate writable memory, with buf[0] being at pos0_..
      * Throws std::bad_alloc() if memory is not available.
      * Use malloc_buf() to get the buffer.
      */
     static sbuf_t* sbuf_malloc(const pos0_t pos0_, size_t len_ );
-    uint8_t *malloc_buf() const;
+    uint8_t *malloc_buf() const;        // the writable buf
+    void wbuf(size_t i, uint8_t val);   // write to location i with val
 
     /****************************************************************
      * Allocate a sbuf from a file mapped into memory.
