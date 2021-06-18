@@ -9,6 +9,7 @@
 #include <sys/stat.h>
 
 #include <filesystem>
+#include <algorithm>
 
 #include "sbuf.h"
 #include "dfxml/src/hash_t.h"
@@ -134,7 +135,7 @@ void sbuf_t::dereference()
 sbuf_t* sbuf_t::sbuf_new(pos0_t pos0_, const uint8_t* buf_, size_t bufsize_, size_t pagesize_)
 {
     return new sbuf_t(pos0_, nullptr, // pos0, parent
-                      buf_, bufsize_, pagesize_, // buf, bufsize, pagesize
+                      buf_, bufsize_, std::min(bufsize_,pagesize_), // buf, bufsize, pagesize
                       NO_FD, flags_t()); // fd, flags
 }
 
