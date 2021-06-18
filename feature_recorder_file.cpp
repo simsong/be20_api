@@ -268,13 +268,13 @@ void feature_recorder_file::printf(const char *fmt, ...)
 #if 0
 static void dump_hist(sqlite3_context *ctx,int argc,sqlite3_value**argv)
 {
-    const histogram_def *def = reinterpret_cast<const histogram_def *>(sqlite3_user_data(ctx));
+    const histogram_def *def = static_cast<const histogram_def *>(sqlite3_user_data(ctx));
 
 #ifdef DEBUG
     std::cerr << "behist feature=" << def->feature << "  suffix="
               << def->suffix << "  argc=" << argc << "value = " << sqlite3_value_text(argv[0]) << "\n";
 #endif
-    std::string new_feature(reinterpret_cast<const char *>(sqlite3_value_text(argv[0])));
+    std::string new_feature(static_cast<const char *>(sqlite3_value_text(argv[0])));
     std::smatch sm;
     std::regex_search( new_feature, sm, def->reg);
     if (sm.size() > 0){

@@ -97,7 +97,7 @@ inline const std::string convert_utf32_to_utf8(const std::u32string& u32s) {
     utf8::utf32to8(u32s.begin(), u32s.end(), std::back_inserter(u8s));
     return u8s;
     // std::wstring_convert<std::codecvt_utf8<int32_t>, int32_t> convert;
-    //    auto p = reinterpret_cast<const int32_t *>(s.data());
+    //    auto p = static_cast<const int32_t *>(s.data());
     //    return convert.to_bytes(p, p + s.size());
     // return std::string();
 }

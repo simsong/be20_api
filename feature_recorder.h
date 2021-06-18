@@ -12,6 +12,7 @@
 #include <set>
 #include <string>
 #include <thread>
+#include <ctime>
 
 #include "atomic_set.h"
 #include "atomic_unicode_histogram.h"
@@ -249,6 +250,14 @@ public:
     // carve the data in the sbuf to a file that ends with ext. If mtime>0, set the time of the file to be mtime
     virtual std::string carve(const sbuf_t& sbuf, std::string ext, time_t mtime = 0) {
         return carve(sbuf_t(), sbuf, ext, mtime);
+    }
+
+    // carve the data in the sbuf to a file that ends with ext, with ISO8601 string as time
+    virtual std::string carve(const sbuf_t& sbuf, std::string ext, std::string mtime) {
+        struct tm t;
+        strptime(mtime.c_str(), "%Y-%m-%d %H:%M:%S", &t);
+        time_t t2 = mktime(&t);
+        return carve(sbuf_t(), sbuf, ext, t2);
     }
 
     /*

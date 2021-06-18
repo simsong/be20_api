@@ -32,7 +32,35 @@ std::atomic<int> sbuf_t::sbuf_count = 0;
 /* Make an empty sbuf */
 sbuf_t::sbuf_t()
 {
+    sbuf_count += 1;
 }
+
+/****************************************************************
+ ** from an offset
+ ****************************************************************/
+// start at offset and get the rest of the sbuf as a child
+sbuf_t::sbuf_t(const sbuf_t &src, size_t offset):
+    pos0(src.pos0 + (offset < src.bufsize ? offset : src.bufsize)),
+    bufsize( offset < src.bufsize ? src.bufsize - offset : 0),
+    pagesize( offset < src.pagesize ? src.pagesize - offset : 0),
+    flags(src.flags), buf(src.buf+offset)
+{
+    src.add_child(*this);
+    sbuf_count += 1;
+}
+
+// start at offset for a given len
+sbuf_t::sbuf_t(const sbuf_t &src, size_t offset, size_t len):
+    pos0(src.pos0 + (offset < src.bufsize ? offset : src.bufsize)),
+    bufsize( offset + len < src.bufsize ? len : (offset > src.bufsize ? 0 : src.bufsize - offset)),
+    pagesize( offset + len < src.pagesize ? len : (offset > src.pagesize ? 0 : src.pagesize - offset)),
+    flags(src.flags), buf(src.buf+offset)
+{
+    src.add_child(*this);
+    sbuf_count += 1;
+}
+
+
 
 /* Core allocator used by all others */
 sbuf_t::sbuf_t(pos0_t pos0_, const sbuf_t *parent_,
@@ -102,7 +130,6 @@ void sbuf_t::dereference()
  ** Allocators.
  ****************************************************************/
 
-
 /* a new sbuf with the data from one but the pos from another. */
 sbuf_t* sbuf_t::sbuf_new(pos0_t pos0_, const uint8_t* buf_, size_t bufsize_, size_t pagesize_)
 {
@@ -113,7 +140,7 @@ sbuf_t* sbuf_t::sbuf_new(pos0_t pos0_, const uint8_t* buf_, size_t bufsize_, siz
 
 sbuf_t* sbuf_t::sbuf_new(pos0_t pos0_, const std::string &str)
 {
-    u_char *buf_ = reinterpret_cast<u_char *>(malloc(str.size()));
+    u_char *buf_ = static_cast<u_char *>(malloc(str.size()));
     if (buf_==nullptr){
         throw std::bad_alloc();
     }
@@ -201,7 +228,7 @@ sbuf_t* sbuf_t::map_file(const std::filesystem::path fname) {
     if (mmalloced == nullptr) { /* malloc failed */
         return 0;
     }
-    uint8_t* mbuf = reinterpret_cast<uint8_t*>(malloced);
+    uint8_t* mbuf = static_cast<uint8_t*>(malloced);
     lseek(mfd, 0, SEEK_SET); // go to beginning of file
     size_t r = (size_t)read(mfd, (void*)mbuf, st.st_size);
     if (r != (size_t)st.st_size) {
@@ -225,27 +252,25 @@ sbuf_t* sbuf_t::map_file(const std::filesystem::path fname) {
 sbuf_t* sbuf_t::sbuf_malloc(pos0_t pos0_, size_t len_)
 {
     void *new_malloced = malloc(len_);
-    flags_t f {};
-    f.writable = true;
     sbuf_t *ret = new sbuf_t(pos0_, nullptr,
-                             reinterpret_cast<const uint8_t *>(new_malloced), len_, len_,
-                             NO_FD, f);
+                             static_cast<const uint8_t *>(new_malloced), len_, len_, NO_FD, flags_t());
     ret->malloced = new_malloced;
+    ret->buf_writable = static_cast<uint8_t *>(new_malloced);
     return ret;
 }
 
 void sbuf_t::wbuf(size_t i, uint8_t val)
 {
-    if (flags.writable==false) {
+    if ( buf_writable==nullptr) {
         throw std::runtime_error("Attempt to write to unwritable sbuf");
     }
-    if (i<0 ){
+    if ( i<0 ){
         throw std::runtime_error("Attempt to write sbuf i<0");
     }
-    if (i>bufsize ){
+    if ( i>bufsize ){
         throw std::runtime_error("Attempt to write sbuf i>bufsize");
     }
-    buf[i] = val;
+    buf_writable[i] = val;
 }
 
 /**

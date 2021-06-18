@@ -606,6 +606,15 @@ TEST_CASE("hello_sbuf", "[sbuf]") {
     sbuf_t* sb3 = sb1.new_slice(6, 5);
     REQUIRE(sb3->asString() == "world");
     delete sb3;
+
+    auto sb4 = sbuf_t(sb1,6);
+    REQUIRE(sb4.asString() == "world!");
+    auto sb5 = sbuf_t(sb1,100);
+    REQUIRE(sb5.asString() == "");
+    auto sb6 = sbuf_t(sb1,6,5);
+    REQUIRE(sb6.asString() == "world");
+    auto sb7 = sbuf_t(sb1,100,5);
+    REQUIRE(sb7.asString() == "");
 }
 
 TEST_CASE("map_file", "[sbuf]") {

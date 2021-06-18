@@ -88,7 +88,6 @@ public:
     const size_t   bufsize{0};       // size of the buffer
     const size_t   pagesize{0};      // page data; the rest is the 'margin'. pagesize <= bufsize
     struct flags_t {
-        bool writable {false};
         bool debug_sbuf_getbuf{false}; // print when sbufgetbuf is called
     } flags{};
 
@@ -465,7 +464,8 @@ public:
         return hp;
     }
 
-    static std::atomic<int> sbuf_count; // how many are in use
+    static std::atomic<int> sbuf_count;   // how many are in use
+    mutable std::atomic<int> children{0}; // number of child sbufs; incremented when data in *buf is used by a child
 private:
     // explicit allocation is only allowed in internal implementation
     explicit sbuf_t(pos0_t pos0_, const sbuf_t *parent_,
@@ -475,9 +475,6 @@ private:
 
     /* The private structures keep track of memory management */
     mutable std::atomic<int> references{0}; // when goes to zero, automatically free
-public:;
-    mutable std::atomic<int> children{0}; // number of child sbufs; incremented when data in *buf is used by a child
-private:;
     int fd{0};                     // if fd>0, unmap(buf) and close(fd) when sbuf is deleted.
     const sbuf_t* parent{nullptr}; // parent sbuf references data in another.
     mutable std::mutex Mhash{};    // mutext for hashing
@@ -489,6 +486,7 @@ private:;
      */
     const uint8_t* buf{nullptr};   // start of the buffer
     void* malloced{nullptr};       // malloced==buf if this was malloced and needs to be freed when sbuf is deleted.
+    uint8_t* buf_writable{nullptr}; // if this is a writable buffer, buf_writable=buf
 
     sbuf_t(const sbuf_t& that) = delete;            // default copy is not implemented
     sbuf_t& operator=(const sbuf_t& that) = delete; // default assignment not implemented
