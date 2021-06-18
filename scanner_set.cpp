@@ -61,6 +61,8 @@ scanner_set::scanner_set(const scanner_config& sc_, const feature_recorder_set::
     if (getenv("SCANNER_SET_DEBUG_INFO")) debug_flags.debug_info = true;
     if (getenv("SCANNER_SET_DEBUG_EXIT_EARLY")) debug_flags.debug_exit_early = true;
     if (getenv("SCANNER_SET_DEBUG_REGISTER")) debug_flags.debug_register = true;
+    const char *dsi = getenv("DEBUG_SCANNERS_IGNORE");
+    if (dsi!=nullptr) debug_flags.debug_scanners_ignore=dsi;
 }
 
 /****************************************************************
@@ -92,7 +94,13 @@ void scanner_set::add_scanner(scanner_t scanner) {
         throw std::runtime_error("scanner_set::add_scanner: a scanner did not set the sp.info field.  "
                                  "Re-run with SCANNER_SET_DEBUG_REGISTER=1 to find those that did.");
     }
-    if (debug_flags.debug_register) { std::cerr << "add_scanner( " << sp.info->name << " )\n"; }
+    if (debug_flags.debug_scanners_ignore.find(sp.info->name) != std::string::npos){
+        std::cerr << "DEBUG: ignore add_scanner " << sp.info->name << "\n";
+        return;
+    }
+    if (debug_flags.debug_register) {
+        std::cerr << "add_scanner( " << sp.info->name << " )\n";
+    }
     scanner_info_db[scanner] = sp.info;
 
     // Make sure it was registered
@@ -220,7 +228,6 @@ void scanner_set::apply_scanner_commands() {
              */
             for (auto it : scanner_info_db) {
                 if (it.second->scanner_flags.no_all) {
-                    std::cerr << "no_all\n";
                     continue;
                 }
                 if (cmd.command == scanner_config::scanner_command::ENABLE) {
@@ -554,7 +561,10 @@ void scanner_set::process_sbuf(class sbuf_t* sbufp) {
             }
         }
     }
-    assert(sbuf.children == 0); // can't delete if there are any children.
+    if (sbuf.children != 0 ){
+        std::cerr << "scanner_set::process_sbuf. Cannot delete sbuf " << sbuf << "\n";
+        throw std::runtime_error("sbuf has >0 children");
+    }
     delete sbufp;
     return;
 }

@@ -134,6 +134,7 @@ public:
         bool debug_exit_early{false};      // just print the size of the volume and exit
         bool debug_allocate_512MiB{false}; // allocate 512MiB but don't set any flags
         bool debug_register{false};        // print when scanners register
+        std::string debug_scanners_ignore{}; // ignore these scanners, separated by :
     } debug_flags{};
 
     /* Scanners can be compiled in (which are passed to the constructor), loaded one-by-one from meory,

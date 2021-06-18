@@ -44,9 +44,9 @@ sbuf_t::sbuf_t(const sbuf_t &src, size_t offset):
     pos0(src.pos0 + (offset < src.bufsize ? offset : src.bufsize)),
     bufsize( offset < src.bufsize ? src.bufsize - offset : 0),
     pagesize( offset < src.pagesize ? src.pagesize - offset : 0),
-    flags(src.flags), buf(src.buf+offset)
+    flags(src.flags), parent(&src), buf(src.buf+offset)
 {
-    src.add_child(*this);
+    parent->add_child(*this);
     sbuf_count += 1;
 }
 
@@ -55,10 +55,11 @@ sbuf_t::sbuf_t(const sbuf_t &src, size_t offset, size_t len):
     pos0(src.pos0 + (offset < src.bufsize ? offset : src.bufsize)),
     bufsize( offset + len < src.bufsize ? len : (offset > src.bufsize ? 0 : src.bufsize - offset)),
     pagesize( offset + len < src.pagesize ? len : (offset > src.pagesize ? 0 : src.pagesize - offset)),
-    flags(src.flags), buf(src.buf+offset)
+    flags(src.flags), parent(&src), buf(src.buf+offset)
 {
-    src.add_child(*this);
+    parent->add_child(*this);
     sbuf_count += 1;
+    std::cerr << "added child to parent\n";
 }
 
 
@@ -79,6 +80,7 @@ sbuf_t::sbuf_t(pos0_t pos0_, const sbuf_t *parent_,
 
 sbuf_t::~sbuf_t()
 {
+    std::cerr << "deleting spbuf. parent=" << parent << "\n";
     if (children != 0) {
         std::runtime_error(Formatter() << "sbuf.cpp: error: sbuf children=" << children);
     }
@@ -451,8 +453,7 @@ ssize_t sbuf_t::find(const char* str, size_t start ) const
 }
 
 std::ostream& operator<<(std::ostream& os, const sbuf_t& t) {
-    os << "sbuf[pos0=" << t.pos0 << " "
-       << "buf[0..8]=0x";
+    os << "sbuf[pos0=" << t.pos0 << " " << "buf[0..8]=0x";
 
     for (size_t i=0; i < std::min( 8UL, t.bufsize); i++){
         os << hexch(t[i]);
@@ -461,7 +462,7 @@ std::ostream& operator<<(std::ostream& os, const sbuf_t& t) {
     for (size_t i=0; i < std::min( 8UL, t.bufsize); i++){
         os << t[i];
     }
-    os << "\" bufsize=" << t.bufsize << " pagesize=" << t.pagesize << "]";
+    os << "\" bufsize=" << t.bufsize << " pagesize=" << t.pagesize << " children=" << t.children << " ]";
     return os;
 }
 
