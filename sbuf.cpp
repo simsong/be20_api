@@ -59,7 +59,6 @@ sbuf_t::sbuf_t(const sbuf_t &src, size_t offset, size_t len):
 {
     parent->add_child(*this);
     sbuf_count += 1;
-    std::cerr << "added child to parent\n";
 }
 
 
@@ -80,7 +79,6 @@ sbuf_t::sbuf_t(pos0_t pos0_, const sbuf_t *parent_,
 
 sbuf_t::~sbuf_t()
 {
-    std::cerr << "deleting spbuf. parent=" << parent << "\n";
     if (children != 0) {
         std::runtime_error(Formatter() << "sbuf.cpp: error: sbuf children=" << children);
     }
@@ -289,7 +287,9 @@ void sbuf_t::raw_dump(std::ostream& os, uint64_t start, uint64_t len) const {
 void sbuf_t::raw_dump(int fd2, uint64_t start, uint64_t len) const {
     if (len > bufsize - start) len = bufsize - start; // maximum left
     uint64_t written = ::write(fd2, buf + start, len);
-    if (written != len) { std::cerr << "write: cannot write sbuf.\n"; }
+    if (written != len) {
+        std::cerr << "write: cannot write sbuf.\n";
+    }
 }
 
 static std::string hexch(unsigned char ch) {
