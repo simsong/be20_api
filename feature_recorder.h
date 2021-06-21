@@ -61,17 +61,22 @@ struct feature_recorder_def {
     uint32_t max_feature_size{1024 * 1024}; // 1024*1024 was in BE1.4
 
     /**
-     * Carving modes.
+     * Carving support.
      *
-     * Carving writes the filename to the feature file; the context is the file's hash using the provided function.
+     * Carving writes the filename to the feature file and the contents to a file in the directory.
+     * The second field of the feature file is the file's hash using the provided function.
      * Automatically de-duplicates.
-     * Carving is implemented in the abstract class becuase all feature recorders have access to it.
+     * Carving is implemented in the abstract class so all feature recorders have access to it.
+     * Carve mode parameters were previously set in the INIT phase of each of the scanners. Now it is set for
+     * all feature recorers in the scanner_set after the scanners are initialized and the feature recorders are created.
      */
     enum carve_mode_t {
         CARVE_NONE = 0,    // don't carve at all, even if the carve function is called
         CARVE_ENCODED = 1, // only carve if the data being carved is encoded (e.g. BASE64 or GZIP is in path)
         CARVE_ALL = 2      // carve whenever the carve function is called.
     } default_carve_mode{CARVE_ALL};
+    size_t min_carve_size {200};
+    size_t max_carve_size {16*1024*1024};
 
     /**
      * \name Flags that control scanners
@@ -107,8 +112,12 @@ struct feature_recorder_def {
     } flags{};
 
     /** @} */
-    feature_recorder_def(std::string name_) : name(name_) {}                                // flagless constructor
-    feature_recorder_def(std::string name_, flags_t flags_) : name(name_), flags(flags_) {} // construct with flags
+    feature_recorder_def(std::string name_) : name(name_) {
+        assert(name != "");
+    }                                // flagless constructor
+    feature_recorder_def(std::string name_, flags_t flags_) : name(name_), flags(flags_) {
+        assert(name != "");
+    } // construct with flags
     bool operator==(const feature_recorder_def& a) const {
         return (this->name == a.name) && (this->flags == a.flags) && (this->default_carve_mode == a.default_carve_mode);
     };
@@ -230,6 +239,8 @@ public:
     virtual void write_buf(const sbuf_t& sbuf, size_t pos, size_t len); /* writes with context */
 
     std::atomic<feature_recorder_def::carve_mode_t> carve_mode{feature_recorder_def::CARVE_ALL};
+    std::atomic<size_t> min_carve_size {200};
+    std::atomic<size_t> max_carve_size {16*1024*1024};
     std::atomic<int64_t> carved_file_count{0}; // starts at 0; gets incremented by carve();
     atomic_set<std::string>
         carve_cache{};                   // hashes of files that have been cached, so the same file is not carved twice

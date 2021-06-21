@@ -122,7 +122,7 @@ public:
      * Use malloc_buf() to get the buffer.
      */
     static sbuf_t* sbuf_malloc(const pos0_t pos0_, size_t len_ );
-    uint8_t *malloc_buf() const;        // the writable buf
+    void *malloc_buf() const;        // the writable buf
     void wbuf(size_t i, uint8_t val);   // write to location i with val
 
     /****************************************************************

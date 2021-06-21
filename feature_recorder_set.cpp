@@ -139,7 +139,9 @@ feature_recorder& feature_recorder_set::create_feature_recorder(const feature_re
         throw std::runtime_error("currently can only record to files or SQL, not both");
     }
     if (!flags.record_files and !flags.record_sql) { throw std::runtime_error("Must record to either files or SQL"); }
-    if (def.name.size() == 0) { throw FeatureRecorderNullName(); }
+    if (def.name.size() == 0) {
+        throw FeatureRecorderNullName();
+    }
 
     auto it = frm.find(def.name);
     if (it != frm.end()) {
@@ -173,7 +175,8 @@ feature_recorder& feature_recorder_set::create_feature_recorder(std::string name
  * If the feature recorder doesn't exist and create is true, create it.
  * Otherwise raise an exception.
  */
-feature_recorder& feature_recorder_set::named_feature_recorder(const std::string name) const {
+feature_recorder& feature_recorder_set::named_feature_recorder(const std::string name) const
+{
     auto it = frm.find(name);
     if (it == frm.end()) { throw NoSuchFeatureRecorder{std::string("No such feature recorder: ") + name}; }
     return *it->second;
@@ -183,8 +186,26 @@ feature_recorder& feature_recorder_set::named_feature_recorder(const std::string
  * The alert recorder is special. It's provided for all of the feature recorders.
  * If one doesn't exist, create it.
  */
-feature_recorder& feature_recorder_set::get_alert_recorder() const {
+feature_recorder& feature_recorder_set::get_alert_recorder() const
+{
     return named_feature_recorder(feature_recorder_set::ALERT_RECORDER_NAME);
+}
+
+/*
+ *
+ */
+void feature_recorder_set::set_carve_defaults()
+{
+    std::cerr << "set_carve_defaults...\n";
+    for (auto it : frm ) {
+        std::string option_name = it.first + "_carve_mode";
+        auto val = sc.namevals.find(option_name);
+        if (val != sc.namevals.end()) {
+            std::cerr << "setting carve mode " << val->second << " for feature recorder " << it.first << "\n";
+            it.second->carve_mode = feature_recorder_def::carve_mode_t(std::stoi( val->second ));
+        }
+    }
+    std::cerr << "set_carve_defaults... done\n";
 }
 
 // send every enabled scanner the phase message

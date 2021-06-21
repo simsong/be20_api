@@ -102,6 +102,14 @@ const uint8_t* sbuf_t::get_buf() const
     return buf;
 }
 
+void* sbuf_t::malloc_buf() const
+{
+    if (malloced == nullptr ) {
+        throw std::runtime_error("malloc_buf called on sbuf_t that was not malloced");
+    }
+    return malloced;
+}
+
 void sbuf_t::add_child(const sbuf_t& child) const
 {
     children   += 1;

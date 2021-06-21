@@ -252,7 +252,10 @@ void scanner_set::apply_scanner_commands() {
      */
     fs.create_alert_recorder();
     for (auto sit : scanner_info_db) {
-        for (auto it : sit.second->feature_defs) { fs.create_feature_recorder(it); }
+        for (auto it : sit.second->feature_defs) {
+            std::cerr << "create feature recorder " << it.name << "\n";
+            fs.create_feature_recorder(it);
+        }
 
         /* Create all of the requested histograms
          * Multiple scanners may request the same histograms without generating an error.
@@ -262,6 +265,9 @@ void scanner_set::apply_scanner_commands() {
             fs.named_feature_recorder(it.feature).histogram_add(it);
         }
     }
+
+    /* set the carve defaults */
+    fs.set_carve_defaults();
     current_phase = scanner_params::PHASE_ENABLED;
 }
 
