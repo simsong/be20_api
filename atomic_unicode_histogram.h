@@ -17,22 +17,22 @@
  *      - regular expression are then run on the UTF-8. (Not the best, but it works for now.)
  */
 
-#include <atomic>
 #include "atomic_map.h"
 #include "histogram_def.h"
 #include "unicode_escape.h"
+#include <atomic>
 
-struct AtomicUnicodeHistogram  {
+struct AtomicUnicodeHistogram {
     static uint32_t debug_histogram_malloc_fail_frequency; // for debugging, make malloc fail sometimes
     struct HistogramTally {
-        uint32_t count      {0}; // total strings seen
-        uint32_t count16    {0}; // total utf16 strings seen
-        HistogramTally(const HistogramTally &a){
-            this->count   = a.count;
+        uint32_t count{0};   // total strings seen
+        uint32_t count16{0}; // total utf16 strings seen
+        HistogramTally(const HistogramTally& a) {
+            this->count = a.count;
             this->count16 = a.count16;
         }
-        HistogramTally &operator=(const HistogramTally &a){
-            this->count   = a.count;
+        HistogramTally& operator=(const HistogramTally& a) {
+            this->count = a.count;
             this->count16 = a.count16;
             return *this;
         }
@@ -40,42 +40,36 @@ struct AtomicUnicodeHistogram  {
         HistogramTally(){};
         virtual ~HistogramTally(){};
 
-        bool operator== (const HistogramTally &a) const {
-            return this->count==a.count && this->count16 == a.count16;
-        };
-        bool operator!= (const HistogramTally &a) const {
-            return !(*this == a);
+        bool operator==(const HistogramTally& a) const { return this->count == a.count && this->count16 == a.count16; };
+        bool operator!=(const HistogramTally& a) const { return !(*this == a); }
+        bool operator<(const HistogramTally& a) const {
+            return (this->count < a.count) || ((this->count == a.count && (this->count16 < a.count16)));
         }
-        bool operator< (const HistogramTally &a) const {
-            return (this->count < a.count) ||
-                ((this->count == a.count && (this->count16 < a.count16)));
-        }
-        size_t bytes() const { return sizeof(*this);}
+        size_t bytes() const { return sizeof(*this); }
     };
 
     /* A FrequencyReportVector is a vector of report elements when the report is generated.*/
     typedef atomic_map<std::string, struct AtomicUnicodeHistogram::HistogramTally> auh_t;
     typedef std::vector<auh_t::AMReportElement> FrequencyReportVector;
 
-    AtomicUnicodeHistogram(const struct histogram_def &def_):def(def_){ }
+    AtomicUnicodeHistogram(const struct histogram_def& def_) : def(def_) {}
     virtual ~AtomicUnicodeHistogram(){};
 
-    void   clear();                     //empties the histogram
-    void   add(const std::string &key);  // adds Unicode string to the histogram count
-    size_t bytes();               // returns the total number of bytes of the histogram,.
+    void clear();                     // empties the histogram
+    void add(const std::string& key); // adds Unicode string to the histogram count
+    size_t bytes();                   // returns the total number of bytes of the histogram,.
 
     /** makeReport() makes a report and returns a
      * FrequencyReportVector.
      */
-    auh_t::report makeReport(size_t topN=0); // returns just the topN; 0 means all
-    const struct histogram_def def;   // the definition we are making
+    auh_t::report makeReport(size_t topN = 0); // returns just the topN; 0 means all
+    const struct histogram_def def;            // the definition we are making
 
 private:
-    auh_t h {};                        // the histogram
+    auh_t h{}; // the histogram
 };
 
-std::ostream & operator << (std::ostream &os, const AtomicUnicodeHistogram::FrequencyReportVector &rep);
-std::ostream & operator << (std::ostream &os, const AtomicUnicodeHistogram::auh_t::AMReportElement &e);
-
+std::ostream& operator<<(std::ostream& os, const AtomicUnicodeHistogram::FrequencyReportVector& rep);
+std::ostream& operator<<(std::ostream& os, const AtomicUnicodeHistogram::auh_t::AMReportElement& e);
 
 #endif

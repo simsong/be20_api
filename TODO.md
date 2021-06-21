@@ -75,3 +75,6 @@ All errors in histogram production seem to be fixed!
 - [ ] Get scanner commands moved from scanner_set to scanner_config.
 - [ ] Implement processing of scanner commands to scanner set.
 - [ ] Implement tests
+
+## 2021-06-12
+- [ ] sbuf_stream and sbuf_private should both be factored into sbuf.

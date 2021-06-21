@@ -4,15 +4,14 @@
  * write() is the main entry point for writing a feature at a given position with context.
  * write() checks the stoplist and escapes non-UTF8 characters, then calls write0().
  */
-void feature_recorder::write(const pos0_t &pos0,const std::string &feature_,const std::string &context_)
-{
-    if (fs.flags.disabled) return;           // disabled
-    if (fs.flags.pedantic){
-        if (feature_.size() > fs.opt_max_feature_size){
+void feature_recorder::write(const pos0_t& pos0, const std::string& feature_, const std::string& context_) {
+    if (fs.flags.disabled) return; // disabled
+    if (fs.flags.pedantic) {
+        if (feature_.size() > def.max_feature_size) {
             std::cerr << "feature_recorder::write : feature_.size()=" << feature_.size() << "\n";
             assert(0);
         }
-        if (context_.size() > fs.opt_max_context_size){
+        if (context_.size() > def.max_context_size) {
             std::cerr << "feature_recorder::write : context_.size()=" << context_.size() << "\n";
             assert(0);
         }
@@ -20,26 +19,26 @@ void feature_recorder::write(const pos0_t &pos0,const std::string &feature_,cons
 
     std::string feature = feature_;
     std::string context = flags.no_context ? "" : context_;
-    std::string *feature_utf8 = AtomicUnicodeHistogram::make_utf8(feature); // a utf8 feature
+    std::string* feature_utf8 = AtomicUnicodeHistogram::make_utf8(feature); // a utf8 feature
 
-    quote_if_necessary(feature,context);
+    quote_if_necessary(feature, context);
 
-    if ( feature.size()==0 ){
+    if (feature.size() == 0) {
         std::cerr << name << ": zero length feature at " << pos0 << "\n";
         if (fs.flags.pedantic) assert(0);
         return;
     }
-    if ( fs.flags.pedantic ){
+    if (fs.flags.pedantic) {
         /* Check for tabs or newlines in feature and and context */
-        for(size_t i=0;i<feature.size();i++){
-            if(feature[i]=='\t') assert(0);
-            if(feature[i]=='\n') assert(0);
-            if(feature[i]=='\r') assert(0);
+        for (size_t i = 0; i < feature.size(); i++) {
+            if (feature[i] == '\t') assert(0);
+            if (feature[i] == '\n') assert(0);
+            if (feature[i] == '\r') assert(0);
         }
-        for(size_t i=0;i<context.size();i++){
-            if(context[i]=='\t') assert(0);
-            if(context[i]=='\n') assert(0);
-            if(context[i]=='\r') assert(0);
+        for (size_t i = 0; i < context.size(); i++) {
+            if (context[i] == '\t') assert(0);
+            if (context[i] == '\n') assert(0);
+            if (context[i] == '\r') assert(0);
         }
     }
 
@@ -47,11 +46,9 @@ void feature_recorder::write(const pos0_t &pos0,const std::string &feature_,cons
      * Only do this if we have a stop_list_recorder (the stop list recorder itself
      * does not have a stop list recorder. If it did we would infinitely recurse.
      */
-    if (flags.no_stoplist==false
-        && fs.stop_list
-        && fs.stop_list_recorder
-        && fs.stop_list->check_feature_context(*feature_utf8,context)) {
-        fs.stop_list_recorder->write(pos0,feature,context);
+    if (flags.no_stoplist == false && fs.stop_list && fs.stop_list_recorder &&
+        fs.stop_list->check_feature_context(*feature_utf8, context)) {
+        fs.stop_list_recorder->write(pos0, feature, context);
         delete feature_utf8;
         return;
     }
@@ -97,7 +94,7 @@ void feature_recorder::write(const pos0_t &pos0,const std::string &feature_,cons
 #endif
 
     /* Finally write out the feature and the context */
-    this->write0(pos0,feature,context);
+    this->write0(pos0, feature, context);
     delete feature_utf8;
 }
 
@@ -107,36 +104,30 @@ void feature_recorder::write(const pos0_t &pos0,const std::string &feature_,cons
  * for writing from within the lexical analyzers.
  */
 
-void feature_recorder::write_buf(const sbuf_t &sbuf,size_t pos,size_t len)
-{
+void feature_recorder::write_buf(const sbuf_t& sbuf, size_t pos, size_t len) {
     /* If we are in the margin, ignore; it will be processed again */
-    if(pos >= sbuf.pagesize && pos < sbuf.bufsize){
-        return;
-    }
+    if (pos >= sbuf.pagesize && pos < sbuf.bufsize) { return; }
 
-    if(pos >= sbuf.bufsize){    /* Sanity checks */
+    if (pos >= sbuf.bufsize) { /* Sanity checks */
         std::cerr << "*** write_buf: WRITE OUTSIDE BUFFER. "
-                  << " pos="  << pos
-                  << " sbuf=" << sbuf << "\n";
+                  << " pos=" << pos << " sbuf=" << sbuf << "\n";
         return;
     }
 
     /* Asked to write beyond bufsize; bring it in */
-    if(pos+len > sbuf.bufsize){
-        len = sbuf.bufsize - pos;
-    }
+    if (pos + len > sbuf.bufsize) { len = sbuf.bufsize - pos; }
 
-    std::string feature = sbuf.substr(pos,len);
+    std::string feature = sbuf.substr(pos, len);
     std::string context;
 
-    if (flags.no_context==false) {
+    if (flags.no_context == false) {
         /* Context write; create a clean context */
-        size_t p0 = context_window < pos ? pos-context_window : 0;
-        size_t p1 = pos+len+context_window;
+        size_t p0 = context_window < pos ? pos - context_window : 0;
+        size_t p1 = pos + len + context_window;
 
-        if(p1>sbuf.bufsize) p1 = sbuf.bufsize;
-        assert(p0<=p1);
-        context = sbuf.substr(p0,p1-p0);
+        if (p1 > sbuf.bufsize) p1 = sbuf.bufsize;
+        assert(p0 <= p1);
+        context = sbuf.substr(p0, p1 - p0);
     }
-    this->write(sbuf.pos0+pos,feature,context);
+    this->write(sbuf.pos0 + pos, feature, context);
 }

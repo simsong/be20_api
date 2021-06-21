@@ -46,3 +46,4 @@ test_be13_api
 x.cpp
 TAGS
 *.tar.gz
+*.tmp

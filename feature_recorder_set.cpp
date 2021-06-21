@@ -1,15 +1,21 @@
 /* -*- mode: C++; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 
-#include "config.h"
+#include "config.h" // needed for hash_t and feature_recorder_sql.h
 
-#include "scanner_config.h"
-#include "feature_recorder_set.h"
 #include "feature_recorder_file.h"
+#include "feature_recorder_set.h"
 #include "feature_recorder_sql.h"
+#include "scanner_config.h"
 
 #include "dfxml/src/dfxml_writer.h"
 #include "dfxml/src/hash_t.h"
 
+#ifndef HAVE_LIBSQLITE3
+#ifdef HAVE_SQLITE3_H
+#warn Disabling HAVE_SQLITE3_H because HAVE_LIBSQLITE3 is not true
+#undef HAVE_SQLITE3_H
+#endif
+#endif
 
 /**
  * feature_recorder_set:
@@ -18,63 +24,55 @@
  */
 
 const std::string feature_recorder_set::ALERT_RECORDER_NAME = "alerts";
-//const std::string feature_recorder_set::DISABLED_RECORDER_NAME = "disabled";
+// const std::string feature_recorder_set::DISABLED_RECORDER_NAME = "disabled";
 
 /* be_hash. Currently this just returns the MD5 of the sbuf,
  * but eventually it will allow the use of different hashes.
  */
-std::string feature_recorder_set::hash_def::md5_hasher(const uint8_t *buf,size_t bufsize)
-{
-    return dfxml::md5_generator::hash_buf(buf,bufsize).hexdigest();
+std::string feature_recorder_set::hash_def::md5_hasher(const uint8_t* buf, size_t bufsize) {
+    return dfxml::md5_generator::hash_buf(buf, bufsize).hexdigest();
 }
 
-std::string feature_recorder_set::hash_def::sha1_hasher(const uint8_t *buf,size_t bufsize)
-{
-    return dfxml::sha1_generator::hash_buf(buf,bufsize).hexdigest();
+std::string feature_recorder_set::hash_def::sha1_hasher(const uint8_t* buf, size_t bufsize) {
+    return dfxml::sha1_generator::hash_buf(buf, bufsize).hexdigest();
 }
 
-std::string feature_recorder_set::hash_def::sha256_hasher(const uint8_t *buf,size_t bufsize)
-{
-    return dfxml::sha256_generator::hash_buf(buf,bufsize).hexdigest();
+std::string feature_recorder_set::hash_def::sha256_hasher(const uint8_t* buf, size_t bufsize) {
+    return dfxml::sha256_generator::hash_buf(buf, bufsize).hexdigest();
 }
 
-feature_recorder_set::hash_func_t feature_recorder_set::hash_def::hash_func_for_name(const std::string &name)
-{
-    if(name=="md5" || name=="MD5"){
-        return md5_hasher;
-    }
-    if(name=="sha1" || name=="SHA1" || name=="sha-1" || name=="SHA-1"){
-        return sha1_hasher;
-    }
-    if(name=="sha256" || name=="SHA256" || name=="sha-256" || name=="SHA-256"){
-        return sha256_hasher;
-    }
+feature_recorder_set::hash_func_t feature_recorder_set::hash_def::hash_func_for_name(const std::string& name) {
+    if (name == "md5" || name == "MD5") { return md5_hasher; }
+    if (name == "sha1" || name == "SHA1" || name == "sha-1" || name == "SHA-1") { return sha1_hasher; }
+    if (name == "sha256" || name == "SHA256" || name == "sha-256" || name == "SHA-256") { return sha256_hasher; }
     throw std::invalid_argument("invalid hasher name: " + name);
 }
-
-
 
 /**
  * Constructor.
  * Create an empty recorder with no outdir.
  */
-feature_recorder_set::feature_recorder_set( const flags_t &flags_,
-                                            const std::string &hash_algorithm,
-                                            const std::string &input_fname_,
-                                            const std::string &outdir_):
-    input_fname(input_fname_),outdir(outdir_),flags(flags_),
-    hasher( hash_def(hash_algorithm, hash_def::hash_func_for_name(hash_algorithm)))
-{
-    if (outdir.size() == 0){
-        throw std::invalid_argument("output directory not provided");
+feature_recorder_set::feature_recorder_set(const flags_t& flags_, const scanner_config& sc_)
+    : flags(flags_), sc(sc_), hasher(hash_def(sc_.hash_algorithm, hash_def::hash_func_for_name(sc_.hash_algorithm))) {
+    namespace fs = std::filesystem;
+    if (sc.outdir.empty()) {
+        throw std::invalid_argument("feature_recorder_set::feature_recorder_set(): output directory not provided");
     }
 
     /* Make sure we can write to the outdir if one is provided */
-    if (outdir == scanner_config::NO_OUTDIR){
+    if (sc.outdir == scanner_config::NO_OUTDIR) {
         flags.disabled = true;
     } else {
-        if (access(outdir.c_str(),W_OK)!=0) {
-            throw std::invalid_argument("output directory not writable");
+        /* Create the output directory if it doesn't exist */
+        if (!fs::is_directory(sc.outdir)) { fs::create_directory(sc.outdir); }
+
+        /* Make sure it is writable */
+        if (!fs::is_directory(sc.outdir)) {
+            throw std::runtime_error("Could not create directory " + sc.outdir.string());
+        }
+
+        if (access(sc.outdir.c_str(), W_OK) != 0) {
+            throw std::invalid_argument("output directory " + sc.outdir.string() + " not writable");
         }
     }
 
@@ -85,15 +83,10 @@ feature_recorder_set::feature_recorder_set( const flags_t &flags_,
     }
 #endif
 
-    /* Create an alert recorder if necessary */
-    if (!flags.no_alert) {
-        create_feature_recorder(feature_recorder_set::ALERT_RECORDER_NAME); // make the alert recorder
-    }
-
-    //message_enabled_scanners(scanner_params::PHASE_INIT); // tell all enabled scanners to init
+    // message_enabled_scanners(scanner_params::PHASE_INIT); // tell all enabled scanners to init
 
 #if 0
-#if defined(HAVE_SQLITE3_H) and defined(HAVE_LIBSQLITE3)
+#if defined(HAVE_SQLITE3_H)
     if (flag_set(ENABLE_SQLITE3_RECORDERS)) {
         db_create();
     }
@@ -108,21 +101,17 @@ feature_recorder_set::feature_recorder_set( const flags_t &flags_,
 #endif
 }
 
-
 /*
  * deallocator
  */
-feature_recorder_set::~feature_recorder_set()
-{
+feature_recorder_set::~feature_recorder_set() {
     frm.delete_all();
 #if 0
-#if defined(HAVE_SQLITE3_H) and defined(HAVE_LIBSQLITE3)
+#if defined(HAVE_SQLITE3_H)
     db_close();
 #endif
 #endif
 }
-
-
 
 /**
  *
@@ -130,38 +119,55 @@ feature_recorder_set::~feature_recorder_set()
  * If disabled, create a disabled feature_recorder that can respond to functions as requested.
  */
 
-
-
 /****************************************************************
  *** adding and removing feature recorders
  ****************************************************************/
+
+void feature_recorder_set::create_alert_recorder() {
+    /* Create an alert recorder if necessary */
+    if (!flags.no_alert) {
+        create_feature_recorder(feature_recorder_set::ALERT_RECORDER_NAME); // make the alert recorder
+    }
+}
 
 /**
  * Create a requested feature recorder. Do not create it if it already exists.
  */
 
-feature_recorder &feature_recorder_set::create_feature_recorder(const feature_recorder_def def)
-{
-    if (flags.record_files and flags.record_sql){
+feature_recorder& feature_recorder_set::create_feature_recorder(const feature_recorder_def def) {
+    if (flags.record_files and flags.record_sql) {
         throw std::runtime_error("currently can only record to files or SQL, not both");
     }
-    if (!flags.record_files and !flags.record_sql){
-        throw std::runtime_error("Must record to either files or SQL");
-    }
-    auto it = frm.find(def.name);
-    if ( it != frm.end() ) {
-        throw FeatureRecorderAlreadyExists {std::string("feature recorder already exists: ")+def.name};
+    if (!flags.record_files and !flags.record_sql) { throw std::runtime_error("Must record to either files or SQL"); }
+    if (def.name.size() == 0) {
+        throw FeatureRecorderNullName();
     }
 
-    feature_recorder *fr = nullptr;
-    if (flags.record_files) {
-        fr = new feature_recorder_file(*this, def);
+    auto it = frm.find(def.name);
+    if (it != frm.end()) {
+        // we have a feature recorder with the same name. See if it has the same definition!
+        feature_recorder &fr = *it->second;
+        if (fr.def == def){
+            return fr;
+        }
+        throw FeatureRecorderAlreadyExists{std::string("feature recorder '")
+                + def.name + "' already exists but with a different definition."};
     }
-    if (flags.record_sql) {
-        fr = new feature_recorder_sql(*this, def);
-    }
+
+    feature_recorder* fr = nullptr;
+    if (flags.record_files) { fr = new feature_recorder_file(*this, def); }
+#ifdef HAVE_SQLITE3_H
+    if (flags.record_sql) { fr = new feature_recorder_sql(*this, def); }
+#endif
+    fr->context_window = sc.context_window_default;
+    fr->carve_mode = def.default_carve_mode; // set the default
     frm.insert(def.name, fr);
-    return *fr;                          // as a courtesy
+    return *fr; // as a courtesy
+}
+
+/* convenience constructor for feature recorder with default def */
+feature_recorder& feature_recorder_set::create_feature_recorder(std::string name) {
+    return create_feature_recorder(feature_recorder_def(name));
 }
 
 /*
@@ -169,12 +175,10 @@ feature_recorder &feature_recorder_set::create_feature_recorder(const feature_re
  * If the feature recorder doesn't exist and create is true, create it.
  * Otherwise raise an exception.
  */
-feature_recorder &feature_recorder_set::named_feature_recorder(const std::string name) const
+feature_recorder& feature_recorder_set::named_feature_recorder(const std::string name) const
 {
     auto it = frm.find(name);
-    if ( it == frm.end() ) {
-        throw NoSuchFeatureRecorder {std::string("No such feature recorder: ")+name};
-    }
+    if (it == frm.end()) { throw NoSuchFeatureRecorder{std::string("No such feature recorder: ") + name}; }
     return *it->second;
 }
 
@@ -182,57 +186,49 @@ feature_recorder &feature_recorder_set::named_feature_recorder(const std::string
  * The alert recorder is special. It's provided for all of the feature recorders.
  * If one doesn't exist, create it.
  */
-feature_recorder &feature_recorder_set::get_alert_recorder() const
+feature_recorder& feature_recorder_set::get_alert_recorder() const
 {
     return named_feature_recorder(feature_recorder_set::ALERT_RECORDER_NAME);
 }
 
-
-// send every enabled scanner the phase message
-void feature_recorder_set::feature_recorders_shutdown()
+/*
+ *
+ */
+void feature_recorder_set::set_carve_defaults()
 {
-    for(auto const &it : frm){
-        it.second->shutdown();
+    std::cerr << "set_carve_defaults...\n";
+    for (auto it : frm ) {
+        std::string option_name = it.first + "_carve_mode";
+        auto val = sc.namevals.find(option_name);
+        if (val != sc.namevals.end()) {
+            std::cerr << "setting carve mode " << val->second << " for feature recorder " << it.first << "\n";
+            it.second->carve_mode = feature_recorder_def::carve_mode_t(std::stoi( val->second ));
+        }
     }
+    std::cerr << "set_carve_defaults... done\n";
 }
 
-
-/****************************************************************
- *** Data handling
- ****************************************************************/
-
-
-/*
- * uses md5 to determine if a block was prevously seen.
- * Hopefully sbuf.buf() is zero-copy.
- */
-bool feature_recorder_set::check_previously_processed(const sbuf_t &sbuf)
-{
-    std::string sha1 = dfxml::sha1_generator::hash_buf(sbuf.buf,sbuf.bufsize).hexdigest();
-    return seen_set.check_for_presence_and_insert(sha1);
+// send every enabled scanner the phase message
+void feature_recorder_set::feature_recorders_shutdown() {
+    for (auto const& it : frm) { it.second->shutdown(); }
 }
 
 /****************************************************************
  *** Stats
  ****************************************************************/
 
-void feature_recorder_set::dump_name_count_stats(dfxml_writer *writer) const
-{
-    if (writer) {
-        writer->push("feature_files");
-        for (auto ij: frm) {
-            writer->set_oneline(true);
-            writer->push("feature_file");
-            writer->xmlout("name",ij.second->name);
-            writer->xmlout("count",ij.second->features_written);
-            writer->pop();
-            writer->set_oneline(false);
-        }
-        writer->pop();
+void feature_recorder_set::dump_name_count_stats(dfxml_writer& writer) const {
+    writer.push("feature_files");
+    for (auto ij : frm) {
+        writer.set_oneline(true);
+        writer.push("feature_file");
+        writer.xmlout("name", ij.second->name);
+        writer.xmlout("count", ij.second->features_written);
+        writer.pop();
+        writer.set_oneline(false);
     }
+    writer.pop();
 }
-
-
 
 /****************************************************************
  *** Histogram Support - Called during shutdown of scanner_set.
@@ -246,46 +242,31 @@ void feature_recorder_set::dump_name_count_stats(dfxml_writer *writer) const
  * 2 - In-memory histograms (used primarily by beapi)
  */
 
-
-void feature_recorder_set::histogram_add(const histogram_def &def)
-{
+void feature_recorder_set::histogram_add(const histogram_def& def) {
     named_feature_recorder(def.feature).histogram_add(def);
 }
 
-size_t feature_recorder_set::histogram_count() const
-{
+size_t feature_recorder_set::histogram_count() const {
     /* Ask each feature recorder to count the number of histograms it can produce */
     size_t count = 0;
-    for ( auto it: frm ){
-        count += it.second->histogram_count();
-    }
+    for (auto it : frm) { count += it.second->histogram_count(); }
     return count;
 }
-
 
 /**
  * Have every feature recorder generate all of its histograms.
  */
-void feature_recorder_set::histograms_generate()
-{
-    for (auto it : frm ){
-        it.second->histogram_flush_all();
-    }
+void feature_recorder_set::histograms_generate() {
+    for (auto it : frm) { it.second->histogram_flush_all(); }
 }
 
-
-std::vector<std::string> feature_recorder_set::feature_file_list() const
-{
+std::vector<std::string> feature_recorder_set::feature_file_list() const {
     std::vector<std::string> ret;
-    for( auto it: frm ){
-        ret.push_back(it.first);
-    }
+    for (auto it : frm) { ret.push_back(it.first); }
     return ret;
 }
 
-
 #if 0
-//#if defined(HAVE_SQLITE3_H) and defined(HAVE_LIBSQLITE3)
 
 /*** SQL Support ***/
 
@@ -299,7 +280,6 @@ std::vector<std::string> feature_recorder_set::feature_file_list() const
  * Time with domexusers:
  * no SQL -
  */
-
 
 #define SQLITE_EXTENSION ".sqlite"
 #ifndef SQLITE_DETERMINISTIC
@@ -361,7 +341,7 @@ void feature_recorder_set::db_create_table(const std::string &name)
 sqlite3 *feature_recorder_set::db_create_empty(const std::string &name)
 {
     assert(name.size()>0);
-    std::string dbfname  = outdir + "/" + name +  SQLITE_EXTENSION;
+    std::string dbfname  = sc.outdir + "/" + name +  SQLITE_EXTENSION;
     if(debug) std::cerr << "create_feature_database " << dbfname << "\n";
     sqlite3 *db=0;
     if (sqlite3_open_v2(dbfname.c_str(), &db,

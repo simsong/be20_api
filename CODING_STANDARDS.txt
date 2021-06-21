@@ -13,7 +13,7 @@ Executive summary:
   Legacy code has tabs at 8 characters; they can be freely converted
   to spaces as necessary.
 
-* Indent at 4 spaces. 
+* Indent at 4 spaces.
 
 * Open braces start on the SAME LINE for:
   - if statements
@@ -34,6 +34,8 @@ Executive summary:
   (setq c-basic-offset 4)
 
 
+* In general, do not use pointers in structures if nullptr is undefined. Always use references in these cases.
+
 References:
 ===========
 
@@ -46,4 +48,3 @@ References:
 * http://google-styleguide.googlecode.com/svn/trunk/cppguide.xml
 
 * http://www.python.org/dev/peps/pep-0008/#maximum-line-length
-

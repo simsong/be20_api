@@ -2,6 +2,7 @@
 #ifndef SBUF_STREAM_H
 #define SBUF_STREAM_H
 
+#include "sbuf.h"
 
 /** \addtogroup bulk_extractor_APIs
  * @{
@@ -11,13 +12,15 @@
 /**
  * sbuf_stream provides the get services of sbuf_t but wrapped in a Stream interface.
  * Note that sbuf_stream is not particularly optimized; it is simply a wrapper.
+ * Right now this is only used by scan_winprefetch. It could become a general iterator.
  */
 class sbuf_stream {
 private:
-    const sbuf_t sbuf;
+    const sbuf_t& sbuf;
     size_t offset;
+
 public:
-    sbuf_stream(const sbuf_t &sbuf_);
+    sbuf_stream(const sbuf_t& sbuf_);
     ~sbuf_stream();
     void seek(size_t offset);
     size_t tell();
@@ -59,10 +62,10 @@ public:
     /**
      * \name string and wstring stream readers
      * @{ */
-    void getUTF8(std::string &utf8_string);
-    void getUTF8(size_t num_octets_requested, std::string &utf8_string);
-    void getUTF16(std::wstring &utf16_string);
-    void getUTF16(size_t num_code_units_requested, std::wstring &utf16_string);
+    void getUTF8(std::string& utf8_string);
+    void getUTF8(size_t num_octets_requested, std::string& utf8_string);
+    void getUTF16(std::wstring& utf16_string);
+    void getUTF16(size_t num_code_units_requested, std::wstring& utf16_string);
     /** @} */
 };
 

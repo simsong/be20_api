@@ -22,7 +22,7 @@ ETAGS = etags-emacs
 ACLOCAL_AMFLAGS = -I m4
 
 # Use the current directory and include the list of BE13_API sources
-BE13_API_DIR=.
+BE13_API_DIR = .
 include Makefile.defs
 
 clean-local:
@@ -31,13 +31,8 @@ clean-local:
 clean-gcov:
 	rm -f *.gcov *.gcda *.gcno
 
-#DFXML_SRC_DIR=dfxml/src/
-#include dfxml/src/Makefile.defs
-
-DFXML_WRITER = dfxml/src/dfxml_writer.cpp \
-      dfxml/src/dfxml_writer.h \
-      dfxml/src/hash_t.h \
-      dfxml/src/cpuid.h
+clang-format:
+	clang-format* -i *h *cpp
 
 AUTOMAKE_OPTIONS = subdir-objects
 
@@ -51,4 +46,7 @@ TESTS = $(check_PROGRAMS)
 
 # apitest: test_be13_api
 
-test_be13_api_SOURCES = $(DFXML_WRITER) $(BE13_API_SRC) test_be13_api.cpp catch.hpp
+test_be13_api_SOURCES = $(BE13_API_SRC) test_be13_api.cpp catch.hpp
+
+push:
+	make && make check && make distcheck && git push origin
