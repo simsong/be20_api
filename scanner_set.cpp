@@ -253,7 +253,6 @@ void scanner_set::apply_scanner_commands() {
     fs.create_alert_recorder();
     for (auto sit : scanner_info_db) {
         for (auto it : sit.second->feature_defs) {
-            std::cerr << "create feature recorder " << it.name << "\n";
             fs.create_feature_recorder(it);
         }
 
