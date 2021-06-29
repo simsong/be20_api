@@ -11,7 +11,7 @@
 #ifndef HAVE_LIBPCAP
 #include "pcap_fake.h"
 
-#include <errno.h>
+//#include <errno.h>
 #include <fcntl.h>
 #include <iostream>
 #include <stdlib.h>

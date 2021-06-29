@@ -172,14 +172,9 @@ void scanner_set::add_scanner_file(std::string fn, const scanner_config &c)
 /* Add all of the scanners in a directory */
 void scanner_set::add_scanner_directory(const std::string &dirname,const scanner_info::scanner_config &sc )
 {
-    DIR *dirp = opendir(dirname.c_str());
-    if(dirp==0){
-        fprintf(stderr,"Cannot open directory %s:",dirname.c_str());
-        exit(1);
-    }
-    struct dirent *dp;
-    while ((dp = readdir(dirp)) != NULL){
-        std::string fname = dp->d_name;
+TODO: Re-implement using C++17 directory reading.
+
+
         if(fname.substr(0,5)=="scan_" || fname.substr(0,5)=="SCAN_"){
             size_t extloc = fname.rfind('.');
             if(extloc==std::string::npos) continue; // no '.'

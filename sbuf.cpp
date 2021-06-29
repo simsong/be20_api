@@ -161,8 +161,7 @@ sbuf_t* sbuf_t::sbuf_new(pos0_t pos0_, const std::string &str)
 
 /** Allocate a subset of an sbuf's memory to a child sbuf.
  * from within an existing sbuf.
- * The allocated buf MUST be freed before the parent, since no copy is
- * made...
+ * The allocated buf MUST be freed before the parent, since no copy is made...
  */
 sbuf_t *sbuf_t::new_slice(size_t off, size_t len) const
 {
@@ -180,6 +179,16 @@ sbuf_t *sbuf_t::new_slice(size_t off, size_t len) const
     return new sbuf_t(pos0 + off, highest_parent(),
                       buf + off, len, new_pagesize,
                       NO_FD, flags_t());
+}
+
+/** Copy a subset of an sbuf's memory to a child sbuf.
+ */
+sbuf_t *sbuf_t::new_slice_copy(size_t off, size_t len) const
+{
+    auto src  = slice(off,len);
+    auto *dst = sbuf_t::sbuf_malloc(src.pos0, src.bufsize);
+    memcpy( dst->malloc_buf(), src.buf, src.bufsize);
+    return dst;
 }
 
 sbuf_t sbuf_t::slice(size_t off, size_t len) const

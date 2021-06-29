@@ -160,18 +160,21 @@ public:
      *
      * slice() returns an object on the stack.
      *
-     * new_slice() returns a new object that must be deleted.
+     * new_slice() returns a new object that shares the object's memory. The object must be deleted.
+     * new_slice_copy() makes a copy of the memory, and must be deleted.
      */
     sbuf_t slice(size_t off, size_t len) const;
     sbuf_t *new_slice(size_t off, size_t len) const;
+    sbuf_t *new_slice_copy(size_t off, size_t len) const;
 
     /**
-     * make an sbuf from a parent but from off to the end of the buffer.
-     * This calls the above one.
+     * slice(off) make an sbuf from a parent but from off to the end of the buffer.
+     * This calls the above one. You can say (sbuf+off) as well
      */
     sbuf_t slice(size_t off) const;
-    sbuf_t *new_slice(size_t off) const;
+    sbuf_t *new_slice(size_t off) const; // allocates; must be deleted
     virtual ~sbuf_t();
+    sbuf_t operator+(size_t off) const { return slice(off); }
 
     inline static const std::string U10001C = "\xf4\x80\x80\x9c"; // default delimeter character in bulk_extractor
     static std::string map_file_delimiter;                        // character placed
