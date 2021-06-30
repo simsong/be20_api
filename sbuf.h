@@ -115,8 +115,6 @@ public:
      */
     static sbuf_t* sbuf_new(const pos0_t pos0_, const std::string &str);
 
-
-
     /* Allocate writable memory, with buf[0] being at pos0_..
      * Throws std::bad_alloc() if memory is not available.
      * Use malloc_buf() to get the buffer.
@@ -130,6 +128,14 @@ public:
      * When the sbuf is deleted, the memory is unmapped and the file is closed.
      */
     static sbuf_t* map_file(const std::filesystem::path fname);                                 // map a sbuf from a file, or throw exception
+
+    /****************************************************************
+     * Create an sbuf from a block of memory that does not need to be freed when the sbuf is deleted.
+     */
+    sbuf_t(pos0_t pos0_, const uint8_t *buf_, size_t bufsize_):
+        pos0(pos0_), bufsize(bufsize_), pagesize(bufsize_),
+        parent(), buf(buf_), malloced(nullptr) {
+    }
 
     /****************************************************************
      *** Child allocators --- allocate an sbuf from another sbuf
