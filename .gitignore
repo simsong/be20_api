@@ -29,3 +29,6 @@ build-aux
 demos
 stamp-h1
 test-*
+test_be13_api
+*.log
+*.trs
