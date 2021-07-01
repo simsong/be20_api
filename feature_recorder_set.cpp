@@ -50,7 +50,7 @@ void feature_recorder_set::init(const feature_file_names_t &feature_files)
     if ((outdir != NO_OUTDIR) && (access(outdir.c_str(),W_OK)!=0)) {
         throw new std::invalid_argument("output directory not writable");
     }
-        
+
     if (flag_set(ENABLE_SQLITE3_RECORDERS)) {
         db_create();
     }
@@ -72,14 +72,14 @@ void feature_recorder_set::flush_all()
 {
     for(feature_recorder_map::iterator i = frm.begin();i!=frm.end();i++){
         i->second->flush();
-    } 
+    }
 }
 
 void feature_recorder_set::close_all()
 {
     for(feature_recorder_map::iterator i = frm.begin();i!=frm.end();i++){
         i->second->close();
-    } 
+    }
     if ( flag_set(feature_recorder_set::ENABLE_SQLITE3_RECORDERS )) {
         db_transaction_commit();
     }
@@ -121,7 +121,7 @@ feature_recorder *feature_recorder_set::create_name_factory(const std::string &n
 /*
  * Create a named feature recorder, any associated stoplist recorders, and open the files
  */
-void feature_recorder_set::create_name(const std::string &name,bool create_stop_recorder) 
+void feature_recorder_set::create_name(const std::string &name,bool create_stop_recorder)
 {
     if(frm.find(name)!=frm.end()){
         std::cerr << "create_name: feature recorder '" << name << "' already exists\n";
@@ -133,7 +133,7 @@ void feature_recorder_set::create_name(const std::string &name,bool create_stop_
     frm[name] = fr;
     if (create_stop_recorder){
         std::string name_stopped = name+"_stopped";
-        
+
         feature_recorder *fr_stopped = create_name_factory(name_stopped);
         fr->set_stop_list_recorder(fr_stopped);
         frm[name_stopped] = fr_stopped;
@@ -153,7 +153,7 @@ feature_recorder *feature_recorder_set::get_alert_recorder() const
  */
 bool feature_recorder_set::check_previously_processed(const uint8_t *buf,size_t bufsize)
 {
-    std::string md5 = md5_generator::hash_buf(buf,bufsize).hexdigest();
+    std::string md5 = dfxml::md5_generator::hash_buf(buf,bufsize).hexdigest();
     return seen_set.check_for_presence_and_insert(md5);
 }
 
@@ -206,7 +206,7 @@ void    feature_recorder_set::set_flag(uint32_t f)
         }
     }
     flags |= f;
-}         
+}
 
 void    feature_recorder_set::unset_flag(uint32_t f)
 {

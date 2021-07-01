@@ -22,3 +22,10 @@ _deps
 a.out
 *.sql3
 stand
+TAGS
+ar-lib
+*.gz
+build-aux
+demos
+stamp-h1
+test-*
