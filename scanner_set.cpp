@@ -302,7 +302,7 @@ scanner_t* scanner_set::get_scanner_by_name(const std::string search_name) const
         if (it.second->name == search_name) { return it.first; }
     }
 #if 0
-    std::cerr << "scanners on file:\n";
+    std::cerr << "scanner_set::get_scanner_by_name(" << search_name << ")\nscanners on file:\n";
     for (auto it: scanner_info_db) {
         std::cerr << " " <<  it.second->name  << "\n";
     }
