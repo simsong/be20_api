@@ -224,7 +224,7 @@ void feature_recorder_set::dump_name_count_stats(dfxml_writer& writer) const {
         writer.push("feature_file");
         writer.xmlout("name", ij.second->name);
         writer.xmlout("count", ij.second->features_written);
-        writer.pop();
+        writer.pop("feature_file");
         writer.set_oneline(false);
     }
     writer.pop();
