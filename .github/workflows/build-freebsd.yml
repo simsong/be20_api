@@ -47,29 +47,26 @@ jobs:
           run: |
             wget https://ftpmirror.gnu.org/autoconf/autoconf-2.71.tar.gz
             tar xfz autoconf-2.71.tar.gz && cd autoconf-2.71 && ./configure && make && make install
-            autoconf --version
-            automake --version
             echo ==================================================
+            echo "ls -l:"
+            ls -l
+            echo pwd
+            pwd
             echo ==================================================
-            echo ls -l:
-              ls -l
-              echo pwd
-              pwd
-              echo ==================================================
-              bash bootstrap.sh
-              ./configure
-              make check
+            bash bootstrap.sh
+            ./configure
+            make check
 
-              - name: Save failures report
-                if:   failure()
-                uses: actions/upload-artifact@v2
-                with:
-                  name: freebsd-error-report
-                  path: |
-                    autom4te.cache/**
-                    config.log
-                    config.h
-                    test*.log
+      - name: Save failures report
+        uses: actions/upload-artifact@v2
+        if:   failure()
+        with:
+          name: freebsd-error-report
+          path: |
+            autom4te.cache/**
+            config.log
+            config.h
+            test*.log
 
-                    - uses: ammaraskar/gcc-problem-matcher@0.1
-                      name: GCC Problem Matcher
+      - name: GCC Problem Matcher
+        uses: ammaraskar/gcc-problem-matcher@0.1

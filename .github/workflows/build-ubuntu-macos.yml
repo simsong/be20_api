@@ -59,4 +59,3 @@ jobs:
           make check
           gcov-9 -n -o . `find . -name '*cpp'`
           bash <(curl -s https://codecov.io/bash)
-          make distclean
