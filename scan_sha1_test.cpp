@@ -12,7 +12,7 @@
 #include <iostream>
 #include <sys/types.h>
 
-#include "dfxml/src/hash_t.h"
+#include "dfxml_cpp/src/hash_t.h"
 #include "scan_sha1_test.h"
 #include "scanner_params.h"
 #include "scanner_set.h"

@@ -12,7 +12,7 @@
 #include <algorithm>
 
 #include "sbuf.h"
-#include "dfxml/src/hash_t.h"
+#include "dfxml_cpp/src/hash_t.h"
 #include "formatter.h"
 #include "unicode_escape.h"
 

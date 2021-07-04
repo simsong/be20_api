@@ -48,7 +48,7 @@ AC_PROG_EGREP
 ## do not put pthread here
 
 ## Check dfxml and be13_api headers
-m4_include([dfxml/src/dfxml_configure.m4])
+m4_include([dfxml_cpp/src/dfxml_configure.m4])
 m4_include([be13_configure.m4])
 
 AC_OUTPUT

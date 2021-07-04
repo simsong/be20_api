@@ -31,6 +31,9 @@ clean-local:
 clean-gcov:
 	rm -f *.gcov *.gcda *.gcno
 
+DFXML_SRC_DIR=dfxml_cpp/src/
+include $(DFXML_SRC_DIR)/Makefile.defs
+
 clang-format:
 	clang-format* -i *h *cpp
 
@@ -46,7 +49,7 @@ TESTS = $(check_PROGRAMS)
 
 # apitest: test_be13_api
 
-test_be13_api_SOURCES = $(BE13_API_SRC) test_be13_api.cpp catch.hpp
+test_be13_api_SOURCES = $(BE13_API_SRC) test_be13_api.cpp catch.hpp $(DFXML_READER) $(DFXML_WRITER)
 
 push:
 	make && make check && make distcheck && git push origin

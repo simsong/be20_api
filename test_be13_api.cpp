@@ -31,6 +31,7 @@
 #include "atomic_unicode_histogram.h"
 #include "sbuf.h"
 #include "utils.h"
+#include "dfxml_cpp/src/hash_t.h"
 
 /****************************************************************
  *** Support code
@@ -313,7 +314,6 @@ TEST_CASE("Third AtomicUnicodeHistogram test", "[histogram]") {
 /****************************************************************
  * hash_t.h
  */
-#include "dfxml/src/hash_t.h"
 static std::string hash_name("sha1");
 static std::string hash_func(const uint8_t* buf, size_t bufsize) {
     if (hash_name == "md5" || hash_name == "MD5") { return dfxml::md5_generator::hash_buf(buf, bufsize).hexdigest(); }

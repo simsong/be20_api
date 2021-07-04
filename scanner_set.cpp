@@ -16,8 +16,8 @@
 #endif
 
 #include "aftimer.h"
-#include "dfxml/src/dfxml_writer.h"
-#include "dfxml/src/hash_t.h"
+#include "dfxml_cpp/src/dfxml_writer.h"
+#include "dfxml_cpp/src/hash_t.h"
 #include "formatter.h"
 #include "scanner_config.h"
 #include "scanner_set.h"

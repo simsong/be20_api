@@ -7,8 +7,8 @@
 #include "feature_recorder_sql.h"
 #include "scanner_config.h"
 
-#include "dfxml/src/dfxml_writer.h"
-#include "dfxml/src/hash_t.h"
+#include "dfxml_cpp/src/dfxml_writer.h"
+#include "dfxml_cpp/src/hash_t.h"
 
 #ifndef HAVE_LIBSQLITE3
 #ifdef HAVE_SQLITE3_H
