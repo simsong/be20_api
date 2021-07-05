@@ -457,6 +457,9 @@ void scanner_set::process_sbuf(class sbuf_t* sbufp) {
     }
 
     const class sbuf_t& sbuf = *sbufp; // don't allow modification
+
+    if (sbuf.bufsize==0) return;        // nothing to scan
+
     const pos0_t& pos0 = sbuf.pos0;
 
     /* If we are too deep, error out */
@@ -469,9 +472,6 @@ void scanner_set::process_sbuf(class sbuf_t* sbufp) {
         /* Determine if we have seen this buffer before */
         bool seen_before = check_previously_processed(sbuf);
         if (seen_before) {
-            std::stringstream ss;
-            ss << "<buflen>" << sbuf.bufsize << "</buflen>";
-            if (dup_data_alerts) { fs.get_alert_recorder().write(sbuf.pos0, "DUP SBUF " + sbuf.hash(), ss.str()); }
             dup_bytes_encountered += sbuf.bufsize;
         }
 

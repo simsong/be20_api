@@ -105,7 +105,6 @@ private:
     std::atomic<uint64_t> sbuf_seen{0}; // number of seen sbufs.
 
     uint32_t max_ngram{10};                         // maximum ngram size to scan for
-    bool dup_data_alerts{false};                    // notify when duplicate data is not processed
     std::atomic<uint64_t> dup_bytes_encountered{0}; // amount of dup data encountered
     class dfxml_writer* writer{nullptr};            // if provided, a dfxml writer
     scanner_params::phase_t current_phase{scanner_params::PHASE_INIT};
