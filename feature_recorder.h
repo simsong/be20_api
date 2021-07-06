@@ -166,7 +166,7 @@ public:
      */
     feature_recorder(class feature_recorder_set& fs, const feature_recorder_def def);
     virtual ~feature_recorder();
-    void flush();
+    virtual void flush();
 
     const std::string name{}; // name of this feature recorder (copied out of def)
     feature_recorder_def def{"<NONAME>"};

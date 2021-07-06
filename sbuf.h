@@ -248,7 +248,7 @@ public:
             if (off==0 && max==0) return "Error: Read past end of sbuf";
             std::stringstream ss;
             ss << "Error: Read past end of sbuf (off=" << off << " max=" << max << " )";
-            strncpy(buf,ss.str().c_str(),sizeof(buf));
+            strncpy(buf,ss.str().c_str(),sizeof(buf)-1);
             buf[sizeof(buf)-1] = '\000'; // safety
             return buf;
         }
@@ -261,7 +261,7 @@ public:
 
     /* Search functions --- memcmp at a particular location */
     int memcmp(const uint8_t* cbuf, size_t at, size_t len) const {
-        if (left(at) < len) throw sbuf_t::range_exception_t();
+        if (left(at) < len) throw sbuf_t::range_exception_t(at, len);
         return ::memcmp(this->buf + at, cbuf, len);
     }
 
@@ -275,23 +275,23 @@ public:
      * These should be used instead of buf[i]
      */
     uint8_t get8u(size_t i) const {
-        if (i + 1 > bufsize) throw sbuf_t::range_exception_t();
+        if (i + 1 > bufsize) throw sbuf_t::range_exception_t(i, 1);
         return this->buf[i];
     }
 
     uint16_t get16u(size_t i) const {
-        if (i + 2 > bufsize) throw sbuf_t::range_exception_t();
+        if (i + 2 > bufsize) throw sbuf_t::range_exception_t(i, 2);
         return 0 | (uint16_t)(this->buf[i + 0] << 0) | (uint16_t)(this->buf[i + 1] << 8);
     }
 
     uint32_t get32u(size_t i) const {
-        if (i + 4 > bufsize) throw sbuf_t::range_exception_t();
+        if (i + 4 > bufsize) throw sbuf_t::range_exception_t(i, 4);
         return 0 | (uint32_t)(this->buf[i + 0] << 0) | (uint32_t)(this->buf[i + 1] << 8) |
                (uint32_t)(this->buf[i + 2] << 16) | (uint32_t)(this->buf[i + 3] << 24);
     }
 
     uint64_t get64u(size_t i) const {
-        if (i + 8 > bufsize) throw sbuf_t::range_exception_t();
+        if (i + 8 > bufsize) throw sbuf_t::range_exception_t(i, 8);
         return 0 | ((uint64_t)(this->buf[i + 0]) << 0) | ((uint64_t)(this->buf[i + 1]) << 8) |
                ((uint64_t)(this->buf[i + 2]) << 16) | ((uint64_t)(this->buf[i + 3]) << 24) |
                ((uint64_t)(this->buf[i + 4]) << 32) | ((uint64_t)(this->buf[i + 5]) << 40) |
@@ -316,23 +316,23 @@ public:
      * sbuf_range_exception if out of range.
      */
     uint8_t get8uBE(size_t i) const {
-        if (i + 1 > bufsize) throw sbuf_t::range_exception_t();
+        if (i + 1 > bufsize) throw sbuf_t::range_exception_t(i, 1);
         return this->buf[i];
     }
 
     uint16_t get16uBE(size_t i) const {
-        if (i + 2 > bufsize) throw sbuf_t::range_exception_t();
+        if (i + 2 > bufsize) throw sbuf_t::range_exception_t(i, 2);
         return 0 | (uint16_t)(this->buf[i + 1] << 0) | (uint16_t)(this->buf[i + 0] << 8);
     }
 
     uint32_t get32uBE(size_t i) const {
-        if (i + 4 > bufsize) throw sbuf_t::range_exception_t();
+        if (i + 4 > bufsize) throw sbuf_t::range_exception_t(i, 4);
         return 0 | (uint32_t)(this->buf[i + 3] << 0) | (uint32_t)(this->buf[i + 2] << 8) |
                (uint32_t)(this->buf[i + 1] << 16) | (uint32_t)(this->buf[i + 0] << 24);
     }
 
     uint64_t get64uBE(size_t i) const {
-        if (i + 8 > bufsize) throw sbuf_t::range_exception_t();
+        if (i + 8 > bufsize) throw sbuf_t::range_exception_t(i, 8);
         return 0 | ((uint64_t)(this->buf[i + 7]) << 0) | ((uint64_t)(this->buf[i + 6]) << 8) |
                ((uint64_t)(this->buf[i + 5]) << 16) | ((uint64_t)(this->buf[i + 4]) << 24) |
                ((uint64_t)(this->buf[i + 3]) << 32) | ((uint64_t)(this->buf[i + 2]) << 40) |
