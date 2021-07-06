@@ -486,60 +486,75 @@ void scanner_set::process_sbuf(class sbuf_t* sbufp) {
          *** CALL EACH OF THE SCANNERS ON THE SBUF
          ****************************************************************/
 
-        if (debug_flags.debug_dump_data) { sbuf.hex_dump(std::cerr); }
+        if (debug_flags.debug_dump_data) {
+            sbuf.hex_dump(std::cerr);
+        }
 
         for (auto it : scanner_info_db) {
             // Look for reasons not to run a scanner
+            // this is a lot of find operations - could we make a vector of the enabled scanner_info_dbs?
+            const auto &name = it.second->name; // scanner name
+            const auto &flags = it.second->scanner_flags; // scanner flags
             if (enabled_scanners.find(it.first) == enabled_scanners.end()) {
                 continue; //  not enabled
             }
 
-            if (ngram_size > 0 && it.second->scanner_flags.scan_ngram_buffer == false) { continue; }
+            if (ngram_size > 0 && flags.scan_ngram_buffer == false) {
+                continue;
+            }
 
-            if (sbuf.depth() > 0 && it.second->scanner_flags.depth0_only) {
+            if (sbuf.depth() > 0 && flags.depth0_only) {
                 // depth >0 and this scanner only run at depth 0
                 continue;
             }
 
-            if (seen_before && it.second->scanner_flags.scan_seen_before == false) { continue; }
+            // Don't rescan data that has been seen twice (if scanner doesn't want it.)
+            if (seen_before && flags.scan_seen_before == false) {
+                continue;
+            }
 
-            const std::string& name = it.second->name;
+            // If the scanner is a recurse_all, it always calls recurse. We can't it twice in the stack, or else
+            // we get infinite regression.
+            if (flags.recurse_always && sbuf.pos0.contains( it.second->pathPrefix)) {
+                continue;
+            }
+
+            bool record_call_stats = false;
 
             try {
 
                 /* Compute the effective path for stats */
-                bool inname = false;
                 std::string epath;
-                for (auto cc : sbuf.pos0.path) {
-                    if (isupper(cc)) inname = true;
-                    if (inname) epath.push_back(toupper(cc));
-                    if (cc == '-') inname = false;
+                if (record_call_stats) {
+                    bool inname = false;
+                    for (auto cc : sbuf.pos0.path) {
+                        if (isupper(cc)) inname = true;
+                        if (inname) epath.push_back(toupper(cc));
+                        if (cc == '-') inname = false;
+                    }
+                    if (epath.size() > 0) epath.push_back('-');
+                    for (auto cc : name) { epath.push_back(toupper(cc)); }
                 }
-                if (epath.size() > 0) epath.push_back('-');
-                for (auto cc : name) { epath.push_back(toupper(cc)); }
-
-                /* Create a RCB that will recursively call process_sbuf() */
-                // recursion_control_block rcb(process_sbuf, upperstr(name));
 
                 /* Call the scanner.*/
-                {
-                    aftimer t;
+                aftimer t;
 
-                    if (debug_flags.debug_print_steps) {
-                        std::cerr << "sbuf.pos0=" << sbuf.pos0 << " calling scanner " << name << "\n";
-                    }
-                    t.start();
-                    scanner_params sp(*this, scanner_params::PHASE_SCAN, sbufp, scanner_params::PrintOptions(),
-                                      nullptr);
-                    (*it.first)(sp);
-                    t.stop();
-                    if (debug_flags.debug_print_steps) {
-                        std::cerr << "sbuf.pos0=" << sbuf.pos0 << " scanner " << name << " t=" << t.elapsed_seconds()
-                                  << "\n";
-                    }
-                    // fs.add_stats(epath,t.elapsed_seconds());
+                if (debug_flags.debug_print_steps) {
+                    std::cerr << "sbuf.pos0=" << sbuf.pos0 << " calling scanner " << name << "\n";
                 }
+                if (record_call_stats || debug_flags.debug_print_steps) {
+                    t.start();
+                }
+                scanner_params sp(*this, scanner_params::PHASE_SCAN, sbufp, scanner_params::PrintOptions(), nullptr);
+                (*it.first)(sp);
 
+                if (record_call_stats || debug_flags.debug_print_steps) {
+                    t.stop();
+                    // fs.add_stats(epath,t.elapsed_seconds());
+                    if (debug_flags.debug_print_steps) {
+                        std::cerr << "sbuf.pos0=" << sbuf.pos0 << " scanner " << name << " t=" << t.elapsed_seconds() << "\n";
+                    }
+                }
             } catch (const std::exception& e) {
                 std::stringstream ss;
                 ss << "std::exception Scanner: " << name << " Exception: " << e.what() << " sbuf.pos0: " << sbuf.pos0

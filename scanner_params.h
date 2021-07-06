@@ -13,6 +13,10 @@
 #include <set>
 #include <sstream>
 #include <string>
+#include <algorithm>
+#include <cctype>
+#include <iostream>
+#include <iterator>
 
 // Note: Do not include scanner_set.h, because it needs scanner_params.h!
 
@@ -64,6 +68,7 @@ struct scanner_params {
             bool find_scanner{false};   //  this scanner uses the find_list
             bool recurse{false};        //  this scanner will recurse
             bool recurse_expand{false}; //  recurses AND result is >= original size
+            bool recurse_always{false};    //  this scanner performs no data validation and ALWAYS recurses.
             bool scan_ngram_buffer{
                 false}; //  Scanner can run even if the entire gets buffer is filled with constant n-grams
             bool scan_seen_before{false}; //  Scanner can run even if buffer has seen before
@@ -86,27 +91,42 @@ struct scanner_params {
             }
         } scanner_flags{};
 
+        std::string ToUpper(const std::string input) {
+            std::string ret;
+            for (auto ch:input){
+                ret.push_back(std::toupper(ch));
+            }
+            return ret;
+        }
+
         // constructor. We must have the name and the pointer. Everything else is optional
-        scanner_info(scanner_t* scanner_, std::string name_) : scanner(scanner_), name(name_){};
+        scanner_info(scanner_t* scanner_, std::string name_) :
+            scanner(scanner_), name(name_), pathPrefix(ToUpper(name_)){
+        };
         /* PASSED FROM SCANNER to API: */
         scanner_t* scanner;            // the scanner
-        std::string name;              //   scanner name
+        std::string name;              // scanner name
+        std::string pathPrefix{};      //   this scanner's path prefix for recursive scanners. e.g. "GZIP". Typically name uppercase
         std::string helpstr{};         // the help string
         std::string author{};          //   who wrote me?
         std::string description{};     //   what do I do?
         std::string url{};             //   where I come from
         std::string scanner_version{}; //   version for the scanner
-        std::string pathPrefix{};      //   this scanner's path prefix for recursive scanners. e.g. "GZIP"
         uint64_t flags{};              //   flags
         std::vector<feature_recorder_def> feature_defs{}; //   feature files that this scanner needs.
         std::vector<histogram_def> histogram_defs{};      //   histogram definitions that the scanner needs
+
+        // Derrived:
+
+
         // void              *packet_user {};        //   data for network callback
         // be13::packet_callback_t *packet_cb {};    //   callback for processing network packets, or NULL
 
         // Move constructor
         scanner_info(scanner_info&& source)
-            : scanner(source.scanner), name(source.name), helpstr(source.helpstr), description(source.description),
-              url(source.url), scanner_version(source.scanner_version), pathPrefix(source.pathPrefix),
+            : scanner(source.scanner), name(source.name), pathPrefix(source.pathPrefix),
+              helpstr(source.helpstr), description(source.description),
+              url(source.url), scanner_version(source.scanner_version),
               flags(source.flags), feature_defs(source.feature_defs), histogram_defs(source.histogram_defs) {}
     };
 

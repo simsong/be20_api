@@ -13,9 +13,9 @@
 #error utils.h requires that autoconf-generated config.h be included first
 #endif
 
-#include <cstdint>
-#include <sys/time.h>
-#include <sys/types.h>
+//#include <cstdint>
+//#include <sys/time.h>
+//#include <sys/types.h>
 #include <unistd.h>
 
 #include <exception>

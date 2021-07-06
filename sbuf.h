@@ -30,12 +30,14 @@
 #include <atomic>
 #include <cassert>
 #include <cstring>
+#include <cstdio>
 #include <exception>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <mutex>
 #include <string>
+#include <sstream>
 
 #include <sys/mman.h>
 #include <unistd.h>
@@ -126,8 +128,9 @@ public:
     /****************************************************************
      * Allocate a sbuf from a file mapped into memory.
      * When the sbuf is deleted, the memory is unmapped and the file is closed.
+     * If file does not exist, throw an exception
      */
-    static sbuf_t* map_file(const std::filesystem::path fname);                                 // map a sbuf from a file, or throw exception
+    static sbuf_t* map_file(const std::filesystem::path fname);
 
     /****************************************************************
      * Create an sbuf from a block of memory that does not need to be freed when the sbuf is deleted.
@@ -235,8 +238,20 @@ public:
      * past the end of buf.
      */
     class range_exception_t : public std::exception {
+        size_t off {0};
+        size_t max {0};
     public:
-        virtual const char* what() const throw() { return "Error: Read past end of sbuf"; }
+        range_exception_t(size_t off_, size_t max_):off(off_),max(max_){};
+        range_exception_t(){};
+        virtual const char* what() const throw() {
+            static char buf[64];
+            if (off==0 && max==0) return "Error: Read past end of sbuf";
+            std::stringstream ss;
+            ss << "Error: Read past end of sbuf (off=" << off << " max=" << max << " )";
+            strncpy(buf,ss.str().c_str(),sizeof(buf));
+            buf[sizeof(buf)-1] = '\000'; // safety
+            return buf;
+        }
     };
 
     /****************************************************************
