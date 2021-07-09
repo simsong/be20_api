@@ -188,8 +188,8 @@ struct scanner_params {
      * Defaults to phase1.
      * This is the complicated one!
      */
-    scanner_params(const scanner_params& sp_existing, const sbuf_t* sbuf_new)
-        : ss(sp_existing.ss), phase(sp_existing.phase), sbuf(sbuf_new), print_options(sp_existing.print_options),
+    scanner_params(const scanner_params& sp_existing, const sbuf_t* sbuf_)
+        : ss(sp_existing.ss), phase(sp_existing.phase), sbuf(sbuf_), print_options(sp_existing.print_options),
           depth(sp_existing.depth + 1), sxml(sp_existing.sxml){};
 #if 0
     /* A scanner params with no print options */

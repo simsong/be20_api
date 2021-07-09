@@ -21,7 +21,7 @@ class feature_recorder_file : public feature_recorder {
 public:
     feature_recorder_file(class feature_recorder_set& fs, const feature_recorder_def def);
     virtual ~feature_recorder_file();
-    virtual void flush();
+    virtual void flush() override;
 
 private:
     std::mutex Mios{};  // mutex for IOS

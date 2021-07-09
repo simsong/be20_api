@@ -110,20 +110,29 @@ public:
     explicit sbuf_t(const sbuf_t &src, size_t offset); // start at offset and get the rest of the sbuf as a child
     explicit sbuf_t(const sbuf_t &src, size_t offset, size_t len); // start at offset for a given len
 
-    /* Allocate from an existing buffer, automatically calling free(buf_) when the sbuf is deleted.
+    /* Allocate from an existing buffer.
+     * Does not free memory when sbuf is deleted.
      */
     static sbuf_t* sbuf_new(const pos0_t pos0_, const uint8_t* buf_, size_t bufsize_, size_t pagesize_);
-    /* Allocate from a string, copying the string into an allocated buffer, and automatically calling free(buf_) when the sbuf is deleted.
-     */
-    static sbuf_t* sbuf_new(const pos0_t pos0_, const std::string &str);
 
     /* Allocate writable memory, with buf[0] being at pos0_..
      * Throws std::bad_alloc() if memory is not available.
      * Use malloc_buf() to get the buffer.
+     * Data is automatically freed when deleted.
      */
     static sbuf_t* sbuf_malloc(const pos0_t pos0_, size_t len_ );
     void *malloc_buf() const;        // the writable buf
     void wbuf(size_t i, uint8_t val);   // write to location i with val
+    // the following must be used like this:
+    // sbuf = sbuf->realloc(newsize);
+    // this is the only way to modify the const bufsize and pagesize.
+    sbuf_t *realloc(size_t newsize);
+
+    /* Allocate writable from a string. It will automatically be freed when deleted.
+     * Note: String is *NOT* null-terminated.
+     */
+    static sbuf_t* sbuf_malloc(const pos0_t pos0, const std::string &str);
+
 
     /****************************************************************
      * Allocate a sbuf from a file mapped into memory.
@@ -516,6 +525,7 @@ private:
     sbuf_t& operator=(const sbuf_t& that) = delete; // default assignment not implemented
 
     inline static const int NO_FD=0;
+    friend std::ostream& operator<<(std::ostream& os, const sbuf_t& t);
 };
 
 std::ostream& operator<<(std::ostream& os, const sbuf_t& sbuf);

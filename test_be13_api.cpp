@@ -617,6 +617,21 @@ TEST_CASE("hello_sbuf", "[sbuf]") {
     REQUIRE(sb7.asString() == "");
 }
 
+TEST_CASE("realloc_sbuf", "[sbuf]") {
+    std::string abc {"abcdefghijklmnopqrstuvwxyz"};
+    sbuf_t *sb10 = sbuf_t::sbuf_malloc(pos0_t(), abc);
+    REQUIRE((*sb10)[0]=='a');
+    REQUIRE((*sb10)[9]=='j');
+    REQUIRE((*sb10)[25]=='z');
+
+    std::cerr << "before sb10=" << sb10 << "\n";
+    sb10 = sb10->realloc(10);
+    std::cerr << "after sb10=" << sb10 << "\n";
+    REQUIRE(sb10->bufsize==10);
+    std::cerr << "calling delete sb10\n";
+    delete sb10;
+}
+
 TEST_CASE("map_file", "[sbuf]") {
     std::string tempdir = get_tempdir();
     std::ofstream os;
