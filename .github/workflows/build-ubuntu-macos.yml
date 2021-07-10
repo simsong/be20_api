@@ -56,7 +56,7 @@ jobs:
         if: startsWith(matrix.os, 'macos')
         #
         run: |
-          ./configure CXXFLAGS='-g -O0 -fsanitize=address -fsanitize=memory -fno-omit-frame-pointer'
+          ./configure
 
       - name: make check
         run: |
