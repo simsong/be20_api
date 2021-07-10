@@ -12,7 +12,7 @@
 #include <algorithm>
 
 #include "sbuf.h"
-#include "dfxml/src/hash_t.h"
+#include "dfxml_cpp/src/hash_t.h"
 #include "formatter.h"
 #include "unicode_escape.h"
 
@@ -139,7 +139,9 @@ void sbuf_t::dereference()
  ** Allocators.
  ****************************************************************/
 
-/* a new sbuf with the data from one but the pos from another. */
+/* a new sbuf with the data from one but the pos from another.
+ * Buffer is not freed when sbuf is deleted.
+ */
 sbuf_t* sbuf_t::sbuf_new(pos0_t pos0_, const uint8_t* buf_, size_t bufsize_, size_t pagesize_)
 {
     return new sbuf_t(pos0_, nullptr, // pos0, parent
@@ -147,22 +149,47 @@ sbuf_t* sbuf_t::sbuf_new(pos0_t pos0_, const uint8_t* buf_, size_t bufsize_, siz
                       NO_FD, flags_t()); // fd, flags
 }
 
-sbuf_t* sbuf_t::sbuf_new(pos0_t pos0_, const std::string &str)
+/* Allocate from a string, copying the string into an allocated buffer, and automatically calling free(buf_) when the sbuf is deleted.
+ * No space is left for terminating \0.
+ */
+sbuf_t* sbuf_t::sbuf_malloc(pos0_t pos0, const std::string &str)
 {
-    u_char *buf_ = static_cast<u_char *>(malloc(str.size()));
-    if (buf_==nullptr){
-        throw std::bad_alloc();
-    }
-    return new sbuf_t(pos0_, nullptr, // pos0, parent
-                      buf_, str.size(), str.size(), // buf, bufsize, pagesize
-                      NO_FD, flags_t()); // fd, flags
+    sbuf_t *ret = sbuf_t::sbuf_malloc(pos0,  str.size());
+    memcpy( ret->malloc_buf(), str.c_str(), str.size());
+    return ret;
 }
 
 
+/*
+ * Similar to a move operator, but reallocates.
+ */
+sbuf_t *sbuf_t::realloc(size_t newsize)
+{
+    if (parent!=nullptr) {
+        throw std::runtime_error("sbuf_t::realloc called on sbuf that has a parent.");
+    }
+    if (malloced==nullptr) {
+        throw std::runtime_error("sbuf_t::realloc called on buffer that was not malloced");
+    }
+    if (newsize >bufsize) {
+        throw std::runtime_error("sbuf_t::realloc attempt to make sbuf bigger");
+    }
+    malloced = ::realloc(malloced, newsize);
+    if (malloced==nullptr) {
+        throw std::bad_alloc();
+    }
+    sbuf_t *ret = new sbuf_t(pos0, nullptr,
+                             static_cast<const uint8_t *>(malloced), newsize, newsize,
+                             0, flags);
+    ret->malloced = malloced;           // ret will delete it
+    malloced = nullptr;                 // prevent double deletion
+    delete this;                        // this is a move
+    return ret;
+}
+
 /** Allocate a subset of an sbuf's memory to a child sbuf.
  * from within an existing sbuf.
- * The allocated buf MUST be freed before the parent, since no copy is
- * made...
+ * The allocated buf MUST be freed before the parent, since no copy is made...
  */
 sbuf_t *sbuf_t::new_slice(size_t off, size_t len) const
 {
@@ -180,6 +207,16 @@ sbuf_t *sbuf_t::new_slice(size_t off, size_t len) const
     return new sbuf_t(pos0 + off, highest_parent(),
                       buf + off, len, new_pagesize,
                       NO_FD, flags_t());
+}
+
+/** Copy a subset of an sbuf's memory to a child sbuf.
+ */
+sbuf_t *sbuf_t::new_slice_copy(size_t off, size_t len) const
+{
+    auto src  = slice(off,len);
+    auto *dst = sbuf_t::sbuf_malloc(src.pos0, src.bufsize);
+    memcpy( dst->malloc_buf(), src.buf, src.bufsize);
+    return dst;
 }
 
 sbuf_t sbuf_t::slice(size_t off, size_t len) const
@@ -470,7 +507,13 @@ std::ostream& operator<<(std::ostream& os, const sbuf_t& t) {
     for (size_t i=0; i < std::min( 8UL, t.bufsize); i++){
         os << t[i];
     }
-    os << "\" bufsize=" << t.bufsize << " pagesize=" << t.pagesize << " children=" << t.children << " ]";
+    os << " buf= " << t.buf
+       << " malloced= " << t.malloced
+       << "\" bufsize=" << t.bufsize
+       << " pagesize=" << t.pagesize
+       << " children=" << t.children
+       << " references=" << t.references
+       << " fd=" << t.fd << "]";
     return os;
 }
 

@@ -8,7 +8,8 @@
 # This file is public domain
 #
 
-AC_PREREQ([2.71])
+#AC_PREREQ([2.71])
+AC_PREREQ([2.69])
 AC_INIT([BE13_API],[2.0.0-dev1],[bugs@digitalcorpora.org])
 AC_CONFIG_MACRO_DIR(m4)
 
@@ -48,7 +49,7 @@ AC_PROG_EGREP
 ## do not put pthread here
 
 ## Check dfxml and be13_api headers
-m4_include([dfxml/src/dfxml_configure.m4])
+m4_include([dfxml_cpp/src/dfxml_configure.m4])
 m4_include([be13_configure.m4])
 
 AC_OUTPUT

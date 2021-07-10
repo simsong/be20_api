@@ -7,8 +7,8 @@
 #include "feature_recorder_sql.h"
 #include "scanner_config.h"
 
-#include "dfxml/src/dfxml_writer.h"
-#include "dfxml/src/hash_t.h"
+#include "dfxml_cpp/src/dfxml_writer.h"
+#include "dfxml_cpp/src/hash_t.h"
 
 #ifndef HAVE_LIBSQLITE3
 #ifdef HAVE_SQLITE3_H
@@ -196,7 +196,6 @@ feature_recorder& feature_recorder_set::get_alert_recorder() const
  */
 void feature_recorder_set::set_carve_defaults()
 {
-    std::cerr << "set_carve_defaults...\n";
     for (auto it : frm ) {
         std::string option_name = it.first + "_carve_mode";
         auto val = sc.namevals.find(option_name);
@@ -205,7 +204,6 @@ void feature_recorder_set::set_carve_defaults()
             it.second->carve_mode = feature_recorder_def::carve_mode_t(std::stoi( val->second ));
         }
     }
-    std::cerr << "set_carve_defaults... done\n";
 }
 
 // send every enabled scanner the phase message
@@ -224,7 +222,7 @@ void feature_recorder_set::dump_name_count_stats(dfxml_writer& writer) const {
         writer.push("feature_file");
         writer.xmlout("name", ij.second->name);
         writer.xmlout("count", ij.second->features_written);
-        writer.pop();
+        writer.pop("feature_file");
         writer.set_oneline(false);
     }
     writer.pop();

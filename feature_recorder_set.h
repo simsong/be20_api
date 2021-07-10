@@ -141,9 +141,7 @@ public:
     void feature_recorders_shutdown();
     void histograms_generate(); // make the histograms in the output directory (and optionally in the database)
 
-#if 0
-    typedef  void (*xml_notifier_t)(const std::string &xmlstring);
-#endif
+    //typedef  void (*xml_notifier_t)(const std::string &xmlstring);
 
     /* support for creating and finding feature recorders
      * Previously called create_name().

@@ -30,12 +30,14 @@
 #include <atomic>
 #include <cassert>
 #include <cstring>
+#include <cstdio>
 #include <exception>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <mutex>
 #include <string>
+#include <sstream>
 
 #include <sys/mman.h>
 #include <unistd.h>
@@ -108,28 +110,44 @@ public:
     explicit sbuf_t(const sbuf_t &src, size_t offset); // start at offset and get the rest of the sbuf as a child
     explicit sbuf_t(const sbuf_t &src, size_t offset, size_t len); // start at offset for a given len
 
-    /* Allocate from an existing buffer, automatically calling free(buf_) when the sbuf is deleted.
+    /* Allocate from an existing buffer.
+     * Does not free memory when sbuf is deleted.
      */
     static sbuf_t* sbuf_new(const pos0_t pos0_, const uint8_t* buf_, size_t bufsize_, size_t pagesize_);
-    /* Allocate from a string, copying the string into an allocated buffer, and automatically calling free(buf_) when the sbuf is deleted.
-     */
-    static sbuf_t* sbuf_new(const pos0_t pos0_, const std::string &str);
-
-
 
     /* Allocate writable memory, with buf[0] being at pos0_..
      * Throws std::bad_alloc() if memory is not available.
      * Use malloc_buf() to get the buffer.
+     * Data is automatically freed when deleted.
      */
     static sbuf_t* sbuf_malloc(const pos0_t pos0_, size_t len_ );
     void *malloc_buf() const;        // the writable buf
     void wbuf(size_t i, uint8_t val);   // write to location i with val
+    // the following must be used like this:
+    // sbuf = sbuf->realloc(newsize);
+    // this is the only way to modify the const bufsize and pagesize.
+    sbuf_t *realloc(size_t newsize);
+
+    /* Allocate writable from a string. It will automatically be freed when deleted.
+     * Note: String is *NOT* null-terminated.
+     */
+    static sbuf_t* sbuf_malloc(const pos0_t pos0, const std::string &str);
+
 
     /****************************************************************
      * Allocate a sbuf from a file mapped into memory.
      * When the sbuf is deleted, the memory is unmapped and the file is closed.
+     * If file does not exist, throw an exception
      */
-    static sbuf_t* map_file(const std::filesystem::path fname);                                 // map a sbuf from a file, or throw exception
+    static sbuf_t* map_file(const std::filesystem::path fname);
+
+    /****************************************************************
+     * Create an sbuf from a block of memory that does not need to be freed when the sbuf is deleted.
+     */
+    sbuf_t(pos0_t pos0_, const uint8_t *buf_, size_t bufsize_):
+        pos0(pos0_), bufsize(bufsize_), pagesize(bufsize_),
+        parent(), buf(buf_), malloced(nullptr) {
+    }
 
     /****************************************************************
      *** Child allocators --- allocate an sbuf from another sbuf
@@ -160,18 +178,21 @@ public:
      *
      * slice() returns an object on the stack.
      *
-     * new_slice() returns a new object that must be deleted.
+     * new_slice() returns a new object that shares the object's memory. The object must be deleted.
+     * new_slice_copy() makes a copy of the memory, and must be deleted.
      */
     sbuf_t slice(size_t off, size_t len) const;
     sbuf_t *new_slice(size_t off, size_t len) const;
+    sbuf_t *new_slice_copy(size_t off, size_t len) const;
 
     /**
-     * make an sbuf from a parent but from off to the end of the buffer.
-     * This calls the above one.
+     * slice(off) make an sbuf from a parent but from off to the end of the buffer.
+     * This calls the above one. You can say (sbuf+off) as well
      */
     sbuf_t slice(size_t off) const;
-    sbuf_t *new_slice(size_t off) const;
+    sbuf_t *new_slice(size_t off) const; // allocates; must be deleted
     virtual ~sbuf_t();
+    sbuf_t operator+(size_t off) const { return slice(off); }
 
     inline static const std::string U10001C = "\xf4\x80\x80\x9c"; // default delimeter character in bulk_extractor
     static std::string map_file_delimiter;                        // character placed
@@ -226,8 +247,20 @@ public:
      * past the end of buf.
      */
     class range_exception_t : public std::exception {
+        size_t off {0};
+        size_t max {0};
     public:
-        virtual const char* what() const throw() { return "Error: Read past end of sbuf"; }
+        range_exception_t(size_t off_, size_t max_):off(off_),max(max_){};
+        range_exception_t(){};
+        virtual const char* what() const throw() {
+            static char buf[64];
+            if (off==0 && max==0) return "Error: Read past end of sbuf";
+            std::stringstream ss;
+            ss << "Error: Read past end of sbuf (off=" << off << " max=" << max << " )";
+            strncpy(buf,ss.str().c_str(),sizeof(buf)-1);
+            buf[sizeof(buf)-1] = '\000'; // safety
+            return buf;
+        }
     };
 
     /****************************************************************
@@ -237,7 +270,7 @@ public:
 
     /* Search functions --- memcmp at a particular location */
     int memcmp(const uint8_t* cbuf, size_t at, size_t len) const {
-        if (left(at) < len) throw sbuf_t::range_exception_t();
+        if (left(at) < len) throw sbuf_t::range_exception_t(at, len);
         return ::memcmp(this->buf + at, cbuf, len);
     }
 
@@ -251,23 +284,23 @@ public:
      * These should be used instead of buf[i]
      */
     uint8_t get8u(size_t i) const {
-        if (i + 1 > bufsize) throw sbuf_t::range_exception_t();
+        if (i + 1 > bufsize) throw sbuf_t::range_exception_t(i, 1);
         return this->buf[i];
     }
 
     uint16_t get16u(size_t i) const {
-        if (i + 2 > bufsize) throw sbuf_t::range_exception_t();
+        if (i + 2 > bufsize) throw sbuf_t::range_exception_t(i, 2);
         return 0 | (uint16_t)(this->buf[i + 0] << 0) | (uint16_t)(this->buf[i + 1] << 8);
     }
 
     uint32_t get32u(size_t i) const {
-        if (i + 4 > bufsize) throw sbuf_t::range_exception_t();
+        if (i + 4 > bufsize) throw sbuf_t::range_exception_t(i, 4);
         return 0 | (uint32_t)(this->buf[i + 0] << 0) | (uint32_t)(this->buf[i + 1] << 8) |
                (uint32_t)(this->buf[i + 2] << 16) | (uint32_t)(this->buf[i + 3] << 24);
     }
 
     uint64_t get64u(size_t i) const {
-        if (i + 8 > bufsize) throw sbuf_t::range_exception_t();
+        if (i + 8 > bufsize) throw sbuf_t::range_exception_t(i, 8);
         return 0 | ((uint64_t)(this->buf[i + 0]) << 0) | ((uint64_t)(this->buf[i + 1]) << 8) |
                ((uint64_t)(this->buf[i + 2]) << 16) | ((uint64_t)(this->buf[i + 3]) << 24) |
                ((uint64_t)(this->buf[i + 4]) << 32) | ((uint64_t)(this->buf[i + 5]) << 40) |
@@ -292,23 +325,23 @@ public:
      * sbuf_range_exception if out of range.
      */
     uint8_t get8uBE(size_t i) const {
-        if (i + 1 > bufsize) throw sbuf_t::range_exception_t();
+        if (i + 1 > bufsize) throw sbuf_t::range_exception_t(i, 1);
         return this->buf[i];
     }
 
     uint16_t get16uBE(size_t i) const {
-        if (i + 2 > bufsize) throw sbuf_t::range_exception_t();
+        if (i + 2 > bufsize) throw sbuf_t::range_exception_t(i, 2);
         return 0 | (uint16_t)(this->buf[i + 1] << 0) | (uint16_t)(this->buf[i + 0] << 8);
     }
 
     uint32_t get32uBE(size_t i) const {
-        if (i + 4 > bufsize) throw sbuf_t::range_exception_t();
+        if (i + 4 > bufsize) throw sbuf_t::range_exception_t(i, 4);
         return 0 | (uint32_t)(this->buf[i + 3] << 0) | (uint32_t)(this->buf[i + 2] << 8) |
                (uint32_t)(this->buf[i + 1] << 16) | (uint32_t)(this->buf[i + 0] << 24);
     }
 
     uint64_t get64uBE(size_t i) const {
-        if (i + 8 > bufsize) throw sbuf_t::range_exception_t();
+        if (i + 8 > bufsize) throw sbuf_t::range_exception_t(i, 8);
         return 0 | ((uint64_t)(this->buf[i + 7]) << 0) | ((uint64_t)(this->buf[i + 6]) << 8) |
                ((uint64_t)(this->buf[i + 5]) << 16) | ((uint64_t)(this->buf[i + 4]) << 24) |
                ((uint64_t)(this->buf[i + 3]) << 32) | ((uint64_t)(this->buf[i + 2]) << 40) |
@@ -492,6 +525,7 @@ private:
     sbuf_t& operator=(const sbuf_t& that) = delete; // default assignment not implemented
 
     inline static const int NO_FD=0;
+    friend std::ostream& operator<<(std::ostream& os, const sbuf_t& t);
 };
 
 std::ostream& operator<<(std::ostream& os, const sbuf_t& sbuf);

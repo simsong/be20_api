@@ -31,6 +31,7 @@
 #include "atomic_unicode_histogram.h"
 #include "sbuf.h"
 #include "utils.h"
+#include "dfxml_cpp/src/hash_t.h"
 
 /****************************************************************
  *** Support code
@@ -313,7 +314,6 @@ TEST_CASE("Third AtomicUnicodeHistogram test", "[histogram]") {
 /****************************************************************
  * hash_t.h
  */
-#include "dfxml/src/hash_t.h"
 static std::string hash_name("sha1");
 static std::string hash_func(const uint8_t* buf, size_t bufsize) {
     if (hash_name == "md5" || hash_name == "MD5") { return dfxml::md5_generator::hash_buf(buf, bufsize).hexdigest(); }
@@ -462,19 +462,10 @@ TEST_CASE("write_features", "[feature_recorder_set]") {
         REQUIRE(sb16->size()-1 == strlen(hello8) * 2); // -1 to remove the \000
         delete sb16;
     }
-#if 0
-    std::vector<std::string> lines = getLines(tempdir+"/name_suffix1.txt");
-    std::cerr << "here is the histogram:\n";
-    for (auto line: lines){
-        std::cerr << line << "\n";
-    }
-    /* get the last line of the test file and see if it is correct */
-    std::string expected_lastline {"hello16-0\t"
-        "H\\x00e\\x00l\\x00l\\x00o\\x00 \\x00w\\x00o\\x00r\\x00l\\x00d\\x00!\\x00"
-        "\tH\\x00e\\x00l\\x00l\\x00o\\x00 \\x00w\\x00o\\x00r\\x00l\\x00d\\x00!\\x00"};
-
-    REQUIRE( lines.back() == expected_lastline);
-#endif
+    std::vector<std::string> lines = getLines(tempdir+"/histogram1.txt");
+    REQUIRE( lines[0] == "n=4\t300\t(utf16=1)");
+    REQUIRE( lines[1] == "n=2\t200");
+    REQUIRE( lines[2] == "n=1\t100");
 }
 
 /****************************************************************
@@ -615,6 +606,47 @@ TEST_CASE("hello_sbuf", "[sbuf]") {
     REQUIRE(sb6.asString() == "world");
     auto sb7 = sbuf_t(sb1,100,5);
     REQUIRE(sb7.asString() == "");
+}
+
+TEST_CASE("malloc_sbuf", "[sbuf]") {
+    sbuf_t *sb1 = sbuf_t::sbuf_malloc(pos0_t(), 256);
+    for(int i=0; i<256; i++){
+        sb1->wbuf(i, 255-i);
+    }
+    REQUIRE_THROWS_AS( sb1->wbuf(600,0), std::runtime_error);
+
+    REQUIRE((*sb1)[100]==155);
+    REQUIRE((*sb1)[150]==105);
+
+    std::stringstream ss;
+    sb1->hex_dump(ss);
+    REQUIRE(ss.str().find("00a0: 5f5e 5d5c") != std::string::npos);
+
+    {
+        sbuf_t sb1b = sb1->slice(100);
+        REQUIRE(sb1->children==1);
+        REQUIRE(sb1b.children==0);
+        REQUIRE(sb1b[0]==155);
+        REQUIRE(sb1b[1]==154);
+        REQUIRE_THROWS_AS( sb1b.wbuf(0,0), std::runtime_error);
+    }
+    REQUIRE(sb1->children==0);
+
+    sbuf_t *sb1c = sb1->new_slice_copy(100,5);
+    REQUIRE(sb1c->bufsize==5);
+    REQUIRE(sb1->children==0);
+    delete sb1c;
+    delete sb1;
+
+    std::string abc {"abcdefghijklmnopqrstuvwxyz"};
+    sbuf_t *sb2 = sbuf_t::sbuf_malloc(pos0_t(), abc);
+    REQUIRE((*sb2)[0]=='a');
+    REQUIRE((*sb2)[9]=='j');
+    REQUIRE((*sb2)[25]=='z');
+
+    sb2 = sb2->realloc(10);
+    REQUIRE(sb2->bufsize==10);
+    delete sb2;
 }
 
 TEST_CASE("map_file", "[sbuf]") {

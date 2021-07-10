@@ -4,6 +4,8 @@
 
 #include <fcntl.h>
 #include <sys/stat.h>
+#include <sys/time.h>
+#include <sys/times.h>
 #include <unistd.h>
 
 #include <cstdarg>
@@ -20,10 +22,6 @@
 #include "utils.h"
 #include "word_and_context_list.h"
 
-// int64_t feature_recorder::offset_add   = 0;
-// std::string  feature_recorder::banner_file;
-// uint32_t feature_recorder::debug = DEBUG_PEDANTIC; // default during development
-// std::thread::id feature_recorder::main_thread_id = std::this_thread::get_id();
 const std::string feature_recorder::MAX_DEPTH_REACHED_ERROR_FEATURE{"process_extract: MAX DEPTH REACHED"};
 const std::string feature_recorder::MAX_DEPTH_REACHED_ERROR_CONTEXT{""};
 
@@ -66,6 +64,9 @@ feature_recorder::feature_recorder(class feature_recorder_set& fs_, const struct
     : fs(fs_), name(def_.name), def(def_) {}
 
 feature_recorder::~feature_recorder() {}
+
+void feature_recorder::flush()    {}
+
 
 /**
  * Unquote Python or octal-style quoting of a string
@@ -463,59 +464,6 @@ const std::string feature_recorder::hash(const sbuf_t& sbuf) const {
 
 void feature_recorder::shutdown() {}
 
-#if 0
-/**
- */
-std::string feature_recorder::carve_data(const sbuf_t &sbuf, const std::string &ext,
-                                         const time_t mtime, const size_t pos, const size_t len )
-{
-    uint64_t this_file_number = file_number_add(in_cache ? 0 : 1); // increment if we are not in the cache
-    std::filesystem::pathdirname1 = fs.get_outdir() / name;
-
-    std::stringstream ss;
-    ss << dirname1 << "/" << std::setw(3) << std::setfill('0') << (this_file_number / 1000);
-
-    std::filesystem::path dirname2      = ss.str();
-    std::filesystem::path fname         = dirname2 / valid_dosname(cbuf.pos0.str() + ext);
-    std::string fname_feature           = fname.substr(fs.get_outdir().size()+1);
-
-    /* Record what was found in the feature file.
-     */
-    if (in_cache){
-        fname="";             // no filename
-    }
-
-    /* Make the directory if it doesn't exist.  */
-    if (std::filesystem::exists(dirname2)==false){
-        std::filesystem::create_directory(dirname1);
-        std::filesystem::create_directory(dirname2);
-    }
-    /* Check to make sure that directory is there. We don't just the return code
-     * because there could have been two attempts to make the directory simultaneously,
-     * so the mkdir could fail but the directory could nevertheless exist. We need to
-     * remember the error number because the access() call may clear it.
-     */
-    int oerrno = errno;                 // remember error number
-    if (std::filesystem::exists(dirname2)==false){
-        std::cerr << "Could not make directory " << dirname2 << ": " << strerror(oerrno) << "\n";
-        return std::string();
-    }
-
-    /* Write the file into the directory */
-    int fd = ::open(fname.c_str(),O_CREAT|O_BINARY|O_RDWR,0666);
-    if(fd<0){
-        std::cerr << "*** carve: Cannot create " << fname << ": " << strerror(errno) << "\n";
-        return std::string();
-    }
-
-    ssize_t ret = cbuf.write(fd,0,len);
-    if(ret<0){
-        std::cerr << "*** carve: Cannot write(pos=" << fd << "," << pos << " len=" << len << "): "<< strerror(errno) << "\n";
-    }
-    ::close(fd);
-    return fname;
-}
-#endif
 
 /****************************************************************
  ** Histogram Support
@@ -526,7 +474,9 @@ std::string feature_recorder::carve_data(const sbuf_t &sbuf, const std::string &
  * @param def - the histogram definition
  */
 void feature_recorder::histogram_add(const struct histogram_def& hdef) {
-    if (features_written != 0) { throw std::runtime_error("Cannot add histograms after features have been written."); }
+    if (features_written != 0) {
+        throw std::runtime_error("Cannot add histograms after features have been written.");
+    }
     histograms.push_back(std::make_unique<AtomicUnicodeHistogram>(hdef));
 }
 

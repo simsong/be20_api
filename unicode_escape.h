@@ -8,7 +8,7 @@
 #define UNICODE_ESCAPE_H
 
 #include <codecvt>
-#include <cstdint>
+//#include <cstdint>
 #include <cstring>
 #include <cwctype>
 #include <iostream>

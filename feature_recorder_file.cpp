@@ -58,7 +58,7 @@ feature_recorder_file::feature_recorder_file(class feature_recorder_set& fs_, co
      * If the file exists, seek to the end and find the last complete line, and start there.
      */
     const std::lock_guard<std::mutex> lock(Mios);
-    std::string fname = fname_in_outdir("", NO_COUNT);
+    std::filesystem::path fname = fname_in_outdir("", NO_COUNT);
     ios.open(fname.c_str(), std::ios_base::in | std::ios_base::out | std::ios_base::ate);
     if (ios.is_open()) { // opened existing file
         ios.seekg(0L, std::ios_base::end);
@@ -131,6 +131,7 @@ const std::string feature_recorder_file::histogram_file_header("# Histogram-File
 const std::string feature_recorder_file::bulk_extractor_version_header("# " PACKAGE_NAME "-Version: " PACKAGE_VERSION
                                                                        "\n");
 
+void feature_recorder_file::flush()    { ios.flush(); }
 void feature_recorder_file::shutdown() { ios.flush(); }
 
 #if 0
@@ -293,10 +294,12 @@ static void dump_hist(sqlite3_context *ctx,int argc,sqlite3_value**argv)
  */
 void feature_recorder_file::histogram_flush(AtomicUnicodeHistogram& h) {
     /* Get the next filename */
-    std::string fname = fname_in_outdir(h.def.suffix, NEXT_COUNT);
+    auto fname = fname_in_outdir(h.def.suffix, NEXT_COUNT);
     std::fstream hfile;
     hfile.open(fname.c_str(), std::ios_base::out);
-    if (!hfile.is_open()) { throw std::runtime_error("Cannot open feature histogram file " + fname); }
+    if (!hfile.is_open()) {
+        throw std::runtime_error("Cannot open feature histogram file " + fname.string());
+    }
     hfile << h.makeReport(0); // sorted and clear
     hfile.close();
 }

@@ -19,12 +19,11 @@
 
 class feature_recorder_file : public feature_recorder {
 public:
-    ;
     feature_recorder_file(class feature_recorder_set& fs, const feature_recorder_def def);
     virtual ~feature_recorder_file();
+    virtual void flush() override;
 
 private:
-    // std::string  fname {};              // feature filename
     std::mutex Mios{};  // mutex for IOS
     std::fstream ios{}; // where features are written
     bool debug{false};  // for debugging
@@ -53,9 +52,6 @@ public:
     virtual void write0(const pos0_t& pos0, const std::string& feature, const std::string& context) override;
 
     /* feature file management */
-    // virtual void open();
-    // virtual void close();
-    // virtual void flush();
 #if 0
     static  int  dump_callback_test(void *user,const feature_recorder &fr,
                                     const std::string &str,const uint64_t &count); // test callback for you to use!

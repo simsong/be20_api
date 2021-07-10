@@ -5,6 +5,8 @@
  * bytes is coded in BASE16, BASE64, etc.
  */
 
+#ifndef CHAR_CLASS_H
+#define CHAR_CLASS_H
 struct CharClass {
     uint32_t range_0_9{0};  // a range_0_9 character
     uint32_t range_A_Fi{0}; // a-f or A-F
@@ -22,3 +24,5 @@ struct CharClass {
         for (size_t i = 0; i < len; i++) { add(buf[i]); }
     }
 };
+
+#endif

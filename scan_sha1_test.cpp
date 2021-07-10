@@ -12,7 +12,7 @@
 #include <iostream>
 #include <sys/types.h>
 
-#include "dfxml/src/hash_t.h"
+#include "dfxml_cpp/src/hash_t.h"
 #include "scan_sha1_test.h"
 #include "scanner_params.h"
 #include "scanner_set.h"
@@ -25,7 +25,7 @@ void scan_sha1_test(struct scanner_params& sp) {
         info->description = "Compute the SHA1 of every sbuf.";
         info->url = "https://digitalcorpora.org/bulk_extractor";
         info->scanner_version = "1.0.0";
-        info->pathPrefix = "SHA1";
+        info->pathPrefix = "SHA1";      // just use SHA1
 
         // specify the feature_records that the scanner wants.
         // Note that the feature recorder does not need to be the same name as the scanner

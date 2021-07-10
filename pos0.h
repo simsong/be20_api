@@ -57,6 +57,10 @@ public:
     bool isRecursive() const { // is there a path?
         return path.size() > 0;
     }
+    bool contains(const std::string &name) const { // does it contain this name?
+        return (path.find(name) != std::string::npos);
+    }
+
     std::string firstPart() const { // the first part of the path
         size_t p = path.find('-');
         if (p == std::string::npos) return std::string("");
