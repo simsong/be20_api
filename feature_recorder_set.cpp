@@ -196,7 +196,6 @@ feature_recorder& feature_recorder_set::get_alert_recorder() const
  */
 void feature_recorder_set::set_carve_defaults()
 {
-    std::cerr << "set_carve_defaults...\n";
     for (auto it : frm ) {
         std::string option_name = it.first + "_carve_mode";
         auto val = sc.namevals.find(option_name);
@@ -205,7 +204,6 @@ void feature_recorder_set::set_carve_defaults()
             it.second->carve_mode = feature_recorder_def::carve_mode_t(std::stoi( val->second ));
         }
     }
-    std::cerr << "set_carve_defaults... done\n";
 }
 
 // send every enabled scanner the phase message
