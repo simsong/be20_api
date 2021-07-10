@@ -58,7 +58,9 @@ jobs:
 
       - name: make check
         run: |
-          make check  || (for fn in test*.log ; do echo ""; echo $fn ; cat $fn ; done; exit 1)
+          ./test_be13_api -l
+          ./test_be13_api run      # just run a single test
+          #make check  || (for fn in test*.log ; do echo ""; echo $fn ; cat $fn ; done; exit 1)
 
       - uses: ammaraskar/gcc-problem-matcher@0.1
         name: GCC Problem Matcher
