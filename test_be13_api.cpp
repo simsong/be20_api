@@ -617,19 +617,41 @@ TEST_CASE("hello_sbuf", "[sbuf]") {
     REQUIRE(sb7.asString() == "");
 }
 
-TEST_CASE("realloc_sbuf", "[sbuf]") {
-    std::string abc {"abcdefghijklmnopqrstuvwxyz"};
-    sbuf_t *sb10 = sbuf_t::sbuf_malloc(pos0_t(), abc);
-    REQUIRE((*sb10)[0]=='a');
-    REQUIRE((*sb10)[9]=='j');
-    REQUIRE((*sb10)[25]=='z');
+TEST_CASE("malloc_sbuf", "[sbuf]") {
+    sbuf_t *sb1 = sbuf_t::sbuf_malloc(pos0_t(), 256);
+    for(int i=0; i<256; i++){
+        sb1->wbuf(i, 255-i);
+    }
+    REQUIRE_THROWS_AS( sb1->wbuf(600,0), std::runtime_error);
 
-    std::cerr << "before sb10=" << sb10 << "\n";
-    sb10 = sb10->realloc(10);
-    std::cerr << "after sb10=" << sb10 << "\n";
-    REQUIRE(sb10->bufsize==10);
-    std::cerr << "calling delete sb10\n";
-    delete sb10;
+    REQUIRE((*sb1)[100]==155);
+    REQUIRE((*sb1)[150]==105);
+
+    {
+        sbuf_t sb1b = sb1->slice(100);
+        REQUIRE(sb1->children==1);
+        REQUIRE(sb1b.children==0);
+        REQUIRE(sb1b[0]==155);
+        REQUIRE(sb1b[1]==154);
+        REQUIRE_THROWS_AS( sb1b.wbuf(0,0), std::runtime_error);
+    }
+    REQUIRE(sb1->children==0);
+
+    sbuf_t *sb1c = sb1->new_slice_copy(100,5);
+    REQUIRE(sb1c->bufsize==5);
+    REQUIRE(sb1->children==0);
+    delete sb1c;
+    delete sb1;
+
+    std::string abc {"abcdefghijklmnopqrstuvwxyz"};
+    sbuf_t *sb2 = sbuf_t::sbuf_malloc(pos0_t(), abc);
+    REQUIRE((*sb2)[0]=='a');
+    REQUIRE((*sb2)[9]=='j');
+    REQUIRE((*sb2)[25]=='z');
+
+    sb2 = sb2->realloc(10);
+    REQUIRE(sb2->bufsize==10);
+    delete sb2;
 }
 
 TEST_CASE("map_file", "[sbuf]") {
