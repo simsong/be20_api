@@ -49,7 +49,7 @@ jobs:
       - name: configure for ubuntu
         if: startsWith(matrix.os, 'ubuntu')
         run: |
-          ./configure CFLAGS='-g -O0 -fprofile-arcs -ftest-coverage' CXXFLAGS='-g -O0 -fprofile-arcs -ftest-coverage' LIBS='-lgcov'
+          ./configure CFLAGS='-g -O0 -fprofile-arcs -ftest-coverage' CXXFLAGS='-g -O0 -fprofile-arcs -ftest-coverage -fsanitize=address -fno-omit-frame-pointer' LIBS='-lgcov'
 
       - name: configure for macOS
         if: startsWith(matrix.os, 'macos')
