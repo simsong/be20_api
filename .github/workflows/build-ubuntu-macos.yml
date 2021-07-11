@@ -48,13 +48,13 @@ jobs:
 
       - name: configure for ubuntu
         if: startsWith(matrix.os, 'ubuntu')
-        # it seems that -fsanitize=address and -fsanitize=memory fail under catch on Ubuntu
+        # it seems that -fsanitize=address and -fsanitize=memory fail under Catch2 with Ubuntu
         run: |
           ./configure CXXFLAGS='-g -O0 -fprofile-arcs -ftest-coverage ' LIBS='-lgcov'
 
       - name: configure for macOS
         if: startsWith(matrix.os, 'macos')
-        #
+        # it seems that -fsanitize=address and -fsanitize=memory breaks C++17 under GitHub Actions/MacOS
         run: |
           ./configure
 
