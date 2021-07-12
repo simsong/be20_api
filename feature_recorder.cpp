@@ -399,9 +399,10 @@ std::string feature_recorder::carve(const sbuf_t& header, const sbuf_t& data, st
         seq << std::setw(3) << std::setfill('0') << int(myfileNumber / 1000);
         const std::string thousands{seq.str()};
 
-        std::ostringstream num;
-        num << std::setw(8) << std::setfill('0') << int(myfileNumber);
-        const std::string units{num.str()};
+        //No longer sequentially numbering
+        //std::ostringstream num;
+        //num << std::setw(8) << std::setfill('0') << int(myfileNumber);
+        //const std::string units{num.str()};
 
         /* Create the directory.
          * If it exists, the call fails.
