@@ -22,13 +22,6 @@
 #include "utils.h"
 #include "word_and_context_list.h"
 
-const std::string feature_recorder::MAX_DEPTH_REACHED_ERROR_FEATURE{"process_extract: MAX DEPTH REACHED"};
-const std::string feature_recorder::MAX_DEPTH_REACHED_ERROR_CONTEXT{""};
-
-const std::string feature_recorder::CARVE_MODE_DESCRIPTION{"0=carve none; 1=carve encoded; 2=carve all"};
-
-const std::string feature_recorder::NO_CARVED_FILE{""};
-
 static inline bool isodigit(char c) { return c >= '0' && c <= '7'; }
 
 /* Feature recorder functions that don't have anything to do with files  or SQL databases */
@@ -60,12 +53,11 @@ static inline int hexval(char ch) {
     return 0;
 }
 
+/* These are all overridden in the subclass */
 feature_recorder::feature_recorder(class feature_recorder_set& fs_, const struct feature_recorder_def def_)
     : fs(fs_), name(def_.name), def(def_) {}
-
 feature_recorder::~feature_recorder() {}
-
-void feature_recorder::flush()    {}
+void feature_recorder::flush() {}
 
 
 /**
@@ -381,23 +373,25 @@ std::string valid_dosname(std::string in) {
 #include <iomanip>
 std::string feature_recorder::carve(const sbuf_t& header, const sbuf_t& data, std::string ext, time_t mtime) {
     switch (carve_mode) {
-    case feature_recorder_def::CARVE_NONE: return NO_CARVED_FILE; // carve nothing
+    case feature_recorder_def::CARVE_NONE:
+        return NO_CARVED_FILE; // carve nothing
     case feature_recorder_def::CARVE_ENCODED:
         if (data.pos0.path.size() == 0) return NO_CARVED_FILE; // not encoded
         if (data.pos0.alphaPart() == do_not_carve_encoding)
             return std::string(); // ignore if it is just encoded with this
         break;                    // otherwise carve
-    case feature_recorder_def::CARVE_ALL: break;
+    case feature_recorder_def::CARVE_ALL:
+        break;
     }
 
     /* See if we have previously carved this object, in which case do not carve it again */
     std::string carved_hash_hexvalue = hash(data);
     bool in_cache = carve_cache.check_for_presence_and_insert(carved_hash_hexvalue);
     std::string carved_relative_path; // carved path reported in feature file, relative to outdir
-    std::filesystem::path carved_absolute_path;
-    // std::string fname_feature;          // what goes into the feature file
+    std::filesystem::path carved_absolute_path; // used for opening
+
     if (in_cache) {
-        carved_relative_path = "<CACHED>";
+        carved_relative_path = CACHED;
     } else {
         /* Determine the directory and filename */
         int64_t myfileNumber = carved_file_count++; // atomic operation
@@ -417,10 +411,15 @@ std::string feature_recorder::carve(const sbuf_t& header, const sbuf_t& data, st
         std::filesystem::create_directory(fs.get_outdir() / name / thousands);
 
         // const std::filesystem::path scannerDir { fs.get_outdir() / name};
-        carved_relative_path = name + "/" + thousands + "/" + units + ext;
-        carved_absolute_path = fs.get_outdir() / name / thousands / (units + ext);
 
-        // fname  = seqDir / (sbuf.pos0.str() + std::string(".") + ext);
+        std::string fname  = data.pos0.str() + ext;
+
+        // carved relative path goes in the feature file
+        carved_relative_path = name + "/" + thousands + "/" + fname;
+
+        // carved absolute path is used for actually opening
+        carved_absolute_path = fs.get_outdir() / name / thousands / fname;
+
         // fname_feature = fname.string().substr(fs.get_outdir().string().size()+1);
     }
 

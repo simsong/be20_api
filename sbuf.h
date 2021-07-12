@@ -105,7 +105,6 @@ public:
      * This should probably be a subclass mutable_sbuf_t() for clarity.
      */
 
-
     explicit sbuf_t();    // We occasionally require an empty sbuf.
     explicit sbuf_t(const sbuf_t &src, size_t offset); // start at offset and get the rest of the sbuf as a child
     explicit sbuf_t(const sbuf_t &src, size_t offset, size_t len); // start at offset for a given len

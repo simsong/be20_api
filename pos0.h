@@ -1,6 +1,7 @@
 #ifndef _FPOS0_H_
 #define _FPOS0_H_
 
+#include <exception>
 #include <algorithm>
 #include <cinttypes>
 #include <sstream>
@@ -125,7 +126,17 @@ inline class pos0_t operator+(pos0_t pos, const std::string& subdir) {
 };
 
 /** Adding an offset */
-inline class pos0_t operator+(pos0_t pos, int64_t delta) { return pos0_t(pos.path, pos.offset + delta); };
+inline class pos0_t operator+(pos0_t pos, size_t delta) {
+    return pos0_t(pos.path, pos.offset + delta);
+};
+
+/** Subtracting an offset */
+inline class pos0_t operator-(pos0_t pos, size_t delta) {
+    if (delta > pos.offset) {
+        throw std::runtime_error("attempt to subtract a delta from an pos0_t that is larger that pos.offset");
+    }
+    return pos0_t(pos.path, pos.offset - delta);
+};
 
 /** \name Comparision operations
  * @{
