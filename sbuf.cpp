@@ -665,3 +665,9 @@ std::string sbuf_t::hash() const {
 std::string sbuf_t::hash(hash_func_t func) const {
     return func(buf, bufsize);
 }
+
+/* Report if the hash exists */
+bool sbuf_t::has_hash() const {
+    const std::lock_guard<std::mutex> lock(Mhash); // protect this function}
+    return (hash_.size() > 0 );
+}

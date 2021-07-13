@@ -172,6 +172,7 @@ void feature_recorder::write0(const std::string& str) {}
  * Write: keep track of count of features written.
  */
 void feature_recorder::write0(const pos0_t& pos0, const std::string& feature, const std::string& context) {
+    if (fs.flags.disabled) { return; }
     features_written += 1;
 }
 

@@ -4,6 +4,7 @@
 #define SCANNER_SET_H
 
 #include <map>
+#include <mutex>
 #include <set>
 #include <sstream>
 #include <string>
@@ -100,20 +101,32 @@ private:
      * Default values are hard-coded below.
      */
 
-    unsigned int max_depth{7}; // maximum depth for recursive scans
+    unsigned int max_depth{7};   // maximum depth for recursive scans
+    unsigned int log_depth{1};   // log to dfxml all sbufs at this depth or less
     std::atomic<unsigned int> max_depth_seen{0};
     std::atomic<uint64_t> sbuf_seen{0}; // number of seen sbufs.
 
     uint32_t max_ngram{10};                         // maximum ngram size to scan for
     std::atomic<uint64_t> dup_bytes_encountered{0}; // amount of dup data encountered
-    class dfxml_writer* writer{nullptr};            // if provided, a dfxml writer
+    class dfxml_writer* writer {nullptr};           // if provided, a dfxml writer. Mutext locking done by dfxml_writer.h
     scanner_params::phase_t current_phase{scanner_params::PHASE_INIT};
 
 public:
-    ;
     /* constructor and destructor */
-    scanner_set(const scanner_config& sc, const feature_recorder_set::flags_t& f, class dfxml_writer* writerl = 0);
+    /* @param sc - the config variables
+       @param f - the flags
+       @param writer - the DFXML writer to use, or nullptr.
+    */
+    scanner_set(const scanner_config& sc, const feature_recorder_set::flags_t& f, class dfxml_writer* writer);
     virtual ~scanner_set(){};
+
+    void set_dfxml_writer(class dfxml_writer *writer_) {
+        if (writer) {
+            throw std::runtime_error("dfxml_writer already set");
+        }
+        writer = writer_;
+    }
+    class dfxml_writer *get_dfxml_writer() { return writer; }
 
     /* PHASE_INIT */
     /* Add scanners to the scanner set. */
@@ -168,8 +181,14 @@ public:
     virtual std::string hash(const sbuf_t& sbuf) const;
 
     // report on the loaded scanners
-    void info_scanners(std::ostream& out, bool detailed_info, bool detailed_settings, const char enable_opt,
-                       const char disable_opt);
+    void info_scanners(std::ostream& out, bool detailed_info, bool detailed_settings,
+                       const char enable_opt, const char disable_opt);
+
+    // dfxml support
+    virtual void log(const std::string message); // writes message to dfxml and log
+    virtual void log(const sbuf_t &sbuf, const std::string message); // writes sbuf if not too deep.
+
+    scanner_params::phase_t get_current_phase() const { return current_phase; };
 
     /*
      * PHASE_ENABLE
@@ -184,7 +203,6 @@ public:
     // void    load_scanner_packet_handlers(); // after all scanners are loaded, this sets up the packet handlers.
 
     const std::filesystem::path get_input_fname() const;
-    scanner_params::phase_t get_current_phase() const { return current_phase; };
     size_t histogram_count() const { return fs.histogram_count(); }; // passthrough, mostly for debugging
     size_t feature_recorder_count() const { return fs.feature_recorder_count(); };
     void dump_name_count_stats(class dfxml_writer& w) const { fs.dump_name_count_stats(w); }; // passthrough
@@ -196,11 +214,12 @@ public:
     /* PHASE SCAN */
     void phase_scan();               // start the scan phase
     void process_sbuf(sbuf_t* sbuf); // process the sbuf, then delete it.
+
     // void     process_packet(const be13::packet_info &pi);
     uint32_t get_max_depth_seen() const; // max seen during scan
 
     // Management of previously seen data
-    atomic_set<std::string> seen_set{}; // hex hash values of sbuf pages that have been seen
+    atomic_set<std::string> seen_set {}; // hex hash values of sbuf pages that have been seen
     virtual bool check_previously_processed(const sbuf_t& sbuf);
 
     /* PHASE_SHUTDOWN */
