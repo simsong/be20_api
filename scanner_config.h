@@ -33,9 +33,7 @@ struct scanner_config {
     uint64_t offset_add{0}; // add this number to the first offset in every feature file (used for parallelism)
     std::filesystem::path banner_file{}; // add the contents of this file to the top of every feature file
 
-    // std::stringstream helpstream{};
-    // static std::string MAX_DEPTH;
-    // static unsigned int default_max_depth;
+    static inline const u_int DEFAULT_MAX_DEPTH {12};
     virtual ~scanner_config(){};
     scanner_config(){};
     scanner_config(const scanner_config&) = default;
@@ -54,7 +52,7 @@ struct scanner_config {
     // &help);
     void set_config(const std::string& name, const std::string& val);
     template <typename T> void get_config(const std::string& name, T* val, const std::string& help);
-    // int max_depth() const;
+    u_int max_depth;
 
     /**
      * Commands whether to enable or disable a scanner.
