@@ -723,10 +723,9 @@ TEST_CASE("enable/disable", "[scanner]") {
     /* Enable the scanner */
     const std::string SHA1_TEST = "sha1_test";
 
-    struct feature_recorder_set::flags_t f;
     {
         sc.push_scanner_command(scanner_config::scanner_command::ALL_SCANNERS, scanner_config::scanner_command::ENABLE);
-        scanner_set ss(sc, f);
+        scanner_set ss(sc, feature_recorder_set::flags_t(), nullptr);
         ss.add_scanner(scan_sha1_test);
         ss.apply_scanner_commands(); // applied after all scanners are added
 
@@ -750,7 +749,7 @@ TEST_CASE("enable/disable", "[scanner]") {
     {
         /* Try it again, but this time turning on all of the commands */
         sc.push_scanner_command(scanner_config::scanner_command::ALL_SCANNERS, scanner_config::scanner_command::ENABLE);
-        scanner_set ss(sc, f);
+        scanner_set ss(sc, feature_recorder_set::flags_t(), nullptr);
         ss.add_scanner(scan_sha1_test);
         ss.apply_scanner_commands(); // applied after all scanners are adde
         REQUIRE(ss.is_scanner_enabled(SHA1_TEST) == true);
@@ -760,7 +759,7 @@ TEST_CASE("enable/disable", "[scanner]") {
         sc.push_scanner_command(SHA1_TEST, scanner_config::scanner_command::ENABLE);
         sc.push_scanner_command(scanner_config::scanner_command::ALL_SCANNERS,
                                 scanner_config::scanner_command::DISABLE);
-        scanner_set ss(sc, f);
+        scanner_set ss(sc, feature_recorder_set::flags_t(), nullptr);
         ss.add_scanner(scan_sha1_test);
         ss.apply_scanner_commands(); // applied after all scanners are adde
         REQUIRE(ss.is_scanner_enabled(SHA1_TEST) == false);
@@ -774,8 +773,7 @@ TEST_CASE("run", "[scanner]") {
     sc.outdir = get_tempdir();
     sc.push_scanner_command(std::string("sha1_test"), scanner_config::scanner_command::ENABLE); /* Turn it onn */
 
-    struct feature_recorder_set::flags_t f;
-    scanner_set ss(sc, f);
+    scanner_set ss(sc, feature_recorder_set::flags_t(), nullptr);
     ss.add_scanner(scan_sha1_test);
     ss.apply_scanner_commands();
 

@@ -53,14 +53,14 @@ typedef std::vector<packet_plugin_info> packet_plugin_info_vector_t;
  */
 scanner_set::scanner_set(const scanner_config& sc_, const feature_recorder_set::flags_t& f, class dfxml_writer* writer_)
     : sc(sc_), fs(f, sc_), writer(writer_) {
-    if (getenv("SCANNER_SET_DEBUG_PRINT_STEPS")) debug_flags.debug_print_steps = true;
-    if (getenv("SCANNER_SET_DEBUG_NO_SCANNERS")) debug_flags.debug_no_scanners = true;
-    if (getenv("SCANNER_SET_DEBUG_SCANNER")) debug_flags.debug_scanner = true;
-    if (getenv("SCANNER_SET_DEBUG_DUMP_DATA")) debug_flags.debug_dump_data = true;
-    if (getenv("SCANNER_SET_DEBUG_DECODING")) debug_flags.debug_decoding = true;
-    if (getenv("SCANNER_SET_DEBUG_INFO")) debug_flags.debug_info = true;
-    if (getenv("SCANNER_SET_DEBUG_EXIT_EARLY")) debug_flags.debug_exit_early = true;
-    if (getenv("SCANNER_SET_DEBUG_REGISTER")) debug_flags.debug_register = true;
+    if (getenv("DEBUG_SCANNER_SET_PRINT_STEPS")) debug_flags.debug_print_steps = true;
+    if (getenv("DEBUG_SCANNER_SET_NO_SCANNERS")) debug_flags.debug_no_scanners = true;
+    if (getenv("DEBUG_SCANNER_SET_SCANNER")) debug_flags.debug_scanner = true;
+    if (getenv("DEBUG_SCANNER_SET_DUMP_DATA")) debug_flags.debug_dump_data = true;
+    if (getenv("DEBUG_SCANNER_SET_DECODING")) debug_flags.debug_decoding = true;
+    if (getenv("DEBUG_SCANNER_SET_INFO")) debug_flags.debug_info = true;
+    if (getenv("DEBUG_SCANNER_SET_EXIT_EARLY")) debug_flags.debug_exit_early = true;
+    if (getenv("DEBUG_SCANNER_SET_REGISTER")) debug_flags.debug_register = true;
     const char *dsi = getenv("DEBUG_SCANNERS_IGNORE");
     if (dsi!=nullptr) debug_flags.debug_scanners_ignore=dsi;
 }
@@ -92,7 +92,7 @@ void scanner_set::add_scanner(scanner_t scanner) {
     // The scanner should have set the info field.
     if (sp.info == nullptr) {
         throw std::runtime_error("scanner_set::add_scanner: a scanner did not set the sp.info field.  "
-                                 "Re-run with SCANNER_SET_DEBUG_REGISTER=1 to find those that did.");
+                                 "Re-run with DEBUG_SCANNER_SET_REGISTER=1 to find those that did.");
     }
     if (debug_flags.debug_scanners_ignore.find(sp.info->name) != std::string::npos){
         std::cerr << "DEBUG: ignore add_scanner " << sp.info->name << "\n";
@@ -236,22 +236,34 @@ feature_recorder& scanner_set::named_feature_recorder(const std::string name) co
  * We need to load them to do this, so they are loaded with empty config
  * Note that scanners can only be loaded once, so this exits.
  */
+bool cmp(const struct scanner_params::scanner_info* a,
+         const struct scanner_params::scanner_info* b)
+{
+    return a->name < b->name;
+}
 void scanner_set::info_scanners(std::ostream& out, bool detailed_info, bool detailed_settings, const char enable_opt,
                                 const char disable_opt) {
+    /* First make a sorted vector of the scanners */
+    std::vector<const struct scanner_params::scanner_info *> A;
+    for (auto &it : scanner_info_db) {
+        A.push_back( it.second );
+    }
+    sort (A.begin(), A.end(), cmp);
+
     std::vector<std::string> enabled_scanner_names, disabled_scanner_names;
-    for (auto it : scanner_info_db) {
+    for (auto it : A) {
         if (detailed_info) {
-            if (it.second->name.size()) out << "Scanner Name: " << it.second->name;
-            if (is_scanner_enabled(it.second->name)) { out << " (ENABLED) "; }
+            if (it->name.size()) out << "Scanner Name: " << it->name;
+            if (is_scanner_enabled(it->name)) { out << " (ENABLED) "; }
             out << "\n";
-            out << "flags:  " << it.second->scanner_flags.asString() << "\n";
-            if (it.second->author.size()) out << "Author: " << it.second->author << "\n";
-            if (it.second->description.size()) out << "Description: " << it.second->description << "\n";
-            if (it.second->url.size()) out << "URL: " << it.second->url << "\n";
-            if (it.second->scanner_version.size()) out << "Scanner Version: " << it.second->scanner_version << "\n";
+            out << "flags:  " << it->scanner_flags.asString() << "\n";
+            if (it->author.size()) out << "Author: " << it->author << "\n";
+            if (it->description.size()) out << "Description: " << it->description << "\n";
+            if (it->url.size()) out << "URL: " << it->url << "\n";
+            if (it->scanner_version.size()) out << "Scanner Version: " << it->scanner_version << "\n";
             out << "Feature Names: ";
             int count = 0;
-            for (auto i2 : it.second->feature_defs) {
+            for (auto i2 : it->feature_defs) {
                 if (count++ > 0) out << ", ";
                 out << i2.name;
             }
@@ -259,15 +271,15 @@ void scanner_set::info_scanners(std::ostream& out, bool detailed_info, bool deta
             out << "\n";
             if (detailed_settings) {
                 out << "Settable Options (and their defaults): \n";
-                out << it.second->helpstr;
+                out << it->helpstr;
             }
             out << "------------------------------------------------\n\n";
         }
-        if (it.second->scanner_flags.no_usage) continue;
-        if (is_scanner_enabled(it.second->name)) {
-            enabled_scanner_names.push_back(it.second->name);
+        if (it->scanner_flags.no_usage) continue;
+        if (is_scanner_enabled(it->name)) {
+            enabled_scanner_names.push_back(it->name);
         } else {
-            disabled_scanner_names.push_back(it.second->name);
+            disabled_scanner_names.push_back(it->name);
         }
     }
     if (enabled_scanner_names.size()) {
@@ -627,6 +639,11 @@ void scanner_set::process_sbuf(class sbuf_t* sbufp) {
     log(sbuf, ss.str());
     delete sbufp;
     return;
+}
+
+void scanner_set::schedule_sbuf(sbuf_t *sbuf)
+{
+    process_sbuf(sbuf);
 }
 
 std::string scanner_set::hash(const sbuf_t& sbuf) const { return sbuf.hash(fs.hasher.func); }
