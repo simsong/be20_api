@@ -40,15 +40,23 @@ class pos0_t {
     const size_t calc_depth(const std::string& s) const {
         return std::count_if(s.begin(), s.end(), [](char c) { return c == '-'; });
     }
+    mutable int depth_ {-1};               // if -1, it needs to be calculated
 
 public:
     const std::string path{}; /* forensic path of decoders*/
     const uint64_t offset{0}; /* location of buf[0] */
-    const unsigned int depth{0};
 
     explicit pos0_t() {}                                                                // the beginning of a nothing
-    pos0_t(std::string s, uint64_t o = 0) : path(s), offset(o), depth(calc_depth(s)) {} // a specific offset in a place
-    pos0_t(const pos0_t& obj) : path(obj.path), offset(obj.offset) {}
+    pos0_t(std::string s, uint64_t o = 0) : path(s), offset(o) {} // a specific offset in a place
+    pos0_t(const pos0_t& obj) : path(obj.path), offset(obj.offset) {}                   // copy operator
+
+    unsigned int depth() const {
+        if (depth_ == -1 ){
+            depth_ = calc_depth(path);
+        }
+        return depth_;
+    }
+
     std::string str() const { // convert to a string, with offset included
         std::stringstream ss;
         if (path.size() > 0) { ss << path << "-"; }

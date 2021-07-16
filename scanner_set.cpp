@@ -516,7 +516,7 @@ void scanner_set::process_sbuf(class sbuf_t* sbufp) {
     }
 
     if (sbufp->bufsize==0){
-        delete sbufp;
+        delete_sbuf(sbufp);
         return;        // nothing to scan
     }
 
@@ -531,7 +531,7 @@ void scanner_set::process_sbuf(class sbuf_t* sbufp) {
     if (sbuf.depth() >= max_depth) {
         fs.get_alert_recorder().write(pos0, feature_recorder::MAX_DEPTH_REACHED_ERROR_FEATURE,
                                       feature_recorder::MAX_DEPTH_REACHED_ERROR_CONTEXT);
-        delete sbufp;
+        delete_sbuf(sbufp);
         return;        // nothing to scan
     }
 
@@ -644,13 +644,18 @@ void scanner_set::process_sbuf(class sbuf_t* sbufp) {
         }
     }
     timer.stop();
-    delete sbufp;
+    delete_sbuf(sbufp);
     return;
 }
 
-void scanner_set::schedule_sbuf(sbuf_t *sbuf)
+void scanner_set::schedule_sbuf(sbuf_t *sbufp)
 {
-    process_sbuf(sbuf);
+    process_sbuf(sbufp);
+}
+
+void scanner_set::delete_sbuf(sbuf_t *sbufp)
+{
+    delete sbufp;
 }
 
 std::string scanner_set::hash(const sbuf_t& sbuf) const { return sbuf.hash(fs.hasher.func); }
