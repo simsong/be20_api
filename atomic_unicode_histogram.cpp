@@ -19,12 +19,14 @@
 #include "atomic_unicode_histogram.h"
 
 std::ostream& operator<<(std::ostream& os, const AtomicUnicodeHistogram::FrequencyReportVector& rep) {
-    for (const auto& it : rep) { os << it; }
+    for (const auto& it : rep) {
+        os << it;
+    }
     return os;
 }
 
 /* Output is in UTF-8 */
-std::ostream& operator<<(std::ostream& os, const AtomicUnicodeHistogram::auh_t::AMReportElement& e) {
+std::ostream& operator<<(std::ostream& os, const AtomicUnicodeHistogram::auh_t::item& e) {
     os << "n=" << e.value.count << "\t" << validateOrEscapeUTF8(e.key, true, false, false);
     if (e.value.count16 > 0) os << "\t(utf16=" << e.value.count16 << ")";
     os << "\n";
@@ -35,12 +37,14 @@ std::ostream& operator<<(std::ostream& os, const AtomicUnicodeHistogram::auh_t::
  * @param topN - if >0, return only this many.
  * Return only the topN.
  */
-AtomicUnicodeHistogram::auh_t::report AtomicUnicodeHistogram::makeReport(size_t topN) {
-    auh_t::report rep = h.dump(true);
-
+std::vector<AtomicUnicodeHistogram::auh_t::item> AtomicUnicodeHistogram::makeReport(size_t topN) {
+    std::vector<AtomicUnicodeHistogram::auh_t::item> ret = h.items();
+    std::sort(ret.rbegin(), ret.rend(), AtomicUnicodeHistogram::auh_t::item::compare); // reverse sort
     /* If we only want some of them, delete the extra */
-    if ((topN > 0) && (topN < rep.size())) { rep.resize(topN); }
-    return rep;
+    if ((topN > 0) && (topN < ret.size())) {
+        ret.resize(topN);
+    }
+    return ret;
 }
 
 /**
@@ -112,7 +116,6 @@ void AtomicUnicodeHistogram::add(const std::string& key_unknown_encoding) {
         }
 
         /* Add the key to the histogram. Note that this is threadsafe */
-        h.insertIfNotContains(displayString, HistogramTally());
         h[displayString].count++;
         if (found_utf16) {
             h[displayString].count16++; // track how many UTF16s were converted
@@ -120,9 +123,7 @@ void AtomicUnicodeHistogram::add(const std::string& key_unknown_encoding) {
     }
 }
 
-size_t AtomicUnicodeHistogram::bytes() // returns the total number of bytes of the histogram,.
+size_t AtomicUnicodeHistogram::size() const // returns the total number of bytes of the histogram,.
 {
-    size_t count = sizeof(*this);
-    for (auto it : h) { count += sizeof(it.first) + it.first.size() + it.second.bytes(); }
-    return count;
+    return h.size();
 }

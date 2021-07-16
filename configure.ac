@@ -37,6 +37,9 @@ AC_LANG_POP()
 # Turn on all warnings
 m4_include([m4/slg_gcc_all_warnings.m4])
 
+# Should we disable optimization?
+AC_ARG_WITH([opt], AS_HELP_STRING([--without-opt],[Drop all -O C flags]))
+
 ################################################################
 # Specify our headers
 
@@ -51,5 +54,15 @@ AC_PROG_EGREP
 ## Check dfxml and be13_api headers
 m4_include([dfxml_cpp/src/dfxml_configure.m4])
 m4_include([be13_configure.m4])
+
+############## drop optimization flags and add -g if requested ################
+if test x"${AFF_NOOPT}" != "x" ; then
+   with_noopt="yes";
+fi
+
+if test "${with_opt}" = "no" ; then
+  CFLAGS=`echo   -g "$CFLAGS"   | sed s/-O[[0-9]]//`             # note the double quoting!
+  CXXFLAGS=`echo -g "$CXXFLAGS" | sed s/-O[[0-9]]//`
+fi
 
 AC_OUTPUT

@@ -17,95 +17,178 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
+#include <iostream>
+
+/*
+ * Sample usage:
+ * struct {int a, int b, int c} mycounter_t;
+ * atomic_map<key, mycounter_t>.
+ * Creates a defaultdict, and automatically cleans up memory.
+ * Could be reimplemented to use smart pointers.
+ */
+
 
 template <class T1, class T2> class atomic_map {
+    // T1 - key. For example, std::string
+    // T2 - value. Should be a pointer.
     // Mutex M protects mymap.
     // It is mutable to allow modification in const methods
     mutable std::mutex M{};
-    std::map<T1, T2> mymap{};
+    std::map<T1, T2 *> mymap{};
 
 public:
     atomic_map() {}
-    ~atomic_map() {}
+    ~atomic_map() {
+        /* delete everything in the map. Could do this with a unique_ptr? */
+        clear();
+    }
     class KeyError : public std::exception {
-        std::string m_error{};
-
+        T1 key;
     public:
-        KeyError(std::string_view error) : m_error(error) {}
-        const char* what() const noexcept override { return m_error.c_str(); }
+        KeyError(T1 key_) : key(key_) {}
+        const char* what() const noexcept override { return "did not convert key_ to a string"; }
     };
-    T2& operator[](const T1& key) {
+    /*
+     * Create the behavior of a Python defaultdict: return the object referenced by the key, otherwise create a new one.
+     */
+    T2 &operator[](const T1& key) {
         const std::lock_guard<std::mutex> lock(M);
         auto it = mymap.find(key);
-        if (it == mymap.end()) { throw KeyError(key); }
-        return it->second;
+        if (it == mymap.end()) {
+            mymap[key] = new T2();
+            return *(mymap[key]);
+        }
+        return *(it->second);
     }
-    typename std::map<T1, T2>::const_iterator find(const T1& key) const {
+    /*
+     * Get behavior throws a key error if not present, and is const.
+     */
+    T2 &get(const T1& key) const {
+        const std::lock_guard<std::mutex> lock(M);
+        auto it = mymap.find(key);
+        if (it == mymap.end()) {
+            throw KeyError(key);
+        }
+        return *(it->second);
+    }
+    /*
+     * insert. We want this in some cases. Fail if it already exists
+     */
+    void insert(const T1 &key, T2 *value) {
+        const std::lock_guard<std::mutex> lock(M);
+        auto it = mymap.find(key);
+        if (it != mymap.end()) {
+            throw KeyError(key);
+        }
+        mymap[key] = value;
+    }
+
+    /* We can't just pass-through to find, because we need to lock the mutext */
+    typename std::map<T1, T2 *>::const_iterator find(const T1& key) const {
         const std::lock_guard<std::mutex> lock(M);
         return mymap.find(key);
     }
-    typename std::map<T1, T2>::const_iterator begin() const {
+    /* We can't allow iteration through the map, since that would not be threadsafe, but we can allow the caller to get end(). */
+#if 0
+    typename std::map<T1, T2 *>::const_iterator begin() const {
         const std::lock_guard<std::mutex> lock(M);
         return mymap.begin();
     }
-    typename std::map<T1, T2>::const_iterator end() const {
+#endif
+    typename std::map<T1, T2 *>::const_iterator end() const {
         const std::lock_guard<std::mutex> lock(M);
         return mymap.end();
     }
+
     void clear() {
+        /* First delete all of the elements, then clear the map.
+         * This might be better done with unique_ptr()
+         * right now we may have a memory leak
+         */
         const std::lock_guard<std::mutex> lock(M);
+        for (auto it : mymap) {
+            delete it.second;
+        }
         mymap.clear();
     }
+    /* Number of elements */
     size_t size() const {
         const std::lock_guard<std::mutex> lock(M);
         return mymap.size();
     }
+#if 0
+    /* implement this later */
+    /* bytes */
+    size_t bytes() const {
+        const std::lock_guard<std::mutex> lock(M);
+        size_t count = sizeof(*this);
+        for (const auto &it : mymap) {
+            count += sizeof(it.first) + sizeof(it.second) + it.first.size() + it.second->size();
+        }
+        return count;
+    }
+#endif
+
+
     bool contains(T1 key) const {
         const std::lock_guard<std::mutex> lock(M);
         return mymap.find(key) != mymap.end();
     }
-    void insert(T1 key, T2 val) {
-        const std::lock_guard<std::mutex> lock(M);
-        mymap[key] = val;
-    }
-    void delete_all() {
-        /* deletes all of the values!  Values must be pointers. This might be better done with unique_ptr()*/
-        const std::lock_guard<std::mutex> lock(M);
-        for (auto it : mymap) { delete it.second; }
-    }
-    void insertIfNotContains(T1 key, T2 val) {
-        const std::lock_guard<std::mutex> lock(M);
-        if (mymap.find(key) == mymap.end()) { mymap[key] = val; }
-    }
-    struct AMReportElement {
-        AMReportElement(T1 key_, T2 value_) : key(key_), value(value_){};
-        AMReportElement(T1 key_) : key(key_){};
-        AMReportElement(){};
+    /* This is used for dumping the contents. This is not efficient. We're basically trying to find the top N and we could do that more efficiently with a priority queue */
+    struct item {
+        item(T1 key_, T2 value_) : key(key_), value(value_){};
+        item(T1 key_) : key(key_){};
+        item(){};
         T1 key{};
         T2 value{};
-        bool operator==(const AMReportElement& a) const { return (this->key == a.key) && (this->value == a.value); }
-        bool operator!=(const AMReportElement& a) const { return !(*this == a); }
-        bool operator<(const AMReportElement& a) const {
+        bool operator==(const item& a) const { return (this->key == a.key) && (this->value == a.value); }
+        bool operator!=(const item& a) const { return !(*this == a); }
+        bool operator<(const item& a) const {
             if (this->key < a.key) return true;
             if ((this->key == a.key) && (this->value < a.value)) return true;
             return false;
         }
-        static bool compare(const AMReportElement& e1, const AMReportElement& e2) { return e1 < e2; }
-        virtual ~AMReportElement(){};
-        size_t bytes() const { return sizeof(*this) + value.bytes(); } // number of bytes used by object
+        static bool compare(const item& e1, const item& e2) { return e1 < e2; }
+        virtual ~item(){};
+        size_t bytes() const {
+            return sizeof(*this) + value.bytes();
+        } // number of bytes used by object
     };
-    typedef std::vector<AMReportElement> report;
-    report dump(bool sorted = false) const {
-        report r;
-        {
-            /* Protect access to mymap with mutex */
-            const std::lock_guard<std::mutex> lock(M);
-            for (auto it : mymap) { r.push_back(AMReportElement(it.first, it.second)); }
+    /* Like python .keys() */
+    typename std::vector<T1> keys() const {
+        const std::lock_guard<std::mutex> lock(M);
+        std::vector<T1>ret;
+        for (auto it : mymap) {
+            ret.push_back( it.first );
         }
-        if (sorted) {
-            std::sort(r.rbegin(), r.rend(), AMReportElement::compare); // reverse sort
+        return ret;
+    }
+
+    /* Like python .values() */
+    typename std::vector<T2 *> values() const {
+        const std::lock_guard<std::mutex> lock(M);
+        std::vector<T2 *>ret;
+        for (auto it : mymap) {
+            ret.push_back( it.second );
         }
-        return r;
+        return ret;
+    }
+
+    /* like Python .items() */
+    std::vector<item> items() const {
+        std::vector<item> ret;
+        /* Protect access to mymap with mutex */
+        const std::lock_guard<std::mutex> lock(M);
+        for (auto it : mymap) {
+            ret.push_back(item(it.first, *it.second));
+        }
+        return ret;
+    }
+    void write(std::ostream &os) const {
+        const std::lock_guard<std::mutex> lock(M);
+        for (auto it : mymap) {
+            os << " " << it.first << ": " << (it.second) << "\n";
+        }
     }
 };
 

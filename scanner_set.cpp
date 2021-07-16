@@ -52,7 +52,7 @@ typedef std::vector<packet_plugin_info> packet_plugin_info_vector_t;
  * create the scanner set
  */
 scanner_set::scanner_set(const scanner_config& sc_, const feature_recorder_set::flags_t& f, class dfxml_writer* writer_)
-    : sc(sc_), fs(f, sc_), writer(writer_) {
+    : fs(f, sc_), writer(writer_), sc(sc_) {
     if (getenv("DEBUG_SCANNER_SET_PRINT_STEPS")) debug_flags.debug_print_steps = true;
     if (getenv("DEBUG_SCANNER_SET_NO_SCANNERS")) debug_flags.debug_no_scanners = true;
     if (getenv("DEBUG_SCANNER_SET_SCANNER")) debug_flags.debug_scanner = true;
@@ -65,9 +65,24 @@ scanner_set::scanner_set(const scanner_config& sc_, const feature_recorder_set::
     if (dsi!=nullptr) debug_flags.debug_scanners_ignore=dsi;
 }
 
+void scanner_set::add_scanner_stat(scanner_t *scanner, uint64_t ns, uint64_t calls)
+{
+    struct stats &st = scanner_stats[scanner];
+    st.ns += ns;                       // atomic!
+    st.calls += calls;                 // atomic!
+}
+
+void scanner_set::add_path_stat(std::string path, uint64_t ns, uint64_t calls)
+{
+    struct stats &st = path_stats[path];
+    st.ns += ns;                       // atomic!
+    st.calls += calls;                 // atomic!
+}
+
+
 /****************************************************************
  ** PHASE_INIT:
- ** Add scanners to the scanner set.
+ ** Scanner management: Add scanners to the scanner set.
  ****************************************************************/
 
 /****************************************************************
@@ -468,12 +483,13 @@ void scanner_set::shutdown() {
     /* Output the scanner stats */
     if (writer) {
         writer->push("scanner_stats");
-        for (auto it : scanner_stats) {
+        for (scanner_t *scanner : scanner_stats.keys()) {
+            struct scanner_set::stats &st = scanner_stats[scanner];
             writer->set_oneline("true");
             writer->push("scanner");
-            writer->xmlout("name", get_scanner_name(it.first));
-            writer->xmlout("ns", it.second->ns);
-            writer->xmlout("calls", it.second->calls);
+            writer->xmlout("name", get_scanner_name(scanner));
+            writer->xmlout("ns", st.ns);
+            writer->xmlout("calls", st.calls);
             writer->pop();
         }
         writer->pop();
@@ -506,7 +522,6 @@ void scanner_set::process_sbuf(class sbuf_t* sbufp) {
 
     const class sbuf_t& sbuf = *sbufp; // don't allow modification
 
-    log(sbuf, "scanner_set::process_sbuf() START");
     aftimer timer;
     timer.start();
 
@@ -599,12 +614,7 @@ void scanner_set::process_sbuf(class sbuf_t* sbufp) {
                 t.start();
             }
             scanner_params sp(*this, scanner_params::PHASE_SCAN, sbufp, scanner_params::PrintOptions(), nullptr);
-            aftimer t2;
-            //t2.start();
-            //log(sbuf, name + " calling");
             (*it.first)(sp);
-            //t2.stop();
-            //log(sbuf, name + " returned " + std::to_string(t2.elapsed_seconds()));
 
             if (record_call_stats || debug_flags.debug_print_steps) {
                 t.stop();
@@ -634,9 +644,6 @@ void scanner_set::process_sbuf(class sbuf_t* sbufp) {
         }
     }
     timer.stop();
-    std::stringstream ss;
-    ss << "scanner_set::process_sbuf() END t=" << timer.elapsed_seconds();
-    log(sbuf, ss.str());
     delete sbufp;
     return;
 }

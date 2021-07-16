@@ -156,20 +156,32 @@ TEST_CASE("atomic_set", "[atomic]") {
 }
 
 #include "atomic_map.h"
+int *new_int()
+{
+    return new int(0);
+}
+
+struct ab_t {
+    int a {0};
+    int b {0};
+} ;
+
+
 TEST_CASE("atomic_map", "[atomic]") {
-    atomic_map<std::string, int> am;
-    am.insert("one", 1);
-    am.insert("two", 2);
-    am.insert("three", 3);
-    am.insertIfNotContains("three", 30);
-    am.insertIfNotContains("four", 4);
-    REQUIRE(am.contains("one") == true);
-    REQUIRE(am.contains("two") == true);
-    REQUIRE(am.contains("three") == true);
-    REQUIRE(am.contains("four") == true);
-    REQUIRE(am.contains("five") == false);
-    REQUIRE(am["one"] == 1);
-    REQUIRE(am["three"] == 3);
+    atomic_map<std::string, ab_t> am;
+    am["one"].a = 10;
+#if 0
+    am["one"].b = 10;
+    am["two"].a = 5;
+    am["three"].b = 10;
+    am["three"].b += 10;
+    am["three"].b += 10;
+    REQUIRE(am["one"].a == 10);
+    REQUIRE(am["one"].b == 10);
+    REQUIRE(am["two"].a == 5);
+    REQUIRE(am["two"].b == 0);
+    REQUIRE(am["three"].b == 30);
+#endif
 }
 
 /****************************************************************
@@ -247,8 +259,8 @@ TEST_CASE("Second AtomicUnicodeHistogram test", "[atomic][regex]") {
 
 TEST_CASE("Third AtomicUnicodeHistogram test", "[histogram]") {
     /* Make sure that the histogram elements work */
-    AtomicUnicodeHistogram::auh_t::AMReportElement e1("hello");
-    AtomicUnicodeHistogram::auh_t::AMReportElement e2("world");
+    AtomicUnicodeHistogram::auh_t::item e1("hello");
+    AtomicUnicodeHistogram::auh_t::item e2("world");
 
     REQUIRE(e1 == e1);
     REQUIRE(e1 != e2);
@@ -267,7 +279,7 @@ TEST_CASE("Third AtomicUnicodeHistogram test", "[histogram]") {
     hm.add("300");
     hm.add("foo 300 bar");
 
-    AtomicUnicodeHistogram::auh_t::report r = hm.makeReport(0);
+    std::vector<AtomicUnicodeHistogram::auh_t::item> r = hm.makeReport(0);
     REQUIRE(r.size() == 3);
 
     /* Make sure that the tallies were correct. */
@@ -716,7 +728,12 @@ TEST_CASE("scanner", "[scanner]") { /* check that scanner params made from an ex
  */
 #include "scan_sha1_test.h"
 #include "scanner_set.h"
-TEST_CASE("enable/disable", "[scanner]") {
+TEST_CASE("scanner_stats", "[scanner_set]") {
+    //scanner_set ss;
+
+}
+
+TEST_CASE("enable/disable", "[scanner_set]") {
     scanner_config sc;
     sc.outdir = get_tempdir();
 

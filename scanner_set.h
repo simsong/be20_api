@@ -78,21 +78,6 @@ class scanner_set {
     std::map<scanner_t*, const struct scanner_params::scanner_info*> scanner_info_db{};
     std::set<scanner_t*> enabled_scanners{}; // the scanners that are enabled
 
-    // scanner_stats
-    struct stats {
-        std::atomic<uint64_t> ns{0};    // nanoseconds
-        std::atomic<uint64_t> calls{0}; // calls
-    };
-    atomic_map<scanner_t*, struct stats*> scanner_stats{}; // maps scanner name to performance stats
-
-    // a pointer to every scanner info in all of the scanners.
-    // This provides all_scanners
-
-    // The scanner_set's configuration for all the scanners that are loaded.
-    // it cannot be const, because it is modified when scanners add their help.
-public:
-    scanner_config sc;
-
 private:
     /* The feature recorder set where the scanners outputs are stored */
     class feature_recorder_set fs;
@@ -120,16 +105,39 @@ public:
     scanner_set(const scanner_config& sc, const feature_recorder_set::flags_t& f, class dfxml_writer* writer);
     virtual ~scanner_set(){};
 
+    struct stats {
+        std::atomic<uint64_t> ns{0};    // nanoseconds
+        std::atomic<uint64_t> calls{0}; // calls
+    };
+    // per-scanner stats
+    atomic_map<scanner_t* , struct stats> scanner_stats{}; // maps scanner name to performance stats
+
+    // per-path stats
+    atomic_map<std::string, struct stats> path_stats{}; // maps scanner name to performance stats
+
+    void add_scanner_stat(scanner_t *, uint64_t ns, uint64_t calls);
+    void add_path_stat(std::string path, uint64_t ns, uint64_t calls);
+
+    // a pointer to every scanner info in all of the scanners.
+    // This provides all_scanners
+
+    // The scanner_set's configuration for all the scanners that are loaded.
+    // it cannot be const, because it is modified when scanners add their help.
+    scanner_config sc;
+
+    /* Accessors */
     void set_dfxml_writer(class dfxml_writer *writer_) {
         if (writer) {
             throw std::runtime_error("dfxml_writer already set");
         }
         writer = writer_;
     }
-    class dfxml_writer *get_dfxml_writer() { return writer; }
+    class dfxml_writer *get_dfxml_writer() const { return writer; }
+    uint64_t get_dup_bytes_encountered()  const  { return dup_bytes_encountered; }
+    uint32_t get_max_depth_seen() const          { return max_depth_seen;} ; // max seen during scan
 
     /* PHASE_INIT */
-    /* Add scanners to the scanner set. */
+    /* Scanner management: Add scanners to the scanner set. */
 
     /* Debug for feature recorders.
      * This used to be a flag, but Stroustrup (2013) recommends just having a bunch of bools.
@@ -203,6 +211,9 @@ public:
     // void    load_scanner_packet_handlers(); // after all scanners are loaded, this sets up the packet handlers.
 
     const std::filesystem::path get_input_fname() const;
+
+    // Stats
+
     size_t histogram_count() const { return fs.histogram_count(); }; // passthrough, mostly for debugging
     size_t feature_recorder_count() const { return fs.feature_recorder_count(); };
     void dump_name_count_stats(class dfxml_writer& w) const { fs.dump_name_count_stats(w); }; // passthrough
@@ -217,7 +228,6 @@ public:
     virtual void schedule_sbuf(sbuf_t* sbuf);  // schedule the sbuf to be processed
 
     // void     process_packet(const be13::packet_info &pi);
-    uint32_t get_max_depth_seen() const; // max seen during scan
 
     // Management of previously seen data
     atomic_set<std::string> seen_set {}; // hex hash values of sbuf pages that have been seen
