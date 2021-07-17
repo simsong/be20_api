@@ -224,9 +224,10 @@ public:
 
     /* PHASE SCAN */
     void phase_scan();               // start the scan phase
-    void process_sbuf(sbuf_t* sbuf); // process the sbuf, then delete it.
+    virtual void process_sbuf(sbuf_t* sbuf); // process the sbuf, then delete it.
     virtual void schedule_sbuf(sbuf_t* sbuf);  // schedule the sbuf to be processed
     virtual void delete_sbuf(sbuf_t *sbuf);    // delete after processing
+    virtual void set_status(const std::string &status) {}; // designed to be overridden
 
     // void     process_packet(const be13::packet_info &pi);
 

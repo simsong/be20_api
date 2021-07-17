@@ -607,6 +607,8 @@ void scanner_set::process_sbuf(class sbuf_t* sbufp) {
             /* Call the scanner.*/
             aftimer t;
 
+            set_status( sbuf.pos0.str() + ": " + name + " (" + std::to_string(sbuf.bufsize) + ")" );
+
             if (debug_flags.debug_print_steps) {
                 std::cerr << "sbuf.pos0=" << sbuf.pos0 << " calling scanner " << name << "\n";
             }

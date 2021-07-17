@@ -498,22 +498,24 @@ ssize_t sbuf_t::find(const char* str, size_t start ) const
 }
 
 std::ostream& operator<<(std::ostream& os, const sbuf_t& t) {
-    os << "sbuf[pos0=" << t.pos0 << " " << "buf[0..8]=0x";
+    os << "sbuf[pos0=" << t.pos0 << " " << "buf[0..8]=";
 
     for (size_t i=0; i < std::min( 8UL, t.bufsize); i++){
-        os << hexch(t[i]);
+        os << hexch(t[i]) << " " ;
     }
     os << "= \"" ;
     for (size_t i=0; i < std::min( 8UL, t.bufsize); i++){
         os << t[i];
     }
-    os << " buf= " << t.buf
-       << " malloced= " << t.malloced
-       << "\" bufsize=" << t.bufsize
-       << " pagesize=" << t.pagesize
-       << " children=" << t.children
+    os << " buf= "       << static_cast<const void *>(t.buf)
+       << " malloced= "  << t.malloced
+       << "\" bufsize="  << t.bufsize
+       << " pagesize="   << t.pagesize
+       << " children="   << t.children
        << " references=" << t.references
-       << " fd=" << t.fd << "]";
+       << " fd="         << t.fd
+       << " depth="      << t.depth()
+       << "]";
     return os;
 }
 

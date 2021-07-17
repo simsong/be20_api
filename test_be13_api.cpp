@@ -465,6 +465,11 @@ TEST_CASE("write_features", "[feature_recorder_set]") {
         fs.histogram_add(h1);
         REQUIRE(fs.histogram_count() == 1);
 
+        REQUIRE(pos0_t::calc_depth("0")==0);
+        REQUIRE(pos0_t::calc_depth("0-OUTLOOK")==1);
+        REQUIRE(pos0_t::calc_depth("0-OUTLOOK-0")==1);
+        REQUIRE(pos0_t::calc_depth("0-OUTLOOK-0-XOR(255)")==2);
+
         pos0_t p;
         fr.write(p, "one", "context");
         fr.write(p + 5, "one", "context");
