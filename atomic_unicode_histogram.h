@@ -50,26 +50,26 @@ struct AtomicUnicodeHistogram {
 
     /* A FrequencyReportVector is a vector of report elements when the report is generated.*/
     typedef atomic_map<std::string, struct AtomicUnicodeHistogram::HistogramTally> auh_t;
-    typedef std::vector<auh_t::AMReportElement> FrequencyReportVector;
+    typedef std::vector<auh_t::item> FrequencyReportVector;
 
     AtomicUnicodeHistogram(const struct histogram_def& def_) : def(def_) {}
     virtual ~AtomicUnicodeHistogram(){};
 
     void clear();                     // empties the histogram
     void add(const std::string& key); // adds Unicode string to the histogram count
-    size_t bytes();                   // returns the total number of bytes of the histogram,.
+    size_t size() const;              // returns the size of the histogram, whatever that means
 
     /** makeReport() makes a report and returns a
      * FrequencyReportVector.
      */
-    auh_t::report makeReport(size_t topN = 0); // returns just the topN; 0 means all
+    std::vector<auh_t::item> makeReport(size_t topN=0);          // returns items of <count,key>
     const struct histogram_def def;            // the definition we are making
 
 private:
-    auh_t h{}; // the histogram
+    auh_t h {}; // the histogram
 };
 
 std::ostream& operator<<(std::ostream& os, const AtomicUnicodeHistogram::FrequencyReportVector& rep);
-std::ostream& operator<<(std::ostream& os, const AtomicUnicodeHistogram::auh_t::AMReportElement& e);
+std::ostream& operator<<(std::ostream& os, const AtomicUnicodeHistogram::auh_t::item& e);
 
 #endif

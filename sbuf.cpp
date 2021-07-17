@@ -500,7 +500,7 @@ ssize_t sbuf_t::find(const char* str, size_t start ) const
 }
 
 std::ostream& operator<<(std::ostream& os, const sbuf_t& t) {
-    os << "sbuf[pos0=" << t.pos0 << " " << "buf[0..8]=0x";
+    os << "sbuf[pos0=" << t.pos0 << " " << "buf[0..8]=";
 
     for (size_t i=0; i < std::min( 8UL, t.bufsize); i++){
         os << hexch(t[i]) << ' ';
@@ -520,6 +520,7 @@ std::ostream& operator<<(std::ostream& os, const sbuf_t& t) {
        << " children="      << t.children
        << " references="    << t.references
        << " fd="            << t.fd
+       << " depth="         << t.depth()
        << "]";
     return os;
 }
@@ -671,4 +672,10 @@ std::string sbuf_t::hash() const {
 /* Similar to above, but does not cache */
 std::string sbuf_t::hash(hash_func_t func) const {
     return func(buf, bufsize);
+}
+
+/* Report if the hash exists */
+bool sbuf_t::has_hash() const {
+    const std::lock_guard<std::mutex> lock(Mhash); // protect this function}
+    return (hash_.size() > 0 );
 }

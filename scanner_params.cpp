@@ -11,7 +11,6 @@ feature_recorder& scanner_params::named_feature_recorder(const std::string featu
 const std::filesystem::path scanner_params::get_input_fname() const { return ss.get_input_fname(); }
 
 void scanner_params::recurse(sbuf_t* new_sbuf) const {
-    /* TODO - call other recursive functions depending on mode */
-    ss.process_sbuf(new_sbuf);
-    /* At this point, sbuf is deleted */
+    ss.schedule_sbuf(new_sbuf);
+    /* sbuf will be deleted after it is processed */
 }

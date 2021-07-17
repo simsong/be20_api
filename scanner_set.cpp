@@ -52,22 +52,37 @@ typedef std::vector<packet_plugin_info> packet_plugin_info_vector_t;
  * create the scanner set
  */
 scanner_set::scanner_set(const scanner_config& sc_, const feature_recorder_set::flags_t& f, class dfxml_writer* writer_)
-    : sc(sc_), fs(f, sc), writer(writer_) {
-    if (getenv("SCANNER_SET_DEBUG_PRINT_STEPS")) debug_flags.debug_print_steps = true;
-    if (getenv("SCANNER_SET_DEBUG_NO_SCANNERS")) debug_flags.debug_no_scanners = true;
-    if (getenv("SCANNER_SET_DEBUG_SCANNER")) debug_flags.debug_scanner = true;
-    if (getenv("SCANNER_SET_DEBUG_DUMP_DATA")) debug_flags.debug_dump_data = true;
-    if (getenv("SCANNER_SET_DEBUG_DECODING")) debug_flags.debug_decoding = true;
-    if (getenv("SCANNER_SET_DEBUG_INFO")) debug_flags.debug_info = true;
-    if (getenv("SCANNER_SET_DEBUG_EXIT_EARLY")) debug_flags.debug_exit_early = true;
-    if (getenv("SCANNER_SET_DEBUG_REGISTER")) debug_flags.debug_register = true;
+    : fs(f, sc_), writer(writer_), sc(sc_) {
+    if (getenv("DEBUG_SCANNER_SET_PRINT_STEPS")) debug_flags.debug_print_steps = true;
+    if (getenv("DEBUG_SCANNER_SET_NO_SCANNERS")) debug_flags.debug_no_scanners = true;
+    if (getenv("DEBUG_SCANNER_SET_SCANNER")) debug_flags.debug_scanner = true;
+    if (getenv("DEBUG_SCANNER_SET_DUMP_DATA")) debug_flags.debug_dump_data = true;
+    if (getenv("DEBUG_SCANNER_SET_DECODING")) debug_flags.debug_decoding = true;
+    if (getenv("DEBUG_SCANNER_SET_INFO")) debug_flags.debug_info = true;
+    if (getenv("DEBUG_SCANNER_SET_EXIT_EARLY")) debug_flags.debug_exit_early = true;
+    if (getenv("DEBUG_SCANNER_SET_REGISTER")) debug_flags.debug_register = true;
     const char *dsi = getenv("DEBUG_SCANNERS_IGNORE");
     if (dsi!=nullptr) debug_flags.debug_scanners_ignore=dsi;
 }
 
+void scanner_set::add_scanner_stat(scanner_t *scanner, uint64_t ns, uint64_t calls)
+{
+    struct stats &st = scanner_stats[scanner];
+    st.ns += ns;                       // atomic!
+    st.calls += calls;                 // atomic!
+}
+
+void scanner_set::add_path_stat(std::string path, uint64_t ns, uint64_t calls)
+{
+    struct stats &st = path_stats[path];
+    st.ns += ns;                       // atomic!
+    st.calls += calls;                 // atomic!
+}
+
+
 /****************************************************************
  ** PHASE_INIT:
- ** Add scanners to the scanner set.
+ ** Scanner management: Add scanners to the scanner set.
  ****************************************************************/
 
 /****************************************************************
@@ -92,7 +107,7 @@ void scanner_set::add_scanner(scanner_t scanner) {
     // The scanner should have set the info field.
     if (sp.info == nullptr) {
         throw std::runtime_error("scanner_set::add_scanner: a scanner did not set the sp.info field.  "
-                                 "Re-run with SCANNER_SET_DEBUG_REGISTER=1 to find those that did.");
+                                 "Re-run with DEBUG_SCANNER_SET_REGISTER=1 to find those that did.");
     }
     if (debug_flags.debug_scanners_ignore.find(sp.info->name) != std::string::npos){
         std::cerr << "DEBUG: ignore add_scanner " << sp.info->name << "\n";
@@ -203,9 +218,131 @@ void scanner_set::load_scanner_packet_handlers()
 }
 #endif
 
+/****************************************************************
+ *** scanner plugin loading
+ ****************************************************************/
+const std::string scanner_set::get_scanner_name(scanner_t scanner) const {
+    auto it = scanner_info_db.find(scanner);
+    if (it != scanner_info_db.end()) { return it->second->name; }
+    return "";
+}
+
+scanner_t* scanner_set::get_scanner_by_name(const std::string search_name) const {
+    for (auto it : scanner_info_db) {
+        if (it.second->name == search_name) { return it.first; }
+    }
+#if 0
+    std::cerr << "scanner_set::get_scanner_by_name(" << search_name << ")\nscanners on file:\n";
+    for (auto it: scanner_info_db) {
+        std::cerr << " " <<  it.second->name  << "\n";
+    }
+    std::cerr << "no such scanner: " << search_name << "\n";
+#endif
+    throw NoSuchScanner(search_name);
+}
+
+/* This interface creates if we are in init phase, doesn't if we are in scan phase */
+feature_recorder& scanner_set::named_feature_recorder(const std::string name) const {
+    return fs.named_feature_recorder(name);
+}
+
 /**
- * return true a scanner is enabled
+ * Print a list of scanners.
+ * We need to load them to do this, so they are loaded with empty config
+ * Note that scanners can only be loaded once, so this exits.
  */
+bool cmp(const struct scanner_params::scanner_info* a,
+         const struct scanner_params::scanner_info* b)
+{
+    return a->name < b->name;
+}
+void scanner_set::info_scanners(std::ostream& out, bool detailed_info, bool detailed_settings, const char enable_opt,
+                                const char disable_opt) {
+    /* First make a sorted vector of the scanners */
+    std::vector<const struct scanner_params::scanner_info *> A;
+    for (auto &it : scanner_info_db) {
+        A.push_back( it.second );
+    }
+    sort (A.begin(), A.end(), cmp);
+
+    std::vector<std::string> enabled_scanner_names, disabled_scanner_names;
+    for (auto it : A) {
+        if (detailed_info) {
+            if (it->name.size()) out << "Scanner Name: " << it->name;
+            if (is_scanner_enabled(it->name)) { out << " (ENABLED) "; }
+            out << "\n";
+            out << "flags:  " << it->scanner_flags.asString() << "\n";
+            if (it->author.size()) out << "Author: " << it->author << "\n";
+            if (it->description.size()) out << "Description: " << it->description << "\n";
+            if (it->url.size()) out << "URL: " << it->url << "\n";
+            if (it->scanner_version.size()) out << "Scanner Version: " << it->scanner_version << "\n";
+            out << "Feature Names: ";
+            int count = 0;
+            for (auto i2 : it->feature_defs) {
+                if (count++ > 0) out << ", ";
+                out << i2.name;
+            }
+            if (count == 0) { out << "(none)"; }
+            out << "\n";
+            if (detailed_settings) {
+                out << "Settable Options (and their defaults): \n";
+                out << it->helpstr;
+            }
+            out << "------------------------------------------------\n\n";
+        }
+        if (it->scanner_flags.no_usage) continue;
+        if (is_scanner_enabled(it->name)) {
+            enabled_scanner_names.push_back(it->name);
+        } else {
+            disabled_scanner_names.push_back(it->name);
+        }
+    }
+    if (enabled_scanner_names.size()) {
+        out << "These scanners enabled; disable with -" << disable_opt << ":\n";
+        for (auto it : enabled_scanner_names) {
+            out << "   -" << disable_opt << " " << it << " - disable scanner " << it << "\n";
+        }
+    }
+    if (disabled_scanner_names.size()) {
+        out << "These scanners disabled; enable with -" << enable_opt << ":\n";
+        sort(disabled_scanner_names.begin(), disabled_scanner_names.end());
+        for (auto it : disabled_scanner_names) {
+            out << "   -" << enable_opt << " " << it << " - enable scanner " << it << "\n";
+        }
+    }
+}
+
+void scanner_set::log(const std::string message)
+{
+    std::stringstream attribute;
+    attribute << "t='" << time(0) << "'";
+    std::cerr  << "log: " << message << " " << attribute.str() << "\n";
+    if (writer){
+        writer->xmlout("log", message, attribute.str(), false);
+        writer->flush();
+    }
+    else {
+        std::cerr << "writer is null\n";
+    }
+}
+
+void scanner_set::log(const sbuf_t &sbuf, const std::string message) // writes sbuf if not too deep.
+{
+    if (sbuf.depth() <= log_depth) {
+        std::stringstream m2;
+        m2 << sbuf.pos0 << " buflen=" << sbuf.bufsize;
+        if (sbuf.has_hash()) {
+            m2 << " " << sbuf.hash();
+        }
+        m2 << ": " << message;
+        log(m2.str());
+    }
+}
+
+
+/****************************************************************
+ *** PHASE_ENABLE
+ ****************************************************************/
 
 /**
  * apply_sacanner_commands:
@@ -288,89 +425,9 @@ bool scanner_set::is_find_scanner_enabled() {
     return false;
 }
 
-/****************************************************************
- *** scanner plugin loading
- ****************************************************************/
-const std::string scanner_set::get_scanner_name(scanner_t scanner) const {
-    auto it = scanner_info_db.find(scanner);
-    if (it != scanner_info_db.end()) { return it->second->name; }
-    return "";
-}
-
-scanner_t* scanner_set::get_scanner_by_name(const std::string search_name) const {
-    for (auto it : scanner_info_db) {
-        if (it.second->name == search_name) { return it.first; }
-    }
-#if 0
-    std::cerr << "scanner_set::get_scanner_by_name(" << search_name << ")\nscanners on file:\n";
-    for (auto it: scanner_info_db) {
-        std::cerr << " " <<  it.second->name  << "\n";
-    }
-    std::cerr << "no such scanner: " << search_name << "\n";
-#endif
-    throw NoSuchScanner(search_name);
-}
-
-/* This interface creates if we are in init phase, doesn't if we are in scan phase */
-feature_recorder& scanner_set::named_feature_recorder(const std::string name) const {
-    return fs.named_feature_recorder(name);
-}
-
-/**
- * Print a list of scanners.
- * We need to load them to do this, so they are loaded with empty config
- * Note that scanners can only be loaded once, so this exits.
- */
-void scanner_set::info_scanners(std::ostream& out, bool detailed_info, bool detailed_settings, const char enable_opt,
-                                const char disable_opt) {
-    std::vector<std::string> enabled_scanner_names, disabled_scanner_names;
-    for (auto it : scanner_info_db) {
-        if (detailed_info) {
-            if (it.second->name.size()) out << "Scanner Name: " << it.second->name;
-            if (is_scanner_enabled(it.second->name)) { out << " (ENABLED) "; }
-            out << "\n";
-            out << "flags:  " << it.second->scanner_flags.asString() << "\n";
-            if (it.second->author.size()) out << "Author: " << it.second->author << "\n";
-            if (it.second->description.size()) out << "Description: " << it.second->description << "\n";
-            if (it.second->url.size()) out << "URL: " << it.second->url << "\n";
-            if (it.second->scanner_version.size()) out << "Scanner Version: " << it.second->scanner_version << "\n";
-            out << "Feature Names: ";
-            int count = 0;
-            for (auto i2 : it.second->feature_defs) {
-                if (count++ > 0) out << ", ";
-                out << i2.name;
-            }
-            if (count == 0) { out << "(none)"; }
-            out << "\n";
-            if (detailed_settings) {
-                out << "Settable Options (and their defaults): \n";
-                out << it.second->helpstr;
-            }
-            out << "------------------------------------------------\n\n";
-        }
-        if (it.second->scanner_flags.no_usage) continue;
-        if (is_scanner_enabled(it.second->name)) {
-            enabled_scanner_names.push_back(it.second->name);
-        } else {
-            disabled_scanner_names.push_back(it.second->name);
-        }
-    }
-    if (enabled_scanner_names.size()) {
-        out << "These scanners enabled; disable with -" << disable_opt << ":\n";
-        for (auto it : enabled_scanner_names) {
-            out << "   -" << disable_opt << " " << it << " - disable scanner " << it << "\n";
-        }
-    }
-    if (disabled_scanner_names.size()) {
-        out << "These scanners disabled; enable with -" << enable_opt << ":\n";
-        sort(disabled_scanner_names.begin(), disabled_scanner_names.end());
-        for (auto it : disabled_scanner_names) {
-            out << "   -" << enable_opt << " " << it << " - enable scanner " << it << "\n";
-        }
-    }
-}
-
 const std::filesystem::path scanner_set::get_input_fname() const { return sc.input_fname; }
+
+
 
 /****************************************************************
  *** PHASE_SCAN methods.
@@ -426,12 +483,13 @@ void scanner_set::shutdown() {
     /* Output the scanner stats */
     if (writer) {
         writer->push("scanner_stats");
-        for (auto it : scanner_stats) {
+        for (scanner_t *scanner : scanner_stats.keys()) {
+            struct scanner_set::stats &st = scanner_stats[scanner];
             writer->set_oneline("true");
             writer->push("scanner");
-            writer->xmlout("name", get_scanner_name(it.first));
-            writer->xmlout("ns", it.second->ns);
-            writer->xmlout("calls", it.second->calls);
+            writer->xmlout("name", get_scanner_name(scanner));
+            writer->xmlout("ns", st.ns);
+            writer->xmlout("calls", st.calls);
             writer->pop();
         }
         writer->pop();
@@ -451,137 +509,158 @@ void scanner_set::process_sbuf(class sbuf_t* sbufp) {
     assert(sbufp != nullptr);
     assert(sbufp->children == 0); // we are going to free it, so it better not have any children.
 
+    set_status( sbufp->pos0.str() + " process_sbuf (" + std::to_string(sbufp->bufsize) + ")" );
+
     /* If we  have not transitioned to PHASE::SCAN, error */
     if (current_phase != scanner_params::PHASE_SCAN) {
         throw std::runtime_error("process_sbuf can only be run in scanner_params::PHASE_SCAN");
     }
 
+    if (sbufp->bufsize==0){
+        delete_sbuf(sbufp);
+        return;        // nothing to scan
+    }
+
     const class sbuf_t& sbuf = *sbufp; // don't allow modification
 
-    if (sbuf.bufsize==0) return;        // nothing to scan
+    aftimer timer;
+    timer.start();
 
     const pos0_t& pos0 = sbuf.pos0;
 
     /* If we are too deep, error out */
     if (sbuf.depth() >= max_depth) {
-        fs.get_alert_recorder().write(pos0, feature_recorder::MAX_DEPTH_REACHED_ERROR_FEATURE,
+        fs.get_alert_recorder().write(pos0,
+                                      feature_recorder::MAX_DEPTH_REACHED_ERROR_FEATURE,
                                       feature_recorder::MAX_DEPTH_REACHED_ERROR_CONTEXT);
-    } else {
-        update_maximum<unsigned int>(max_depth_seen, sbuf.depth());
+        delete_sbuf(sbufp);
+        return;        // nothing to scan
+    }
 
-        /* Determine if we have seen this buffer before */
-        bool seen_before = check_previously_processed(sbuf);
-        if (seen_before) {
-            dup_bytes_encountered += sbuf.bufsize;
+    update_maximum<unsigned int>(max_depth_seen, sbuf.depth());
+
+    /* Determine if we have seen this buffer before */
+    bool seen_before = check_previously_processed(sbuf);
+    if (seen_before) {
+        dup_bytes_encountered += sbuf.bufsize;
+    }
+
+    /* Determine if the sbuf consists of a repeating ngram. If so,
+     * it's only passed to the parsers that want ngrams. (By default,
+     * such sbufs are booring.)
+     */
+
+    set_status( sbuf.pos0.str() + " finding ngram size (" + std::to_string(sbuf.bufsize) + ")" );
+    size_t ngram_size = sbuf.find_ngram_size(max_ngram);
+
+    /****************************************************************
+     *** CALL EACH OF THE SCANNERS ON THE SBUF
+     ****************************************************************/
+
+    if (debug_flags.debug_dump_data) {
+        sbuf.hex_dump(std::cerr);
+    }
+
+    for (auto it : scanner_info_db) {
+        // Look for reasons not to run a scanner
+        // this is a lot of find operations - could we make a vector of the enabled scanner_info_dbs?
+        const auto &name = it.second->name; // scanner name
+        const auto &flags = it.second->scanner_flags; // scanner flags
+        if (enabled_scanners.find(it.first) == enabled_scanners.end()) {
+            continue; //  not enabled
         }
 
-        /* Determine if the sbuf consists of a repeating ngram. If so,
-         * it's only passed to the parsers that want ngrams. (By default,
-         * such sbufs are booring.)
-         */
-
-        size_t ngram_size = sbuf.find_ngram_size(max_ngram);
-
-        /****************************************************************
-         *** CALL EACH OF THE SCANNERS ON THE SBUF
-         ****************************************************************/
-
-        if (debug_flags.debug_dump_data) {
-            sbuf.hex_dump(std::cerr);
+        if (ngram_size > 0 && flags.scan_ngram_buffer == false) {
+            continue;
         }
 
-        for (auto it : scanner_info_db) {
-            // Look for reasons not to run a scanner
-            // this is a lot of find operations - could we make a vector of the enabled scanner_info_dbs?
-            const auto &name = it.second->name; // scanner name
-            const auto &flags = it.second->scanner_flags; // scanner flags
-            if (enabled_scanners.find(it.first) == enabled_scanners.end()) {
-                continue; //  not enabled
-            }
+        if (sbuf.depth() > 0 && flags.depth0_only) {
+            // depth >0 and this scanner only run at depth 0
+            continue;
+        }
 
-            if (ngram_size > 0 && flags.scan_ngram_buffer == false) {
-                continue;
-            }
+        // Don't rescan data that has been seen twice (if scanner doesn't want it.)
+        if (seen_before && flags.scan_seen_before == false) {
+            continue;
+        }
 
-            if (sbuf.depth() > 0 && flags.depth0_only) {
-                // depth >0 and this scanner only run at depth 0
-                continue;
-            }
+        // If the scanner is a recurse_all, it always calls recurse. We can't it twice in the stack, or else
+        // we get infinite regression.
+        if (flags.recurse_always && sbuf.pos0.contains( it.second->pathPrefix)) {
+            continue;
+        }
 
-            // Don't rescan data that has been seen twice (if scanner doesn't want it.)
-            if (seen_before && flags.scan_seen_before == false) {
-                continue;
-            }
+        bool record_call_stats = false;
 
-            // If the scanner is a recurse_all, it always calls recurse. We can't it twice in the stack, or else
-            // we get infinite regression.
-            if (flags.recurse_always && sbuf.pos0.contains( it.second->pathPrefix)) {
-                continue;
-            }
+        try {
 
-            bool record_call_stats = false;
-
-            try {
-
-                /* Compute the effective path for stats */
-                std::string epath;
-                if (record_call_stats) {
-                    bool inname = false;
-                    for (auto cc : sbuf.pos0.path) {
-                        if (isupper(cc)) inname = true;
-                        if (inname) epath.push_back(toupper(cc));
-                        if (cc == '-') inname = false;
-                    }
-                    if (epath.size() > 0) epath.push_back('-');
-                    for (auto cc : name) { epath.push_back(toupper(cc)); }
+            /* Compute the effective path for stats */
+            std::string epath;
+            if (record_call_stats) {
+                bool inname = false;
+                for (auto cc : sbuf.pos0.path) {
+                    if (isupper(cc)) inname = true;
+                    if (inname) epath.push_back(toupper(cc));
+                    if (cc == '-') inname = false;
                 }
+                if (epath.size() > 0) epath.push_back('-');
+                for (auto cc : name) { epath.push_back(toupper(cc)); }
+            }
 
-                /* Call the scanner.*/
-                aftimer t;
+            /* Call the scanner.*/
+            aftimer t;
 
+            set_status( sbuf.pos0.str() + ": " + name + " (" + std::to_string(sbuf.bufsize) + ")" );
+
+            if (debug_flags.debug_print_steps) {
+                std::cerr << "sbuf.pos0=" << sbuf.pos0 << " calling scanner " << name << "\n";
+            }
+            if (record_call_stats || debug_flags.debug_print_steps) {
+                t.start();
+            }
+            scanner_params sp(*this, scanner_params::PHASE_SCAN, sbufp, scanner_params::PrintOptions(), nullptr);
+            (*it.first)(sp);
+
+            if (record_call_stats || debug_flags.debug_print_steps) {
+                t.stop();
+                // fs.add_stats(epath,t.elapsed_seconds());
                 if (debug_flags.debug_print_steps) {
-                    std::cerr << "sbuf.pos0=" << sbuf.pos0 << " calling scanner " << name << "\n";
+                    std::cerr << "sbuf.pos0=" << sbuf.pos0 << " scanner " << name << " t=" << t.elapsed_seconds() << "\n";
                 }
-                if (record_call_stats || debug_flags.debug_print_steps) {
-                    t.start();
-                }
-                scanner_params sp(*this, scanner_params::PHASE_SCAN, sbufp, scanner_params::PrintOptions(), nullptr);
-                (*it.first)(sp);
-
-                if (record_call_stats || debug_flags.debug_print_steps) {
-                    t.stop();
-                    // fs.add_stats(epath,t.elapsed_seconds());
-                    if (debug_flags.debug_print_steps) {
-                        std::cerr << "sbuf.pos0=" << sbuf.pos0 << " scanner " << name << " t=" << t.elapsed_seconds() << "\n";
-                    }
-                }
-            } catch (const std::exception& e) {
-                std::stringstream ss;
-                ss << "std::exception Scanner: " << name << " Exception: " << e.what() << " sbuf.pos0: " << sbuf.pos0
-                   << " bufsize=" << sbuf.bufsize << "\n";
-                std::cerr << ss.str();
-                try {
-                    fs.get_alert_recorder().write(sbuf.pos0, "scanner=" + name,
-                                                  std::string("<exception>") + e.what() + "</exception>");
-                } catch (feature_recorder_set::NoSuchFeatureRecorder& e2) {}
-            } catch (...) {
-                std::stringstream ss;
-                ss << "std::exception Scanner: " << name << " Unknown Exception "
-                   << " sbuf.pos0: " << sbuf.pos0 << " bufsize=" << sbuf.bufsize << "\n";
-                std::cerr << ss.str();
-                try {
-                    fs.get_alert_recorder().write(sbuf.pos0, "scanner=" + name,
-                                                  std::string("<unknown_exception></unknown_exception>"));
-                } catch (feature_recorder_set::NoSuchFeatureRecorder& e) {}
             }
+        } catch (const std::exception& e) {
+            std::stringstream ss;
+            ss << "std::exception Scanner: " << name << " Exception: " << e.what() << " sbuf.pos0: " << sbuf.pos0
+               << " bufsize=" << sbuf.bufsize << "\n";
+            std::cerr << ss.str();
+            try {
+                fs.get_alert_recorder().write(sbuf.pos0, "scanner=" + name,
+                                              std::string("<exception>") + e.what() + "</exception>");
+            } catch (feature_recorder_set::NoSuchFeatureRecorder& e2) {}
+        } catch (...) {
+            std::stringstream ss;
+            ss << "std::exception Scanner: " << name << " Unknown Exception "
+               << " sbuf.pos0: " << sbuf.pos0 << " bufsize=" << sbuf.bufsize << "\n";
+            std::cerr << ss.str();
+            try {
+                fs.get_alert_recorder().write(sbuf.pos0, "scanner=" + name,
+                                              std::string("<unknown_exception></unknown_exception>"));
+            } catch (feature_recorder_set::NoSuchFeatureRecorder& e) {}
         }
     }
-    if (sbuf.children != 0 ){
-        std::cerr << "scanner_set::process_sbuf. Cannot delete sbuf " << sbuf << "\n";
-        throw std::runtime_error("sbuf has >0 children");
-    }
-    delete sbufp;
+    timer.stop();
+    delete_sbuf(sbufp);
     return;
+}
+
+void scanner_set::schedule_sbuf(sbuf_t *sbufp)
+{
+    process_sbuf(sbufp);
+}
+
+void scanner_set::delete_sbuf(sbuf_t *sbufp)
+{
+    delete sbufp;
 }
 
 std::string scanner_set::hash(const sbuf_t& sbuf) const { return sbuf.hash(fs.hasher.func); }

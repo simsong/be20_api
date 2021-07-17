@@ -1,8 +1,10 @@
 #ifndef _FPOS0_H_
 #define _FPOS0_H_
 
+#include <exception>
 #include <algorithm>
 #include <cinttypes>
+#include <cctype>
 #include <sstream>
 #include <string>
 
@@ -36,18 +38,39 @@ inline int64_t stoi64(std::string str) {
 }
 
 class pos0_t {
-    const size_t calc_depth(const std::string& s) const {
-        return std::count_if(s.begin(), s.end(), [](char c) { return c == '-'; });
-    }
+    mutable int depth_ {-1};               // if -1, it needs to be calculated
 
 public:
     const std::string path{}; /* forensic path of decoders*/
     const uint64_t offset{0}; /* location of buf[0] */
-    const unsigned int depth{0};
 
     explicit pos0_t() {}                                                                // the beginning of a nothing
-    pos0_t(std::string s, uint64_t o = 0) : path(s), offset(o), depth(calc_depth(s)) {} // a specific offset in a place
-    pos0_t(const pos0_t& obj) : path(obj.path), offset(obj.offset) {}
+    pos0_t(std::string s, uint64_t o = 0) : path(s), offset(o) {} // a specific offset in a place
+    pos0_t(const pos0_t& obj) : path(obj.path), offset(obj.offset) {}                   // copy operator
+
+    /* Every new layer is indicated by a "-" followed by a letter.
+     * This threadsafe, but it may need to be computed twice if two
+     * computations are happening at the same time.
+     */
+    static unsigned int calc_depth(const std::string& s)  {
+        if (s.size()<2) {
+            return 0;
+        }
+        unsigned int cdepth = 0;
+        for( size_t i = 0; i<s.size()-1; i++ ){
+            if (s[i]=='-' && isupper(s[i+1])) {
+                cdepth += 1;
+            }
+        }
+        return cdepth;
+    }
+    unsigned int depth() const {
+        if (depth_ == -1 ){
+            depth_ = calc_depth(path);
+        }
+        return depth_;
+    }
+
     std::string str() const { // convert to a string, with offset included
         std::stringstream ss;
         if (path.size() > 0) { ss << path << "-"; }
@@ -125,7 +148,17 @@ inline class pos0_t operator+(pos0_t pos, const std::string& subdir) {
 };
 
 /** Adding an offset */
-inline class pos0_t operator+(pos0_t pos, int64_t delta) { return pos0_t(pos.path, pos.offset + delta); };
+inline class pos0_t operator+(pos0_t pos, size_t delta) {
+    return pos0_t(pos.path, pos.offset + delta);
+};
+
+/** Subtracting an offset */
+inline class pos0_t operator-(pos0_t pos, size_t delta) {
+    if (delta > pos.offset) {
+        throw std::runtime_error("attempt to subtract a delta from an pos0_t that is larger that pos.offset");
+    }
+    return pos0_t(pos.path, pos.offset - delta);
+};
 
 /** \name Comparision operations
  * @{

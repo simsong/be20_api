@@ -77,3 +77,6 @@ All errors in histogram production seem to be fixed!
 
 ## 2021-06-12
 - [ ] sbuf_stream and sbuf_private should both be factored into sbuf.
+
+- [ ] FrequencyReportHistogram should use unique_ptr<> rather than
+  actually the report elements on the vector.

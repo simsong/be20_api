@@ -33,9 +33,9 @@
 
 /* Define a map of feature recorders with atomic access. */
 /* TODO: This should probably be a unique_ptr */
-typedef atomic_map<std::string, class feature_recorder*> feature_recorder_map_t;
+typedef atomic_map<std::string, class feature_recorder> feature_recorder_map_t;
 inline std::ostream& operator<<(std::ostream& os, const feature_recorder_map_t& m) {
-    for (auto it : m) { os << " " << it.first << ": frm\n"; }
+    m.write(os);
     return os;
 }
 

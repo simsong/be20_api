@@ -134,57 +134,6 @@ const std::string feature_recorder_file::bulk_extractor_version_header("# " PACK
 void feature_recorder_file::flush()    { ios.flush(); }
 void feature_recorder_file::shutdown() { ios.flush(); }
 
-#if 0
-// add a memory histogram; assume the position in the mhistograms is stable
-void feature_recorder_file::enable_memory_histograms()
-{
-    for( auto it: histogram_defs){
-        mhistograms[it] = new mhistogram_t();
-    }
-}
-#endif
-
-#if 0
-/**
- *  Create a histogram for this feature recorder and an extraction pattern.
- */
-
-/* dump_callback_test is a simple callback that just prints to stderr. It's for testing */
-int feature_recorder_file::dump_callback_test(void *user,const feature_recorder &fr,
-                                          const std::string &str,const uint64_t &count)
-{
-    (void)user;
-    std::cerr << "dump_cb: user=" << user << " " << str << ": " << count << "\n";
-    return 0;
-}
-
-/* Make a histogram. If a callback is provided, send the output there. */
-class mhistogram_callback {
-    mhistogram_callback(const mhistogram_callback&);
-    mhistogram_callback &operator=(const mhistogram_callback &);
-public:
-    mhistogram_callback(void *user_,
-                        feature_recorder::dump_callback_t *cb_,
-                        const histogram_def &def_,
-                        const feature_recorder &fr_,
-                        uint64_t limit_):user(user_),cb(cb_),def(def_),fr(fr_),callback_count(0),limit(limit_){}
-    void *user;
-    feature_recorder::dump_callback_t *cb;
-    const histogram_def &def;
-    const feature_recorder &fr;
-    uint64_t callback_count;
-    uint64_t limit;
-    int do_callback(const std::string &str,const uint64_t &tally){
-        (*cb)(user,fr,def,str,tally);
-        if(limit && ++callback_count >= limit) return -1;
-        return 0;
-    }
-    static int callback(void *ptr,const std::string &str,const uint64_t &tally) {
-        return ((mhistogram_callback *)(ptr))->do_callback(str,tally);
-    }
-};
-#endif
-
 /**
  * We now have three kinds of histograms:
  * 1 - Traditional post-processing histograms specified by the histogram library
@@ -192,13 +141,6 @@ public:
  *   1b - SQL-based traditional ones.
  * 2 - In-memory histograms (used primarily by beapi)
  */
-
-#if 0
-size_t feature_recorder_file::count_histograms() const
-{
-    return histogram_defs.size();
-}
-#endif
 
 /****************************************************************
  *** WRITING SUPPORT
@@ -209,6 +151,7 @@ size_t feature_recorder_file::count_histograms() const
  * so it's an easy place to do utf-8 validation in debug mode.
  */
 void feature_recorder_file::write0(const std::string& str) {
+    feature_recorder::write0(str); // call super class
     if (fs.flags.pedantic && (utf8::find_invalid(str.begin(), str.end()) != str.end())) {
         std::cerr << "******************************************\n";
         std::cerr << "feature recorder: " << name << "\n";
@@ -222,12 +165,15 @@ void feature_recorder_file::write0(const std::string& str) {
     const std::lock_guard<std::mutex> lock(Mios);
     if (ios.is_open()) {
         /* If there is no banner, add it */
-        if (ios.tellg() == 0) { banner_stamp(ios, feature_file_header); }
+        if (ios.tellg() == 0) {
+            banner_stamp(ios, feature_file_header);
+        }
 
         /* Output the feature */
         ios << str << '\n';
-        if (ios.fail()) { throw std::runtime_error("Disk full. Free up space and re-restart."); }
-        feature_recorder::write0(str); // call super class
+        if (ios.fail()) {
+            throw std::runtime_error("Disk full. Free up space and re-restart.");
+        }
     }
 }
 
@@ -242,48 +188,15 @@ void feature_recorder_file::write0(const std::string& str) {
  */
 
 void feature_recorder_file::write0(const pos0_t& pos0, const std::string& feature, const std::string& context) {
+    feature_recorder::write0(pos0, feature, context); // call super to increment counter
     if (fs.flags.disabled) { return; }
     std::stringstream ss;
     ss << pos0.shift(fs.offset_add).str() << '\t' << feature;
-    if ((def.flags.no_context == false) && (context.size() > 0)) { ss << '\t' << context; }
-    feature_recorder::write0(pos0, feature, context); // call super
+    if ((def.flags.no_context == false) && (context.size() > 0)) {
+        ss << '\t' << context;
+    }
     write0(ss.str());                                 // and do the actual write
 }
-
-#if 0
-void feature_recorder_file::printf(const char *fmt, ...)
-{
-    const int maxsize = 65536;
-    managed_malloc<char>p(maxsize);
-
-    if(p.buf==0) return;
-
-    va_list ap;
-    va_start(ap,fmt);
-    vsnprintf(p.buf,maxsize,fmt,ap);
-    va_end(ap);
-    this->write(p.buf);
-}
-#endif
-
-#if 0
-static void dump_hist(sqlite3_context *ctx,int argc,sqlite3_value**argv)
-{
-    const histogram_def *def = static_cast<const histogram_def *>(sqlite3_user_data(ctx));
-
-#ifdef DEBUG
-    std::cerr << "behist feature=" << def->feature << "  suffix="
-              << def->suffix << "  argc=" << argc << "value = " << sqlite3_value_text(argv[0]) << "\n";
-#endif
-    std::string new_feature(static_cast<const char *>(sqlite3_value_text(argv[0])));
-    std::smatch sm;
-    std::regex_search( new_feature, sm, def->reg);
-    if (sm.size() > 0){
-        new_feature = sm.str();
-        sqlite3_result_text(ctx,new_feature.c_str(),new_feature.size(),SQLITE_TRANSIENT);
-    }
-}
-#endif
 
 /****************************************************************
  *** FILE-BASED HISOTGRAMS
@@ -300,168 +213,9 @@ void feature_recorder_file::histogram_flush(AtomicUnicodeHistogram& h) {
     if (!hfile.is_open()) {
         throw std::runtime_error("Cannot open feature histogram file " + fname.string());
     }
-    hfile << h.makeReport(0); // sorted and clear
+    auto r = h.makeReport(0); // sorted and clear
+    for(const auto &it : r){
+        hfile << it;
+    }
     hfile.close();
 }
-
-#if 0
-void feature_recorder_file::generate_histogram(std::ostream &os, const struct histogram_def &def)
-{
-    const std::lock_guard<std::mutex> lock(Mios);
-    ios.flush();
-    os << histogram_file_header;
-
-    /* This is a file based histogram. We will be reading from one file and writing to another */
-    std::ifstream f(fname.c_str());
-    if(!f.is_open()){
-        throw std::invalid_argument("Cannot open histogram input file: " + ifname);
-    }
-
-    /* Read each line of the feature file and add it to the histogram.
-     * If we run out of memory, dump that histogram to a file and start
-     * on the next histogram.
-     */
-    for(int histogram_counter = 0;histogram_counter<max_histogram_files;histogram_counter++){
-
-        AtomicUnicodeHistogram h(def.flags);            /* of seen features, created in pass two */
-        try {
-            std::string line;
-            while (getline(f,line)){
-                if (line.size()==0) continue; // empty line
-                if (line[0]=='#') continue;   // comment line
-                truncate_at(line,'\r');      // truncate at a \r if there is one.
-
-                /** If there is a string required in the line and it isn't present, don't use this line */
-                if (def.require.size()){
-                    if(line.find_first_of(def.require)==std::string::npos){
-                        continue;
-                    }
-                }
-
-                std::string feature = extract_feature(line);
-                // Unquote string if it has anything quoted
-                if (feature.find('\\')!=std::string::npos){
-                    feature = unquote_string(feature);
-                }
-                /** If there is a pattern to use to prune down the feature, use it */
-                if (def.pattern.size()){
-                    std::smatch sm;
-                    std::regex_search( feature, sm, def.reg);
-                    if (sm.size()>0) {
-                        feature = sm.str();
-                    }
-                }
-
-                /* Remove what follows after \t if this is a context file */
-                size_t tab=feature.find('\t');
-                if (tab!=std::string::npos) feature.erase(tab); // erase from tab to end
-
-                /* Add the feature! */
-                h.add(feature);
-            }
-            f.close();
-        }
-        catch (const std::exception &e) {
-            std::cerr << "ERROR: " << e.what() << " generating histogram " << name << "\n";
-        }
-
-*Simson is here
-
-        /* Output what we have to a new file ofname */
-        std::stringstream real_suffix;
-
-        real_suffix << def.suffix;
-        if(histogram_counter>0) real_suffix << histogram_counter;
-
-        std::string ofname = fname_suffix(real_suffix.str()); // histogram name
-        std::ofstream o;
-        o.open(ofname.c_str());         // open the file
-        if(!o.is_open()){
-            std::cerr << "Cannot open histogram output file: " << ofname << "\n";
-            return;
-        }
-
-        AtomicUnicodeHistogram::FrequencyReportVector *fr = h.makeReport();
-        if(fr->size()>0){
-            banner_stamp(o,histogram_file_header);
-            o << *fr;                   // sends the entire histogram
-        }
-
-        for(size_t i = 0;i<fr->size();i++){
-            delete fr->at(i);
-        }
-        delete fr;
-        o.close();
-
-        if(f.is_open()==false){
-            return;     // input file was closed
-        }
-    }
-    std::cerr << "Looped " << max_histogram_files
-              << " times on histogram; something seems wrong\n";
-}
-#endif
-
-#if 0
-void feature_recorder_file::dump_histogram(const histogram_def &def,void *user,feature_recorder::dump_callback_t cb) const
-{
-    /* Inform that we are dumping this histogram */
-    if(cb) cb(user,*this,def,"",0);
-
-    /* If this is a memory histogram, dump it and return */
-    mhistograms_t::const_iterator it = mhistograms.find(def);
-    if(it!=mhistograms.end()){
-        assert(cb!=0);
-        mhistogram_callback mcbo(user,cb,def,*this,mhistogram_limit);
-        it->second->dump_sorted(static_cast<void *>(&mcbo),mhistogram_callback::callback);
-        return;
-    }
-
-#if defined(HAVE_SQLITE3_H) and defined(HAVE_LIBSQLITE3)
-    if (fs.flag_set(feature_recorder_set::ENABLE_SQLITE3_RECORDERS)) {
-        dump_histogram_sqlite3(def,user,cb);
-    }
-#endif
-    if (fs.flag_notset(feature_recorder_set::DISABLE_FILE_RECORDERS)) {
-        dump_histogram_file(def,user,cb);
-    }
-}
-#endif
-
-/* Dump all of this feature recorders histograms */
-
-#if 0
-void feature_recorder_file::dump_histograms(void *user,feature_recorder::dump_callback_t cb,
-                                           feature_recorder_set::xml_notifier_t xml_error_notifier) const
-{
-    /* If we are recording features to SQL and we have a histogram defintion
-     * for this feature recorder, we need to create a base histogram first,
-     * then we can create the extracted histograms if they are presented.
-     */
-
-
-    /* Loop through all the histograms and dump each one.
-     * This now works for both memory histograms and non-memory histograms.
-     */
-    for (auto it:histogram_defs ){
-        try {
-            dump_histogram((it),user,cb);
-        }
-        catch (const std::exception &e) {
-            std::cerr << "ERROR: histogram " << name << ": " << e.what() << "\n";
-            if(xml_error_notifier){
-                std::string error = std::string("<error function='phase3' histogram='")
-                    + name + std::string("</error>");
-                (*xml_error_notifier)(error);
-            }
-        }
-    }
-}
-#endif
-
-#if 0
-void feature_recorder_file::add_histogram(const histogram_def &def)
-{
-    histogram_defs.insert(def);
-}
-#endif

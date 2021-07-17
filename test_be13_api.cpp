@@ -156,20 +156,32 @@ TEST_CASE("atomic_set", "[atomic]") {
 }
 
 #include "atomic_map.h"
+int *new_int()
+{
+    return new int(0);
+}
+
+struct ab_t {
+    int a {0};
+    int b {0};
+} ;
+
+
 TEST_CASE("atomic_map", "[atomic]") {
-    atomic_map<std::string, int> am;
-    am.insert("one", 1);
-    am.insert("two", 2);
-    am.insert("three", 3);
-    am.insertIfNotContains("three", 30);
-    am.insertIfNotContains("four", 4);
-    REQUIRE(am.contains("one") == true);
-    REQUIRE(am.contains("two") == true);
-    REQUIRE(am.contains("three") == true);
-    REQUIRE(am.contains("four") == true);
-    REQUIRE(am.contains("five") == false);
-    REQUIRE(am["one"] == 1);
-    REQUIRE(am["three"] == 3);
+    atomic_map<std::string, ab_t> am;
+    am["one"].a = 10;
+#if 0
+    am["one"].b = 10;
+    am["two"].a = 5;
+    am["three"].b = 10;
+    am["three"].b += 10;
+    am["three"].b += 10;
+    REQUIRE(am["one"].a == 10);
+    REQUIRE(am["one"].b == 10);
+    REQUIRE(am["two"].a == 5);
+    REQUIRE(am["two"].b == 0);
+    REQUIRE(am["three"].b == 30);
+#endif
 }
 
 /****************************************************************
@@ -247,8 +259,8 @@ TEST_CASE("Second AtomicUnicodeHistogram test", "[atomic][regex]") {
 
 TEST_CASE("Third AtomicUnicodeHistogram test", "[histogram]") {
     /* Make sure that the histogram elements work */
-    AtomicUnicodeHistogram::auh_t::AMReportElement e1("hello");
-    AtomicUnicodeHistogram::auh_t::AMReportElement e2("world");
+    AtomicUnicodeHistogram::auh_t::item e1("hello");
+    AtomicUnicodeHistogram::auh_t::item e2("world");
 
     REQUIRE(e1 == e1);
     REQUIRE(e1 != e2);
@@ -267,7 +279,7 @@ TEST_CASE("Third AtomicUnicodeHistogram test", "[histogram]") {
     hm.add("300");
     hm.add("foo 300 bar");
 
-    AtomicUnicodeHistogram::auh_t::report r = hm.makeReport(0);
+    std::vector<AtomicUnicodeHistogram::auh_t::item> r = hm.makeReport(0);
     REQUIRE(r.size() == 3);
 
     /* Make sure that the tallies were correct. */
@@ -452,6 +464,11 @@ TEST_CASE("write_features", "[feature_recorder_set]") {
         REQUIRE(fs.histogram_count() == 0);
         fs.histogram_add(h1);
         REQUIRE(fs.histogram_count() == 1);
+
+        REQUIRE(pos0_t::calc_depth("0")==0);
+        REQUIRE(pos0_t::calc_depth("0-OUTLOOK")==1);
+        REQUIRE(pos0_t::calc_depth("0-OUTLOOK-0")==1);
+        REQUIRE(pos0_t::calc_depth("0-OUTLOOK-0-XOR(255)")==2);
 
         pos0_t p;
         fr.write(p, "one", "context");
@@ -730,17 +747,21 @@ TEST_CASE("scanner", "[scanner]") { /* check that scanner params made from an ex
  */
 #include "scan_sha1_test.h"
 #include "scanner_set.h"
-TEST_CASE("enable/disable", "[scanner]") {
+TEST_CASE("scanner_stats", "[scanner_set]") {
+    //scanner_set ss;
+
+}
+
+TEST_CASE("enable/disable", "[scanner_set]") {
     scanner_config sc;
     sc.outdir = get_tempdir();
 
     /* Enable the scanner */
     const std::string SHA1_TEST = "sha1_test";
 
-    struct feature_recorder_set::flags_t f;
     {
         sc.push_scanner_command(scanner_config::scanner_command::ALL_SCANNERS, scanner_config::scanner_command::ENABLE);
-        scanner_set ss(sc, f);
+        scanner_set ss(sc, feature_recorder_set::flags_t(), nullptr);
         ss.add_scanner(scan_sha1_test);
         ss.apply_scanner_commands(); // applied after all scanners are added
 
@@ -764,7 +785,7 @@ TEST_CASE("enable/disable", "[scanner]") {
     {
         /* Try it again, but this time turning on all of the commands */
         sc.push_scanner_command(scanner_config::scanner_command::ALL_SCANNERS, scanner_config::scanner_command::ENABLE);
-        scanner_set ss(sc, f);
+        scanner_set ss(sc, feature_recorder_set::flags_t(), nullptr);
         ss.add_scanner(scan_sha1_test);
         ss.apply_scanner_commands(); // applied after all scanners are adde
         REQUIRE(ss.is_scanner_enabled(SHA1_TEST) == true);
@@ -774,7 +795,7 @@ TEST_CASE("enable/disable", "[scanner]") {
         sc.push_scanner_command(SHA1_TEST, scanner_config::scanner_command::ENABLE);
         sc.push_scanner_command(scanner_config::scanner_command::ALL_SCANNERS,
                                 scanner_config::scanner_command::DISABLE);
-        scanner_set ss(sc, f);
+        scanner_set ss(sc, feature_recorder_set::flags_t(), nullptr);
         ss.add_scanner(scan_sha1_test);
         ss.apply_scanner_commands(); // applied after all scanners are adde
         REQUIRE(ss.is_scanner_enabled(SHA1_TEST) == false);
@@ -788,8 +809,7 @@ TEST_CASE("run", "[scanner]") {
     sc.outdir = get_tempdir();
     sc.push_scanner_command(std::string("sha1_test"), scanner_config::scanner_command::ENABLE); /* Turn it onn */
 
-    struct feature_recorder_set::flags_t f;
-    scanner_set ss(sc, f);
+    scanner_set ss(sc, feature_recorder_set::flags_t(), nullptr);
     ss.add_scanner(scan_sha1_test);
     ss.apply_scanner_commands();
 

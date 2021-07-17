@@ -93,7 +93,7 @@ public:
         bool debug_sbuf_getbuf{false}; // print when sbufgetbuf is called
     } flags{};
 
-    const unsigned int depth() const { return pos0.depth; }
+    const unsigned int depth() const { return pos0.depth(); }
     const uint8_t* get_buf() const;       // returns the buffer UNSAFE but trackable. Enable DEBUG_SBUF_GETBUF to print on each
     /****************************************************************
      *** Allocators that allocate from memory not already in an sbuf.
@@ -104,7 +104,6 @@ public:
      * This is the one case where buf is written into...
      * This should probably be a subclass mutable_sbuf_t() for clarity.
      */
-
 
     explicit sbuf_t();    // We occasionally require an empty sbuf.
     explicit sbuf_t(const sbuf_t &src, size_t offset); // start at offset and get the rest of the sbuf as a child
@@ -472,6 +471,7 @@ public:
     typedef std::string (*hash_func_t)(const uint8_t* buf, size_t bufsize);
     std::string hash() const;           //  default hasher (currently SHA1); caches results
     std::string hash(hash_func_t func) const; // hash with this hash func; does not cache
+    bool has_hash() const;                    // report if hash has already been computed
 
     /**
      * These are largely for debugging, but they also support the BEViewer.

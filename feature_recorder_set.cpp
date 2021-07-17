@@ -105,7 +105,7 @@ feature_recorder_set::feature_recorder_set(const flags_t& flags_, const scanner_
  * deallocator
  */
 feature_recorder_set::~feature_recorder_set() {
-    frm.delete_all();
+    frm.clear();                        // be sure all elements are deleted
 #if 0
 #if defined(HAVE_SQLITE3_H)
     db_close();
@@ -196,19 +196,22 @@ feature_recorder& feature_recorder_set::get_alert_recorder() const
  */
 void feature_recorder_set::set_carve_defaults()
 {
-    for (auto it : frm ) {
-        std::string option_name = it.first + "_carve_mode";
+    for (const auto &name : frm.keys()){
+        std::string option_name = name + "_carve_mode";
         auto val = sc.namevals.find(option_name);
         if (val != sc.namevals.end()) {
-            std::cerr << "setting carve mode " << val->second << " for feature recorder " << it.first << "\n";
-            it.second->carve_mode = feature_recorder_def::carve_mode_t(std::stoi( val->second ));
+            feature_recorder &fr = frm.get(name);
+            std::cerr << "setting carve mode " << val->second << " for feature recorder " << name << "\n";
+            fr.carve_mode = feature_recorder_def::carve_mode_t(std::stoi( val->second ));
         }
     }
 }
 
 // send every enabled scanner the phase message
 void feature_recorder_set::feature_recorders_shutdown() {
-    for (auto const& it : frm) { it.second->shutdown(); }
+    for (auto const& it : frm.values()) {
+        it->shutdown();
+    }
 }
 
 /****************************************************************
@@ -217,11 +220,11 @@ void feature_recorder_set::feature_recorders_shutdown() {
 
 void feature_recorder_set::dump_name_count_stats(dfxml_writer& writer) const {
     writer.push("feature_files");
-    for (auto ij : frm) {
+    for (auto name : frm.keys()) {
         writer.set_oneline(true);
         writer.push("feature_file");
-        writer.xmlout("name", ij.second->name);
-        writer.xmlout("count", ij.second->features_written);
+        writer.xmlout("name", name);
+        writer.xmlout("count", frm.get(name).features_written);
         writer.pop("feature_file");
         writer.set_oneline(false);
     }
@@ -247,7 +250,9 @@ void feature_recorder_set::histogram_add(const histogram_def& def) {
 size_t feature_recorder_set::histogram_count() const {
     /* Ask each feature recorder to count the number of histograms it can produce */
     size_t count = 0;
-    for (auto it : frm) { count += it.second->histogram_count(); }
+    for (auto *frp : frm.values()) {
+        count += frp->histogram_count();
+    }
     return count;
 }
 
@@ -255,13 +260,13 @@ size_t feature_recorder_set::histogram_count() const {
  * Have every feature recorder generate all of its histograms.
  */
 void feature_recorder_set::histograms_generate() {
-    for (auto it : frm) { it.second->histogram_flush_all(); }
+    for (auto *frp : frm.values()) {
+        frp->histogram_flush_all();
+    }
 }
 
 std::vector<std::string> feature_recorder_set::feature_file_list() const {
-    std::vector<std::string> ret;
-    for (auto it : frm) { ret.push_back(it.first); }
-    return ret;
+    return frm.keys();
 }
 
 #if 0

@@ -56,12 +56,11 @@ static inline int hexval(char ch) {
 }
 #endif
 
+/* These are all overridden in the subclass */
 feature_recorder::feature_recorder(class feature_recorder_set& fs_, const struct feature_recorder_def def_)
     : fs(fs_), name(def_.name), def(def_) {}
-
 feature_recorder::~feature_recorder() {}
-
-void feature_recorder::flush()    {}
+void feature_recorder::flush() {}
 
 
 #if 0
@@ -180,6 +179,7 @@ void feature_recorder::write0(const std::string& str) {}
  * Write: keep track of count of features written.
  */
 void feature_recorder::write0(const pos0_t& pos0, const std::string& feature, const std::string& context) {
+    if (fs.flags.disabled) { return; }
     features_written += 1;
 }
 
@@ -384,23 +384,25 @@ std::string valid_dosname(std::string in) {
 #include <iomanip>
 std::string feature_recorder::carve(const sbuf_t& header, const sbuf_t& data, std::string ext, time_t mtime) {
     switch (carve_mode) {
-    case feature_recorder_def::CARVE_NONE: return NO_CARVED_FILE; // carve nothing
+    case feature_recorder_def::CARVE_NONE:
+        return NO_CARVED_FILE; // carve nothing
     case feature_recorder_def::CARVE_ENCODED:
         if (data.pos0.path.size() == 0) return NO_CARVED_FILE; // not encoded
         if (data.pos0.alphaPart() == do_not_carve_encoding)
             return std::string(); // ignore if it is just encoded with this
         break;                    // otherwise carve
-    case feature_recorder_def::CARVE_ALL: break;
+    case feature_recorder_def::CARVE_ALL:
+        break;
     }
 
     /* See if we have previously carved this object, in which case do not carve it again */
     std::string carved_hash_hexvalue = hash(data);
     bool in_cache = carve_cache.check_for_presence_and_insert(carved_hash_hexvalue);
     std::string carved_relative_path; // carved path reported in feature file, relative to outdir
-    std::filesystem::path carved_absolute_path;
-    // std::string fname_feature;          // what goes into the feature file
+    std::filesystem::path carved_absolute_path; // used for opening
+
     if (in_cache) {
-        carved_relative_path = "<CACHED>";
+        carved_relative_path = CACHED;
     } else {
         /* Determine the directory and filename */
         int64_t myfileNumber = carved_file_count++; // atomic operation
@@ -408,9 +410,10 @@ std::string feature_recorder::carve(const sbuf_t& header, const sbuf_t& data, st
         seq << std::setw(3) << std::setfill('0') << int(myfileNumber / 1000);
         const std::string thousands{seq.str()};
 
-        std::ostringstream num;
-        num << std::setw(8) << std::setfill('0') << int(myfileNumber);
-        const std::string units{num.str()};
+        //No longer sequentially numbering
+        //std::ostringstream num;
+        //num << std::setw(8) << std::setfill('0') << int(myfileNumber);
+        //const std::string units{num.str()};
 
         /* Create the directory.
          * If it exists, the call fails.
@@ -420,10 +423,15 @@ std::string feature_recorder::carve(const sbuf_t& header, const sbuf_t& data, st
         std::filesystem::create_directory(fs.get_outdir() / name / thousands);
 
         // const std::filesystem::path scannerDir { fs.get_outdir() / name};
-        carved_relative_path = name + "/" + thousands + "/" + units + ext;
-        carved_absolute_path = fs.get_outdir() / name / thousands / (units + ext);
 
-        // fname  = seqDir / (sbuf.pos0.str() + std::string(".") + ext);
+        std::string fname  = data.pos0.str() + ext;
+
+        // carved relative path goes in the feature file
+        carved_relative_path = name + "/" + thousands + "/" + fname;
+
+        // carved absolute path is used for actually opening
+        carved_absolute_path = fs.get_outdir() / name / thousands / fname;
+
         // fname_feature = fname.string().substr(fs.get_outdir().string().size()+1);
     }
 
