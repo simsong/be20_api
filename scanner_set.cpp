@@ -509,6 +509,7 @@ void scanner_set::process_sbuf(class sbuf_t* sbufp) {
     assert(sbufp != nullptr);
     assert(sbufp->children == 0); // we are going to free it, so it better not have any children.
 
+    set_status( sbufp->pos0.str() + " process_sbuf (" + std::to_string(sbufp->bufsize) + ")" );
 
     /* If we  have not transitioned to PHASE::SCAN, error */
     if (current_phase != scanner_params::PHASE_SCAN) {
@@ -529,7 +530,8 @@ void scanner_set::process_sbuf(class sbuf_t* sbufp) {
 
     /* If we are too deep, error out */
     if (sbuf.depth() >= max_depth) {
-        fs.get_alert_recorder().write(pos0, feature_recorder::MAX_DEPTH_REACHED_ERROR_FEATURE,
+        fs.get_alert_recorder().write(pos0,
+                                      feature_recorder::MAX_DEPTH_REACHED_ERROR_FEATURE,
                                       feature_recorder::MAX_DEPTH_REACHED_ERROR_CONTEXT);
         delete_sbuf(sbufp);
         return;        // nothing to scan
@@ -548,6 +550,7 @@ void scanner_set::process_sbuf(class sbuf_t* sbufp) {
      * such sbufs are booring.)
      */
 
+    set_status( sbuf.pos0.str() + " finding ngram size (" + std::to_string(sbuf.bufsize) + ")" );
     size_t ngram_size = sbuf.find_ngram_size(max_ngram);
 
     /****************************************************************
