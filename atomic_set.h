@@ -14,31 +14,34 @@
 #include <map>
 #include <mutex>
 #include <set>
-#include <unordered_map>
 #include <unordered_set>
 #include <vector>
+
+/*
+ * note: do not use const TYPE &s for signatures; it caused deadlocks.
+ */
 
 template <class TYPE> class atomic_set {
     // Mutex M protects myset.
     // It is mutable to allow modification in const methods
     mutable std::mutex M{};
-    std::unordered_set<TYPE> myset{};
+    std::set<TYPE> myset{};
 
 public:
     atomic_set() {}
-    bool contains(const TYPE& s) const {
+    bool contains(const TYPE s) const {
         const std::lock_guard<std::mutex> lock(M);
         return myset.find(s) != myset.end();
     }
-    void insert(const TYPE& s) {
+    void insert(const TYPE s) {
         const std::lock_guard<std::mutex> lock(M);
         myset.insert(s);
     }
 
-    /* Returns true if s is in the set, false if it is not, but
-     * inserts either way
+    /* Returns true if s is in the set, false if it is not.
+     * After return, s is in the set.
      */
-    bool check_for_presence_and_insert(const TYPE& s) {
+    bool check_for_presence_and_insert(const TYPE s) {
         const std::lock_guard<std::mutex> lock(M);
         if (myset.find(s) != myset.end()) return true; // in the set
         myset.insert(s);                               // otherwise insert it
@@ -51,8 +54,8 @@ public:
     }
     /* like python .keys() */
     std::vector<TYPE> keys() const {
-        std::vector<TYPE> ret;
         const std::lock_guard<std::mutex> lock(M);
+        std::vector<TYPE> ret;
         for (auto obj: myset) {
             ret.push(obj);
         }

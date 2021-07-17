@@ -442,18 +442,6 @@ void scanner_set::phase_scan() {
 }
 
 /****************************************************************
- *** Data handling
- ****************************************************************/
-
-/*
- * uses hash to determine if a block was prevously seen.
- * Hopefully sbuf.buf() is zero-copy.
- */
-bool scanner_set::check_previously_processed(const sbuf_t& sbuf) {
-    return seen_set.check_for_presence_and_insert(sbuf.hash());
-}
-
-/****************************************************************
  *** PHASE_SHUTDOWN methods.
  ****************************************************************/
 
@@ -502,6 +490,16 @@ template <typename T> void update_maximum(std::atomic<T>& maximum_value, T const
     while (prev_value < value && !maximum_value.compare_exchange_weak(prev_value, value)) {}
 }
 
+/*
+ * uses hash to determine if a block was prevously seen.
+ * Hopefully sbuf.buf() is zero-copy.
+ */
+bool scanner_set::check_previously_processed(const sbuf_t& sbuf) {
+    return seen_set.contains(sbuf.hash());
+}
+
+
+
 /* Process an sbuf!
  * Deletes the buf after processing.
  */
@@ -540,7 +538,8 @@ void scanner_set::process_sbuf(class sbuf_t* sbufp) {
     update_maximum<unsigned int>(max_depth_seen, sbuf.depth());
 
     /* Determine if we have seen this buffer before */
-    bool seen_before = check_previously_processed(sbuf);
+    std::string hash = sbuf.hash();
+    bool seen_before = seen_set.check_for_presence_and_insert(hash);
     if (seen_before) {
         dup_bytes_encountered += sbuf.bufsize;
     }

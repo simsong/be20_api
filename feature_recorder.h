@@ -244,8 +244,7 @@ public:
     std::atomic<size_t> min_carve_size {200};
     std::atomic<size_t> max_carve_size {16*1024*1024};
     std::atomic<int64_t> carved_file_count{0}; // starts at 0; gets incremented by carve();
-    atomic_set<std::string>
-        carve_cache{};                   // hashes of files that have been cached, so the same file is not carved twice
+    atomic_set<std::string> carve_cache{};                   // hashes of files that have been cached, so the same file is not carved twice
     std::string do_not_carve_encoding{}; // do not carve files with this encoding.
     static inline const std::string CARVE_MODE_DESCRIPTION {"0=carve none; 1=carve encoded; 2=carve all"};
     static inline const std::string NO_CARVED_FILE {""};

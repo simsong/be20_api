@@ -233,7 +233,7 @@ public:
 
     // Management of previously seen data
     atomic_set<std::string> seen_set {}; // hex hash values of sbuf pages that have been seen
-    virtual bool check_previously_processed(const sbuf_t& sbuf);
+    virtual bool check_previously_processed(const sbuf_t& sbuf); // checks but doesn't set
 
     /* PHASE_SHUTDOWN */
     // explicit shutdown, called automatically on delete if it hasn't be called
