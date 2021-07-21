@@ -52,7 +52,7 @@ struct scanner_config {
     // &help);
     void set_config(const std::string& name, const std::string& val);
     template <typename T> void get_config(const std::string& name, T* val, const std::string& help);
-    u_int max_depth;
+    u_int max_depth {DEFAULT_MAX_DEPTH};
 
     /**
      * Commands whether to enable or disable a scanner.

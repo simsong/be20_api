@@ -65,19 +65,21 @@ scanner_set::scanner_set(const scanner_config& sc_, const feature_recorder_set::
     if (dsi!=nullptr) debug_flags.debug_scanners_ignore=dsi;
 }
 
-void scanner_set::add_scanner_stat(scanner_t *scanner, uint64_t ns, uint64_t calls)
+#if 0
+void scanner_set::add_scanner_stat(scanner_t *scanner, const struct scanner_set::stats &n)
 {
     struct stats &st = scanner_stats[scanner];
-    st.ns += ns;                       // atomic!
-    st.calls += calls;                 // atomic!
+    st.ns    += n.ns;                       // atomic!
+    st.calls += n.calls;                 // atomic!
 }
 
-void scanner_set::add_path_stat(std::string path, uint64_t ns, uint64_t calls)
+void scanner_set::add_path_stat(std::string path, const struct scanner_set::stats &n)
 {
     struct stats &st = path_stats[path];
-    st.ns += ns;                       // atomic!
-    st.calls += calls;                 // atomic!
+    st.ns    += n.ns;                       // atomic!
+    st.calls += n.calls;                 // atomic!
 }
+#endif
 
 
 /****************************************************************
@@ -276,6 +278,7 @@ void scanner_set::info_scanners(std::ostream& out, bool detailed_info, bool deta
             if (it->description.size()) out << "Description: " << it->description << "\n";
             if (it->url.size()) out << "URL: " << it->url << "\n";
             if (it->scanner_version.size()) out << "Scanner Version: " << it->scanner_version << "\n";
+            out << "Min sbuf size: " << it->min_sbuf_size << "\n";
             out << "Feature Names: ";
             int count = 0;
             for (auto i2 : it->feature_defs) {
@@ -397,6 +400,13 @@ void scanner_set::apply_scanner_commands() {
         }
     }
 
+    /* Tell each of the enabled scanners to init */
+    current_phase = scanner_params::PHASE_INIT2;
+    scanner_params::PrintOptions po; // empty po
+    scanner_params sp(*this, scanner_params::PHASE_INIT2, nullptr, po, nullptr);
+    for (auto it : enabled_scanners) { (*it)(sp); }
+
+
     /* set the carve defaults */
     fs.set_carve_defaults();
     current_phase = scanner_params::PHASE_ENABLED;
@@ -438,6 +448,7 @@ void scanner_set::phase_scan() {
     if (current_phase != scanner_params::PHASE_ENABLED) {
         throw std::runtime_error("start_scan can only be run in scanner_params::PHASE_ENABLED");
     }
+    fs.frm_freeze();
     current_phase = scanner_params::PHASE_SCAN;
 }
 
@@ -483,6 +494,7 @@ void scanner_set::shutdown() {
     /* Output the scanner stats */
     if (writer) {
         writer->push("scanner_stats");
+#if 0
         for (scanner_t *scanner : scanner_stats.keys()) {
             struct scanner_set::stats &st = scanner_stats[scanner];
             writer->set_oneline("true");
@@ -492,6 +504,7 @@ void scanner_set::shutdown() {
             writer->xmlout("calls", st.calls);
             writer->pop();
         }
+#endif
         writer->pop();
     }
 }
@@ -509,7 +522,7 @@ void scanner_set::process_sbuf(class sbuf_t* sbufp) {
     assert(sbufp != nullptr);
     assert(sbufp->children == 0); // we are going to free it, so it better not have any children.
 
-    set_status( sbufp->pos0.str() + " process_sbuf (" + std::to_string(sbufp->bufsize) + ")" );
+    thread_set_status( sbufp->pos0.str() + " process_sbuf (" + std::to_string(sbufp->bufsize) + ")" );
 
     /* If we  have not transitioned to PHASE::SCAN, error */
     if (current_phase != scanner_params::PHASE_SCAN) {
@@ -550,7 +563,7 @@ void scanner_set::process_sbuf(class sbuf_t* sbufp) {
      * such sbufs are booring.)
      */
 
-    set_status( sbuf.pos0.str() + " finding ngram size (" + std::to_string(sbuf.bufsize) + ")" );
+    thread_set_status( sbuf.pos0.str() + " finding ngram size (" + std::to_string(sbuf.bufsize) + ")" );
     size_t ngram_size = sbuf.find_ngram_size(max_ngram);
 
     /****************************************************************
@@ -590,6 +603,11 @@ void scanner_set::process_sbuf(class sbuf_t* sbufp) {
             continue;
         }
 
+        // is sbuf large enough?
+        if (sbuf.bufsize < it.second->min_sbuf_size) {
+            continue;
+        }
+
         bool record_call_stats = false;
 
         try {
@@ -609,8 +627,7 @@ void scanner_set::process_sbuf(class sbuf_t* sbufp) {
 
             /* Call the scanner.*/
             aftimer t;
-
-            set_status( sbuf.pos0.str() + ": " + name + " (" + std::to_string(sbuf.bufsize) + ")" );
+            thread_set_status( sbuf.pos0.str() + ": " + name + " (" + std::to_string(sbuf.bufsize) + ")" );
 
             if (debug_flags.debug_print_steps) {
                 std::cerr << "sbuf.pos0=" << sbuf.pos0 << " calling scanner " << name << "\n";
@@ -623,7 +640,11 @@ void scanner_set::process_sbuf(class sbuf_t* sbufp) {
 
             if (record_call_stats || debug_flags.debug_print_steps) {
                 t.stop();
-                // fs.add_stats(epath,t.elapsed_seconds());
+#if 0
+                struct stats st(t.elapsed_nanoseconds(), 1);
+                add_scanner_stat(*it.first, st);
+                add_path_stat(epath, st);
+#endif
                 if (debug_flags.debug_print_steps) {
                     std::cerr << "sbuf.pos0=" << sbuf.pos0 << " scanner " << name << " t=" << t.elapsed_seconds() << "\n";
                 }

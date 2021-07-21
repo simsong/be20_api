@@ -22,7 +22,7 @@ template <class TYPE> class atomic_set {
     // Mutex M protects myset.
     // It is mutable to allow modification in const methods
     mutable std::mutex M{};
-    std::unordered_set<TYPE> myset{};
+    std::set<TYPE> myset{};
 
 public:
     atomic_set() {}
@@ -30,7 +30,7 @@ public:
         const std::lock_guard<std::mutex> lock(M);
         return myset.find(s) != myset.end();
     }
-    void insert(const TYPE& s) {
+    void insert(const TYPE s) {
         const std::lock_guard<std::mutex> lock(M);
         myset.insert(s);
     }
@@ -38,7 +38,7 @@ public:
     /* Returns true if s is in the set, false if it is not, but
      * inserts either way
      */
-    bool check_for_presence_and_insert(const TYPE& s) {
+    bool check_for_presence_and_insert(const TYPE s) {
         const std::lock_guard<std::mutex> lock(M);
         if (myset.find(s) != myset.end()) return true; // in the set
         myset.insert(s);                               // otherwise insert it

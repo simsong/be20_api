@@ -1,25 +1,29 @@
 #ifndef __AFTIMER_H__
 #define __AFTIMER_H__
 
-#include <cinttypes>
+#define __STDC_WANT_LIB_EXT1__ 1
+#include <ctime>
+#include <cstdio>
 #include <string>
-#include <sys/time.h>
+#include <chrono>
 
 class aftimer {
-    struct timeval t0 {};
-    bool running{};
-    long total_sec{};
-    long total_usec{};
-    double lap_time_{}; // time from when we last did a "stop"
+    std::chrono::time_point<std::chrono::steady_clock> t0 {};
+    bool   running{};
+    uint64_t elapsed_ns {}; //  for all times we have started and stopped
+    uint64_t last_ns    {}; // time from when we last did a "start"
 public:
-    aftimer() : t0(), running(false), total_sec(0), total_usec(0), lap_time_(0) {}
+    aftimer()  {}
 
     void start(); // start the timer
     void stop();  // stop the timer
 
-    time_t tstart() const { return t0.tv_sec; }       // time we started
+    //std::chrono::time_point<std::chrono::system_clock> tstart() const {
+    //return t0;       // time we started
+//}
     double elapsed_seconds() const;                   // how long timer has been running, total
-    double lap_time() const;                          // how long the timer is running this time
+    uint64_t elapsed_nanoseconds() const;
+    uint64_t lap_seconds() const;                          // how long the timer is running this time
     double eta(double fraction_done) const;           // calculate ETA in seconds, given fraction
     std::string hms(long t) const;                    // turn a number of seconds into h:m:s
     std::string elapsed_text() const;                 /* how long we have been running */
@@ -33,62 +37,32 @@ public:
  * https://gist.github.com/ugovaretto/5875385
  */
 
-#ifdef WIN32
-inline int getimeofday(struct timeval* tv, struct timezone* tz) {
-    FILETIME ft;
-    GetSystemTimeAsFileTime(&ft);
-    unsigned __int64 tmpres = 0;
-    tmpres |= ft.dwHighDateTime;
-    tmpres <<= 32;
-    tmpres |= ft.dwLowDateTime;
-
-    /*converting file time to unix epoch*/
-    tmpres -= DELTA_EPOCH_IN_MICROSECS;
-    tmpres /= 10; /*convert into microseconds*/
-    t->tv_sec = (long)(tmpres / 1000000UL);
-    t->tv_usec = (long)(tmpres % 1000000UL);
-
-    if (NULL != tz) {
-        if (!tzflag) {
-            _tzset();
-            tzflag++;
-        }
-        tz->tz_minuteswest = _timezone / 60;
-        tz->tz_dsttime = _daylight;
-    }
-    return 0;
-}
-#endif
-
-inline void timestamp(struct timeval* t) { gettimeofday(t, NULL); }
+//inline void timestamp(struct timeval* t) { gettimeofday(t, NULL); }
 
 inline void aftimer::start() {
-    timestamp(&t0);
-    running = 1;
+    assert (running = false);
+    t0 = std::chrono::steady_clock::now();
+    running = true;
 }
 
 inline void aftimer::stop() {
-    if (running) {
-        struct timeval t;
-        timestamp(&t);
-        total_sec += t.tv_sec - t0.tv_sec;
-        total_usec += t.tv_usec - t0.tv_usec;
-        lap_time_ = (double)(t.tv_sec - t0.tv_sec) + (double)(t.tv_usec - t0.tv_usec) / 1000000.0;
-        running = false;
-    }
+    assert (running==true);
+    auto v = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - t0 );
+    last_ns = v.count();
+    elapsed_ns += v.count();
+    running = false;
 }
 
-inline double aftimer::lap_time() const { return lap_time_; }
+//inline aftimer::duration aftimer::lap_time() const { return last_ns; }
 
 inline double aftimer::elapsed_seconds() const {
-    double ret = (double)total_sec + (double)total_usec / 1000000.0;
-    if (running) {
-        struct timeval t;
-        timestamp(&t);
-        ret += t.tv_sec - t0.tv_sec;
-        ret += (t.tv_usec - t0.tv_usec) / 1000000.0;
-    }
-    return ret;
+    assert (running==false);
+    return elapsed_ns / (1000.0 * 1000.0 * 1000.0);
+}
+
+inline uint64_t aftimer::elapsed_nanoseconds() const {
+    assert (running==false);
+    return elapsed_ns;
 }
 
 inline std::string aftimer::hms(long t) const {
@@ -109,7 +83,9 @@ inline std::string aftimer::hms(long t) const {
     return std::string(buf);
 }
 
-inline std::string aftimer::elapsed_text() const { return hms((int)elapsed_seconds()); }
+inline std::string aftimer::elapsed_text() const {
+    return hms((int)elapsed_seconds());
+}
 
 /**
  * returns the number of seconds until the job is complete.
@@ -136,11 +112,7 @@ inline std::string aftimer::eta_text(double fraction_done) const {
 inline std::string aftimer::eta_time(double fraction_done) const {
     time_t t = time_t(eta(fraction_done)) + time(0);
     struct tm tm;
-#ifdef HAVE_LOCALTIME_R
     localtime_r(&t, &tm);
-#else
-    tm = *localtime(&t);
-#endif
     char buf[64];
     snprintf(buf, sizeof(buf), "%02d:%02d:%02d", tm.tm_hour, tm.tm_min, tm.tm_sec);
     return std::string(buf);

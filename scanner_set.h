@@ -42,7 +42,9 @@
  * When executing, once again each scanner is called with the SP and RCB.
  * This is the only file that needs to be included for a scanner.
  *
- * \li \c phase_startup - scanners are loaded and register the names of the feature files they want.
+ * \li \c phase_init     - scanners are loaded and set up the names of the feature files they want.
+ * \li \c phase_enabled  - enabled - enable/disable commands called
+ * \li \c phase_init2    - single-threaded call to each scanner in order to get a handle to the feature recorders.
  * \li \c phase_scan - each scanner is called to analyze 1 or more sbufs.
  * \li \c phase_shutdown - scanners are given a chance to shutdown
  *
@@ -105,18 +107,22 @@ public:
     scanner_set(const scanner_config& sc, const feature_recorder_set::flags_t& f, class dfxml_writer* writer);
     virtual ~scanner_set(){};
 
+#if 0
     struct stats {
-        std::atomic<uint64_t> ns{0};    // nanoseconds
-        std::atomic<uint64_t> calls{0}; // calls
+        explicit stats(uint64_t a, uint64_t b):ns(a),calls(b){};
+        explicit stats(const stats &s):ns(s.ns),calls(s.calls){};
+        uint64_t ns{0};    // nanoseconds
+        uint64_t calls{0}; // calls
     };
+
     // per-scanner stats
     atomic_map<scanner_t* , struct stats> scanner_stats{}; // maps scanner name to performance stats
+    void add_scanner_stat(scanner_t *, const struct stats &st);
 
     // per-path stats
     atomic_map<std::string, struct stats> path_stats{}; // maps scanner name to performance stats
-
-    void add_scanner_stat(scanner_t *, uint64_t ns, uint64_t calls);
-    void add_path_stat(std::string path, uint64_t ns, uint64_t calls);
+    void add_path_stat(std::string path, const struct stats &st);
+#endif
 
     // a pointer to every scanner info in all of the scanners.
     // This provides all_scanners
@@ -182,6 +188,8 @@ public:
     };
     const std::string get_scanner_name(scanner_t scanner) const; // returns the name of the scanner
     virtual scanner_t* get_scanner_by_name(const std::string name) const;
+
+    /* Feature recorder support */
     virtual feature_recorder& named_feature_recorder(const std::string name) const; // returns the feature recorder
     virtual std::vector<std::string> feature_file_list() const;                     // returns the list of feature files
 
@@ -227,7 +235,7 @@ public:
     virtual void process_sbuf(sbuf_t* sbuf); // process the sbuf, then delete it.
     virtual void schedule_sbuf(sbuf_t* sbuf);  // schedule the sbuf to be processed
     virtual void delete_sbuf(sbuf_t *sbuf);    // delete after processing
-    virtual void set_status(const std::string &status) {}; // designed to be overridden
+    virtual void thread_set_status(const std::string &status) {}; // designed to be overridden
 
     // void     process_packet(const be13::packet_info &pi);
 

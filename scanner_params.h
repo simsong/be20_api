@@ -61,6 +61,8 @@ struct scanner_params {
         // scanner_info(const scanner_info &i)=delete;
         // scanner_info &operator=(const scanner_info &i)=delete;
 
+        const static inline size_t DEFAULT_MIN_SBUF_SIZE=16; // by default, do not scan sbufs smaller than this.
+
         struct scanner_flags_t {
             bool default_enabled{true}; //  enabled by default
             bool no_usage{false};       //  do not show scanner in usage
@@ -112,12 +114,12 @@ struct scanner_params {
         std::string description{};     //   what do I do?
         std::string url{};             //   where I come from
         std::string scanner_version{}; //   version for the scanner
-        uint64_t flags{};              //   flags
         std::vector<feature_recorder_def> feature_defs{}; //   feature files that this scanner needs.
+        size_t   min_sbuf_size {DEFAULT_MIN_SBUF_SIZE}; // minimum sbuf to scan
+        uint64_t flags{};              //   flags
         std::vector<histogram_def> histogram_defs{};      //   histogram definitions that the scanner needs
 
         // Derrived:
-
 
         // void              *packet_user {};        //   data for network callback
         // be13::packet_callback_t *packet_cb {};    //   callback for processing network packets, or NULL
@@ -127,7 +129,7 @@ struct scanner_params {
             : scanner(source.scanner), name(source.name), pathPrefix(source.pathPrefix),
               helpstr(source.helpstr), description(source.description),
               url(source.url), scanner_version(source.scanner_version),
-              flags(source.flags), feature_defs(source.feature_defs), histogram_defs(source.histogram_defs) {}
+              feature_defs(source.feature_defs), flags(source.flags), histogram_defs(source.histogram_defs) {}
     };
 
     /* Scanners can also be asked to assist in printing. */
@@ -162,6 +164,7 @@ struct scanner_params {
     enum phase_t {
         PHASE_INIT,    // called in main thread when scanner loads
         PHASE_ENABLED, // enable/disable commands called
+        PHASE_INIT2,    // called in main thread to get the feature recorders and so forth.
         PHASE_SCAN,    // called in worker thread for every ENABLED scanner to scan an sbuf
         PHASE_SHUTDOWN // called in main thread for every ENABLED scanner when scanner is shutting down. Allows XML
                        // closing.
