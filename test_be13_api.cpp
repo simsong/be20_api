@@ -161,20 +161,39 @@ TEST_CASE("atomic_set", "[atomic]") {
 TEST_CASE("atomic_set_mt", "[atomic]") {
     thread_pool pool;
     atomic_set<std::string> as;
-    for (size_t i=0;i<1000;i++){
+    for (size_t i=0;i<100;i++){
         pool.push_task( [&as, i] {
-            std::stringstream ss;
-            ss << "this is string " << i << " " << std::this_thread::get_id();
-            as.insert( ss.str() );
-            std::this_thread::sleep_for( std::chrono::microseconds( i ));
+            for (int j=0;j<100;j++){
+                std::stringstream ss;
+                ss << "this is string " << j << " " << i << " " << std::this_thread::get_id();
+                as.insert( ss.str() );
+            }
         });
     }
     pool.wait_for_tasks();
-    std::cerr << "as.size() = " << as.size() << "\n";
-    for (auto k: as.keys()) {
-        std::cerr << k << "\n";
-    }
+    REQUIRE( as.keys().size() == 10000 );
     as.clear();
+    REQUIRE( as.keys().size() == 0 );
+}
+
+TEST_CASE("atomic_map_mt", "[atomic]") {
+    thread_pool pool;
+    atomic_map<std::string, std::string> am;
+    for (size_t i=0;i<100;i++){
+        pool.push_task( [&am, i] {
+            for (int j=0;j<100;j++){
+                std::stringstream s1;
+                s1 << "thread " << i;
+                std::stringstream s2;
+                s2 << "string " << j << " " << i << " " << std::this_thread::get_id();
+                am[s1.str()] = s2.str();
+            }
+        });
+    }
+    pool.wait_for_tasks();
+    REQUIRE( am.keys().size() == 100 );
+    am.clear();
+    REQUIRE( am.keys().size() == 0 );
 }
 
 #include "atomic_map.h"
@@ -769,22 +788,19 @@ TEST_CASE("scanner", "[scanner]") { /* check that scanner params made from an ex
  */
 #include "scan_sha1_test.h"
 #include "scanner_set.h"
+
+/* Just make sure that they can be created and deleted without error.
+ * Previously we got errors before we moved the destructor to the .cpp file from the .h file.
+ */
 TEST_CASE("scanner_stats", "[scanner_set]") {
     scanner_config sc;
     feature_recorder_set::flags_t flags;
 
 
-    std::cerr << "created scanner_config size=" << sizeof(sc) << "\n";
-    std::cerr << "created flags=" << sizeof(flags) << "\n";
-
     feature_recorder_set fs(flags, sc);
-    std::cerr << "created fs=" << sizeof(fs) << "\n";
-
     std::map<scanner_t*, const struct scanner_params::scanner_info*> scanner_info_db{};
     std::set<scanner_t*> enabled_scanners{}; // the scanners that are enabled
     atomic_set<std::string> seen_set {}; // hex hash values of sbuf pages that have been seen
-
-
     auto ss = new scanner_set(sc, feature_recorder_set::flags_t(), nullptr);
     delete ss;
 }

@@ -27,10 +27,8 @@ template <class TYPE> class atomic_set {
 public:
     atomic_set() {}
     ~atomic_set() {
-        std::cerr << "~atomic_set. size=" << myset.size() << "\n";
         const std::lock_guard<std::mutex> lock(M);
         myset.clear();                  // empty it
-        std::cerr << "~atomic_set. cleared. size=" << myset.size() << "\n";
     }
     void clear() {
         const std::lock_guard<std::mutex> lock(M);
