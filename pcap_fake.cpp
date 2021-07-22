@@ -11,11 +11,10 @@
 #ifndef HAVE_LIBPCAP
 #include "pcap_fake.h"
 
-//#include <errno.h>
 #include <fcntl.h>
 #include <iostream>
-#include <stdlib.h>
-#include <string.h>
+#include <cstdlib>
+#include <cstring>
 
 #ifdef WIN32
 #define SET_BINMODE(f) _setmode(_fileno(f), _O_BINARY)

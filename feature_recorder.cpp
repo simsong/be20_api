@@ -8,6 +8,7 @@
 #include <sys/times.h>
 #include <unistd.h>
 
+#include <ctime>
 #include <cstdarg>
 #include <filesystem>
 #include <fstream>
@@ -22,6 +23,7 @@
 #include "utils.h"
 #include "word_and_context_list.h"
 
+#if 0
 static inline bool isodigit(char c) { return c >= '0' && c <= '7'; }
 
 /* Feature recorder functions that don't have anything to do with files  or SQL databases */
@@ -52,6 +54,7 @@ static inline int hexval(char ch) {
     }
     return 0;
 }
+#endif
 
 /* These are all overridden in the subclass */
 feature_recorder::feature_recorder(class feature_recorder_set& fs_, const struct feature_recorder_def def_)
@@ -60,6 +63,7 @@ feature_recorder::~feature_recorder() {}
 void feature_recorder::flush() {}
 
 
+#if 0
 /**
  * Unquote Python or octal-style quoting of a string
  */
@@ -87,11 +91,13 @@ std::string feature_recorder::unquote_string(const std::string& s) {
     }
     return out;
 }
+#endif
 
 /**
  * Get the feature which is defined as being between a \t and [\t\n]
  */
 
+#if 0
 /*static*/ std::string feature_recorder::extract_feature(const std::string& line) {
     size_t tab1 = line.find('\t');
     if (tab1 == std::string::npos) return ""; // no feature
@@ -100,6 +106,7 @@ std::string feature_recorder::unquote_string(const std::string& s) {
     if (tab2 != std::string::npos) return line.substr(feature_start, tab2 - feature_start);
     return line.substr(feature_start); // no context to remove
 }
+#endif
 
 const std::filesystem::path feature_recorder::get_outdir() const // cannot be inline becuase it accesses fs
 {
@@ -318,12 +325,14 @@ std::string replace(const std::string& src, char f, char t) {
  ****************************************************************
  *
  * carving support.
+ * 2021-07-10 - we no longer carve to forensic path or actual path. Now we carve sequential numbers.
  * 2014-04-24 - $ is no longer valid either
  * 2013-08-29 - replace invalid characters in filenames
  * 2013-07-30 - automatically bin directories
  * 2013-06-08 - filenames are the forensic path.
  */
 
+#if 0
 std::string valid_dosname(std::string in) {
     std::string out;
     for (size_t i = 0; i < in.size(); i++) {
@@ -338,6 +347,7 @@ std::string valid_dosname(std::string in) {
     }
     return out;
 }
+#endif
 
 /*
  * write buffer to specified dirname/filename for writing data.

@@ -20,6 +20,8 @@
 
 #include <algorithm>
 #include <array>
+#include <chrono>
+#include <thread>
 #include <cstdlib>
 #include <cstring>
 #include <filesystem>
@@ -155,6 +157,45 @@ TEST_CASE("atomic_set", "[atomic]") {
     REQUIRE(as.size() == 3);
 }
 
+#include "thread-pool/thread_pool.hpp"
+TEST_CASE("atomic_set_mt", "[atomic]") {
+    thread_pool pool;
+    atomic_set<std::string> as;
+    for (size_t i=0;i<100;i++){
+        pool.push_task( [&as, i] {
+            for (int j=0;j<100;j++){
+                std::stringstream ss;
+                ss << "this is string " << j << " " << i << " " << std::this_thread::get_id();
+                as.insert( ss.str() );
+            }
+        });
+    }
+    pool.wait_for_tasks();
+    REQUIRE( as.keys().size() == 10000 );
+    as.clear();
+    REQUIRE( as.keys().size() == 0 );
+}
+
+TEST_CASE("atomic_map_mt", "[atomic]") {
+    thread_pool pool;
+    atomic_map<std::string, std::string> am;
+    for (size_t i=0;i<100;i++){
+        pool.push_task( [&am, i] {
+            for (int j=0;j<100;j++){
+                std::stringstream s1;
+                s1 << "thread " << i;
+                std::stringstream s2;
+                s2 << "string " << j << " " << i << " " << std::this_thread::get_id();
+                am[s1.str()] = s2.str();
+            }
+        });
+    }
+    pool.wait_for_tasks();
+    REQUIRE( am.keys().size() == 100 );
+    am.clear();
+    REQUIRE( am.keys().size() == 0 );
+}
+
 #include "atomic_map.h"
 int *new_int()
 {
@@ -188,7 +229,7 @@ TEST_CASE("atomic_map", "[atomic]") {
  * histogram_def.h
  */
 #include "histogram_def.h"
-TEST_CASE("histogram_def comparision functions", "[histogram_def]") {
+TEST_CASE("comparision_functions", "[histogram_def]") {
     histogram_def h1("name1", "feature1", "pattern1", "", "suffix1", histogram_def::flags_t());
     histogram_def h2("name2", "feature2", "pattern2", "", "suffix2", histogram_def::flags_t());
 
@@ -197,7 +238,7 @@ TEST_CASE("histogram_def comparision functions", "[histogram_def]") {
     REQUIRE(h1 < h2);
 }
 
-TEST_CASE("histogram_def 8-bit regular expression functions", "[histogram_def]") {
+TEST_CASE("histogram_def-8", "[histogram_def]") {
     histogram_def d0("numbers", "numbers", "([0-9]+)", "", "s0", histogram_def::flags_t());
     REQUIRE(d0.match("123") == true);
     REQUIRE(d0.match("abc") == false);
@@ -216,7 +257,7 @@ TEST_CASE("histogram_def 8-bit regular expression functions", "[histogram_def]")
  */
 #include "atomic_unicode_histogram.h"
 #include "histogram_def.h"
-TEST_CASE("First AtomicUnicodeHistogram test", "[atomic][regex]") {
+TEST_CASE("AtomicUnicodeHistogram_1", "[atomic][regex]") {
     /* Histogram that matches everything */
     histogram_def d1("name", "feature_file", "(.*)", "", "suffix1", histogram_def::flags_t());
     AtomicUnicodeHistogram h(d1);
@@ -244,7 +285,7 @@ TEST_CASE("First AtomicUnicodeHistogram test", "[atomic][regex]") {
     REQUIRE(f.at(0).value.count16 == 0);
 }
 
-TEST_CASE("Second AtomicUnicodeHistogram test", "[atomic][regex]") {
+TEST_CASE("AtomicUnicodeHistogram_2", "[atomic][regex]") {
     /* Histogram that matches everything */
     histogram_def d1("extraction", "extraction", "^(.....)", "", "", histogram_def::flags_t());
     AtomicUnicodeHistogram h(d1);
@@ -257,7 +298,7 @@ TEST_CASE("Second AtomicUnicodeHistogram test", "[atomic][regex]") {
     REQUIRE(f.at(0).value.count16 == 0);
 }
 
-TEST_CASE("Third AtomicUnicodeHistogram test", "[histogram]") {
+TEST_CASE("AtomicUnicodeHistogram_3", "[histogram]") {
     /* Make sure that the histogram elements work */
     AtomicUnicodeHistogram::auh_t::item e1("hello");
     AtomicUnicodeHistogram::auh_t::item e2("world");
@@ -375,7 +416,7 @@ TEST_CASE("quote_if_necessary", "[feature_recorder]") {
     REQUIRE(c2_quoted == c2);
 }
 
-TEST_CASE("fname in outdir", "[feature_recorder]") {
+TEST_CASE("fname", "[feature_recorder]") {
     feature_recorder_set::flags_t flags;
     flags.no_alert = true;
     scanner_config sc;
@@ -641,25 +682,39 @@ TEST_CASE("malloc_sbuf", "[sbuf]") {
 
     {
         sbuf_t sb1b = sb1->slice(100);
-        REQUIRE(sb1->children==1);
+        REQUIRE(sb1->children==1);      // make sure child is registered
         REQUIRE(sb1b.children==0);
         REQUIRE(sb1b[0]==155);
         REQUIRE(sb1b[1]==154);
-        REQUIRE_THROWS_AS( sb1b.wbuf(0,0), std::runtime_error);
+        REQUIRE_THROWS_AS( sb1b.wbuf(0,0), std::runtime_error); // slices are not writable
     }
-    REQUIRE(sb1->children==0);
+    REQUIRE(sb1->children==0);          // make sure child is gone.
 
     sbuf_t *sb1c = sb1->new_slice_copy(100,5);
     REQUIRE(sb1c->bufsize==5);
     REQUIRE(sb1->children==0);
     delete sb1c;
+
+    // Set 100..200 t be 55
+    for(int i=100; i< 200; i++) {
+        sb1->wbuf(i, 55);
+    }
+    REQUIRE( sb1->is_constant(0, 100, 55) == false );
+    REQUIRE( sb1->is_constant(100, 100, 55) == true );
+    REQUIRE( sb1->find(150, 0) == -1 );
+    std::stringstream ss2;
+    ss2 << *sb1;
+    REQUIRE( ss2.str().find("children=0") != std::string::npos );
     delete sb1;
+
 
     std::string abc {"abcdefghijklmnopqrstuvwxyz"};
     sbuf_t *sb2 = sbuf_t::sbuf_malloc(pos0_t(), abc);
     REQUIRE((*sb2)[0]=='a');
     REQUIRE((*sb2)[9]=='j');
     REQUIRE((*sb2)[25]=='z');
+
+    REQUIRE( sb2->substr(2,4) == "cdef" );
 
     sb2 = sb2->realloc(10);
     REQUIRE(sb2->bufsize==10);
@@ -733,9 +788,21 @@ TEST_CASE("scanner", "[scanner]") { /* check that scanner params made from an ex
  */
 #include "scan_sha1_test.h"
 #include "scanner_set.h"
-TEST_CASE("scanner_stats", "[scanner_set]") {
-    //scanner_set ss;
 
+/* Just make sure that they can be created and deleted without error.
+ * Previously we got errors before we moved the destructor to the .cpp file from the .h file.
+ */
+TEST_CASE("scanner_stats", "[scanner_set]") {
+    scanner_config sc;
+    feature_recorder_set::flags_t flags;
+
+
+    feature_recorder_set fs(flags, sc);
+    std::map<scanner_t*, const struct scanner_params::scanner_info*> scanner_info_db{};
+    std::set<scanner_t*> enabled_scanners{}; // the scanners that are enabled
+    atomic_set<std::string> seen_set {}; // hex hash values of sbuf pages that have been seen
+    auto ss = new scanner_set(sc, feature_recorder_set::flags_t(), nullptr);
+    delete ss;
 }
 
 TEST_CASE("enable/disable", "[scanner_set]") {
@@ -837,9 +904,6 @@ TEST_CASE("run", "[scanner]") {
     /* Make sure that the feature recorder output was created */
     std::vector<std::string> lines;
     std::string fname_fr = get_tempdir() + "/sha1_bufs.txt";
-    std::string cmd = "ls -l " + get_tempdir();
-    int ret = system(cmd.c_str());
-    if (ret != 0) { throw std::runtime_error("could not list tempdir???"); }
 
     lines = getLines(fname_fr);
     REQUIRE(lines[0] == "# BANNER FILE NOT PROVIDED (-b option)");
@@ -915,13 +979,6 @@ TEST_CASE("unicode_detection", "[unicode]") {
     delete sb8p;
 }
 
-TEST_CASE("Show the output directory", "[end]") {
-    std::string cmd = "ls -l " + get_tempdir();
-    std::cout << cmd << "\n";
-    int ret = system(cmd.c_str());
-    if (ret != 0) { throw std::runtime_error("could not list tempdir???"); }
-}
-
 TEST_CASE("directory_support", "[utilities]") {
     namespace fs = std::filesystem;
     std::string tmpdir = NamedTemporaryDirectory();
@@ -935,4 +992,11 @@ TEST_CASE("directory_support", "[utilities]") {
     REQUIRE(directory_empty(tmpdir) == false);
     unlink(foo_txt.c_str());
     rmdir(tmpdir.c_str());
+}
+
+TEST_CASE("Show_output", "[end]") {
+    std::string cmd = "ls -l " + get_tempdir();
+    std::cout << cmd << "\n";
+    int ret = system(cmd.c_str());
+    if (ret != 0) { throw std::runtime_error("could not list tempdir???"); }
 }

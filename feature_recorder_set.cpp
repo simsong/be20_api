@@ -135,6 +135,10 @@ void feature_recorder_set::create_alert_recorder() {
  */
 
 feature_recorder& feature_recorder_set::create_feature_recorder(const feature_recorder_def def) {
+    if (frm_frozen) {
+        throw std::runtime_error("attempt to create new feature recorder " + def.name + " after frm is frozen.");
+    }
+
     if (flags.record_files and flags.record_sql) {
         throw std::runtime_error("currently can only record to files or SQL, not both");
     }

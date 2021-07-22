@@ -65,6 +65,17 @@ Update to this repository to master:
   individual scanner can just look at the depth in the sbuf and abort
   if the scanner things have gone on too long.
 
+Scanner Activation
+------------------
+* scanner_commands is created from reading the command-line
+  arguments. It contains enable and disable commands for each scanner.
+
+* For each scanner, we can then scan the scanner_commands to determine
+  if the scanner should be initialized, and if we should, we
+  initialize it.
+
+* The scanners are then sent
+
 BE13_API STATUS REPORT
 ======================
 I continue to port bulk_extractor, tcpflow, be13_api and dfxml to modern C++. After surveying the standards I’ve decided to go with C++17 and not C++14, as support for 17 is now widespread. (I probably don’t need 20). I am sticking with autotools, although there seems a strong reason to move to CMake. I am keeping be13_api and dfxml as a modules that are included, python-style, rather than making them stand-alone libraries that are linked against. I’m not 100% sure that’s the correct decision, though.

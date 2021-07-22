@@ -12,6 +12,7 @@
 #include <set>
 #include <string>
 #include <thread>
+#include <mutex>
 
 #include "feature_recorder.h"
 #include "pos0.h"

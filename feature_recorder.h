@@ -184,9 +184,9 @@ public:
     static inline const std::string CACHED {"<CACHED>"}; // not written
 
     /* quoting functions */
-    static std::string quote_string(const std::string& feature);   // turns unprintable characters to octal escape
-    static std::string unquote_string(const std::string& feature); // turns octal escape back to binary characters
-    static std::string extract_feature(const std::string& line);   // remove the feature from a feature file line
+    //static std::string quote_string(const std::string& feature);   // turns unprintable characters to octal escape
+    //static std::string unquote_string(const std::string& feature); // turns octal escape back to binary characters
+    //static std::string extract_feature(const std::string& line);   // remove the feature from a feature file line
 
     /* Hash an SBuf using the current hasher. If we want to hash less than a sbuf, make a child sbuf */
     const std::string hash(const sbuf_t& sbuf) const;

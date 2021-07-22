@@ -17,6 +17,8 @@ BE13_API_SRC= \
 	$(BE13_API_DIR)/formatter.h \
 	$(BE13_API_DIR)/histogram_def.cpp \
 	$(BE13_API_DIR)/histogram_def.h  \
+	$(BE13_API_DIR)/mt_scanner_set.cpp  \
+	$(BE13_API_DIR)/mt_scanner_set.h  \
 	$(BE13_API_DIR)/net_ethernet.h \
 	$(BE13_API_DIR)/packet_info.h \
 	$(BE13_API_DIR)/pcap_fake.cpp \
@@ -36,6 +38,7 @@ BE13_API_SRC= \
 	$(BE13_API_DIR)/scanner_params.h \
 	$(BE13_API_DIR)/scanner_set.cpp \
 	$(BE13_API_DIR)/scanner_set.h \
+        $(BE13_API_DIR)/thread-pool/LICENSE.hpp \
 	$(BE13_API_DIR)/unicode_escape.cpp \
 	$(BE13_API_DIR)/unicode_escape.h \
 	$(BE13_API_DIR)/utf8.h \
@@ -53,3 +56,8 @@ BE13_API_SRC= \
         $(BE13_API_DIR)/dfxml_cpp/src/dfxml_writer.h \
         $(BE13_API_DIR)/dfxml_cpp/src/hash_t.h \
         $(BE13_API_DIR)/dfxml_cpp/src/cpuid.h
+
+BE13_API_EXTRA_DIST= \
+        $(BE13_API_DIR)/thread-pool/2105.00613.pdf \
+        $(BE13_API_DIR)/thread-pool/LICENSE.txt \
+        $(BE13_API_DIR)/thread-pool/README.md

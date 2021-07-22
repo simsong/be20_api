@@ -4,8 +4,8 @@
  * A fake libpcap interface that can only read files without a filter.
  */
 
-#include <stdint.h>
-#include <stdio.h>
+#include <cstdint>
+#include <cstdio>
 #include <sys/cdefs.h>
 #include <sys/time.h>
 

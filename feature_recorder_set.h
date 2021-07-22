@@ -51,9 +51,11 @@ private:
     const std::string input_fname{}; // input file; copy for convenience.
     const std::string outdir{};      // where output goes; must know.
 
-    // map of feature recorders, name->feature recorder
+    /* map of feature recorders, name->feature recorder
+     * It is read-write when BE is running single-threaded. After we go into multi-threaded mode, it is read-only.
+     */
     feature_recorder_map_t frm{};
-
+    bool frm_frozen {false};            // once the frm is frozen, it is read-only.
     feature_recorder* stop_list_recorder{nullptr}; // where stopped features get written (if there is one)
 #if defined(HAVE_SQLITE3_H) and defined(HAVE_LIBSQLITE3)
     /* If we are compiled with SQLite3, this is the handle to the open database */
@@ -61,6 +63,7 @@ private:
 #endif
 
 public:
+    void frm_freeze() { assert(frm_frozen==false); frm_frozen=true;}
     size_t feature_recorder_count() const { return frm.size(); }
     /* Flags for feature recorders. This used to be a bitmask, but Stroustrup (2013) recommends just having
      * a bunch of bools.
@@ -87,8 +90,8 @@ public:
     feature_recorder_set(const flags_t& flags_, const scanner_config& sc);
     virtual ~feature_recorder_set();
 
-    /* Configuration */
-    const scanner_config& sc;
+    /* Configuration. This is a copy; it should be a reference, but that caused an AddressSanitizer error. */
+    const scanner_config sc;
 
     /* Read-only functions for the scanner-config file management variables */
     virtual std::filesystem::path get_input_fname() const { return sc.input_fname; }
