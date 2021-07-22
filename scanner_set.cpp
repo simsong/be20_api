@@ -52,7 +52,8 @@ typedef std::vector<packet_plugin_info> packet_plugin_info_vector_t;
  * create the scanner set
  */
 scanner_set::scanner_set(const scanner_config& sc_, const feature_recorder_set::flags_t& f, class dfxml_writer* writer_)
-    : fs(f, sc_), writer(writer_), sc(sc_) {
+    : fs(f, sc_), writer(writer_), sc(sc_)
+{
     if (getenv("DEBUG_SCANNER_SET_PRINT_STEPS")) debug_flags.debug_print_steps = true;
     if (getenv("DEBUG_SCANNER_SET_NO_SCANNERS")) debug_flags.debug_no_scanners = true;
     if (getenv("DEBUG_SCANNER_SET_SCANNER")) debug_flags.debug_scanner = true;
@@ -65,21 +66,20 @@ scanner_set::scanner_set(const scanner_config& sc_, const feature_recorder_set::
     if (dsi!=nullptr) debug_flags.debug_scanners_ignore=dsi;
 }
 
-#if 0
+scanner_set::~scanner_set()
+{
+}
+
 void scanner_set::add_scanner_stat(scanner_t *scanner, const struct scanner_set::stats &n)
 {
-    struct stats &st = scanner_stats[scanner];
-    st.ns    += n.ns;                       // atomic!
-    st.calls += n.calls;                 // atomic!
+    scanner_stats[scanner] += n;
 }
 
 void scanner_set::add_path_stat(std::string path, const struct scanner_set::stats &n)
 {
-    struct stats &st = path_stats[path];
-    st.ns    += n.ns;                       // atomic!
-    st.calls += n.calls;                 // atomic!
+    path_stats[path] += n;
 }
-#endif
+
 
 
 /****************************************************************
@@ -640,11 +640,9 @@ void scanner_set::process_sbuf(class sbuf_t* sbufp) {
 
             if (record_call_stats || debug_flags.debug_print_steps) {
                 t.stop();
-#if 0
                 struct stats st(t.elapsed_nanoseconds(), 1);
                 add_scanner_stat(*it.first, st);
                 add_path_stat(epath, st);
-#endif
                 if (debug_flags.debug_print_steps) {
                     std::cerr << "sbuf.pos0=" << sbuf.pos0 << " scanner " << name << " t=" << t.elapsed_seconds() << "\n";
                 }

@@ -20,6 +20,8 @@
 
 #include <algorithm>
 #include <array>
+#include <chrono>
+#include <thread>
 #include <cstdlib>
 #include <cstring>
 #include <filesystem>
@@ -155,6 +157,26 @@ TEST_CASE("atomic_set", "[atomic]") {
     REQUIRE(as.size() == 3);
 }
 
+#include "thread-pool/thread_pool.hpp"
+TEST_CASE("atomic_set_mt", "[atomic]") {
+    thread_pool pool;
+    atomic_set<std::string> as;
+    for (size_t i=0;i<1000;i++){
+        pool.push_task( [&as, i] {
+            std::stringstream ss;
+            ss << "this is string " << i << " " << std::this_thread::get_id();
+            as.insert( ss.str() );
+            std::this_thread::sleep_for( std::chrono::microseconds( i ));
+        });
+    }
+    pool.wait_for_tasks();
+    std::cerr << "as.size() = " << as.size() << "\n";
+    for (auto k: as.keys()) {
+        std::cerr << k << "\n";
+    }
+    as.clear();
+}
+
 #include "atomic_map.h"
 int *new_int()
 {
@@ -188,7 +210,7 @@ TEST_CASE("atomic_map", "[atomic]") {
  * histogram_def.h
  */
 #include "histogram_def.h"
-TEST_CASE("histogram_def comparision functions", "[histogram_def]") {
+TEST_CASE("comparision_functions", "[histogram_def]") {
     histogram_def h1("name1", "feature1", "pattern1", "", "suffix1", histogram_def::flags_t());
     histogram_def h2("name2", "feature2", "pattern2", "", "suffix2", histogram_def::flags_t());
 
@@ -197,7 +219,7 @@ TEST_CASE("histogram_def comparision functions", "[histogram_def]") {
     REQUIRE(h1 < h2);
 }
 
-TEST_CASE("histogram_def 8-bit regular expression functions", "[histogram_def]") {
+TEST_CASE("histogram_def-8", "[histogram_def]") {
     histogram_def d0("numbers", "numbers", "([0-9]+)", "", "s0", histogram_def::flags_t());
     REQUIRE(d0.match("123") == true);
     REQUIRE(d0.match("abc") == false);
@@ -216,7 +238,7 @@ TEST_CASE("histogram_def 8-bit regular expression functions", "[histogram_def]")
  */
 #include "atomic_unicode_histogram.h"
 #include "histogram_def.h"
-TEST_CASE("First AtomicUnicodeHistogram test", "[atomic][regex]") {
+TEST_CASE("AtomicUnicodeHistogram_1", "[atomic][regex]") {
     /* Histogram that matches everything */
     histogram_def d1("name", "feature_file", "(.*)", "", "suffix1", histogram_def::flags_t());
     AtomicUnicodeHistogram h(d1);
@@ -244,7 +266,7 @@ TEST_CASE("First AtomicUnicodeHistogram test", "[atomic][regex]") {
     REQUIRE(f.at(0).value.count16 == 0);
 }
 
-TEST_CASE("Second AtomicUnicodeHistogram test", "[atomic][regex]") {
+TEST_CASE("AtomicUnicodeHistogram_2", "[atomic][regex]") {
     /* Histogram that matches everything */
     histogram_def d1("extraction", "extraction", "^(.....)", "", "", histogram_def::flags_t());
     AtomicUnicodeHistogram h(d1);
@@ -257,7 +279,7 @@ TEST_CASE("Second AtomicUnicodeHistogram test", "[atomic][regex]") {
     REQUIRE(f.at(0).value.count16 == 0);
 }
 
-TEST_CASE("Third AtomicUnicodeHistogram test", "[histogram]") {
+TEST_CASE("AtomicUnicodeHistogram_3", "[histogram]") {
     /* Make sure that the histogram elements work */
     AtomicUnicodeHistogram::auh_t::item e1("hello");
     AtomicUnicodeHistogram::auh_t::item e2("world");
@@ -375,7 +397,7 @@ TEST_CASE("quote_if_necessary", "[feature_recorder]") {
     REQUIRE(c2_quoted == c2);
 }
 
-TEST_CASE("fname in outdir", "[feature_recorder]") {
+TEST_CASE("fname", "[feature_recorder]") {
     feature_recorder_set::flags_t flags;
     flags.no_alert = true;
     scanner_config sc;
@@ -748,8 +770,23 @@ TEST_CASE("scanner", "[scanner]") { /* check that scanner params made from an ex
 #include "scan_sha1_test.h"
 #include "scanner_set.h"
 TEST_CASE("scanner_stats", "[scanner_set]") {
-    //scanner_set ss;
+    scanner_config sc;
+    feature_recorder_set::flags_t flags;
 
+
+    std::cerr << "created scanner_config size=" << sizeof(sc) << "\n";
+    std::cerr << "created flags=" << sizeof(flags) << "\n";
+
+    feature_recorder_set fs(flags, sc);
+    std::cerr << "created fs=" << sizeof(fs) << "\n";
+
+    std::map<scanner_t*, const struct scanner_params::scanner_info*> scanner_info_db{};
+    std::set<scanner_t*> enabled_scanners{}; // the scanners that are enabled
+    atomic_set<std::string> seen_set {}; // hex hash values of sbuf pages that have been seen
+
+
+    auto ss = new scanner_set(sc, feature_recorder_set::flags_t(), nullptr);
+    delete ss;
 }
 
 TEST_CASE("enable/disable", "[scanner_set]") {
@@ -941,7 +978,7 @@ TEST_CASE("directory_support", "[utilities]") {
     rmdir(tmpdir.c_str());
 }
 
-TEST_CASE("Show the output directory", "[end]") {
+TEST_CASE("Show_output", "[end]") {
     std::string cmd = "ls -l " + get_tempdir();
     std::cout << cmd << "\n";
     int ret = system(cmd.c_str());

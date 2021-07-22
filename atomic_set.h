@@ -26,6 +26,16 @@ template <class TYPE> class atomic_set {
 
 public:
     atomic_set() {}
+    ~atomic_set() {
+        std::cerr << "~atomic_set. size=" << myset.size() << "\n";
+        const std::lock_guard<std::mutex> lock(M);
+        myset.clear();                  // empty it
+        std::cerr << "~atomic_set. cleared. size=" << myset.size() << "\n";
+    }
+    void clear() {
+        const std::lock_guard<std::mutex> lock(M);
+        myset.clear();                  // empty it
+    }
     bool contains(const TYPE& s) const {
         const std::lock_guard<std::mutex> lock(M);
         return myset.find(s) != myset.end();
@@ -54,7 +64,7 @@ public:
         std::vector<TYPE> ret;
         const std::lock_guard<std::mutex> lock(M);
         for (auto obj: myset) {
-            ret.push(obj);
+            ret.push_back(obj);
         }
         return ret;
     }

@@ -40,7 +40,7 @@ public:
 //inline void timestamp(struct timeval* t) { gettimeofday(t, NULL); }
 
 inline void aftimer::start() {
-    assert (running = false);
+    assert (running == false);
     t0 = std::chrono::steady_clock::now();
     running = true;
 }

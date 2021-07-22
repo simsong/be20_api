@@ -105,14 +105,23 @@ public:
        @param writer - the DFXML writer to use, or nullptr.
     */
     scanner_set(const scanner_config& sc, const feature_recorder_set::flags_t& f, class dfxml_writer* writer);
-    virtual ~scanner_set(){};
+    virtual ~scanner_set();
 
-#if 0
     struct stats {
+        explicit stats(){};
         explicit stats(uint64_t a, uint64_t b):ns(a),calls(b){};
         explicit stats(const stats &s):ns(s.ns),calls(s.calls){};
+        stats operator+(const stats &s) {
+            return stats(this->ns + s.ns, this->calls + s.calls);
+        }
+        stats &operator+=(const stats &s) {
+            this->ns += s.ns;
+            this->calls += s.calls;
+            return *this;
+        }
         uint64_t ns{0};    // nanoseconds
         uint64_t calls{0}; // calls
+
     };
 
     // per-scanner stats
@@ -122,7 +131,6 @@ public:
     // per-path stats
     atomic_map<std::string, struct stats> path_stats{}; // maps scanner name to performance stats
     void add_path_stat(std::string path, const struct stats &st);
-#endif
 
     // a pointer to every scanner info in all of the scanners.
     // This provides all_scanners
