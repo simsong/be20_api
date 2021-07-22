@@ -33,7 +33,7 @@ class mt_scanner_set: public scanner_set {
     /* status and notification system */
     [[noreturn]] void notify_thread();               // notify what's going on
     std::thread *notifier {nullptr};                 // notifier thread
-    atomic_map<std::thread::id, std::string> status_map; // the status of each thread::id; does not need a mutex
+    atomic_map<std::thread::id, std::string> status_map {}; // the status of each thread::id; does not need a mutex
 
 public:
     mt_scanner_set(const scanner_config& sc, const feature_recorder_set::flags_t& f, class dfxml_writer* writer);
