@@ -179,8 +179,7 @@ public:
     virtual feature_recorder& create_feature_recorder(std::string name);         // convenience function
 
     // Just return it
-    virtual feature_recorder&
-    named_feature_recorder(const std::string name) const;       // returns the named feature recorder
+    virtual feature_recorder& named_feature_recorder(const std::string name) const;       // returns the named feature recorder
     virtual feature_recorder& get_alert_recorder() const;       // returns the alert recorder
     virtual std::vector<std::string> feature_file_list() const; // returns a list of feature file names
 

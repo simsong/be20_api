@@ -18,13 +18,6 @@ class mt_scanner_set: public scanner_set {
     mt_scanner_set& operator=(const mt_scanner_set& s) = delete;
     class thread_pool *pool {nullptr};     // nullptr means we are not threading
 
-    /* The thread pool contains a queue of std::function<void()>, which are calls to work_unit::process() */
-    struct  work_unit {
-        work_unit(mt_scanner_set &ss_, sbuf_t *sbuf_):ss(ss_),sbuf(sbuf_){}
-        mt_scanner_set &ss;
-        sbuf_t *sbuf {};
-        void process_ss_sbuf() const;
-    };
     std::atomic<int> depth0_sbufs_in_queue {0};
     std::atomic<uint64_t> depth0_bytes_in_queue {0};
     std::atomic<int> sbufs_in_queue {0};
@@ -36,7 +29,7 @@ class mt_scanner_set: public scanner_set {
     atomic_map<std::thread::id, std::string> status_map {}; // the status of each thread::id; does not need a mutex
 
 public:
-    mt_scanner_set(const scanner_config& sc, const feature_recorder_set::flags_t& f, class dfxml_writer* writer);
+    mt_scanner_set(scanner_config &sc, const feature_recorder_set::flags_t& f, class dfxml_writer* writer);
     virtual ~mt_scanner_set(){};
     void launch_workers(int count);
     virtual void decrement_queue_stats(sbuf_t *sbufp);

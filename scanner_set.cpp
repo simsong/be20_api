@@ -21,6 +21,7 @@
 #include "formatter.h"
 #include "scanner_config.h"
 #include "scanner_set.h"
+#include "mt_scanner_set.h"
 
 /****************************************************************
  *** SCANNER SET IMPLEMENTATION (previously the PLUG-IN SYSTEM)
@@ -51,7 +52,7 @@ typedef std::vector<packet_plugin_info> packet_plugin_info_vector_t;
 /****************************************************************
  * create the scanner set
  */
-scanner_set::scanner_set(const scanner_config& sc_, const feature_recorder_set::flags_t& f, class dfxml_writer* writer_)
+scanner_set::scanner_set(scanner_config& sc_, const feature_recorder_set::flags_t& f, class dfxml_writer* writer_)
     : fs(f, sc_), writer(writer_), sc(sc_)
 {
     if (getenv("DEBUG_SCANNER_SET_PRINT_STEPS")) debug_flags.debug_print_steps = true;
@@ -101,7 +102,7 @@ void scanner_set::add_scanner(scanner_t scanner) {
      * We then ask the scanner to initialize.
      */
     scanner_params::PrintOptions po;
-    scanner_params sp(*this, scanner_params::PHASE_INIT, nullptr, po, nullptr);
+    scanner_params sp(sc, this, scanner_params::PHASE_INIT, nullptr, po, nullptr);
 
     // Send the scanner the PHASE_INIT message, which will cause it to fill in the sp.info field.
     (*scanner)(sp);
@@ -403,9 +404,8 @@ void scanner_set::apply_scanner_commands() {
     /* Tell each of the enabled scanners to init */
     current_phase = scanner_params::PHASE_INIT2;
     scanner_params::PrintOptions po; // empty po
-    scanner_params sp(*this, scanner_params::PHASE_INIT2, nullptr, po, nullptr);
+    scanner_params sp(sc, this, scanner_params::PHASE_INIT2, nullptr, po, nullptr);
     for (auto it : enabled_scanners) { (*it)(sp); }
-
 
     /* set the carve defaults */
     fs.set_carve_defaults();
@@ -483,7 +483,7 @@ void scanner_set::shutdown() {
 
     /* Tell the scanners we are shutting down */
     scanner_params::PrintOptions po; // empty po
-    scanner_params sp(*this, scanner_params::PHASE_SHUTDOWN, nullptr, po, nullptr);
+    scanner_params sp(sc, this, scanner_params::PHASE_SHUTDOWN, nullptr, po, nullptr);
     for (auto it : enabled_scanners) { (*it)(sp); }
 
     fs.feature_recorders_shutdown();
@@ -635,7 +635,7 @@ void scanner_set::process_sbuf(class sbuf_t* sbufp) {
             if (record_call_stats || debug_flags.debug_print_steps) {
                 t.start();
             }
-            scanner_params sp(*this, scanner_params::PHASE_SCAN, sbufp, scanner_params::PrintOptions(), nullptr);
+            scanner_params sp(sc, this, scanner_params::PHASE_SCAN, sbufp, scanner_params::PrintOptions(), nullptr);
             (*it.first)(sp);
 
             if (record_call_stats || debug_flags.debug_print_steps) {

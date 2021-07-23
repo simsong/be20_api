@@ -49,17 +49,7 @@ int show_free_bsd(std::ostream &os)
 #endif
 
 
-/*
- * Called in the worker thread to process the sbuf.
- */
-void mt_scanner_set::work_unit::process_ss_sbuf() const
-{
-    std::cerr << std::this_thread::get_id() << " mt_scanner_set::work_unit::process " << *sbuf << "\n";
-    ss.decrement_queue_stats(sbuf);     // it was removed from the queue
-    ss.process_sbuf(sbuf);              // deletes the sbuf
-}
-
-mt_scanner_set::mt_scanner_set(const scanner_config& sc_,
+mt_scanner_set::mt_scanner_set(scanner_config& sc_,
                                const feature_recorder_set::flags_t& f_,
                                class dfxml_writer* writer_):
     scanner_set(sc_, f_, writer_)
@@ -74,6 +64,7 @@ void mt_scanner_set::thread_set_status(const std::string &status)
 
 void mt_scanner_set::decrement_queue_stats(sbuf_t *sbufp)
 {
+    assert (sbufp != nullptr );
     if (sbufp->depth()==0){
         depth0_sbufs_in_queue -= 1;
         assert(depth0_sbufs_in_queue>=0);
@@ -86,13 +77,16 @@ void mt_scanner_set::decrement_queue_stats(sbuf_t *sbufp)
 
 void mt_scanner_set::process_sbuf(sbuf_t *sbufp)
 {
+    assert (sbufp != nullptr );
+    std::cerr << "mt_scanner_set::process_sbuf pool=" << pool << "\n";
     thread_set_status(sbufp->pos0.str() + " process_sbuf");
     scanner_set::process_sbuf(sbufp);
 }
 
 void mt_scanner_set::schedule_sbuf(sbuf_t *sbufp)
 {
-    std::cerr << "schedule_sbuf " << *sbufp << "\n";
+    assert (sbufp != nullptr );
+    std::cerr << "schedule_sbuf this=" << this << "sbufp=" << *sbufp << "  pool=" << pool << "\n";
     /* Run in same thread? */
     if (pool==nullptr || (sbufp->depth() > 0 && sbufp->bufsize < SAME_THREAD_SBUF_SIZE)) {
         std::cerr << std::this_thread::get_id()
@@ -111,19 +105,19 @@ void mt_scanner_set::schedule_sbuf(sbuf_t *sbufp)
     bytes_in_queue += sbufp->bufsize;
 
     /* Run in a different thread */
-    struct work_unit wu(*this, sbufp);
-    //pool->push_task( [wu]{ wu.process_ss_sbuf(); } );
     pool->push_task( [this, sbufp]{ this->process_sbuf(sbufp); } );
 }
 
 void mt_scanner_set::delete_sbuf(sbuf_t *sbufp)
 {
+    assert (sbufp != nullptr );
     thread_set_status(sbufp->pos0.str() + " delete_sbuf");
     scanner_set::delete_sbuf(sbufp);
 }
 
 void mt_scanner_set::launch_workers(int count)
 {
+    std::cerr << "launch_workers\n";
     pool = new thread_pool(count);
 }
 

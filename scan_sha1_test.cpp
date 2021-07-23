@@ -15,7 +15,7 @@
 #include "dfxml_cpp/src/hash_t.h"
 #include "scan_sha1_test.h"
 #include "scanner_params.h"
-#include "scanner_set.h"
+#include "mt_scanner_set.h"
 
 feature_recorder *sha1_recorder  = nullptr;
 void scan_sha1_test(struct scanner_params& sp) {
@@ -44,7 +44,7 @@ void scan_sha1_test(struct scanner_params& sp) {
         return;
     }
     if (sp.phase == scanner_params::PHASE_INIT2) {
-        sha1_recorder = &sp.ss.named_feature_recorder("sha1_bufs");
+        sha1_recorder = &sp.named_feature_recorder("sha1_bufs");
     }
 
     if (sp.phase == scanner_params::PHASE_SCAN) {

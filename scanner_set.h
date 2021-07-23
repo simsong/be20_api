@@ -104,7 +104,7 @@ public:
        @param f - the flags
        @param writer - the DFXML writer to use, or nullptr.
     */
-    scanner_set(const scanner_config& sc, const feature_recorder_set::flags_t& f, class dfxml_writer* writer);
+    scanner_set(scanner_config& sc, const feature_recorder_set::flags_t& f, class dfxml_writer* writer);
     virtual ~scanner_set();
 
     struct stats {
@@ -136,8 +136,8 @@ public:
     // This provides all_scanners
 
     // The scanner_set's configuration for all the scanners that are loaded.
-    // it cannot be const, because it is modified when scanners add their help.
-    scanner_config sc;
+    // references the master one
+    scanner_config &sc;
 
     /* Accessors */
     void set_dfxml_writer(class dfxml_writer *writer_) {
