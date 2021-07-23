@@ -38,6 +38,7 @@ public:
     virtual void delete_sbuf(sbuf_t* sbuf) override; // process the sbuf, then delete it.
     virtual void thread_set_status(const std::string &status) override; // set the status for this thread
     virtual void print_tp_status();                  // print the status of each thread
+    virtual void info() const override;
     void join();                            // join the threads
     void run_notify_thread();               // notify what's going on
 };

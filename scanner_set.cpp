@@ -55,6 +55,8 @@ typedef std::vector<packet_plugin_info> packet_plugin_info_vector_t;
 scanner_set::scanner_set(scanner_config& sc_, const feature_recorder_set::flags_t& f, class dfxml_writer* writer_)
     : fs(f, sc_), writer(writer_), sc(sc_)
 {
+    std::cerr << "scanner_set:scanner_set(): this=" << this << " \n";
+    this->info();
     if (getenv("DEBUG_SCANNER_SET_PRINT_STEPS")) debug_flags.debug_print_steps = true;
     if (getenv("DEBUG_SCANNER_SET_NO_SCANNERS")) debug_flags.debug_no_scanners = true;
     if (getenv("DEBUG_SCANNER_SET_SCANNER")) debug_flags.debug_scanner = true;
@@ -65,10 +67,19 @@ scanner_set::scanner_set(scanner_config& sc_, const feature_recorder_set::flags_
     if (getenv("DEBUG_SCANNER_SET_REGISTER")) debug_flags.debug_register = true;
     const char *dsi = getenv("DEBUG_SCANNERS_IGNORE");
     if (dsi!=nullptr) debug_flags.debug_scanners_ignore=dsi;
+    seen_set = new atomic_set<std::string>();
 }
 
 scanner_set::~scanner_set()
 {
+    if (seen_set) {
+        delete seen_set;
+    }
+}
+
+void scanner_set::info() const
+{
+    std::cerr << "scanner_set::info() this=" << this << "\n";
 }
 
 void scanner_set::add_scanner_stat(scanner_t *scanner, const struct scanner_set::stats &n)
@@ -461,7 +472,11 @@ void scanner_set::phase_scan() {
  * Hopefully sbuf.buf() is zero-copy.
  */
 bool scanner_set::check_previously_processed(const sbuf_t& sbuf) {
-    return seen_set.check_for_presence_and_insert(sbuf.hash());
+    std::string hash = sbuf.hash();
+    if (seen_set != nullptr) {
+        return seen_set->check_for_presence_and_insert( hash );
+    }
+    return false;
 }
 
 /****************************************************************
@@ -519,11 +534,13 @@ template <typename T> void update_maximum(std::atomic<T>& maximum_value, T const
  * Deletes the buf after processing.
  */
 void scanner_set::process_sbuf(class sbuf_t* sbufp) {
+    std::cerr <<"scanner_set::process_sbuf point 1"; info();
     assert(sbufp != nullptr);
     assert(sbufp->children == 0); // we are going to free it, so it better not have any children.
 
     thread_set_status( sbufp->pos0.str() + " process_sbuf (" + std::to_string(sbufp->bufsize) + ")" );
 
+    std::cerr <<"scanner_set::process_sbuf point 2"; info();
     /* If we  have not transitioned to PHASE::SCAN, error */
     if (current_phase != scanner_params::PHASE_SCAN) {
         throw std::runtime_error("process_sbuf can only be run in scanner_params::PHASE_SCAN");
@@ -534,8 +551,10 @@ void scanner_set::process_sbuf(class sbuf_t* sbufp) {
         return;        // nothing to scan
     }
 
+    std::cerr <<"scanner_set::process_sbuf point 3"; info();
     const class sbuf_t& sbuf = *sbufp; // don't allow modification
 
+    std::cerr <<"scanner_set::process_sbuf point 4"; info();
     aftimer timer;
     timer.start();
 
@@ -550,14 +569,18 @@ void scanner_set::process_sbuf(class sbuf_t* sbufp) {
         return;        // nothing to scan
     }
 
+    std::cerr <<"scanner_set::process_sbuf point 5"; info();
     update_maximum<unsigned int>(max_depth_seen, sbuf.depth());
+    std::cerr <<"scanner_set::process_sbuf point 5a"; info();
 
     /* Determine if we have seen this buffer before */
     bool seen_before = check_previously_processed(sbuf);
     if (seen_before) {
         dup_bytes_encountered += sbuf.bufsize;
     }
+    std::cerr <<"scanner_set::process_sbuf point 5b"; info();
 
+    std::cerr <<"scanner_set::process_sbuf point 6"; info();
     /* Determine if the sbuf consists of a repeating ngram. If so,
      * it's only passed to the parsers that want ngrams. (By default,
      * such sbufs are booring.)
@@ -570,6 +593,7 @@ void scanner_set::process_sbuf(class sbuf_t* sbufp) {
      *** CALL EACH OF THE SCANNERS ON THE SBUF
      ****************************************************************/
 
+    std::cerr <<"scanner_set::process_sbuf point 7"; info();
     if (debug_flags.debug_dump_data) {
         sbuf.hex_dump(std::cerr);
     }
@@ -609,6 +633,7 @@ void scanner_set::process_sbuf(class sbuf_t* sbufp) {
         }
 
         bool record_call_stats = false;
+        std::cerr <<"scanner_set::process_sbuf point 8"; info();
 
         try {
 
@@ -625,17 +650,21 @@ void scanner_set::process_sbuf(class sbuf_t* sbufp) {
                 for (auto cc : name) { epath.push_back(toupper(cc)); }
             }
 
+            std::cerr <<"scanner_set::process_sbuf point 10"; info();
             /* Call the scanner.*/
             aftimer t;
             thread_set_status( sbuf.pos0.str() + ": " + name + " (" + std::to_string(sbuf.bufsize) + ")" );
 
+            std::cerr <<"scanner_set::process_sbuf point 11"; info();
             if (debug_flags.debug_print_steps) {
                 std::cerr << "sbuf.pos0=" << sbuf.pos0 << " calling scanner " << name << "\n";
             }
             if (record_call_stats || debug_flags.debug_print_steps) {
                 t.start();
             }
+            std::cerr << "before make sp\n"; info();
             scanner_params sp(sc, this, scanner_params::PHASE_SCAN, sbufp, scanner_params::PrintOptions(), nullptr);
+            std::cerr << "after make sp\n"; info();
             (*it.first)(sp);
 
             if (record_call_stats || debug_flags.debug_print_steps) {

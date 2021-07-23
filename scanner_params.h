@@ -179,26 +179,22 @@ struct scanner_params {
     scanner_params& operator=(const scanner_params&) = delete;
 
     /* A scanner params with all of the instance variables, typically for scanning  */
-    scanner_params(struct scanner_config &sc_,
-                   class scanner_set  *ss_, phase_t phase_,
-                   const sbuf_t* sbuf_, PrintOptions print_options_,
-                   std::stringstream* xmladd)
-        : sc(sc_), ss(ss_), phase(phase_), sbuf(sbuf_), print_options(print_options_), sxml(xmladd) {}
+    scanner_params(struct scanner_config &sc_, class scanner_set  *ss_, phase_t phase_,
+                   const sbuf_t* sbuf_, PrintOptions print_options_, std::stringstream* xmladd);
+
 
     /* User-servicable parts; these are here for scanners */
     virtual ~scanner_params(){};
     virtual feature_recorder& named_feature_recorder(const std::string feature_recorder_name) const;
-    template <typename T> void get_config(const std::string& name, T* val, const std::string& help);
+    template <typename T> void get_config(const std::string& name, T* val, const std::string& help) const {
+        sc.get_config(name, val, help);
+    };
 
     /** Construct a scanner_params for recursion from an existing sp and a new sbuf.
      * Defaults to phase1.
      * This is the complicated one!
      */
-    scanner_params(const scanner_params& sp_existing, const sbuf_t* sbuf_)
-        : sc(sp_existing.sc), ss(sp_existing.ss),
-          phase(sp_existing.phase), sbuf(sbuf_),
-          print_options(sp_existing.print_options),
-          depth(sp_existing.depth + 1), sxml(sp_existing.sxml){};
+    scanner_params(const scanner_params& sp_existing, const sbuf_t* sbuf_);
 #if 0
     /* A scanner params with no print options */
     scanner_params(phase_t phase_, const sbuf_t &sbuf_, class feature_recorder_set &fs_):
@@ -222,12 +218,13 @@ struct scanner_params {
     std::filesystem::path const get_input_fname() const; // not sure why this is needed?
 
     virtual void recurse(sbuf_t* sbuf) const; // recursive call by scanner
+    virtual bool check_previously_processed(const sbuf_t &sbuf) const;
 };
 
-template <> void scanner_params::get_config(const std::string& name, std::string* val, const std::string& help);
-template <> void scanner_params::get_config(const std::string& name, signed char* val, const std::string& help);
-template <> void scanner_params::get_config(const std::string& name, unsigned char* val, const std::string& help);
-template <> void scanner_params::get_config(const std::string& name, bool* val, const std::string& help);
+//template <> void scanner_params::get_config(const std::string& name, std::string* val, const std::string& help);
+//template <> void scanner_params::get_config(const std::string& name, signed char* val, const std::string& help);
+//template <> void scanner_params::get_config(const std::string& name, unsigned char* val, const std::string& help);
+//template <> void scanner_params::get_config(const std::string& name, bool* val, const std::string& help);
 
 inline std::ostream& operator<<(std::ostream& os, const scanner_params& sp) {
     os << "scanner_params(" << sp.sbuf << ")";

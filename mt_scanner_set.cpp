@@ -54,8 +54,14 @@ mt_scanner_set::mt_scanner_set(scanner_config& sc_,
                                class dfxml_writer* writer_):
     scanner_set(sc_, f_, writer_)
 {
+    std::cerr << "mt_scanner_set::mt_scanner_set(): this=" << this << " pool=" << pool << "\n";
 }
 
+
+void mt_scanner_set::info() const
+{
+    std::cerr << "mt_scanner_set::info() this=" << this << " pool=" << (void *)pool << "\n";
+}
 
 void mt_scanner_set::thread_set_status(const std::string &status)
 {
@@ -78,19 +84,20 @@ void mt_scanner_set::decrement_queue_stats(sbuf_t *sbufp)
 void mt_scanner_set::process_sbuf(sbuf_t *sbufp)
 {
     assert (sbufp != nullptr );
-    std::cerr << "mt_scanner_set::process_sbuf pool=" << pool << "\n";
-    thread_set_status(sbufp->pos0.str() + " process_sbuf");
+    std::cerr << "mt_scanner_set::process_sbuf before call to scanner_set::process_sbuf() this=" << this << " pool=" << pool << "\n";
+    //thread_set_status(sbufp->pos0.str() + " process_sbuf");
     scanner_set::process_sbuf(sbufp);
+    std::cerr << "mt_scanner_set::process_sbuf after call to scanner_set::process_sbuf() this=" << this << " pool=" << pool << "\n\n";
+    assert((uint64_t)pool != 1);
 }
 
 void mt_scanner_set::schedule_sbuf(sbuf_t *sbufp)
 {
     assert (sbufp != nullptr );
-    std::cerr << "schedule_sbuf this=" << this << "sbufp=" << *sbufp << "  pool=" << pool << "\n";
+    std::cerr << "mt_scanner_set::schedule_sbuf this=" << this << " sbufp=" << *sbufp << "  pool=" << pool << "\n";
     /* Run in same thread? */
     if (pool==nullptr || (sbufp->depth() > 0 && sbufp->bufsize < SAME_THREAD_SBUF_SIZE)) {
-        std::cerr << std::this_thread::get_id()
-                  << " same thread: " << *sbufp << "\n";
+        std::cerr << std::this_thread::get_id() << " same thread: " << *sbufp << "\n";
         process_sbuf(sbufp);
         return;
     }

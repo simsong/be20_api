@@ -90,7 +90,7 @@ private:
 
     unsigned int max_depth{7};   // maximum depth for recursive scans
     unsigned int log_depth{1};   // log to dfxml all sbufs at this depth or less
-    std::atomic<unsigned int> max_depth_seen{0};
+    std::atomic<uint32_t> max_depth_seen{0};
     std::atomic<uint64_t> sbuf_seen{0}; // number of seen sbufs.
 
     uint32_t max_ngram{10};                         // maximum ngram size to scan for
@@ -244,11 +244,14 @@ public:
     virtual void schedule_sbuf(sbuf_t* sbuf);  // schedule the sbuf to be processed
     virtual void delete_sbuf(sbuf_t *sbuf);    // delete after processing
     virtual void thread_set_status(const std::string &status) {}; // designed to be overridden
+    virtual void info() const;
 
     // void     process_packet(const be13::packet_info &pi);
 
     // Management of previously seen data
-    atomic_set<std::string> seen_set {}; // hex hash values of sbuf pages that have been seen
+    // hex hash values of sbuf pages that have been seen
+    // Note: due to reasons we do not understand, this generated a weird slicing bug when this was not a pointer.
+    atomic_set<std::string> *seen_set {nullptr};
     virtual bool check_previously_processed(const sbuf_t& sbuf);
 
     /* PHASE_SHUTDOWN */
