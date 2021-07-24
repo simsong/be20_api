@@ -130,7 +130,7 @@ void scanner_set::add_scanner(scanner_t scanner) {
     if (debug_flags.debug_register) {
         std::cerr << "add_scanner( " << sp.info->name << " )\n";
     }
-    scanner_info_db[scanner] = sp.info;
+    scanner_info_db[scanner] = std::move(sp.info);
 
     // Make sure it was registered
     if (scanner_info_db.find(scanner) == scanner_info_db.end()) {}
@@ -222,7 +222,7 @@ TODO: Re-implement using C++17 directory reading.
 #if 0
 void scanner_set::load_scanner_packet_handlers()
 {
-    for (auto it: enabled_scanners){
+    for (const auto &it: enabled_scanners){
         const scanner_def *sd = (*it);
             if(sd->info.packet_cb){
                 packet_handlers.push_back(packet_plugin_info(sd->info.packet_user,sd->info.packet_cb));
@@ -242,12 +242,12 @@ const std::string scanner_set::get_scanner_name(scanner_t scanner) const {
 }
 
 scanner_t* scanner_set::get_scanner_by_name(const std::string search_name) const {
-    for (auto it : scanner_info_db) {
+    for (const auto &it : scanner_info_db) {
         if (it.second->name == search_name) { return it.first; }
     }
 #if 0
     std::cerr << "scanner_set::get_scanner_by_name(" << search_name << ")\nscanners on file:\n";
-    for (auto it: scanner_info_db) {
+    for (const auto &it: scanner_info_db) {
         std::cerr << " " <<  it.second->name  << "\n";
     }
     std::cerr << "no such scanner: " << search_name << "\n";
@@ -272,28 +272,32 @@ bool cmp(const struct scanner_params::scanner_info* a,
 }
 void scanner_set::info_scanners(std::ostream& out, bool detailed_info, bool detailed_settings, const char enable_opt,
                                 const char disable_opt) {
-    /* First make a sorted vector of the scanners */
-    std::vector<const struct scanner_params::scanner_info *> A;
+    /* Get a list of scanner names */
+    std::vector<std::string> all_scanner_names,enabled_scanner_names, disabled_scanner_names;
     for (auto &it : scanner_info_db) {
-        A.push_back( it.second );
+        all_scanner_names.push_back( it.second->name );
     }
-    sort (A.begin(), A.end(), cmp);
 
-    std::vector<std::string> enabled_scanner_names, disabled_scanner_names;
-    for (auto it : A) {
+    /* Sort them */
+    sort (all_scanner_names.begin(), all_scanner_names.end());
+
+    /* Now print info on each scanner in alphabetical order */
+    for (const auto &name : all_scanner_names) {
+        scanner_t *scanner = get_scanner_by_name(name);
+        const struct scanner_params::scanner_info &scanner_info  = *(scanner_info_db[scanner]);
         if (detailed_info) {
-            if (it->name.size()) out << "Scanner Name: " << it->name;
-            if (is_scanner_enabled(it->name)) { out << " (ENABLED) "; }
+            if (scanner_info.name.size()) out << "Scanner Name: " << scanner_info.name;
+            if (is_scanner_enabled(scanner_info.name)) { out << " (ENABLED) "; }
             out << "\n";
-            out << "flags:  " << it->scanner_flags.asString() << "\n";
-            if (it->author.size()) out << "Author: " << it->author << "\n";
-            if (it->description.size()) out << "Description: " << it->description << "\n";
-            if (it->url.size()) out << "URL: " << it->url << "\n";
-            if (it->scanner_version.size()) out << "Scanner Version: " << it->scanner_version << "\n";
-            out << "Min sbuf size: " << it->min_sbuf_size << "\n";
+            out << "flags:  " << scanner_info.scanner_flags.asString() << "\n";
+            if (scanner_info.author.size()) out << "Author: " << scanner_info.author << "\n";
+            if (scanner_info.description.size()) out << "Description: " << scanner_info.description << "\n";
+            if (scanner_info.url.size()) out << "URL: " << scanner_info.url << "\n";
+            if (scanner_info.scanner_version.size()) out << "Scanner Version: " << scanner_info.scanner_version << "\n";
+            out << "Min sbuf size: " << scanner_info.min_sbuf_size << "\n";
             out << "Feature Names: ";
             int count = 0;
-            for (auto i2 : it->feature_defs) {
+            for (auto i2 : scanner_info.feature_defs) {
                 if (count++ > 0) out << ", ";
                 out << i2.name;
             }
@@ -301,27 +305,27 @@ void scanner_set::info_scanners(std::ostream& out, bool detailed_info, bool deta
             out << "\n";
             if (detailed_settings) {
                 out << "Settable Options (and their defaults): \n";
-                out << it->helpstr;
+                out << scanner_info.helpstr;
             }
             out << "------------------------------------------------\n\n";
         }
-        if (it->scanner_flags.no_usage) continue;
-        if (is_scanner_enabled(it->name)) {
-            enabled_scanner_names.push_back(it->name);
+        if (scanner_info.scanner_flags.no_usage) continue;
+        if (is_scanner_enabled(scanner_info.name)) {
+            enabled_scanner_names.push_back(scanner_info.name);
         } else {
-            disabled_scanner_names.push_back(it->name);
+            disabled_scanner_names.push_back(scanner_info.name);
         }
     }
     if (enabled_scanner_names.size()) {
         out << "These scanners enabled; disable with -" << disable_opt << ":\n";
-        for (auto it : enabled_scanner_names) {
+        for (const auto &it : enabled_scanner_names) {
             out << "   -" << disable_opt << " " << it << " - disable scanner " << it << "\n";
         }
     }
     if (disabled_scanner_names.size()) {
         out << "These scanners disabled; enable with -" << enable_opt << ":\n";
         sort(disabled_scanner_names.begin(), disabled_scanner_names.end());
-        for (auto it : disabled_scanner_names) {
+        for (const auto &it : disabled_scanner_names) {
             out << "   -" << enable_opt << " " << it << " - enable scanner " << it << "\n";
         }
     }
@@ -368,12 +372,12 @@ void scanner_set::apply_scanner_commands() {
     if (current_phase != scanner_params::PHASE_INIT) {
         throw std::runtime_error("apply_scanner_commands can only be run in scanner_params::PHASE_INIT");
     }
-    for (auto cmd : sc.scanner_commands) {
+    for (const auto &cmd : sc.scanner_commands) {
         if (cmd.scannerName == scanner_config::scanner_command::ALL_SCANNERS) {
             /* If name is 'all' and the NO_ALL flag is not set for that scanner,
              * then either enable it or disable it as appropriate
              */
-            for (auto it : scanner_info_db) {
+            for (const auto &it : scanner_info_db) {
                 if (it.second->scanner_flags.no_all) {
                     continue;
                 }
@@ -398,15 +402,15 @@ void scanner_set::apply_scanner_commands() {
      * Multiple scanners may request the same feature recorder without generating an error.
      */
     fs.create_alert_recorder();
-    for (auto sit : scanner_info_db) {
-        for (auto it : sit.second->feature_defs) {
+    for (const auto &sit : scanner_info_db) {
+        for (const auto &it : sit.second->feature_defs) {
             fs.create_feature_recorder(it);
         }
 
         /* Create all of the requested histograms
          * Multiple scanners may request the same histograms without generating an error.
          */
-        for (auto it : sit.second->histogram_defs) {
+        for (const auto &it : sit.second->histogram_defs) {
             // Make sure that a feature recorder exists for the feature specified in the histogram
             fs.named_feature_recorder(it.feature).histogram_add(it);
         }
@@ -416,7 +420,7 @@ void scanner_set::apply_scanner_commands() {
     current_phase = scanner_params::PHASE_INIT2;
     scanner_params::PrintOptions po; // empty po
     scanner_params sp(sc, this, scanner_params::PHASE_INIT2, nullptr, po, nullptr);
-    for (auto it : enabled_scanners) { (*it)(sp); }
+    for (const auto &it : enabled_scanners) { (*it)(sp); }
 
     /* set the carve defaults */
     fs.set_carve_defaults();
@@ -431,7 +435,7 @@ bool scanner_set::is_scanner_enabled(const std::string& name) {
 // put the enabled scanners into the vector
 std::vector<std::string> scanner_set::get_enabled_scanners() const {
     std::vector<std::string> ret;
-    for (auto it : enabled_scanners) {
+    for (const auto &it : enabled_scanners) {
         auto f = scanner_info_db.find(it);
         ret.push_back(f->second->name);
     }
@@ -440,7 +444,7 @@ std::vector<std::string> scanner_set::get_enabled_scanners() const {
 
 // Return true if any of the enabled scanners are a FIND scanner
 bool scanner_set::is_find_scanner_enabled() {
-    for (auto it : enabled_scanners) {
+    for (const auto &it : enabled_scanners) {
         if (scanner_info_db[it]->scanner_flags.find_scanner) { return true; }
     }
     return false;
@@ -493,7 +497,7 @@ void scanner_set::shutdown() {
     /* Tell the scanners we are shutting down */
     scanner_params::PrintOptions po; // empty po
     scanner_params sp(sc, this, scanner_params::PHASE_SHUTDOWN, nullptr, po, nullptr);
-    for (auto it : enabled_scanners) { (*it)(sp); }
+    for (const auto &it : enabled_scanners) { (*it)(sp); }
 
     fs.feature_recorders_shutdown();
 
@@ -592,7 +596,7 @@ void scanner_set::process_sbuf(class sbuf_t* sbufp) {
         sbuf.hex_dump(std::cerr);
     }
 
-    for (auto it : scanner_info_db) {
+    for (const auto &it : scanner_info_db) {
         // Look for reasons not to run a scanner
         // this is a lot of find operations - could we make a vector of the enabled scanner_info_dbs?
         const auto &name = it.second->name; // scanner name

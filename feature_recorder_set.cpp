@@ -95,7 +95,7 @@ feature_recorder_set::feature_recorder_set(const flags_t& flags_, const scanner_
 
 #if 0
     /* Create the requested feature files */
-    for( auto it:feature_files){
+    for( const auto &it:feature_files){
         create_name(it, flags & CREATE_STOP_LIST_RECORDERS);
     }
 #endif

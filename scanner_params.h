@@ -17,6 +17,7 @@
 #include <cctype>
 #include <iostream>
 #include <iterator>
+#include <memory>
 
 // Note: Do not include scanner_set.h, because it needs scanner_params.h!
 
@@ -209,7 +210,7 @@ struct scanner_params {
 
     struct scanner_config &sc;                 // configuration.
     class scanner_set *ss {nullptr}; // null in PHASE_INIT. the scanner set calling this scanner. Failed when we made it a &ss. Not that this is frequently a mt_scanner_set.
-    struct scanner_info* info{nullptr};  // filled in by callback in PHASE_INIT
+    std::unique_ptr<struct scanner_info> info {nullptr};  // filled in by callback in PHASE_INIT
     const phase_t phase{};        // what scanner should do
     const sbuf_t* sbuf{nullptr};  // what to scan / only valid in SCAN_PHASE
     PrintOptions print_options{}; // how to print. Default is that there are no options

@@ -26,7 +26,7 @@ bool regex_vector::has_metachars(const std::string& str) {
  * the length. Note that this only handles a single group.
  */
 bool regex_vector::search_all(const std::string& probe, std::string* found, size_t* offset, size_t* len) const {
-    for (auto it : regex_chars) {
+    for (const auto &it : regex_chars) {
         std::smatch sm;
         std::regex_search(probe, sm, it);
         if (sm.size() > 0) {

@@ -9,6 +9,7 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include <memory>
 
 #include "atomic_map.h"
 #include "sbuf.h"
@@ -77,7 +78,7 @@ class scanner_set {
     /* The scanners that are registered and enabled */
 
     // Map the scanner name to the scanner pointer
-    std::map<scanner_t*, const struct scanner_params::scanner_info*> scanner_info_db{};
+    std::map<scanner_t*, std::unique_ptr<struct scanner_params::scanner_info>> scanner_info_db{};
     std::set<scanner_t*> enabled_scanners{}; // the scanners that are enabled
 
 private:
