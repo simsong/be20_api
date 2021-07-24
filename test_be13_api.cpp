@@ -830,6 +830,7 @@ TEST_CASE("previously_processed", "[scanner_set]") {
     REQUIRE(ss.previously_processed_count(slg) == 2);
 }
 
+#if 0
 TEST_CASE("mt_previously_processed", "[scanner_set]") {
     scanner_config sc;
     feature_recorder_set::flags_t f;
@@ -840,6 +841,7 @@ TEST_CASE("mt_previously_processed", "[scanner_set]") {
     REQUIRE(ss.previously_processed_count(slg) == 1);
     REQUIRE(ss.previously_processed_count(slg) == 2);
 }
+#endif
 
 TEST_CASE("enable/disable", "[scanner_set]") {
     scanner_config sc;
