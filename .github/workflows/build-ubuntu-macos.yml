@@ -50,7 +50,7 @@ jobs:
         if: startsWith(matrix.os, 'ubuntu')
         # it seems that -fsanitize=address and -fsanitize=memory fail under Catch2 with Ubuntu
         run: |
-          ./configure CXXFLAGS='-g -O0 -fprofile-arcs -ftest-coverage ' LIBS='-lgcov' --enable-silent-rules
+          ./configure CXXFLAGS='-g -O0 -fprofile-arcs -ftest-coverage ' LIBS='-lgcov' --enable-silent-rules --enable-address-sanitizer --disable-opt
 
       - name: configure for macOS
         if: startsWith(matrix.os, 'macos')
