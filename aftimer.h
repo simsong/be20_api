@@ -21,7 +21,7 @@ public:
     //std::chrono::time_point<std::chrono::system_clock> tstart() const {
     //return t0;       // time we started
 //}
-    double elapsed_seconds() const;                   // how long timer has been running, total
+    double elapsed_seconds() const;                   // how long timer has been running; timer can be running
     uint64_t elapsed_nanoseconds() const;
     uint64_t lap_seconds() const;                          // how long the timer is running this time
     double eta(double fraction_done) const;           // calculate ETA in seconds, given fraction
@@ -56,12 +56,10 @@ inline void aftimer::stop() {
 //inline aftimer::duration aftimer::lap_time() const { return last_ns; }
 
 inline double aftimer::elapsed_seconds() const {
-    assert (running==false);
     return elapsed_ns / (1000.0 * 1000.0 * 1000.0);
 }
 
 inline uint64_t aftimer::elapsed_nanoseconds() const {
-    assert (running==false);
     return elapsed_ns;
 }
 

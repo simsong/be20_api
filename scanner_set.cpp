@@ -467,17 +467,11 @@ void scanner_set::phase_scan() {
  *** Data handling
  ****************************************************************/
 
-/*
- * uses hash to determine if a block was prevously seen.
- * Hopefully sbuf.buf() is zero-copy.
- */
-bool scanner_set::check_previously_processed(const sbuf_t& sbuf) {
+uint64_t scanner_set::previously_processed_count(const sbuf_t& sbuf) {
     std::string hash = sbuf.hash();
-    if (seen_set != nullptr) {
-        return seen_set->check_for_presence_and_insert( hash );
-    }
-    return false;
+    return previously_processed_counter[ hash ]++;
 }
+
 
 /****************************************************************
  *** PHASE_SHUTDOWN methods.
@@ -574,7 +568,7 @@ void scanner_set::process_sbuf(class sbuf_t* sbufp) {
     std::cerr <<"scanner_set::process_sbuf point 5a"; info();
 
     /* Determine if we have seen this buffer before */
-    bool seen_before = check_previously_processed(sbuf);
+    bool seen_before = previously_processed_count(sbuf) > 0;
     if (seen_before) {
         dup_bytes_encountered += sbuf.bufsize;
     }

@@ -802,6 +802,7 @@ TEST_CASE("scanner", "[scanner]") { /* check that scanner params made from an ex
  */
 #include "scan_sha1_test.h"
 #include "scanner_set.h"
+#include "mt_scanner_set.h"
 
 /* Just make sure that they can be created and deleted without error.
  * Previously we got errors before we moved the destructor to the .cpp file from the .h file.
@@ -810,13 +811,34 @@ TEST_CASE("scanner_stats", "[scanner_set]") {
     scanner_config sc;
     feature_recorder_set::flags_t flags;
 
-
     feature_recorder_set fs(flags, sc);
     std::map<scanner_t*, const struct scanner_params::scanner_info*> scanner_info_db{};
     std::set<scanner_t*> enabled_scanners{}; // the scanners that are enabled
     atomic_set<std::string> seen_set {}; // hex hash values of sbuf pages that have been seen
     auto ss = new scanner_set(sc, feature_recorder_set::flags_t(), nullptr);
     delete ss;
+}
+
+TEST_CASE("previously_processed", "[scanner_set]") {
+    scanner_config sc;
+    feature_recorder_set::flags_t f;
+    scanner_set ss(sc, f, nullptr);
+    sbuf_t slg("Simson");
+    ss.info();
+    REQUIRE(ss.previously_processed_count(slg) == 0);
+    REQUIRE(ss.previously_processed_count(slg) == 1);
+    REQUIRE(ss.previously_processed_count(slg) == 2);
+}
+
+TEST_CASE("mt_previously_processed", "[scanner_set]") {
+    scanner_config sc;
+    feature_recorder_set::flags_t f;
+    mt_scanner_set ss(sc, f, nullptr);
+    sbuf_t slg("Simson");
+    ss.info();
+    REQUIRE(ss.previously_processed_count(slg) == 0);
+    REQUIRE(ss.previously_processed_count(slg) == 1);
+    REQUIRE(ss.previously_processed_count(slg) == 2);
 }
 
 TEST_CASE("enable/disable", "[scanner_set]") {

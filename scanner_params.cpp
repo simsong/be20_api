@@ -37,7 +37,7 @@ const std::filesystem::path scanner_params::get_input_fname() const
 
 bool scanner_params::check_previously_processed(const sbuf_t &s) const
 {
-    return ss->check_previously_processed(s);
+    return ss->previously_processed_count(s)==0;
 }
 
 void scanner_params::recurse(sbuf_t* new_sbuf) const {

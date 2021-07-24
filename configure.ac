@@ -37,9 +37,6 @@ AC_LANG_POP()
 # Turn on all warnings
 m4_include([m4/slg_gcc_all_warnings.m4])
 
-# Should we disable optimization?
-AC_ARG_WITH([opt], AS_HELP_STRING([--without-opt],[Drop all -O C flags]))
-
 ################################################################
 # Specify our headers
 
@@ -54,6 +51,8 @@ AC_PROG_EGREP
 ## Check dfxml and be13_api headers
 m4_include([dfxml_cpp/src/dfxml_configure.m4])
 m4_include([be13_configure.m4])
+m4_include([m4/slg_address_sanitizer.m4])
+m4_include([m4/slg_noopt.m4])
 
 ############## drop optimization flags and add -g if requested ################
 if test x"${AFF_NOOPT}" != "x" ; then
