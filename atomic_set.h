@@ -14,9 +14,12 @@
 #include <map>
 #include <mutex>
 #include <set>
-#include <unordered_map>
 #include <unordered_set>
 #include <vector>
+
+/*
+ * note: do not use const TYPE &s for signatures; it caused deadlocks.
+ */
 
 template <class TYPE> class atomic_set {
     // Mutex M protects myset.
@@ -28,11 +31,11 @@ public:
     atomic_set() {}
     ~atomic_set() {
         const std::lock_guard<std::mutex> lock(M);
-        myset.clear();                  // empty it
+        myset.clear();
     }
     void clear() {
         const std::lock_guard<std::mutex> lock(M);
-        myset.clear();                  // empty it
+        myset.clear();
     }
     bool contains(const TYPE& s) const {
         const std::lock_guard<std::mutex> lock(M);
@@ -43,8 +46,8 @@ public:
         myset.insert(s);
     }
 
-    /* Returns true if s is in the set, false if it is not, but
-     * inserts either way
+    /* Returns true if s is in the set, false if it is not.
+     * After return, s is in the set.
      */
     bool check_for_presence_and_insert(const TYPE s) {
         const std::lock_guard<std::mutex> lock(M);
@@ -59,8 +62,8 @@ public:
     }
     /* like python .keys() */
     std::vector<TYPE> keys() const {
-        std::vector<TYPE> ret;
         const std::lock_guard<std::mutex> lock(M);
+        std::vector<TYPE> ret;
         for (auto obj: myset) {
             ret.push_back(obj);
         }

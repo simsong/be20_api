@@ -250,8 +250,6 @@ public:
 
     // Management of previously seen data
     // hex hash values of sbuf pages that have been seen
-    // Note: due to reasons we do not understand, this generated a weird slicing bug when this was not a pointer.
-    atomic_set<std::string> *seen_set {nullptr};
     atomic_map<std::string, std::atomic<uint64_t>> previously_processed_counter {};
     uint64_t previously_processed_count(const sbuf_t& sbuf);
 

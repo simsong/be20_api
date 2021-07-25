@@ -469,6 +469,7 @@ void scanner_set::phase_scan() {
 }
 
 /****************************************************************
+<<<<<<< HEAD
  *** Data handling
  ****************************************************************/
 
@@ -479,6 +480,8 @@ uint64_t scanner_set::previously_processed_count(const sbuf_t& sbuf) {
 
 
 /****************************************************************
+=======
+>>>>>>> master
  *** PHASE_SHUTDOWN methods.
  ****************************************************************/
 
@@ -528,6 +531,16 @@ template <typename T> void update_maximum(std::atomic<T>& maximum_value, T const
     T prev_value = maximum_value;
     while (prev_value < value && !maximum_value.compare_exchange_weak(prev_value, value)) {}
 }
+
+/*
+ * uses hash to determine if a block was prevously seen.
+ * Hopefully sbuf.buf() is zero-copy.
+ */
+bool scanner_set::check_previously_processed(const sbuf_t& sbuf) {
+    return seen_set.contains(sbuf.hash());
+}
+
+
 
 /* Process an sbuf!
  * Deletes the buf after processing.
