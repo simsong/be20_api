@@ -81,7 +81,6 @@ class scanner_set {
     std::map<scanner_t*, std::unique_ptr<struct scanner_params::scanner_info>> scanner_info_db{};
     std::set<scanner_t*> enabled_scanners{}; // the scanners that are enabled
 
-private:
     /* The feature recorder set where the scanners outputs are stored */
     class feature_recorder_set fs;
 
@@ -245,7 +244,7 @@ public:
     virtual void schedule_sbuf(sbuf_t* sbuf);  // schedule the sbuf to be processed
     virtual void delete_sbuf(sbuf_t *sbuf);    // delete after processing
     virtual void thread_set_status(const std::string &status) {}; // designed to be overridden
-    virtual void info() const;
+    virtual void *info() const;
 
     // void     process_packet(const be13::packet_info &pi);
 

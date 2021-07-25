@@ -58,9 +58,10 @@ mt_scanner_set::mt_scanner_set(scanner_config& sc_,
 }
 
 
-void mt_scanner_set::info() const
+void *mt_scanner_set::info() const
 {
     std::cerr << "mt_scanner_set::info() this=" << this << " pool=" << (void *)pool << "\n";
+    return (void *)pool;
 }
 
 void mt_scanner_set::thread_set_status(const std::string &status)

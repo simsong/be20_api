@@ -7,8 +7,8 @@ scanner_params::scanner_params(struct scanner_config &sc_, class scanner_set  *s
                                const sbuf_t* sbuf_, PrintOptions print_options_, std::stringstream* xmladd)
     : sc(sc_), ss(ss_), phase(phase_), sbuf(sbuf_), print_options(print_options_), sxml(xmladd)
 {
-    std::cerr << "scanner_params: make1 this=" << this << "\n";
-    ss->info();
+    //std::cerr << "scanner_params: make1 this=" << this << "\n";
+    //ss->info();
 }
 
 scanner_params::scanner_params(const scanner_params& sp_existing, const sbuf_t* sbuf_)
@@ -17,7 +17,7 @@ scanner_params::scanner_params(const scanner_params& sp_existing, const sbuf_t* 
       print_options(sp_existing.print_options),
       depth(sp_existing.depth + 1), sxml(sp_existing.sxml)
 {
-    std::cerr << "scanner_params: make2 this=" << this << "\n";
+    //std::cerr << "scanner_params: make2 this=" << this << "\n";
 }
 
 

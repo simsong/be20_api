@@ -77,9 +77,10 @@ scanner_set::~scanner_set()
     }
 }
 
-void scanner_set::info() const
+void *scanner_set::info() const
 {
     std::cerr << "scanner_set::info() this=" << this << "\n";
+    return nullptr;
 }
 
 void scanner_set::add_scanner_stat(scanner_t *scanner, const struct scanner_set::stats &n)
@@ -569,13 +570,20 @@ void scanner_set::process_sbuf(class sbuf_t* sbufp) {
 
     std::cerr <<"scanner_set::process_sbuf point 5"; info();
     update_maximum<unsigned int>(max_depth_seen, sbuf.depth());
-    std::cerr <<"scanner_set::process_sbuf point 5a"; info();
+    std::cerr <<"scanner_set::process_sbuf point 5a";
+    auto pool_hold = info();
 
     /* Determine if we have seen this buffer before */
     bool seen_before = previously_processed_count(sbuf) > 0;
     if (seen_before) {
         dup_bytes_encountered += sbuf.bufsize;
     }
+    auto pool_now = info();
+    if(pool_now != pool_hold){
+        std::cerr << "scanner_set::process_sbuf: error. pool_hold=" << pool_hold << "but now pool_now=" << pool_now << "\n";
+        assert(pool_now == pool_hold);
+    }
+
     std::cerr <<"scanner_set::process_sbuf point 5b"; info();
 
     std::cerr <<"scanner_set::process_sbuf point 6"; info();
