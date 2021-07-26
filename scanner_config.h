@@ -34,6 +34,7 @@ struct scanner_config {
     std::filesystem::path banner_file{}; // add the contents of this file to the top of every feature file
 
     static inline const u_int DEFAULT_MAX_DEPTH {12};
+    static inline const u_int DEFAULT_MAX_NGRAM {10};
     virtual ~scanner_config(){};
     scanner_config(){};
     scanner_config(const scanner_config&) = default;
@@ -52,7 +53,8 @@ struct scanner_config {
     // &help);
     void set_config(const std::string& name, const std::string& val);
     template <typename T> void get_config(const std::string& name, T* val, const std::string& help);
-    u_int max_depth {DEFAULT_MAX_DEPTH};
+    u_int    max_depth {DEFAULT_MAX_DEPTH};
+    uint32_t max_ngram {DEFAULT_MAX_NGRAM};                         // maximum ngram size to scan for
 
     /**
      * Commands whether to enable or disable a scanner.

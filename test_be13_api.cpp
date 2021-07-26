@@ -802,7 +802,6 @@ TEST_CASE("scanner", "[scanner]") { /* check that scanner params made from an ex
  */
 #include "scan_sha1_test.h"
 #include "scanner_set.h"
-#include "mt_scanner_set.h"
 
 /* Just make sure that they can be created and deleted without error.
  * Previously we got errors before we moved the destructor to the .cpp file from the .h file.
@@ -824,7 +823,6 @@ TEST_CASE("previously_processed", "[scanner_set]") {
     feature_recorder_set::flags_t f;
     scanner_set ss(sc, f, nullptr);
     sbuf_t slg("Simson");
-    ss.info();
     REQUIRE(ss.previously_processed_count(slg) == 0);
     REQUIRE(ss.previously_processed_count(slg) == 1);
     REQUIRE(ss.previously_processed_count(slg) == 2);
@@ -834,7 +832,7 @@ TEST_CASE("previously_processed", "[scanner_set]") {
 TEST_CASE("mt_previously_processed", "[scanner_set]") {
     scanner_config sc;
     feature_recorder_set::flags_t f;
-    mt_scanner_set ss(sc, f, nullptr);
+    scanner_set ss(sc, f, nullptr);
     sbuf_t slg("Simson");
     ss.info();
     REQUIRE(ss.previously_processed_count(slg) == 0);

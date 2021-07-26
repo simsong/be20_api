@@ -15,7 +15,7 @@
 #include "dfxml_cpp/src/hash_t.h"
 #include "scan_sha1_test.h"
 #include "scanner_params.h"
-#include "mt_scanner_set.h"
+#include "scanner_set.h"
 
 feature_recorder *sha1_recorder  = nullptr;
 void scan_sha1_test(struct scanner_params& sp) {

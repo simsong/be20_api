@@ -32,13 +32,13 @@ public:
     mt_scanner_set(scanner_config &sc, const feature_recorder_set::flags_t& f, class dfxml_writer* writer);
     virtual ~mt_scanner_set(){};
     void launch_workers(int count);
-    virtual void decrement_queue_stats(sbuf_t *sbufp);
-    virtual void process_sbuf(sbuf_t* sbuf) override; // process the sbuf, then delete it.
-    virtual void schedule_sbuf(sbuf_t* sbuf) override; // process the sbuf, then delete it.
-    virtual void delete_sbuf(sbuf_t* sbuf) override; // process the sbuf, then delete it.
-    virtual void thread_set_status(const std::string &status) override; // set the status for this thread
-    virtual void print_tp_status();                  // print the status of each thread
-    virtual void *info() const override;
+    void decrement_queue_stats(sbuf_t *sbufp);
+    void process_sbuf(sbuf_t* sbuf) override; // process the sbuf, then delete it.
+    void schedule_sbuf(sbuf_t* sbuf) override; // process the sbuf, then delete it.
+    void delete_sbuf(sbuf_t* sbuf) override; // process the sbuf, then delete it.
+    void thread_set_status(const std::string &status) override; // set the status for this thread
+    void print_tp_status();                  // print the status of each thread
+    void *info() const override;
     void join();                            // join the threads
     void run_notify_thread();               // notify what's going on
 };

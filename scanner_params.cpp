@@ -1,7 +1,7 @@
 #include "scanner_params.h"
 #include "feature_recorder.h"
 #include "feature_recorder_set.h"
-#include "mt_scanner_set.h"
+#include "scanner_set.h"
 
 scanner_params::scanner_params(struct scanner_config &sc_, class scanner_set  *ss_, phase_t phase_,
                                const sbuf_t* sbuf_, PrintOptions print_options_, std::stringstream* xmladd)

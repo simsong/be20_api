@@ -75,29 +75,6 @@ class scanner_set {
     scanner_set(const scanner_set& s) = delete;
     scanner_set& operator=(const scanner_set& s) = delete;
 
-    /* The scanners that are registered and enabled */
-
-    // Map the scanner name to the scanner pointer
-    std::map<scanner_t*, std::unique_ptr<struct scanner_params::scanner_info>> scanner_info_db{};
-    std::set<scanner_t*> enabled_scanners{}; // the scanners that are enabled
-
-    /* The feature recorder set where the scanners outputs are stored */
-    class feature_recorder_set fs;
-
-    /* Run-time configuration for all of the scanners (per-scanner configuration is stored in sc)
-     * Default values are hard-coded below.
-     */
-
-    unsigned int max_depth{7};   // maximum depth for recursive scans
-    unsigned int log_depth{1};   // log to dfxml all sbufs at this depth or less
-    std::atomic<uint32_t> max_depth_seen{0};
-    std::atomic<uint64_t> sbuf_seen{0}; // number of seen sbufs.
-
-    uint32_t max_ngram{10};                         // maximum ngram size to scan for
-    std::atomic<uint64_t> dup_bytes_encountered{0}; // amount of dup data encountered
-    class dfxml_writer* writer {nullptr};           // if provided, a dfxml writer. Mutext locking done by dfxml_writer.h
-    scanner_params::phase_t current_phase{scanner_params::PHASE_INIT};
-
 public:
     /* constructor and destructor */
     /* @param sc - the config variables
@@ -106,6 +83,18 @@ public:
     */
     scanner_set(scanner_config& sc, const feature_recorder_set::flags_t& f, class dfxml_writer* writer);
     virtual ~scanner_set();
+    scanner_config sc;                             // scanner_set configuration; passed to feature_recorder_set
+    class dfxml_writer* writer {nullptr};          // if provided, a dfxml writer. Mutext locking done by dfxml_writer.h
+    void set_dfxml_writer(class dfxml_writer *writer_);
+    class dfxml_writer *get_dfxml_writer() const;
+
+    /* They throw a ScannerNotFound exception if no scanner exists */
+    class NoSuchScanner : public std::exception {
+        std::string m_error{};
+    public:
+        NoSuchScanner(std::string_view error) : m_error(error) {}
+        const char* what() const noexcept override { return m_error.c_str(); }
+    };
 
     struct stats {
         explicit stats(){};
@@ -124,40 +113,6 @@ public:
 
     };
 
-    // per-scanner stats
-    atomic_map<scanner_t* , struct stats> scanner_stats{}; // maps scanner name to performance stats
-    void add_scanner_stat(scanner_t *, const struct stats &st);
-
-    // per-path stats
-    atomic_map<std::string, struct stats> path_stats{}; // maps scanner name to performance stats
-    void add_path_stat(std::string path, const struct stats &st);
-
-    // a pointer to every scanner info in all of the scanners.
-    // This provides all_scanners
-
-    // The scanner_set's configuration for all the scanners that are loaded.
-    // references the master one
-    scanner_config &sc;
-
-    /* Accessors */
-    void set_dfxml_writer(class dfxml_writer *writer_) {
-        if (writer) {
-            throw std::runtime_error("dfxml_writer already set");
-        }
-        writer = writer_;
-    }
-    class dfxml_writer *get_dfxml_writer() const { return writer; }
-    uint64_t get_dup_bytes_encountered()  const  { return dup_bytes_encountered; }
-    uint32_t get_max_depth_seen() const          { return max_depth_seen;} ; // max seen during scan
-
-    /* PHASE_INIT */
-    /* Scanner management: Add scanners to the scanner set. */
-
-    /* Debug for feature recorders.
-     * This used to be a flag, but Stroustrup (2013) recommends just having a bunch of bools.
-     * Each one can be set automatically by setting the enviornment variable
-     * SCANNER_SET_DEBUG_<name>, e.g. export SCANNER_SET_DEBUG_PRINT_STEPS=1
-     */
     struct debug_flags_t {
         bool debug_print_steps{false};     // prints as each scanner is started
         bool debug_scanner{false};         // dump all feature writes to stderr
@@ -171,87 +126,111 @@ public:
         std::string debug_scanners_ignore{}; // ignore these scanners, separated by :
     } debug_flags{};
 
-    /* Scanners can be compiled in (which are passed to the constructor), loaded one-by-one from meory,
-     * or loaded from a file, a directory, or a set of directories.
-     * Loaded scanners are added to the 'scanners' vector.
-     *
-     * After the scanners are loaded, the scan starts.
-     * Each scanner is called with scanner_params and a scanner control block as arguments.
-     * See "scanner_params.h".
-     */
-    void add_scanner(scanner_t scanner);                    // load a specific scanner in memory
-    void add_scanners(scanner_t* const* scanners_builtin);  // load a nullptr array of scanners.
-    void add_scanner_file(std::string fn);                  // load a scanner from a shared library file
-    void add_scanner_directory(const std::string& dirname); // load all scanners in the directory
 
-    /* These functions must be virtual so they can be called by dynamically loaded plugins */
-    /* They throw a ScannerNotFound exception if no scanner exists */
-
-    class NoSuchScanner : public std::exception {
-        std::string m_error{};
-
-    public:
-        NoSuchScanner(std::string_view error) : m_error(error) {}
-        const char* what() const noexcept override { return m_error.c_str(); }
-    };
+    // Scanner database.
+    std::map<scanner_t*, std::unique_ptr<struct scanner_params::scanner_info>> scanner_info_db{};
+    std::set<scanner_t*> enabled_scanners{}; // the scanners that are enabled
     const std::string get_scanner_name(scanner_t scanner) const; // returns the name of the scanner
     virtual scanner_t* get_scanner_by_name(const std::string name) const;
 
-    /* Feature recorder support */
+    // Multi-threaded support
+private:
+    static const inline size_t SAME_THREAD_SBUF_SIZE = 8192; // sbufs smaller than this run in the same thread.
+    class thread_pool *pool {nullptr}; // nullptr means we are not threading
+    std::atomic<int> depth0_sbufs_in_queue {0};
+    std::atomic<uint64_t> depth0_bytes_in_queue {0};
+    std::atomic<int> sbufs_in_queue {0};
+    std::atomic<uint64_t> bytes_in_queue {0};
+    /* status and notification system */
+    [[noreturn]] void notify_thread();               // notify what's going on
+    std::thread *notifier {nullptr};                 // notifier thread
+    atomic_map<std::thread::id, std::string> thread_status {}; // the status of each thread::id
+
+public:
+    // thread interface
+    void launch_workers(int count);
+    void decrement_queue_stats(sbuf_t *sbufp);
+    void thread_set_status(const std::string &status); // designed to be overridden
+    void print_tp_status();                  // print the status of each thread
+    void join();                            // join the threads
+    void launch_notify_thread();               // notify what's going on
+
+    // scanner stats
+    std::atomic<uint64_t> sbuf_seen{0}; // number of seen sbufs.
+    std::atomic<uint64_t> dup_bytes_encountered{0}; // amount of dup data encountered
+    atomic_map<scanner_t* , struct stats> scanner_stats{}; // maps scanner name to performance stats
+    void add_scanner_stat(scanner_t *, const struct stats &st);
+    uint64_t get_dup_bytes_encountered()  const  { return dup_bytes_encountered; }
+    uint32_t get_max_depth_seen() const          { return max_depth_seen;} ; // max seen during scan
+
+    // per-path stats
+    atomic_map<std::string, struct stats> path_stats{}; // maps scanner name to performance stats
+    void add_path_stat(std::string path, const struct stats &st);
+
+    unsigned int max_depth{7};   // maximum depth for recursive scans
+    unsigned int log_depth{1};   // log to dfxml all sbufs at this depth or less
+    std::atomic<uint32_t> max_depth_seen{0};
+
+    // Feature recorders. Functions below are virtual so they can be called by loaded scanners.
+    class feature_recorder_set fs;
     virtual feature_recorder& named_feature_recorder(const std::string name) const; // returns the feature recorder
     virtual std::vector<std::string> feature_file_list() const;                     // returns the list of feature files
-
-    // hash support
-    virtual std::string hash(const sbuf_t& sbuf) const;
-
-    // report on the loaded scanners
-    void info_scanners(std::ostream& out, bool detailed_info, bool detailed_settings,
-                       const char enable_opt, const char disable_opt);
-
-    // dfxml support
-    virtual void log(const std::string message); // writes message to dfxml and log
-    virtual void log(const sbuf_t &sbuf, const std::string message); // writes sbuf if not too deep.
-
-    scanner_params::phase_t get_current_phase() const { return current_phase; };
-
-    /*
-     * PHASE_ENABLE
-     * Various scanners are enabled and their histograms are created
-     */
-
-    void apply_scanner_commands(); // applies all of the enable/disable commands and create the feature recorders
-    bool is_scanner_enabled(const std::string& name);      // report if it is enabled or not
-    std::vector<std::string> get_enabled_scanners() const; // put names of the enabled scanners into the vector
-    bool is_find_scanner_enabled();                        // return true if a find scanner is enabled
-
-    // void    load_scanner_packet_handlers(); // after all scanners are loaded, this sets up the packet handlers.
-
-    const std::filesystem::path get_input_fname() const;
-
-    // Stats
-
     size_t histogram_count() const { return fs.histogram_count(); }; // passthrough, mostly for debugging
     size_t feature_recorder_count() const { return fs.feature_recorder_count(); };
     void dump_name_count_stats(class dfxml_writer& w) const { fs.dump_name_count_stats(w); }; // passthrough
-
-    // Scanners automatically get initted when they are loaded.
-    // They are immediately ready to process sbufs and packets!
-    // As soon as sbufs or packets are processed, no new scanners should be added to this scanner set.
-
-    /* PHASE SCAN */
-    void phase_scan();               // start the scan phase
-    virtual void process_sbuf(sbuf_t* sbuf); // process the sbuf, then delete it.
-    virtual void schedule_sbuf(sbuf_t* sbuf);  // schedule the sbuf to be processed
-    virtual void delete_sbuf(sbuf_t *sbuf);    // delete after processing
-    virtual void thread_set_status(const std::string &status) {}; // designed to be overridden
-    virtual void *info() const;
-
-    // void     process_packet(const be13::packet_info &pi);
 
     // Management of previously seen data
     // hex hash values of sbuf pages that have been seen
     atomic_map<std::string, std::atomic<uint64_t>> previously_processed_counter {};
     uint64_t previously_processed_count(const sbuf_t& sbuf);
+
+    /* Run-time configuration for all of the scanners (per-scanner configuration is stored in sc)
+     * Default values are hard-coded below.
+     */
+
+
+    // Scanning
+    scanner_params::phase_t current_phase{scanner_params::PHASE_INIT};
+    scanner_params::phase_t get_current_phase() const { return current_phase; };
+
+    /* PHASE_INIT SUPPORT */
+    void add_scanner(scanner_t scanner);                    // load a specific scanner in memory
+    void add_scanners(scanner_t* const* scanners_builtin);  // load a nullptr array of scanners.
+    void add_scanner_file(std::string fn);                  // load a scanner from a shared library file
+    void add_scanner_directory(const std::string& dirname); // load all scanners in the directory
+    void info_scanners(std::ostream& out, bool detailed_info, bool detailed_settings,
+                       const char enable_opt, const char disable_opt);
+    void apply_scanner_commands(); // applies all of the enable/disable commands and create the feature recorders
+    bool is_scanner_enabled(const std::string& name);      // report if it is enabled or not
+    std::vector<std::string> get_enabled_scanners() const; // put names of the enabled scanners into the vector
+    bool is_find_scanner_enabled();                        // return true if a find scanner is enabled
+
+    // hash support
+    virtual std::string hash(const sbuf_t& sbuf) const;
+
+    // report on the loaded scanners
+
+    // dfxml support
+    virtual void log(const std::string message); // writes message to dfxml and log
+    virtual void log(const sbuf_t &sbuf, const std::string message); // writes sbuf if not too deep.
+
+
+    /*
+     * PHASE_ENABLE
+     * Various scanners are enabled and their histograms are created
+     */
+    // void    load_scanner_packet_handlers(); // after all scanners are loaded, this sets up the packet handlers.
+
+    const std::filesystem::path get_input_fname() const;
+
+
+    /* PHASE SCAN */
+    void phase_scan();               // start the scan phase
+    void process_sbuf(sbuf_t* sbuf); // process the sbuf, then delete it.
+    void schedule_sbuf(sbuf_t* sbuf);  // schedule the sbuf to be processed
+    void delete_sbuf(sbuf_t *sbuf);    // delete after processing
+
+    // void     process_packet(const be13::packet_info &pi);
 
     /* PHASE_SHUTDOWN */
     // explicit shutdown, called automatically on delete if it hasn't be called
