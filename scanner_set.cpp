@@ -41,7 +41,6 @@
 scanner_set::scanner_set(scanner_config& sc_, const feature_recorder_set::flags_t& f, class dfxml_writer* writer_)
     : sc(sc_), writer(writer_), fs(f, sc_)
 {
-    std::cerr << "scanner_set:scanner_set(): this=" << this << " \n";
     if (getenv("DEBUG_SCANNER_SET_PRINT_STEPS")) debug_flags.debug_print_steps = true;
     if (getenv("DEBUG_SCANNER_SET_NO_SCANNERS")) debug_flags.debug_no_scanners = true;
     if (getenv("DEBUG_SCANNER_SET_SCANNER")) debug_flags.debug_scanner = true;
@@ -518,13 +517,11 @@ template <typename T> void update_maximum(std::atomic<T>& maximum_value, T const
  * Deletes the buf after processing.
  */
 void scanner_set::process_sbuf(class sbuf_t* sbufp) {
-    std::cerr <<"scanner_set::process_sbuf point 1";
     assert(sbufp != nullptr);
     assert(sbufp->children == 0); // we are going to free it, so it better not have any children.
 
     thread_set_status( sbufp->pos0.str() + " process_sbuf (" + std::to_string(sbufp->bufsize) + ")" );
 
-    std::cerr <<"scanner_set::process_sbuf point 2";
     /* If we  have not transitioned to PHASE::SCAN, error */
     if (current_phase != scanner_params::PHASE_SCAN) {
         throw std::runtime_error("process_sbuf can only be run in scanner_params::PHASE_SCAN");
@@ -535,10 +532,7 @@ void scanner_set::process_sbuf(class sbuf_t* sbufp) {
         return;        // nothing to scan
     }
 
-    std::cerr <<"scanner_set::process_sbuf point 3";
     const class sbuf_t& sbuf = *sbufp; // don't allow modification
-
-    std::cerr <<"scanner_set::process_sbuf point 4";
     aftimer timer;
     timer.start();
 
@@ -553,9 +547,7 @@ void scanner_set::process_sbuf(class sbuf_t* sbufp) {
         return;        // nothing to scan
     }
 
-    std::cerr <<"scanner_set::process_sbuf point 5";
     update_maximum<unsigned int>(max_depth_seen, sbuf.depth());
-    std::cerr <<"scanner_set::process_sbuf point 5a";
     auto pool_hold = (void*)pool;
 
     /* Determine if we have seen this buffer before */
@@ -569,9 +561,6 @@ void scanner_set::process_sbuf(class sbuf_t* sbufp) {
         assert(pool_now == pool_hold);
     }
 
-    std::cerr <<"scanner_set::process_sbuf point 5b";
-
-    std::cerr <<"scanner_set::process_sbuf point 6";
     /* Determine if the sbuf consists of a repeating ngram. If so,
      * it's only passed to the parsers that want ngrams. (By default,
      * such sbufs are booring.)
@@ -584,11 +573,12 @@ void scanner_set::process_sbuf(class sbuf_t* sbufp) {
      *** CALL EACH OF THE SCANNERS ON THE SBUF
      ****************************************************************/
 
-    std::cerr <<"scanner_set::process_sbuf point 7";
     if (debug_flags.debug_dump_data) {
         sbuf.hex_dump(std::cerr);
     }
 
+    /* Make the scanner params once, rather than every time through */
+    scanner_params sp(sc, this, scanner_params::PHASE_SCAN, sbufp, scanner_params::PrintOptions(), nullptr);
     for (const auto &it : scanner_info_db) {
         // Look for reasons not to run a scanner
         // this is a lot of find operations - could we make a vector of the enabled scanner_info_dbs?
@@ -624,7 +614,6 @@ void scanner_set::process_sbuf(class sbuf_t* sbufp) {
         }
 
         bool record_call_stats = false;
-        std::cerr <<"scanner_set::process_sbuf point 8";
 
         try {
 
@@ -641,21 +630,16 @@ void scanner_set::process_sbuf(class sbuf_t* sbufp) {
                 for (auto cc : name) { epath.push_back(toupper(cc)); }
             }
 
-            std::cerr <<"scanner_set::process_sbuf point 10";
             /* Call the scanner.*/
             aftimer t;
             thread_set_status( sbuf.pos0.str() + ": " + name + " (" + std::to_string(sbuf.bufsize) + ")" );
 
-            std::cerr <<"scanner_set::process_sbuf point 11";
             if (debug_flags.debug_print_steps) {
                 std::cerr << "sbuf.pos0=" << sbuf.pos0 << " calling scanner " << name << "\n";
             }
             if (record_call_stats || debug_flags.debug_print_steps) {
                 t.start();
             }
-            std::cerr << "before make sp\n";
-            scanner_params sp(sc, this, scanner_params::PHASE_SCAN, sbufp, scanner_params::PrintOptions(), nullptr);
-            std::cerr << "after make sp\n";
             (*it.first)(sp);
 
             if (record_call_stats || debug_flags.debug_print_steps) {
@@ -695,15 +679,12 @@ void scanner_set::process_sbuf(class sbuf_t* sbufp) {
 void scanner_set::schedule_sbuf(sbuf_t *sbufp)
 {
     assert (sbufp != nullptr );
-    std::cerr << "scanner_set::schedule_sbuf this=" << this << " sbufp=" << *sbufp << "  pool=" << pool << "\n";
     /* Run in same thread? */
     if (pool==nullptr || (sbufp->depth() > 0 && sbufp->bufsize < SAME_THREAD_SBUF_SIZE)) {
-        std::cerr << std::this_thread::get_id() << " same thread: " << *sbufp << "\n";
         process_sbuf(sbufp);
         return;
     }
 
-    std::cerr << std::this_thread::get_id() << "                enqueue: " << *sbufp <<  "\n";
     if (sbufp->depth()==0) {
         depth0_sbufs_in_queue += 1;
         depth0_bytes_in_queue += sbufp->bufsize;

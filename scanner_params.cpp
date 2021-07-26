@@ -41,7 +41,6 @@ bool scanner_params::check_previously_processed(const sbuf_t &s) const
 }
 
 void scanner_params::recurse(sbuf_t* new_sbuf) const {
-    std::cerr << "scanner_params::recurse ss=" << (void *)&ss << "\n";
     assert(ss!=nullptr);
     ss->schedule_sbuf(new_sbuf);
     /* sbuf will be deleted after it is processed */
