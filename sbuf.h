@@ -468,10 +468,12 @@ public:
 
     // Return the hash of the buffer's contents. The hash function doesn't
     // matter; we use SHA1 currently
+    // This is threadsafe. However, hash_hash may return false
+    // when a hash is already present
     typedef std::string (*hash_func_t)(const uint8_t* buf, size_t bufsize);
     std::string hash() const;           //  default hasher (currently SHA1); caches results
     std::string hash(hash_func_t func) const; // hash with this hash func; does not cache
-    bool has_hash() const;                    // report if hash has already been computed
+    bool has_hash() const;                    // report if hash has already been computed.
 
     /**
      * These are largely for debugging, but they also support the BEViewer.

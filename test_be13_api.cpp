@@ -666,7 +666,7 @@ TEST_CASE("hello_sbuf", "[sbuf]") {
     REQUIRE(sb7.asString() == "");
 }
 
-TEST_CASE("malloc_sbuf", "[sbuf]") {
+TEST_CASE("sbuf_malloc", "[sbuf]") {
     sbuf_t *sb1 = sbuf_t::sbuf_malloc(pos0_t(), 256);
     for(int i=0; i<256; i++){
         sb1->wbuf(i, 255-i);
@@ -719,6 +719,20 @@ TEST_CASE("malloc_sbuf", "[sbuf]") {
     sb2 = sb2->realloc(10);
     REQUIRE(sb2->bufsize==10);
     delete sb2;
+}
+
+TEST_CASE("sbuf_malloc2", "[sbuf]") {
+    sbuf_t root("<b>this is bold</b><i>this is itallics</i>");
+    std::stringstream ss;
+
+    for(int i=0;i<100;i++){
+        root.raw_dump(ss, 0, root.bufsize);
+        ss << root;
+    }
+    std::string bufstr = ss.str();
+    auto *dbuf = sbuf_t::sbuf_malloc(root.pos0+"MSXML", bufstr.size());
+    memcpy(dbuf->malloc_buf(), bufstr.c_str(), bufstr.size());
+    delete dbuf;
 }
 
 TEST_CASE("map_file", "[sbuf]") {
@@ -796,7 +810,6 @@ TEST_CASE("scanner_stats", "[scanner_set]") {
     scanner_config sc;
     feature_recorder_set::flags_t flags;
 
-
     feature_recorder_set fs(flags, sc);
     std::map<scanner_t*, const struct scanner_params::scanner_info*> scanner_info_db{};
     std::set<scanner_t*> enabled_scanners{}; // the scanners that are enabled
@@ -804,6 +817,29 @@ TEST_CASE("scanner_stats", "[scanner_set]") {
     auto ss = new scanner_set(sc, feature_recorder_set::flags_t(), nullptr);
     delete ss;
 }
+
+TEST_CASE("previously_processed", "[scanner_set]") {
+    scanner_config sc;
+    feature_recorder_set::flags_t f;
+    scanner_set ss(sc, f, nullptr);
+    sbuf_t slg("Simson");
+    REQUIRE(ss.previously_processed_count(slg) == 0);
+    REQUIRE(ss.previously_processed_count(slg) == 1);
+    REQUIRE(ss.previously_processed_count(slg) == 2);
+}
+
+#if 0
+TEST_CASE("mt_previously_processed", "[scanner_set]") {
+    scanner_config sc;
+    feature_recorder_set::flags_t f;
+    scanner_set ss(sc, f, nullptr);
+    sbuf_t slg("Simson");
+    ss.info();
+    REQUIRE(ss.previously_processed_count(slg) == 0);
+    REQUIRE(ss.previously_processed_count(slg) == 1);
+    REQUIRE(ss.previously_processed_count(slg) == 2);
+}
+#endif
 
 TEST_CASE("enable/disable", "[scanner_set]") {
     scanner_config sc;

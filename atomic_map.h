@@ -106,7 +106,7 @@ public:
          * right now we may have a memory leak
          */
         const std::lock_guard<std::mutex> lock(M);
-        for (auto it : mymap) {
+        for (const auto &it : mymap) {
             delete it.second;
         }
         mymap.clear();
@@ -158,7 +158,7 @@ public:
     typename std::vector<T1> keys() const {
         const std::lock_guard<std::mutex> lock(M);
         std::vector<T1>ret;
-        for (auto it : mymap) {
+        for (const auto &it : mymap) {
             ret.push_back( it.first );
         }
         return ret;
@@ -168,7 +168,7 @@ public:
     typename std::vector<T2 *> values() const {
         const std::lock_guard<std::mutex> lock(M);
         std::vector<T2 *>ret;
-        for (auto it : mymap) {
+        for (const auto &it : mymap) {
             ret.push_back( it.second );
         }
         return ret;
@@ -179,14 +179,14 @@ public:
         std::vector<item> ret;
         /* Protect access to mymap with mutex */
         const std::lock_guard<std::mutex> lock(M);
-        for (auto it : mymap) {
+        for (const auto &it : mymap) {
             ret.push_back(item(it.first, *it.second));
         }
         return ret;
     }
     void write(std::ostream &os) const {
         const std::lock_guard<std::mutex> lock(M);
-        for (auto it : mymap) {
+        for (const auto &it : mymap) {
             os << " " << it.first << ": " << (it.second) << "\n";
         }
     }

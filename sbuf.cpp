@@ -669,7 +669,7 @@ std::string sbuf_t::hash() const {
     return hash_;
 }
 
-/* Similar to above, but does not cache */
+/* Similar to above, but does not cache, so it is inherently threadsafe */
 std::string sbuf_t::hash(hash_func_t func) const {
     return func(buf, bufsize);
 }

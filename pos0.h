@@ -98,7 +98,7 @@ public:
         std::string desc;
         bool inalpha = false;
         /* Now get the std::string part of pos0 */
-        for (auto it : path) {
+        for (const auto &it : path) {
             if ((it) == '-') {
                 if (desc.size() > 0 && desc.at(desc.size() - 1) != '/') desc += '/';
                 inalpha = false;

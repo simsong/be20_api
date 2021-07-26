@@ -71,7 +71,7 @@ void feature_recorder::write(const pos0_t& pos0, const std::string& feature_, co
 
 #if 0
     /* Support in-memory histograms */
-    for (auto it:mhistograms ){
+    for (const auto &it:mhistograms ){
         const histogram_def &def = it.first;
         mhistogram_t *m = it.second;
         std::string new_feature = *feature_utf8;

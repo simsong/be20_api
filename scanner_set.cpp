@@ -7,6 +7,8 @@
 #include <cassert>
 #include <string>
 #include <vector>
+#include <thread>
+
 
 /* needed solely for loading shared libraries */
 #include "config.h"
@@ -15,6 +17,7 @@
 #include <dlfcn.h>
 #endif
 
+#include "thread-pool/thread_pool.hpp"
 #include "aftimer.h"
 #include "dfxml_cpp/src/dfxml_writer.h"
 #include "dfxml_cpp/src/hash_t.h"
@@ -34,25 +37,9 @@
  *        All of the global variables go away.
  */
 
-#if 0
-/* object for keeping track of packet callbacks */
-class packet_plugin_info {
-public:
-    packet_plugin_info(void *user_,be13::packet_callback_t *callback_):user(user_),callback(callback_){};
-    void *user;
-    be13::packet_callback_t *callback;
-};
-
-/* Vector of callbacks */
-typedef std::vector<packet_plugin_info> packet_plugin_info_vector_t;
-//packet_plugin_info_vector_t  packet_handlers;   // pcap callback handlers
-#endif
-
-/****************************************************************
- * create the scanner set
- */
-scanner_set::scanner_set(const scanner_config& sc_, const feature_recorder_set::flags_t& f, class dfxml_writer* writer_)
-    : fs(f, sc_), writer(writer_), sc(sc_)
+/* constructor and destructors */
+scanner_set::scanner_set(scanner_config& sc_, const feature_recorder_set::flags_t& f, class dfxml_writer* writer_)
+    : sc(sc_), writer(writer_), fs(f, sc_)
 {
     if (getenv("DEBUG_SCANNER_SET_PRINT_STEPS")) debug_flags.debug_print_steps = true;
     if (getenv("DEBUG_SCANNER_SET_NO_SCANNERS")) debug_flags.debug_no_scanners = true;
@@ -70,10 +57,120 @@ scanner_set::~scanner_set()
 {
 }
 
+void scanner_set::set_dfxml_writer(class dfxml_writer *writer_)
+{
+    if (writer) {
+        throw std::runtime_error("dfxml_writer already set");
+    }
+    writer = writer_;
+}
+
+class dfxml_writer *scanner_set::get_dfxml_writer() const
+{
+    return writer;
+}
+
+
+/****************************************************************
+ *** scanner database
+ ****************************************************************/
+
+const std::string scanner_set::get_scanner_name(scanner_t scanner) const {
+    auto it = scanner_info_db.find(scanner);
+    if (it != scanner_info_db.end()) { return it->second->name; }
+    return "";
+}
+
+scanner_t* scanner_set::get_scanner_by_name(const std::string search_name) const {
+    for (const auto &it : scanner_info_db) {
+        if (it.second->name == search_name) { return it.first; }
+    }
+    throw NoSuchScanner(search_name);
+}
+
+/****************************************************************
+ *** thread interface
+ ****************************************************************/
+
+void scanner_set::notify_thread()
+{
+    while(true){
+        time_t rawtime = time (0);
+        struct tm *timeinfo = localtime (&rawtime);
+        std::cerr << asctime(timeinfo) << "\n";
+        print_tp_status();
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+    }
+}
+
+void scanner_set::launch_workers(int count)
+{
+    assert(pool == nullptr);
+    pool = new thread_pool(count);
+}
+
+void scanner_set::decrement_queue_stats(sbuf_t *sbufp)
+{
+    assert (sbufp != nullptr );
+    if (sbufp->depth()==0){
+        depth0_sbufs_in_queue -= 1;
+        assert(depth0_sbufs_in_queue>=0);
+        depth0_bytes_in_queue -= sbufp->bufsize;
+    }
+    sbufs_in_queue -= 1;
+    assert(sbufs_in_queue>=0);
+    bytes_in_queue -= sbufp->bufsize;
+}
+
+
+void scanner_set::thread_set_status(const std::string &status)
+{
+    thread_status[std::this_thread::get_id()] = status;
+}
+
+/*
+ * Print the status of each thread in the threadpool.
+ */
+void scanner_set::print_tp_status()
+{
+    if (pool==nullptr) return;
+
+    std::cout << "---enter print_tp_status----------------\n";
+    std::cerr << "depth 0 sbufs in queue " << depth0_sbufs_in_queue << "\n";
+    std::cerr << "depth 0 bytes in queue " << depth0_bytes_in_queue << "\n";
+    std::cerr << "sbufs in queue " << sbufs_in_queue << "\n";
+    std::cerr << "bytes in queue " << bytes_in_queue << "\n";
+#ifdef BSD_STYLE
+    show_free_bsd(std::cerr);
+#endif
+    std::cout << "----------------------------------------\n";
+}
+
+void scanner_set::join()
+{
+    if (pool != nullptr) {
+        pool->wait_for_tasks();
+    }
+}
+
+void scanner_set::launch_notify_thread()
+{
+    notifier = new std::thread(&scanner_set::notify_thread, this);
+}
+
+/****************************************************************
+ *** scanner stats
+ ****************************************************************/
+
 void scanner_set::add_scanner_stat(scanner_t *scanner, const struct scanner_set::stats &n)
 {
     scanner_stats[scanner] += n;
 }
+
+
+/****************************************************************
+ *** per-path stats
+ ****************************************************************/
 
 void scanner_set::add_path_stat(std::string path, const struct scanner_set::stats &n)
 {
@@ -83,14 +180,23 @@ void scanner_set::add_path_stat(std::string path, const struct scanner_set::stat
 
 
 /****************************************************************
- ** PHASE_INIT:
- ** Scanner management: Add scanners to the scanner set.
+ *** Feature recorders
  ****************************************************************/
 
+feature_recorder& scanner_set::named_feature_recorder(const std::string name) const
+{
+    return fs.named_feature_recorder(name);
+}
+
+std::vector<std::string> scanner_set::feature_file_list() const
+{
+    return fs.feature_file_list();
+}
+
 /****************************************************************
- *
- * Add a scanner to the scanner set.
- */
+ *** Scanning
+ ****************************************************************/
+
 
 void scanner_set::add_scanner(scanner_t scanner) {
     /* If scanner is already loaded, that's an error */
@@ -101,7 +207,7 @@ void scanner_set::add_scanner(scanner_t scanner) {
      * We then ask the scanner to initialize.
      */
     scanner_params::PrintOptions po;
-    scanner_params sp(*this, scanner_params::PHASE_INIT, nullptr, po, nullptr);
+    scanner_params sp(sc, this, scanner_params::PHASE_INIT, nullptr, po, nullptr);
 
     // Send the scanner the PHASE_INIT message, which will cause it to fill in the sp.info field.
     (*scanner)(sp);
@@ -118,7 +224,7 @@ void scanner_set::add_scanner(scanner_t scanner) {
     if (debug_flags.debug_register) {
         std::cerr << "add_scanner( " << sp.info->name << " )\n";
     }
-    scanner_info_db[scanner] = sp.info;
+    scanner_info_db[scanner] = std::move(sp.info);
 
     // Make sure it was registered
     if (scanner_info_db.find(scanner) == scanner_info_db.end()) {}
@@ -128,14 +234,19 @@ void scanner_set::add_scanner(scanner_t scanner) {
 }
 
 /* add_scanners allows a calling program to add a null-terminated array of scanners. */
-void scanner_set::add_scanners(scanner_t* const* scanners) {
+void scanner_set::add_scanners(scanner_t* const* scanners)
+{
     for (int i = 0; scanners[i]; i++) { add_scanner(scanners[i]); }
 }
 
 /* Add a scanner from a file (it's in the file as a shared library) */
+void scanner_set::add_scanner_file(std::string fn)
+{
+    if(time(0)>10) {
+        throw std::runtime_error("not implemented yet.");
+    }
 #if 0
-void scanner_set::add_scanner_file(std::string fn, const scanner_config &c)
-{    /* Figure out the function name */
+    /* Figure out the function name */
     size_t extloc = fn.rfind('.');
     if(extloc==std::string::npos){
         fprintf(stderr,"Cannot find '.' in %s",fn.c_str());
@@ -182,13 +293,13 @@ void scanner_set::add_scanner_file(std::string fn, const scanner_config &c)
     return;
 #endif
     load_scanner(*scanner,sc);
-}
 #endif
+}
 
-#if 0
 /* Add all of the scanners in a directory */
-void scanner_set::add_scanner_directory(const std::string &dirname,const scanner_info::scanner_config &sc )
+void scanner_set::add_scanner_directory(const std::string &dirname)
 {
+#if 0
 TODO: Re-implement using C++17 directory reading.
 
 
@@ -204,50 +315,10 @@ TODO: Re-implement using C++17 directory reading.
             load_scanner_file(dirname+"/"+fname,sc );
         }
     }
-}
 #endif
-
-#if 0
-void scanner_set::load_scanner_packet_handlers()
-{
-    for (auto it: enabled_scanners){
-        const scanner_def *sd = (*it);
-            if(sd->info.packet_cb){
-                packet_handlers.push_back(packet_plugin_info(sd->info.packet_user,sd->info.packet_cb));
-            }
-        }
-    }
-}
-#endif
-
-/****************************************************************
- *** scanner plugin loading
- ****************************************************************/
-const std::string scanner_set::get_scanner_name(scanner_t scanner) const {
-    auto it = scanner_info_db.find(scanner);
-    if (it != scanner_info_db.end()) { return it->second->name; }
-    return "";
-}
-
-scanner_t* scanner_set::get_scanner_by_name(const std::string search_name) const {
-    for (auto it : scanner_info_db) {
-        if (it.second->name == search_name) { return it.first; }
-    }
-#if 0
-    std::cerr << "scanner_set::get_scanner_by_name(" << search_name << ")\nscanners on file:\n";
-    for (auto it: scanner_info_db) {
-        std::cerr << " " <<  it.second->name  << "\n";
-    }
-    std::cerr << "no such scanner: " << search_name << "\n";
-#endif
-    throw NoSuchScanner(search_name);
 }
 
 /* This interface creates if we are in init phase, doesn't if we are in scan phase */
-feature_recorder& scanner_set::named_feature_recorder(const std::string name) const {
-    return fs.named_feature_recorder(name);
-}
-
 /**
  * Print a list of scanners.
  * We need to load them to do this, so they are loaded with empty config
@@ -260,28 +331,32 @@ bool cmp(const struct scanner_params::scanner_info* a,
 }
 void scanner_set::info_scanners(std::ostream& out, bool detailed_info, bool detailed_settings, const char enable_opt,
                                 const char disable_opt) {
-    /* First make a sorted vector of the scanners */
-    std::vector<const struct scanner_params::scanner_info *> A;
+    /* Get a list of scanner names */
+    std::vector<std::string> all_scanner_names,enabled_scanner_names, disabled_scanner_names;
     for (auto &it : scanner_info_db) {
-        A.push_back( it.second );
+        all_scanner_names.push_back( it.second->name );
     }
-    sort (A.begin(), A.end(), cmp);
 
-    std::vector<std::string> enabled_scanner_names, disabled_scanner_names;
-    for (auto it : A) {
+    /* Sort them */
+    sort (all_scanner_names.begin(), all_scanner_names.end());
+
+    /* Now print info on each scanner in alphabetical order */
+    for (const auto &name : all_scanner_names) {
+        scanner_t *scanner = get_scanner_by_name(name);
+        const struct scanner_params::scanner_info &scanner_info  = *(scanner_info_db[scanner]);
         if (detailed_info) {
-            if (it->name.size()) out << "Scanner Name: " << it->name;
-            if (is_scanner_enabled(it->name)) { out << " (ENABLED) "; }
+            if (scanner_info.name.size()) out << "Scanner Name: " << scanner_info.name;
+            if (is_scanner_enabled(scanner_info.name)) { out << " (ENABLED) "; }
             out << "\n";
-            out << "flags:  " << it->scanner_flags.asString() << "\n";
-            if (it->author.size()) out << "Author: " << it->author << "\n";
-            if (it->description.size()) out << "Description: " << it->description << "\n";
-            if (it->url.size()) out << "URL: " << it->url << "\n";
-            if (it->scanner_version.size()) out << "Scanner Version: " << it->scanner_version << "\n";
-            out << "Min sbuf size: " << it->min_sbuf_size << "\n";
+            out << "flags:  " << scanner_info.scanner_flags.asString() << "\n";
+            if (scanner_info.author.size()) out << "Author: " << scanner_info.author << "\n";
+            if (scanner_info.description.size()) out << "Description: " << scanner_info.description << "\n";
+            if (scanner_info.url.size()) out << "URL: " << scanner_info.url << "\n";
+            if (scanner_info.scanner_version.size()) out << "Scanner Version: " << scanner_info.scanner_version << "\n";
+            out << "Min sbuf size: " << scanner_info.min_sbuf_size << "\n";
             out << "Feature Names: ";
             int count = 0;
-            for (auto i2 : it->feature_defs) {
+            for (auto i2 : scanner_info.feature_defs) {
                 if (count++ > 0) out << ", ";
                 out << i2.name;
             }
@@ -289,63 +364,32 @@ void scanner_set::info_scanners(std::ostream& out, bool detailed_info, bool deta
             out << "\n";
             if (detailed_settings) {
                 out << "Settable Options (and their defaults): \n";
-                out << it->helpstr;
+                out << scanner_info.helpstr;
             }
             out << "------------------------------------------------\n\n";
         }
-        if (it->scanner_flags.no_usage) continue;
-        if (is_scanner_enabled(it->name)) {
-            enabled_scanner_names.push_back(it->name);
+        if (scanner_info.scanner_flags.no_usage) continue;
+        if (is_scanner_enabled(scanner_info.name)) {
+            enabled_scanner_names.push_back(scanner_info.name);
         } else {
-            disabled_scanner_names.push_back(it->name);
+            disabled_scanner_names.push_back(scanner_info.name);
         }
     }
     if (enabled_scanner_names.size()) {
         out << "These scanners enabled; disable with -" << disable_opt << ":\n";
-        for (auto it : enabled_scanner_names) {
+        for (const auto &it : enabled_scanner_names) {
             out << "   -" << disable_opt << " " << it << " - disable scanner " << it << "\n";
         }
     }
     if (disabled_scanner_names.size()) {
         out << "These scanners disabled; enable with -" << enable_opt << ":\n";
         sort(disabled_scanner_names.begin(), disabled_scanner_names.end());
-        for (auto it : disabled_scanner_names) {
+        for (const auto &it : disabled_scanner_names) {
             out << "   -" << enable_opt << " " << it << " - enable scanner " << it << "\n";
         }
     }
 }
 
-void scanner_set::log(const std::string message)
-{
-    std::stringstream attribute;
-    attribute << "t='" << time(0) << "'";
-    std::cerr  << "log: " << message << " " << attribute.str() << "\n";
-    if (writer){
-        writer->xmlout("log", message, attribute.str(), false);
-        writer->flush();
-    }
-    else {
-        std::cerr << "writer is null\n";
-    }
-}
-
-void scanner_set::log(const sbuf_t &sbuf, const std::string message) // writes sbuf if not too deep.
-{
-    if (sbuf.depth() <= log_depth) {
-        std::stringstream m2;
-        m2 << sbuf.pos0 << " buflen=" << sbuf.bufsize;
-        if (sbuf.has_hash()) {
-            m2 << " " << sbuf.hash();
-        }
-        m2 << ": " << message;
-        log(m2.str());
-    }
-}
-
-
-/****************************************************************
- *** PHASE_ENABLE
- ****************************************************************/
 
 /**
  * apply_sacanner_commands:
@@ -356,12 +400,12 @@ void scanner_set::apply_scanner_commands() {
     if (current_phase != scanner_params::PHASE_INIT) {
         throw std::runtime_error("apply_scanner_commands can only be run in scanner_params::PHASE_INIT");
     }
-    for (auto cmd : sc.scanner_commands) {
+    for (const auto &cmd : sc.scanner_commands) {
         if (cmd.scannerName == scanner_config::scanner_command::ALL_SCANNERS) {
             /* If name is 'all' and the NO_ALL flag is not set for that scanner,
              * then either enable it or disable it as appropriate
              */
-            for (auto it : scanner_info_db) {
+            for (const auto &it : scanner_info_db) {
                 if (it.second->scanner_flags.no_all) {
                     continue;
                 }
@@ -386,15 +430,15 @@ void scanner_set::apply_scanner_commands() {
      * Multiple scanners may request the same feature recorder without generating an error.
      */
     fs.create_alert_recorder();
-    for (auto sit : scanner_info_db) {
-        for (auto it : sit.second->feature_defs) {
+    for (const auto &sit : scanner_info_db) {
+        for (const auto &it : sit.second->feature_defs) {
             fs.create_feature_recorder(it);
         }
 
         /* Create all of the requested histograms
          * Multiple scanners may request the same histograms without generating an error.
          */
-        for (auto it : sit.second->histogram_defs) {
+        for (const auto &it : sit.second->histogram_defs) {
             // Make sure that a feature recorder exists for the feature specified in the histogram
             fs.named_feature_recorder(it.feature).histogram_add(it);
         }
@@ -403,24 +447,25 @@ void scanner_set::apply_scanner_commands() {
     /* Tell each of the enabled scanners to init */
     current_phase = scanner_params::PHASE_INIT2;
     scanner_params::PrintOptions po; // empty po
-    scanner_params sp(*this, scanner_params::PHASE_INIT2, nullptr, po, nullptr);
-    for (auto it : enabled_scanners) { (*it)(sp); }
-
+    scanner_params sp(sc, this, scanner_params::PHASE_INIT2, nullptr, po, nullptr);
+    for (const auto &it : enabled_scanners) { (*it)(sp); }
 
     /* set the carve defaults */
     fs.set_carve_defaults();
     current_phase = scanner_params::PHASE_ENABLED;
 }
 
-bool scanner_set::is_scanner_enabled(const std::string& name) {
+bool scanner_set::is_scanner_enabled(const std::string& name)
+{
     scanner_t* scanner = get_scanner_by_name(name);
     return enabled_scanners.find(scanner) != enabled_scanners.end();
 }
 
 // put the enabled scanners into the vector
-std::vector<std::string> scanner_set::get_enabled_scanners() const {
+std::vector<std::string> scanner_set::get_enabled_scanners() const
+{
     std::vector<std::string> ret;
-    for (auto it : enabled_scanners) {
+    for (const auto &it : enabled_scanners) {
         auto f = scanner_info_db.find(it);
         ret.push_back(f->second->name);
     }
@@ -428,14 +473,24 @@ std::vector<std::string> scanner_set::get_enabled_scanners() const {
 }
 
 // Return true if any of the enabled scanners are a FIND scanner
-bool scanner_set::is_find_scanner_enabled() {
-    for (auto it : enabled_scanners) {
+bool scanner_set::is_find_scanner_enabled()
+{
+    for (const auto &it : enabled_scanners) {
         if (scanner_info_db[it]->scanner_flags.find_scanner) { return true; }
     }
     return false;
 }
 
-const std::filesystem::path scanner_set::get_input_fname() const { return sc.input_fname; }
+
+
+/****************************************************************
+ *** PHASE_ENABLE methods.
+ ****************************************************************/
+
+const std::filesystem::path scanner_set::get_input_fname() const
+{
+return sc.input_fname;
+}
 
 
 
@@ -450,63 +505,6 @@ void scanner_set::phase_scan() {
     }
     fs.frm_freeze();
     current_phase = scanner_params::PHASE_SCAN;
-}
-
-/****************************************************************
- *** Data handling
- ****************************************************************/
-
-/*
- * uses hash to determine if a block was prevously seen.
- * Hopefully sbuf.buf() is zero-copy.
- */
-bool scanner_set::check_previously_processed(const sbuf_t& sbuf) {
-    return seen_set.check_for_presence_and_insert(sbuf.hash());
-}
-
-/****************************************************************
- *** PHASE_SHUTDOWN methods.
- ****************************************************************/
-
-/**
- * Shutdown:
- * 1 - change phase from PHASE_SCAN to PHASE_SHUTDOWN.
- * 2 - Shut down all of the scanners.
- * 3 - write out the in-memory histograms.
- * 4 - terminate the XML file.
- */
-void scanner_set::shutdown() {
-    if (current_phase != scanner_params::PHASE_SCAN) {
-        throw std::runtime_error("shutdown can only be called in scanner_params::PHASE_SCAN");
-    }
-    current_phase = scanner_params::PHASE_SHUTDOWN;
-
-    /* Tell the scanners we are shutting down */
-    scanner_params::PrintOptions po; // empty po
-    scanner_params sp(*this, scanner_params::PHASE_SHUTDOWN, nullptr, po, nullptr);
-    for (auto it : enabled_scanners) { (*it)(sp); }
-
-    fs.feature_recorders_shutdown();
-
-    /* Tell every feature recorder to flush all of its histograms */
-    fs.histograms_generate();
-
-    /* Output the scanner stats */
-    if (writer) {
-        writer->push("scanner_stats");
-#if 0
-        for (scanner_t *scanner : scanner_stats.keys()) {
-            struct scanner_set::stats &st = scanner_stats[scanner];
-            writer->set_oneline("true");
-            writer->push("scanner");
-            writer->xmlout("name", get_scanner_name(scanner));
-            writer->xmlout("ns", st.ns);
-            writer->xmlout("calls", st.calls);
-            writer->pop();
-        }
-#endif
-        writer->pop();
-    }
 }
 
 // https://stackoverflow.com/questions/16190078/how-to-atomically-update-a-maximum-value
@@ -535,7 +533,6 @@ void scanner_set::process_sbuf(class sbuf_t* sbufp) {
     }
 
     const class sbuf_t& sbuf = *sbufp; // don't allow modification
-
     aftimer timer;
     timer.start();
 
@@ -551,11 +548,17 @@ void scanner_set::process_sbuf(class sbuf_t* sbufp) {
     }
 
     update_maximum<unsigned int>(max_depth_seen, sbuf.depth());
+    auto pool_hold = (void*)pool;
 
     /* Determine if we have seen this buffer before */
-    bool seen_before = check_previously_processed(sbuf);
+    bool seen_before = previously_processed_count(sbuf) > 0;
     if (seen_before) {
         dup_bytes_encountered += sbuf.bufsize;
+    }
+    auto pool_now = (void *)pool;
+    if(pool_now != pool_hold){
+        std::cerr << "scanner_set::process_sbuf: error. pool_hold=" << pool_hold << "but now pool_now=" << pool_now << "\n";
+        assert(pool_now == pool_hold);
     }
 
     /* Determine if the sbuf consists of a repeating ngram. If so,
@@ -564,7 +567,7 @@ void scanner_set::process_sbuf(class sbuf_t* sbufp) {
      */
 
     thread_set_status( sbuf.pos0.str() + " finding ngram size (" + std::to_string(sbuf.bufsize) + ")" );
-    size_t ngram_size = sbuf.find_ngram_size(max_ngram);
+    size_t ngram_size = sbuf.find_ngram_size(sc.max_ngram);
 
     /****************************************************************
      *** CALL EACH OF THE SCANNERS ON THE SBUF
@@ -574,7 +577,9 @@ void scanner_set::process_sbuf(class sbuf_t* sbufp) {
         sbuf.hex_dump(std::cerr);
     }
 
-    for (auto it : scanner_info_db) {
+    /* Make the scanner params once, rather than every time through */
+    scanner_params sp(sc, this, scanner_params::PHASE_SCAN, sbufp, scanner_params::PrintOptions(), nullptr);
+    for (const auto &it : scanner_info_db) {
         // Look for reasons not to run a scanner
         // this is a lot of find operations - could we make a vector of the enabled scanner_info_dbs?
         const auto &name = it.second->name; // scanner name
@@ -635,7 +640,6 @@ void scanner_set::process_sbuf(class sbuf_t* sbufp) {
             if (record_call_stats || debug_flags.debug_print_steps) {
                 t.start();
             }
-            scanner_params sp(*this, scanner_params::PHASE_SCAN, sbufp, scanner_params::PrintOptions(), nullptr);
             (*it.first)(sp);
 
             if (record_call_stats || debug_flags.debug_print_steps) {
@@ -674,15 +678,129 @@ void scanner_set::process_sbuf(class sbuf_t* sbufp) {
 
 void scanner_set::schedule_sbuf(sbuf_t *sbufp)
 {
-    process_sbuf(sbufp);
+    assert (sbufp != nullptr );
+    /* Run in same thread? */
+    if (pool==nullptr || (sbufp->depth() > 0 && sbufp->bufsize < SAME_THREAD_SBUF_SIZE)) {
+        process_sbuf(sbufp);
+        return;
+    }
+
+    if (sbufp->depth()==0) {
+        depth0_sbufs_in_queue += 1;
+        depth0_bytes_in_queue += sbufp->bufsize;
+    }
+    sbufs_in_queue += 1;
+    bytes_in_queue += sbufp->bufsize;
+
+    /* Run in a different thread */
+    pool->push_task( [this, sbufp]{ this->process_sbuf(sbufp); } );
 }
+
 
 void scanner_set::delete_sbuf(sbuf_t *sbufp)
 {
+    assert (sbufp != nullptr );
+    thread_set_status(sbufp->pos0.str() + " delete_sbuf");
     delete sbufp;
 }
 
-std::string scanner_set::hash(const sbuf_t& sbuf) const { return sbuf.hash(fs.hasher.func); }
+/****************************************************************
+ *** PHASE_SHUTDOWN methods.
+ ****************************************************************/
+
+
+void scanner_set::log(const std::string message)
+{
+    std::stringstream attribute;
+    attribute << "t='" << time(0) << "'";
+    std::cerr  << "log: " << message << " " << attribute.str() << "\n";
+    if (writer){
+        writer->xmlout("log", message, attribute.str(), false);
+        writer->flush();
+    }
+    else {
+        std::cerr << "writer is null\n";
+    }
+}
+
+void scanner_set::log(const sbuf_t &sbuf, const std::string message) // writes sbuf if not too deep.
+{
+    if (sbuf.depth() <= log_depth) {
+        std::stringstream m2;
+        m2 << sbuf.pos0 << " buflen=" << sbuf.bufsize;
+        if (sbuf.has_hash()) {
+            m2 << " " << sbuf.hash();
+        }
+        m2 << ": " << message;
+        log(m2.str());
+    }
+}
+
+
+
+
+/**
+ * Shutdown:
+ * 1 - change phase from PHASE_SCAN to PHASE_SHUTDOWN.
+ * 2 - Shut down all of the scanners.
+ * 3 - write out the in-memory histograms.
+ * 4 - terminate the XML file.
+ */
+void scanner_set::shutdown() {
+    if (current_phase != scanner_params::PHASE_SCAN) {
+        throw std::runtime_error("shutdown can only be called in scanner_params::PHASE_SCAN");
+    }
+    current_phase = scanner_params::PHASE_SHUTDOWN;
+
+    /* Tell the scanners we are shutting down */
+    scanner_params::PrintOptions po; // empty po
+    scanner_params sp(sc, this, scanner_params::PHASE_SHUTDOWN, nullptr, po, nullptr);
+    for (const auto &it : enabled_scanners) { (*it)(sp); }
+
+    fs.feature_recorders_shutdown();
+
+    /* Tell every feature recorder to flush all of its histograms */
+    fs.histograms_generate();
+
+    /* Output the scanner stats */
+    if (writer) {
+        writer->push("scanner_stats");
+#if 0
+        for (scanner_t *scanner : scanner_stats.keys()) {
+            struct scanner_set::stats &st = scanner_stats[scanner];
+            writer->set_oneline("true");
+            writer->push("scanner");
+            writer->xmlout("name", get_scanner_name(scanner));
+            writer->xmlout("ns", st.ns);
+            writer->xmlout("calls", st.calls);
+            writer->pop();
+        }
+#endif
+        writer->pop();
+    }
+}
+
+/*
+ * uses hash to determine if a block was prevously seen.
+ * Hopefully sbuf.buf() is zero-copy.
+ */
+std::string scanner_set::hash(const sbuf_t& sbuf) const
+{
+    return sbuf.hash(fs.hasher.func);
+}
+
+uint64_t scanner_set::previously_processed_count(const sbuf_t& sbuf) {
+    std::string hash = sbuf.hash();
+    return previously_processed_counter[ hash ]++;
+}
+
+
+
+
+/****************************************************************
+ *** Feature Recorder
+ ****************************************************************/
+
 
 /**
  * Process a pcap packet.
@@ -697,4 +815,29 @@ void scanner_set::process_packet(const be13::packet_info &pi)
 }
 #endif
 
-std::vector<std::string> scanner_set::feature_file_list() const { return fs.feature_file_list(); }
+/****************************************************************
+ *** packet handling
+ ****************************************************************/
+
+#if 0
+/* Vector of callbacks */
+typedef std::vector<packet_plugin_info> packet_plugin_info_vector_t;
+//packet_plugin_info_vector_t  packet_handlers;   // pcap callback handlers
+/* object for keeping track of packet callbacks */
+class packet_plugin_info {
+public:
+    packet_plugin_info(void *user_,be13::packet_callback_t *callback_):user(user_),callback(callback_){};
+    void *user;
+    be13::packet_callback_t *callback;
+};
+void scanner_set::load_scanner_packet_handlers()
+{
+    for (const auto &it: enabled_scanners){
+        const scanner_def *sd = (*it);
+            if(sd->info.packet_cb){
+                packet_handlers.push_back(packet_plugin_info(sd->info.packet_user,sd->info.packet_cb));
+            }
+        }
+    }
+}
+#endif
