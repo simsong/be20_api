@@ -98,7 +98,7 @@ void scanner_set::notify_thread()
         time_t rawtime = time (0);
         struct tm *timeinfo = localtime (&rawtime);
         std::cerr << asctime(timeinfo) << "\n";
-        print_tp_status();
+        print_tp_stats();
         std::this_thread::sleep_for(std::chrono::seconds(1));
     }
 }
@@ -109,17 +109,22 @@ void scanner_set::launch_workers(int count)
     pool = new thread_pool(count);
 }
 
-void scanner_set::decrement_queue_stats(sbuf_t *sbufp)
+void scanner_set::update_queue_stats(sbuf_t *sbufp, int dir)
 {
     assert (sbufp != nullptr );
+    assert ( dir==1 || dir==-1);
     if (sbufp->depth()==0){
-        depth0_sbufs_in_queue -= 1;
-        assert(depth0_sbufs_in_queue>=0);
-        depth0_bytes_in_queue -= sbufp->bufsize;
+        depth0_sbufs_in_queue += 1 * dir;
+        depth0_bytes_in_queue += sbufp->bufsize * dir;
+        assert(depth0_sbufs_in_queue >= 0);
+        assert(depth0_bytes_in_queue >= 0);
     }
-    sbufs_in_queue -= 1;
-    assert(sbufs_in_queue>=0);
-    bytes_in_queue -= sbufp->bufsize;
+    sbufs_in_queue += 1 * dir;
+    bytes_in_queue += sbufp->bufsize * dir;
+
+    assert(sbufs_in_queue >= 0);
+    assert(sbufs_in_queue >= depth0_sbufs_in_queue);
+    assert(bytes_in_queue >= depth0_bytes_in_queue);
 }
 
 
@@ -131,11 +136,12 @@ void scanner_set::thread_set_status(const std::string &status)
 /*
  * Print the status of each thread in the threadpool.
  */
-void scanner_set::print_tp_status()
+void scanner_set::print_tp_stats()
 {
     if (pool==nullptr) return;
 
     std::cout << "---enter print_tp_status----------------\n";
+    std::cerr << "tasks queued: " << pool->get_tasks_queued() << "\n";
     std::cerr << "depth 0 sbufs in queue " << depth0_sbufs_in_queue << "\n";
     std::cerr << "depth 0 bytes in queue " << depth0_bytes_in_queue << "\n";
     std::cerr << "sbufs in queue " << sbufs_in_queue << "\n";
@@ -324,11 +330,13 @@ TODO: Re-implement using C++17 directory reading.
  * We need to load them to do this, so they are loaded with empty config
  * Note that scanners can only be loaded once, so this exits.
  */
+#if 0
 bool cmp(const struct scanner_params::scanner_info* a,
          const struct scanner_params::scanner_info* b)
 {
     return a->name < b->name;
 }
+#endif
 void scanner_set::info_scanners(std::ostream& out, bool detailed_info, bool detailed_settings, const char enable_opt,
                                 const char disable_opt) {
     /* Get a list of scanner names */
@@ -519,8 +527,8 @@ template <typename T> void update_maximum(std::atomic<T>& maximum_value, T const
 void scanner_set::process_sbuf(class sbuf_t* sbufp) {
     assert(sbufp != nullptr);
     assert(sbufp->children == 0); // we are going to free it, so it better not have any children.
-
     thread_set_status( sbufp->pos0.str() + " process_sbuf (" + std::to_string(sbufp->bufsize) + ")" );
+    //std::cerr << "process_sbuf: " << *sbufp << "\n";
 
     /* If we  have not transitioned to PHASE::SCAN, error */
     if (current_phase != scanner_params::PHASE_SCAN) {
@@ -537,7 +545,6 @@ void scanner_set::process_sbuf(class sbuf_t* sbufp) {
     timer.start();
 
     const pos0_t& pos0 = sbuf.pos0;
-
     /* If we are too deep, error out */
     if (sbuf.depth() >= max_depth) {
         fs.get_alert_recorder().write(pos0,
@@ -679,18 +686,16 @@ void scanner_set::process_sbuf(class sbuf_t* sbufp) {
 void scanner_set::schedule_sbuf(sbuf_t *sbufp)
 {
     assert (sbufp != nullptr );
+    //std::cerr << "schedule_sbuf: " << *sbufp << "\n";
     /* Run in same thread? */
     if (pool==nullptr || (sbufp->depth() > 0 && sbufp->bufsize < SAME_THREAD_SBUF_SIZE)) {
         process_sbuf(sbufp);
         return;
     }
 
-    if (sbufp->depth()==0) {
-        depth0_sbufs_in_queue += 1;
-        depth0_bytes_in_queue += sbufp->bufsize;
-    }
-    sbufs_in_queue += 1;
-    bytes_in_queue += sbufp->bufsize;
+    sbufp->scheduled = true;
+    update_queue_stats( sbufp, +1 );
+    print_tp_stats();
 
     /* Run in a different thread */
     pool->push_task( [this, sbufp]{ this->process_sbuf(sbufp); } );
@@ -699,8 +704,17 @@ void scanner_set::schedule_sbuf(sbuf_t *sbufp)
 
 void scanner_set::delete_sbuf(sbuf_t *sbufp)
 {
-    assert (sbufp != nullptr );
+    //std::cerr << "delete_sbuf: " << *sbufp << "\n";
+    if (sbufp->scheduled) {
+        update_queue_stats( sbufp, -1 );
+    }
     thread_set_status(sbufp->pos0.str() + " delete_sbuf");
+    print_tp_stats();
+    if (sbufp->depth()==0 && writer) {
+        std::stringstream attribute;
+        attribute << "t='" << time(0) << "'";
+        writer->xmlout("sbuf_delete", sbufp->pos0.str(), attribute.str(), false);
+    }
     delete sbufp;
 }
 

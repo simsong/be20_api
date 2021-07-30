@@ -5,10 +5,8 @@
 /*
  * Stream interfaces
  */
-sbuf_stream::sbuf_stream(const sbuf_t& sbuf_) : sbuf(sbuf_), offset(0) {}
-
+sbuf_stream::sbuf_stream(const sbuf_t& sbuf_) : sbuf(sbuf_) { }
 sbuf_stream::~sbuf_stream() {}
-
 void sbuf_stream::seek(size_t offset_) { offset = offset_; }
 
 size_t sbuf_stream::tell() { return offset; }
@@ -160,32 +158,35 @@ int64_t sbuf_stream::get64i(sbuf_t::byte_order_t bo) {
 /*
  * string readers
  */
-void sbuf_stream::getUTF8(size_t num_octets_requested, std::string& utf8_string) {
-    sbuf.getUTF8(num_octets_requested, utf8_string);
+std::string sbuf_stream::getUTF8(size_t num_octets_requested)
+{
+    std::string utf8_string = sbuf.getUTF8(num_octets_requested);
     offset += utf8_string.length();
-    return;
+    return utf8_string;
 }
-void sbuf_stream::getUTF8(std::string& utf8_string) {
-    sbuf.getUTF8(offset, utf8_string);
-    size_t num_bytes = utf8_string.length();
+std::string sbuf_stream::getUTF8() {
+    std::string ret = sbuf.getUTF8(offset);
+    size_t num_bytes = ret.length();
     // if anything was read then also skip \0
-    if (num_bytes > 0) { num_bytes++; }
+    if (num_bytes > 0) {
+        num_bytes++;
+    }
     offset += num_bytes;
-    return;
+    return ret;
 }
 
-void sbuf_stream::getUTF16(size_t code_units_requested, std::wstring& utf16_string) {
-    sbuf.getUTF16(offset, code_units_requested, utf16_string);
-    offset += utf16_string.length() * 2;
-    return;
+std::wstring sbuf_stream::getUTF16(size_t code_units_requested) {
+    std::wstring ret = sbuf.getUTF16(offset, code_units_requested);
+    offset += ret.length() * 2;
+    return ret;
 }
-void sbuf_stream::getUTF16(std::wstring& utf16_string) {
-    sbuf.getUTF16(offset, utf16_string);
+std::wstring sbuf_stream::getUTF16() {
+    std::wstring utf16_string = sbuf.getUTF16(offset);
     size_t num_bytes = utf16_string.length() * 2;
     if (num_bytes > 0) {
         // if anything was read then also skip \U0000
         num_bytes += 2;
     }
     offset += num_bytes;
-    return;
+    return utf16_string;
 }

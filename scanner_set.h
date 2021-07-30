@@ -11,6 +11,7 @@
 #include <vector>
 #include <memory>
 
+#include "thread-pool/thread_pool.hpp"
 #include "atomic_map.h"
 #include "sbuf.h"
 #include "scanner_config.h"
@@ -137,6 +138,8 @@ public:
 private:
     static const inline size_t SAME_THREAD_SBUF_SIZE = 8192; // sbufs smaller than this run in the same thread.
     class thread_pool *pool {nullptr}; // nullptr means we are not threading
+public:;
+    int get_thread_count() { return (pool!=nullptr) ? pool->get_thread_count() : 1; };
     std::atomic<int> depth0_sbufs_in_queue {0};
     std::atomic<uint64_t> depth0_bytes_in_queue {0};
     std::atomic<int> sbufs_in_queue {0};
@@ -149,9 +152,9 @@ private:
 public:
     // thread interface
     void launch_workers(int count);
-    void decrement_queue_stats(sbuf_t *sbufp);
+    void update_queue_stats(sbuf_t *sbufp, int dir); // either +1 increment or -1 decrement
     void thread_set_status(const std::string &status); // designed to be overridden
-    void print_tp_status();                  // print the status of each thread
+    void print_tp_stats();                  // print the status of each thread
     void join();                            // join the threads
     void launch_notify_thread();               // notify what's going on
 
@@ -226,8 +229,10 @@ public:
 
     /* PHASE SCAN */
     void phase_scan();               // start the scan phase
+private:;
     void process_sbuf(sbuf_t* sbuf); // process the sbuf, then delete it.
-    void schedule_sbuf(sbuf_t* sbuf);  // schedule the sbuf to be processed
+public:;
+    void schedule_sbuf(sbuf_t* sbuf);  // schedule the sbuf to be processed, after which it is deleted
     void delete_sbuf(sbuf_t *sbuf);    // delete after processing
 
     // void     process_packet(const be13::packet_info &pi);

@@ -17,7 +17,7 @@
 class sbuf_stream {
 private:
     const sbuf_t& sbuf;
-    size_t offset;
+    size_t offset {};
 
 public:
     sbuf_stream(const sbuf_t& sbuf_);
@@ -62,10 +62,10 @@ public:
     /**
      * \name string and wstring stream readers
      * @{ */
-    void getUTF8(std::string& utf8_string);
-    void getUTF8(size_t num_octets_requested, std::string& utf8_string);
-    void getUTF16(std::wstring& utf16_string);
-    void getUTF16(size_t num_code_units_requested, std::wstring& utf16_string);
+    std::string  getUTF8();
+    std::string  getUTF8(size_t num_octets_requested );
+    std::wstring getUTF16();
+    std::wstring getUTF16(size_t num_code_units_requested);
     /** @} */
 };
 

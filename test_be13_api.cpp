@@ -621,8 +621,7 @@ TEST_CASE("hello_sbuf", "[sbuf]") {
     REQUIRE(sb1.hash() != "");
     REQUIRE(sb1.hash() == sbuf_t(hello8).hash());
 
-    std::string s;
-    sb1.getUTF8(6, 5, s);
+    std::string s = sb1.getUTF8(6, 5);
     REQUIRE(s == "world");
 
     sbuf_t sb2("This\nis\na\ntest");
@@ -934,7 +933,7 @@ TEST_CASE("run", "[scanner]") {
 
     /* Perform a simulated scan */
     ss.phase_scan();        // start the scanner phase
-    ss.process_sbuf(hello); // process a single sbuf, and delete it
+    ss.schedule_sbuf(hello); // process a single sbuf, and delete it
     ss.shutdown();          // shutdown; this will write out the in-memory histogram.
 
     /* Make sure that the feature recorder output was created */
