@@ -84,7 +84,7 @@
  * subset will now point to unallocated memory.)
  */
 class sbuf_t {
-public:
+public:;
     const pos0_t   pos0{};          /* the path of buf[0] */
     // buf is now private. See below.
     const size_t   bufsize{0};       // size of the buffer
@@ -92,6 +92,7 @@ public:
     struct flags_t {
         bool debug_sbuf_getbuf{false}; // print when sbufgetbuf is called
     } flags{};
+    bool scheduled {false};             // was this scheduled?
 
     const unsigned int depth() const { return pos0.depth(); }
     const uint8_t* get_buf() const;       // returns the buffer UNSAFE but trackable. Enable DEBUG_SBUF_GETBUF to print on each
@@ -213,8 +214,8 @@ public:
     /* Forensic API */
     /** Find the offset of a byte */
     size_t offset(const uint8_t* loc) const {
-        if (loc < buf) { throw range_exception_t(); }
-        if (loc > buf + bufsize) { throw range_exception_t(); }
+        if (loc < buf)           { throw range_exception_t(1000000001,1000000001); } // special codes
+        if (loc > buf + bufsize) { throw range_exception_t(1000000002,1000000002); }
         return loc - buf;
     }
 
@@ -247,15 +248,13 @@ public:
      */
     class range_exception_t : public std::exception {
         size_t off {0};
-        size_t max {0};
+        size_t len {0};
     public:
-        range_exception_t(size_t off_, size_t max_):off(off_),max(max_){};
-        range_exception_t(){};
+        range_exception_t(size_t off_, size_t len_):off(off_), len(len_){};
         virtual const char* what() const throw() {
-            static char buf[64];
-            if (off==0 && max==0) return "Error: Read past end of sbuf";
+            static char buf[64];        // big enough to hold a single error
             std::stringstream ss;
-            ss << "Error: Read past end of sbuf (off=" << off << " max=" << max << " )";
+            ss << "Error: Read past end of sbuf (off=" << off << " len=" << len << " )";
             strncpy(buf,ss.str().c_str(),sizeof(buf)-1);
             buf[sizeof(buf)-1] = '\000'; // safety
             return buf;
@@ -265,6 +264,7 @@ public:
     /****************************************************************
      *** The following get functions read integer and string types
      *** or else throw an sbuf_range_exception if out of range.
+     *** They are all inlined so that they will be fast!
      ****************************************************************/
 
     /* Search functions --- memcmp at a particular location */
@@ -407,7 +407,7 @@ public:
      * of i, in the byte order of your choice or else throw sbuf_range_exception
      * if out of range.
      */
-    int8_t get8i(size_t i, sbuf_t::byte_order_t bo) const { return bo == BO_LITTLE_ENDIAN ? get8u(i) : get8uBE(i); }
+    int8_t  get8i(size_t i, sbuf_t::byte_order_t bo) const { return bo == BO_LITTLE_ENDIAN ? get8u(i) : get8uBE(i); }
     int16_t get16i(size_t i, sbuf_t::byte_order_t bo) const { return bo == BO_LITTLE_ENDIAN ? get16u(i) : get16uBE(i); }
     int32_t get32i(size_t i, sbuf_t::byte_order_t bo) const { return bo == BO_LITTLE_ENDIAN ? get32u(i) : get32uBE(i); }
     int64_t get64i(size_t i, sbuf_t::byte_order_t bo) const { return bo == BO_LITTLE_ENDIAN ? get64u(i) : get64uBE(i); }
@@ -419,8 +419,8 @@ public:
      * These get functions safely read string.
      * TODO: rework them so that they return the utf8_string, rather than modifying what's called.
      */
-    void getUTF8(size_t i, size_t num_octets_requested, std::string& utf8_string) const;
-    void getUTF8(size_t i, std::string& utf8_string) const;
+    std::string getUTF8(size_t i, size_t num_octets_requested) const;
+    std::string getUTF8(size_t i) const; // till end?
     /** @} */
 
     /**
@@ -428,10 +428,10 @@ public:
      * @{
      * These get functions safely read wstring
      */
-    void getUTF16(size_t i, size_t num_code_units_requested, std::wstring& utf16_string) const;
-    void getUTF16(size_t i, std::wstring& utf16_string) const;
-    void getUTF16(size_t i, size_t num_code_units_requested, byte_order_t bo, std::wstring& utf16_string) const;
-    void getUTF16(size_t i, byte_order_t bo, std::wstring& utf16_string) const;
+    std::wstring  getUTF16(size_t i, size_t num_code_units_requested) const;
+    std::wstring  getUTF16(size_t i) const;
+    std::wstring  getUTF16(size_t i, size_t num_code_units_requested, byte_order_t bo) const;
+    std::wstring  getUTF16(size_t i, byte_order_t bo) const;
     /** @} */
 
     /**
@@ -499,6 +499,7 @@ public:
         return hp;
     }
 
+    static std::atomic<int> sbuf_total;   // how many are in use
     static std::atomic<int> sbuf_count;   // how many are in use
     mutable std::atomic<int> children{0}; // number of child sbufs; incremented when data in *buf is used by a child
 private:

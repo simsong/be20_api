@@ -28,11 +28,13 @@
 #endif
 
 /* Keep track of how many sbufs we have */
+std::atomic<int> sbuf_t::sbuf_total = 0;
 std::atomic<int> sbuf_t::sbuf_count = 0;
 
 /* Make an empty sbuf */
 sbuf_t::sbuf_t()
 {
+    sbuf_total += 1;
     sbuf_count += 1;
 }
 
@@ -47,6 +49,7 @@ sbuf_t::sbuf_t(const sbuf_t &src, size_t offset):
     flags(src.flags), parent(&src), buf(src.buf+offset)
 {
     parent->add_child(*this);
+    sbuf_total += 1;
     sbuf_count += 1;
 }
 
@@ -58,6 +61,7 @@ sbuf_t::sbuf_t(const sbuf_t &src, size_t offset, size_t len):
     flags(src.flags), parent(&src), buf(src.buf+offset)
 {
     parent->add_child(*this);
+    sbuf_total += 1;
     sbuf_count += 1;
 }
 
@@ -73,6 +77,7 @@ sbuf_t::sbuf_t(pos0_t pos0_, const sbuf_t *parent_,
     if (parent) {
         parent->add_child(*this);
     }
+    sbuf_total += 1;
     sbuf_count += 1;
 }
 
@@ -193,8 +198,8 @@ sbuf_t *sbuf_t::realloc(size_t newsize)
  */
 sbuf_t *sbuf_t::new_slice(size_t off, size_t len) const
 {
-    if (off > bufsize) throw range_exception_t(); // check to make sure off is in the buffer
-    if (off+len > bufsize) throw range_exception_t(); // check to make sure off+len is in the buffer
+    if (off > bufsize)     throw range_exception_t(off, len); // check to make sure off is in the buffer
+    if (off+len > bufsize) throw range_exception_t(off, len); // check to make sure off+len is in the buffer
 
     size_t new_pagesize = pagesize;
     if (off > pagesize) {
@@ -221,8 +226,8 @@ sbuf_t *sbuf_t::new_slice_copy(size_t off, size_t len) const
 
 sbuf_t sbuf_t::slice(size_t off, size_t len) const
 {
-    if (off > bufsize) throw range_exception_t(); // check to make sure off is in the buffer
-    if (off+len > bufsize) throw range_exception_t(); // check to make sure off+len is in the buffer
+    if (off > bufsize)     throw range_exception_t(off, len); // check to make sure off is in the buffer
+    if (off+len > bufsize) throw range_exception_t(off, len); // check to make sure off+len is in the buffer
 
     size_t new_pagesize = pagesize;
     if (off > pagesize) {
@@ -528,139 +533,116 @@ std::ostream& operator<<(std::ostream& os, const sbuf_t& t) {
 /**
  * Read the requested number of UTF-8 format string octets including any \0.
  */
-void sbuf_t::getUTF8(size_t i, size_t num_octets_requested, std::string& utf8_string) const {
+std::string sbuf_t::getUTF8(size_t i, size_t num_octets_requested) const
+{
     // clear any residual value
-    utf8_string = "";
+    std::string utf8_string;
 
-    if (i >= bufsize) {
-        // past EOF
-        return;
+    while (i < bufsize && num_octets_requested > 0 ){
+        utf8_string.push_back( get8u(i) );
+        i += 1;
+        num_octets_requested -= 1;
     }
-    if (i + num_octets_requested > bufsize) {
-        // clip at EOF
-        num_octets_requested = bufsize - i;
-    }
-    utf8_string = std::string((const char*)buf + i, num_octets_requested);
+    return utf8_string;
 }
 
 /**
  * Read UTF-8 format code octets into string up to but not including \0.
  */
-void sbuf_t::getUTF8(size_t i, std::string& utf8_string) const {
-    // clear any residual value
-    utf8_string = "";
+std::string sbuf_t::getUTF8(size_t i) const
+{
+    std::string utf8_string;
 
-    // read octets
-    for (size_t off = i; off < bufsize; off++) {
-        uint8_t octet = get8u(off);
-
+    while (i < bufsize) {
+        uint8_t octet = get8u(i);
         // stop before \0
         if (octet == 0) {
             // at \0
             break;
         }
-
         // accept the octet
         utf8_string.push_back(octet);
+        i += 1;
     }
+    return utf8_string;
 }
 
 /**
  * Read the requested number of UTF-16 format code units into wstring including any \U0000.
  */
-void sbuf_t::getUTF16(size_t i, size_t num_code_units_requested, std::wstring& utf16_string) const {
+std::wstring sbuf_t::getUTF16(size_t i, size_t num_code_units_requested) const
+{
     // clear any residual value
-    utf16_string = std::wstring();
+    std::wstring utf16_string;
 
-    if (i >= bufsize) {
-        // past EOF
-        return;
+    while (i+1 < bufsize && num_code_units_requested > 0) {
+        utf16_string.push_back(get16u(i));
+        i += 2;
+        num_code_units_requested -= 1;
     }
-    if (i + num_code_units_requested * 2 + 1 > bufsize) {
-        // clip at EOF
-        num_code_units_requested = ((bufsize - 1) - i) / 2;
-    }
-    // NOTE: we can't use wstring constructor because we require 16 bits,
-    // not whatever sizeof(wchar_t) is.
-    // utf16_string = std::wstring((const char *)buf+i,num_code_units_requested);
-
-    // get code units individually
-    for (size_t j = 0; j < num_code_units_requested; j++) { utf16_string.push_back(get16u(i + j * 2)); }
+    return utf16_string;
 }
 
 /**
  * Read UTF-16 format code units into wstring up to but not including \U0000.
  */
-void sbuf_t::getUTF16(size_t i, std::wstring& utf16_string) const {
-    // clear any residual value
-    utf16_string = std::wstring();
+std::wstring sbuf_t::getUTF16(size_t i) const
+{
+    std::wstring utf16_string;
 
-    // read the code units
-    size_t off;
-    for (off = i; off < bufsize - 1; off += 2) {
-        uint16_t code_unit = get16u(off);
-        // cout << "sbuf.cpp getUTF16 i: " << i << " code unit: " << code_unit << "\n";
-
+    while (i+1 < bufsize) {
+        uint16_t code_unit = get16u(i);
         // stop before \U0000
         if (code_unit == 0) {
             // at \U0000
             break;
         }
-
         // accept the code unit
         utf16_string.push_back(code_unit);
+        i+=2;
     }
+    return utf16_string;
 }
 
 /**
  * Read the requested number of UTF-16 format code units using the specified byte order into wstring including any
  * \U0000.
  */
-void sbuf_t::getUTF16(size_t i, size_t num_code_units_requested, byte_order_t bo, std::wstring& utf16_string) const {
+std::wstring sbuf_t::getUTF16(size_t i, size_t num_code_units_requested, byte_order_t bo) const
+{
     // clear any residual value
-    utf16_string = std::wstring();
-
-    if (i >= bufsize) {
-        // past EOF
-        return;
+    std::wstring utf16_string;
+    while (i+1 < bufsize && num_code_units_requested > 0) {
+        utf16_string.push_back(get16u(i, bo));
+        i += 2;
+        num_code_units_requested -= 1;
     }
-    if (i + num_code_units_requested * 2 + 1 > bufsize) {
-        // clip at EOF
-        num_code_units_requested = ((bufsize - 1) - i) / 2;
-    }
-    // NOTE: we can't use wstring constructor because we require 16 bits,
-    // not whatever sizeof(wchar_t) is.
-    // utf16_string = std::wstring((const char *)buf+i,num_code_units_requested);
-
-    // get code units individually
-    for (size_t j = 0; j < num_code_units_requested; j++) { utf16_string.push_back(get16u(i + j, bo)); }
+    return utf16_string;
 }
 
 /**
  * Read UTF-16 format code units using the specified byte order into wstring up to but not including \U0000.
  */
-void sbuf_t::getUTF16(size_t i, byte_order_t bo, std::wstring& utf16_string) const {
-    // clear any residual value
-    utf16_string = std::wstring();
+std::wstring sbuf_t::getUTF16(size_t i, byte_order_t bo) const
+{
+    std::wstring utf16_string;
 
-    // read the code units
-    size_t off;
-    for (off = i; off < bufsize - 1; off += 2) {
-        uint16_t code_unit = get16u(off, bo);
-        // cout << "sbuf.cpp getUTF16 i: " << i << " code unit: " << code_unit << "\n";
-
+    while (i+1 < bufsize) {
+        uint16_t code_unit = get16u(i, bo);
         // stop before \U0000
         if (code_unit == 0) {
             // at \U0000
             break;
         }
-
         // accept the code unit
         utf16_string.push_back(code_unit);
+        i+=2;
     }
+    return utf16_string;
 }
 
-std::string sbuf_t::hash() const {
+std::string sbuf_t::hash() const
+{
     const std::lock_guard<std::mutex> lock(Mhash); // protect this function
     if (hash_.size() == 0) {
         /* hasn't been hashed yet, so hash it */
@@ -670,12 +652,14 @@ std::string sbuf_t::hash() const {
 }
 
 /* Similar to above, but does not cache, so it is inherently threadsafe */
-std::string sbuf_t::hash(hash_func_t func) const {
+std::string sbuf_t::hash(hash_func_t func) const
+{
     return func(buf, bufsize);
 }
 
 /* Report if the hash exists */
-bool sbuf_t::has_hash() const {
+bool sbuf_t::has_hash() const
+{
     const std::lock_guard<std::mutex> lock(Mhash); // protect this function}
     return (hash_.size() > 0 );
 }
