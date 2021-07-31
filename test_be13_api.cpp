@@ -226,6 +226,19 @@ TEST_CASE("atomic_map", "[atomic]") {
 }
 
 /****************************************************************
+ * utils.h
+ */
+
+TEST_CASE("scale_stoi64","[utils]") {
+    REQUIRE(scaled_stoi64("10") == 10);
+    REQUIRE(scaled_stoi64("2k") == 2048);
+    REQUIRE(scaled_stoi64("4m") == 4194304);
+    REQUIRE(scaled_stoi64("1g") == 1073741824);
+}
+
+/*** BE-specific tests continue ***/
+
+/****************************************************************
  * histogram_def.h
  */
 #include "histogram_def.h"

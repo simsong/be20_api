@@ -26,52 +26,6 @@
 //#include <unistd.h>
 //#endif
 
-#if 0
-#ifndef HAVE_ERR
-void err(int eval,const char *fmt,...)
-{
-    va_list ap;
-    va_start(ap,fmt);
-    vfprintf(stderr,fmt,ap);
-    va_end(ap);
-    fprintf(stderr,": %s\n",strerror(errno));
-    exit(eval);
-}
-#endif
-
-#ifndef HAVE_ERRX
-void errx(int eval,const char *fmt,...)
-{
-    va_list ap;
-    va_start(ap,fmt);
-    vfprintf(stderr,fmt,ap);
-    fprintf(stderr,"%s\n",strerror(errno));
-    va_end(ap);
-    exit(eval);
-}
-#endif
-
-#ifndef HAVE_WARN
-void	warn(const char *fmt, ...)
-{
-    va_list args;
-    va_start(args,fmt);
-    vfprintf(stderr,fmt, args);
-    fprintf(stderr,": %s\n",strerror(errno));
-}
-#endif
-
-#ifndef HAVE_WARNX
-void warnx(const char *fmt,...)
-{
-    va_list ap;
-    va_start(ap,fmt);
-    vfprintf(stderr,fmt,ap);
-    va_end(ap);
-}
-#endif
-#endif
-
 /** Extract a buffer...
  * @param buf - the buffer to extract;
  * @param buflen - the size of the page to extract
@@ -127,4 +81,16 @@ std::vector<std::string>& split(const std::string& s, char delim, std::vector<st
 std::vector<std::string> split(const std::string& s, char delim) {
     std::vector<std::string> elems;
     return split(s, delim, elems);
+}
+
+uint64_t scaled_stoi64(const std::string &str)
+{
+    std::stringstream ss(str);
+    uint64_t val;
+    ss >> val;
+    if(str.find('k')!=std::string::npos  || str.find('K')!=std::string::npos) val *= 1024LL;
+    if(str.find('m')!=std::string::npos  || str.find('m')!=std::string::npos) val *= 1024LL * 1024LL;
+    if(str.find('g')!=std::string::npos  || str.find('g')!=std::string::npos) val *= 1024LL * 1024LL * 1024LL;
+    if(str.find('t')!=std::string::npos  || str.find('T')!=std::string::npos) val *= 1024LL * 1024LL * 1024LL * 1024LL;
+    return val;
 }
