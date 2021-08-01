@@ -270,19 +270,19 @@ TEST_CASE("AtomicUnicodeHistogram_1", "[atomic][regex]") {
     AtomicUnicodeHistogram::FrequencyReportVector f = h.makeReport();
     REQUIRE(f.size() == 2);
     REQUIRE(f.at(0).key == "foo");
-    REQUIRE(f.at(0).value.count == 3);
-    REQUIRE(f.at(0).value.count16 == 0);
+    REQUIRE(f.at(0).value->count == 3);
+    REQUIRE(f.at(0).value->count16 == 0);
 
     REQUIRE(f.at(1).key == "bar");
-    REQUIRE(f.at(1).value.count == 1);
-    REQUIRE(f.at(1).value.count16 == 0);
+    REQUIRE(f.at(1).value->count == 1);
+    REQUIRE(f.at(1).value->count16 == 0);
 
     f = h.makeReport(1);
 
     REQUIRE(f.size() == 1);
     REQUIRE(f.at(0).key == "foo");
-    REQUIRE(f.at(0).value.count == 3);
-    REQUIRE(f.at(0).value.count16 == 0);
+    REQUIRE(f.at(0).value->count == 3);
+    REQUIRE(f.at(0).value->count16 == 0);
 }
 
 TEST_CASE("AtomicUnicodeHistogram_2", "[atomic][regex]") {
@@ -294,14 +294,16 @@ TEST_CASE("AtomicUnicodeHistogram_2", "[atomic][regex]") {
     /* Now make sure things were added with the right counts */
     AtomicUnicodeHistogram::FrequencyReportVector f = h.makeReport();
     REQUIRE(f.at(0).key == "abcde");
-    REQUIRE(f.at(0).value.count == 1);
-    REQUIRE(f.at(0).value.count16 == 0);
+    REQUIRE(f.at(0).value->count == 1);
+    REQUIRE(f.at(0).value->count16 == 0);
 }
 
 TEST_CASE("AtomicUnicodeHistogram_3", "[histogram]") {
     /* Make sure that the histogram elements work */
-    AtomicUnicodeHistogram::auh_t::item e1("hello");
-    AtomicUnicodeHistogram::auh_t::item e2("world");
+    AtomicUnicodeHistogram::HistogramTally v1;
+    AtomicUnicodeHistogram::HistogramTally v2;
+    AtomicUnicodeHistogram::auh_t::item e1("hello", &v1);
+    AtomicUnicodeHistogram::auh_t::item e2("world", &v2);
 
     REQUIRE(e1 == e1);
     REQUIRE(e1 != e2);
@@ -325,16 +327,16 @@ TEST_CASE("AtomicUnicodeHistogram_3", "[histogram]") {
 
     /* Make sure that the tallies were correct. */
     REQUIRE(r.at(0).key == "300");
-    REQUIRE(r.at(0).value.count == 3);
-    REQUIRE(r.at(0).value.count16 == 0);
+    REQUIRE(r.at(0).value->count == 3);
+    REQUIRE(r.at(0).value->count16 == 0);
 
     REQUIRE(r.at(1).key == "200");
-    REQUIRE(r.at(1).value.count == 2);
-    REQUIRE(r.at(1).value.count16 == 0);
+    REQUIRE(r.at(1).value->count == 2);
+    REQUIRE(r.at(1).value->count16 == 0);
 
     REQUIRE(r.at(2).key == "100");
-    REQUIRE(r.at(2).value.count == 1);
-    REQUIRE(r.at(2).value.count16 == 0);
+    REQUIRE(r.at(2).value->count == 1);
+    REQUIRE(r.at(2).value->count16 == 0);
 
     /* Add a UTF-16 300 */
     char buf300[6]{'\000', '3', '\000', '0', '\000', '0'};
@@ -342,8 +344,8 @@ TEST_CASE("AtomicUnicodeHistogram_3", "[histogram]") {
     hm.add(b300);
     r = hm.makeReport(0);
     REQUIRE(r.at(0).key == "300");
-    REQUIRE(r.at(0).value.count == 4);
-    REQUIRE(r.at(0).value.count16 == 1);
+    REQUIRE(r.at(0).value->count == 4);
+    REQUIRE(r.at(0).value->count16 == 1);
 
     /* write the histogram to a file */
     std::string tempdir = get_tempdir();

@@ -128,3 +128,15 @@ std::vector<std::string> split(const std::string& s, char delim) {
     std::vector<std::string> elems;
     return split(s, delim, elems);
 }
+
+uint64_t scaled_stoi64(const std::string &str)
+{
+    std::stringstream ss(str);
+    uint64_t val;
+    ss >> val;
+    if(str.find('k')!=std::string::npos  || str.find('K')!=std::string::npos) val *= 1024LL;
+    if(str.find('m')!=std::string::npos  || str.find('m')!=std::string::npos) val *= 1024LL * 1024LL;
+    if(str.find('g')!=std::string::npos  || str.find('g')!=std::string::npos) val *= 1024LL * 1024LL * 1024LL;
+    if(str.find('t')!=std::string::npos  || str.find('T')!=std::string::npos) val *= 1024LL * 1024LL * 1024LL * 1024LL;
+    return val;
+}

@@ -27,8 +27,8 @@ std::ostream& operator<<(std::ostream& os, const AtomicUnicodeHistogram::Frequen
 
 /* Output is in UTF-8 */
 std::ostream& operator<<(std::ostream& os, const AtomicUnicodeHistogram::auh_t::item& e) {
-    os << "n=" << e.value.count << "\t" << validateOrEscapeUTF8(e.key, true, false, false);
-    if (e.value.count16 > 0) os << "\t(utf16=" << e.value.count16 << ")";
+    os << "n=" << e.value->count << "\t" << validateOrEscapeUTF8(e.key, true, false, false);
+    if (e.value->count16 > 0) os << "\t(utf16=" << e.value->count16 << ")";
     os << "\n";
     return os;
 }
@@ -42,7 +42,7 @@ std::vector<AtomicUnicodeHistogram::auh_t::item> AtomicUnicodeHistogram::makeRep
     std::sort(ret.rbegin(), ret.rend(), AtomicUnicodeHistogram::auh_t::item::compare); // reverse sort
     /* If we only want some of them, delete the extra */
     if ((topN > 0) && (topN < ret.size())) {
-        ret.resize(topN);
+        ret.erase( ret.begin()+topN, ret.end());
     }
     return ret;
 }

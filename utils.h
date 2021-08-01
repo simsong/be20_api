@@ -165,4 +165,5 @@ inline bool directory_empty(std::filesystem::path path) {
     return true;
 }
 
+uint64_t scaled_stoi64(const std::string &str);
 #endif

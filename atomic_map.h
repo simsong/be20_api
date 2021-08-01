@@ -27,7 +27,6 @@
  * Could be reimplemented to use smart pointers.
  */
 
-
 template <class T1, class T2> class atomic_map {
     // T1 - key. For example, std::string
     // T2 - value. Should be a pointer.
@@ -49,7 +48,9 @@ public:
         const char* what() const noexcept override { return "did not convert key_ to a string"; }
     };
     /*
-     * Create the behavior of a Python defaultdict: return the object referenced by the key, otherwise create a new one.
+     * Create the behavior of a Python defaultdict:
+     * If the object is not in the map, add it.
+     * then return a reference to the object that is in the map.
      */
     T2 &operator[](const T1& key) {
         const std::lock_guard<std::mutex> lock(M);
@@ -101,9 +102,10 @@ public:
     }
 
     void clear() {
-        /* First delete all of the elements, then clear the map.
-         * This might be better done with unique_ptr()
-         * right now we may have a memory leak
+        /* First delete all of the elements, then clear the map.  This
+         * might be better done with unique_ptr(). However, then we
+         * couldn't return a pointer, so we would need to use
+         * shared_ptr(), which would incur a higher cost.
          */
         const std::lock_guard<std::mutex> lock(M);
         for (const auto &it : mymap) {
@@ -129,31 +131,10 @@ public:
     }
 #endif
 
-
     bool contains(T1 key) const {
         const std::lock_guard<std::mutex> lock(M);
         return mymap.find(key) != mymap.end();
     }
-    /* This is used for dumping the contents. This is not efficient. We're basically trying to find the top N and we could do that more efficiently with a priority queue */
-    struct item {
-        item(T1 key_, T2 value_) : key(key_), value(value_){};
-        item(T1 key_) : key(key_){};
-        item(){};
-        T1 key{};
-        T2 value{};
-        bool operator==(const item& a) const { return (this->key == a.key) && (this->value == a.value); }
-        bool operator!=(const item& a) const { return !(*this == a); }
-        bool operator<(const item& a) const {
-            if (this->key < a.key) return true;
-            if ((this->key == a.key) && (this->value < a.value)) return true;
-            return false;
-        }
-        static bool compare(const item& e1, const item& e2) { return e1 < e2; }
-        virtual ~item(){};
-        size_t bytes() const {
-            return sizeof(*this) + value.bytes();
-        } // number of bytes used by object
-    };
     /* Like python .keys() */
     typename std::vector<T1> keys() const {
         const std::lock_guard<std::mutex> lock(M);
@@ -174,13 +155,37 @@ public:
         return ret;
     }
 
+
     /* like Python .items() */
+    /* This is used for dumping the contents in a mostly threadsafe manner.
+     * The item that is return is a reference to what's in the atomic_map, so it better not be deleted,
+     * and if you want multiple threads to access it, the elements should be atomic.
+     * It would be useful to have a priority queue to get the topN.
+     */
+    struct item {
+        item(T1 key_, T2 *value_) : key(key_), value(value_){};
+        T1 key{};                      // reference to the key in the histogram
+        T2 *value{};                    // a pointer to the histogram's object
+        // these comparisions only look at the keys
+        bool operator==(const item& a) const { return (this->key == a.key); }
+        bool operator!=(const item& a) const { return !(*this == a); }
+        bool operator<(const item& a) const {
+            if (this->key < a.key) return true;
+            return false;
+        }
+        static bool compare(const item& e1, const item& e2) { return e1 < e2; }
+        virtual ~item(){};
+        size_t bytes() const {
+            return sizeof(*this) + value->bytes();
+        } // number of bytes used by object
+    };
+
     std::vector<item> items() const {
         std::vector<item> ret;
         /* Protect access to mymap with mutex */
         const std::lock_guard<std::mutex> lock(M);
-        for (const auto &it : mymap) {
-            ret.push_back(item(it.first, *it.second));
+        for ( auto &pair:mymap ){
+            ret.push_back( item(pair.first, pair.second));
         }
         return ret;
     }

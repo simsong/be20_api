@@ -222,7 +222,8 @@ void feature_recorder_set::feature_recorders_shutdown() {
  *** Stats
  ****************************************************************/
 
-void feature_recorder_set::dump_name_count_stats(dfxml_writer& writer) const {
+void feature_recorder_set::dump_name_count_stats(dfxml_writer& writer) const
+{
     writer.push("feature_files");
     for (auto name : frm.keys()) {
         writer.set_oneline(true);
@@ -230,7 +231,7 @@ void feature_recorder_set::dump_name_count_stats(dfxml_writer& writer) const {
         writer.xmlout("name", name);
         writer.xmlout("count", frm.get(name).features_written);
         writer.pop("feature_file");
-        writer.set_oneline(false);
+        writer.set_oneline(false);      // generates the newline
     }
     writer.pop();
 }
