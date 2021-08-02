@@ -9,12 +9,27 @@
 #include <vector>
 #include <thread>
 
-
-/* needed solely for loading shared libraries */
+/* needed loading shared libraries and getting free memory*/
 #include "config.h"
 
 #ifdef HAVE_DLFCN_H
 #include <dlfcn.h>
+#endif
+
+#include <sys/types.h>
+
+#ifdef HAVE_SYS_SYSCTL_H
+#include <sys/sysctl.h>
+#endif
+
+#ifdef HAVE_SYS_VMMETER_H
+#include <sys/vmmeter.h>
+#endif
+
+#ifdef HAVE_MACH_MACH_H
+#include <mach/mach.h>
+#include <mach/mach_host.h>
+#include <mach/host_info.h>
 #endif
 
 #include "thread-pool/thread_pool.hpp"
@@ -122,6 +137,42 @@ void scanner_set::thread_set_status(const std::string &status)
     thread_status[std::this_thread::get_id()] = status;
 }
 
+// https://askubuntu.com/questions/867068/what-is-available-memory-while-using-free-command
+uint64_t scanner_set::get_available_memory()
+{
+#if defined(HAVE_SYS_SYSCTL_H) && defined(HAVE_SYS_VMMETER_H)
+    u_int page_size;
+    struct vmtotal vmt;
+    size_t vmt_size, uint_size;
+    int rc = sysctlbyname("vm.vmtotal", &vmt, &vmt_size, NULL, 0);
+    if (rc ==0){
+        rc = sysctlbyname("vm.stats.vm.v_page_size", &page_size, &uint_size, NULL, 0);
+        if (rc ==0 ){
+            return vmt.t_avm * page_size;
+        }
+    }
+#endif
+
+#ifdef HAVE_HOST_STATISTICS64
+    // https://opensource.apple.com/source/system_cmds/system_cmds-496/vm_stat.tproj/vm_stat.c.auto.html
+
+    vm_statistics64_data_t	vm_stat;
+    vm_size_t pageSize = 4096; 	/* Default */
+    mach_port_t myHost = mach_host_self();
+    if (host_page_size(myHost, &pageSize) != KERN_SUCCESS) {
+        pageSize = 4096;                // put the default back
+    }
+    vm_statistics64_t stat = &vm_stat;
+
+    unsigned int count = HOST_VM_INFO64_COUNT;
+    if (host_statistics64(myHost, HOST_VM_INFO64, (host_info64_t)stat, &count) != KERN_SUCCESS) {
+        return 0;
+    }
+    return stat->free_count * pageSize;
+#endif
+    return 0;                           // can't figure it out
+}
+
 /*
  * Print the status of each thread in the threadpool.
  */
@@ -141,6 +192,10 @@ std::map<std::string, std::string> scanner_set::get_realtime_stats() const
         std::stringstream ss;
         ss << "thread-" << ++counter;
         ret[ ss.str() ] = std::string(*it);
+    }
+    uint64_t available_memory = get_available_memory();
+    if (available_memory!=0){
+        ret["available_memory"] = std::to_string(available_memory);
     }
     return ret;
 }
