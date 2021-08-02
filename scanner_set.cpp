@@ -499,12 +499,13 @@ void scanner_set::dump_scanner_stats() const
     if (writer==nullptr) return;
     writer->push("scanner_stats");
     for (const auto &it: scanner_stats.items()) {
-        writer->set_oneline("true");
+        writer->set_oneline(true);
         writer->push("scanner");
         writer->xmlout("name", get_scanner_name( it.key ));
         writer->xmlout("ns", it.value->ns);
         writer->xmlout("calls", it.value->calls);
         writer->pop();
+        writer->set_oneline(false);
     }
     writer->pop();
 }
@@ -546,7 +547,6 @@ void scanner_set::process_sbuf(class sbuf_t* sbufp) {
     assert(sbufp != nullptr);
     assert(sbufp->children == 0); // we are going to free it, so it better not have any children.
     thread_set_status( sbufp->pos0.str() + " process_sbuf (" + std::to_string(sbufp->bufsize) + ")" );
-    //std::cerr << "process_sbuf: " << *sbufp << "\n";
 
     /* If we  have not transitioned to PHASE::SCAN, error */
     if (current_phase != scanner_params::PHASE_SCAN) {
@@ -605,6 +605,7 @@ void scanner_set::process_sbuf(class sbuf_t* sbufp) {
     /* Make the scanner params once, rather than every time through */
     scanner_params sp(sc, this, scanner_params::PHASE_SCAN, sbufp, scanner_params::PrintOptions(), nullptr);
     for (const auto &it : scanner_info_db) {
+
         // Look for reasons not to run a scanner
         // this is a lot of find operations - could we make a vector of the enabled scanner_info_dbs?
         const auto &name = it.second->name; // scanner name
@@ -702,7 +703,6 @@ void scanner_set::process_sbuf(class sbuf_t* sbufp) {
 void scanner_set::schedule_sbuf(sbuf_t *sbufp)
 {
     assert (sbufp != nullptr );
-    //std::cerr << "schedule_sbuf: " << *sbufp << "\n";
     /* Run in same thread? */
     if (pool==nullptr || (sbufp->depth() > 0 && sbufp->bufsize < SAME_THREAD_SBUF_SIZE)) {
         process_sbuf(sbufp);
@@ -736,15 +736,12 @@ void scanner_set::delete_sbuf(sbuf_t *sbufp)
 
 void scanner_set::log(const std::string message)
 {
-    std::stringstream attribute;
-    attribute << "t='" << time(0) << "'";
-    std::cerr  << "log: " << message << " " << attribute.str() << "\n";
     if (writer){
-        writer->xmlout("log", message, attribute.str(), false);
+        writer->xmlout("log", message, aftimer::now_str("t='","'"), false);
         writer->flush();
     }
     else {
-        std::cerr << "writer is null\n";
+        std::cerr  << "log: " << message << "\n";
     }
 }
 
