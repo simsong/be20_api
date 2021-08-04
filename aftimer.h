@@ -6,6 +6,8 @@
 #include <cstdio>
 #include <string>
 #include <chrono>
+#include <sstream>
+#include <iomanip>
 
 class aftimer {
     std::chrono::time_point<std::chrono::steady_clock> t0 {};
@@ -13,6 +15,7 @@ class aftimer {
     uint64_t elapsed_ns {}; //  for all times we have started and stopped
     uint64_t last_ns    {}; // time from when we last did a "start"
 public:
+    static std::string now_str(std::string prefix="",std::string suffix="");              // return a high-resolution string as now.
     aftimer()  {}
 
     void start(); // start the timer
@@ -38,6 +41,16 @@ public:
  */
 
 //inline void timestamp(struct timeval* t) { gettimeofday(t, NULL); }
+
+// https://stackoverflow.com/questions/16177295/get-time-since-epoch-in-milliseconds-preferably-using-c11-chrono
+inline std::string aftimer::now_str(std::string prefix,std::string suffix) {
+    unsigned long milliseconds_since_epoch =
+        std::chrono::duration_cast<std::chrono::milliseconds>
+        (std::chrono::system_clock::now().time_since_epoch()).count();
+    std::stringstream ss;
+    ss << std::setprecision(4) << std::fixed << prefix << milliseconds_since_epoch/1000 << suffix;
+    return ss.str();
+}
 
 inline void aftimer::start() {
     assert (running == false);

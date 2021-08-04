@@ -130,6 +130,8 @@ struct Feature {
         : pos(pos_), feature(feature_), context(context_){};
     Feature(std::string pos_, std::string feature_, std::string context_)
         : pos(pos_), feature(feature_), context(context_){};
+    Feature(std::string pos_, std::string feature_)
+        : pos(pos_), feature(feature_), context(""){};
 
     const pos0_t pos;
     const std::string feature;

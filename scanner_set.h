@@ -85,6 +85,7 @@ public:
     scanner_set(scanner_config& sc, const feature_recorder_set::flags_t& f, class dfxml_writer* writer);
     virtual ~scanner_set();
     scanner_config sc;                             // scanner_set configuration; passed to feature_recorder_set
+
     class dfxml_writer* writer {nullptr};          // if provided, a dfxml writer. Mutext locking done by dfxml_writer.h
     void set_dfxml_writer(class dfxml_writer *writer_);
     class dfxml_writer *get_dfxml_writer() const;
@@ -127,7 +128,6 @@ public:
         std::string debug_scanners_ignore{}; // ignore these scanners, separated by :
     } debug_flags{};
 
-
     // Scanner database.
     std::map<scanner_t*, std::unique_ptr<struct scanner_params::scanner_info>> scanner_info_db{};
     std::set<scanner_t*> enabled_scanners{}; // the scanners that are enabled
@@ -138,27 +138,30 @@ public:
 private:
     static const inline size_t SAME_THREAD_SBUF_SIZE = 8192; // sbufs smaller than this run in the same thread.
     class thread_pool *pool {nullptr}; // nullptr means we are not threading
+
 public:;
+    static uint64_t get_available_memory();
+
     int get_thread_count() { return (pool!=nullptr) ? pool->get_thread_count() : 1; };
     std::atomic<int> depth0_sbufs_in_queue {0};
     std::atomic<uint64_t> depth0_bytes_in_queue {0};
     std::atomic<int> sbufs_in_queue {0};
     std::atomic<uint64_t> bytes_in_queue {0};
-    /* status and notification system */
-    [[noreturn]] void notify_thread();               // notify what's going on
-    std::thread *notifier {nullptr};                 // notifier thread
+
+    // thread status and notification
     atomic_map<std::thread::id, std::string> thread_status {}; // the status of each thread::id
 
-public:
+    // to get a copy of thread_status, use get_stats, which also returns information about the queue
+    std::map<std::string,std::string> get_realtime_stats() const;   // thread-safe return of a copy of threadpool stats; for notification APIs.
+
     // thread interface
     void launch_workers(int count);
-    void update_queue_stats(sbuf_t *sbufp, int dir); // either +1 increment or -1 decrement
+    void update_queue_stats(sbuf_t *sbufp, int dir);   // either +1 increment or -1 decrement
     void thread_set_status(const std::string &status); // designed to be overridden
-    void print_tp_stats();                  // print the status of each thread
-    void join();                            // join the threads
-    void launch_notify_thread();               // notify what's going on
+    void join();                                       // join the threads
 
     // scanner stats
+    bool record_call_stats {true};     // by default, record the call stats
     std::atomic<uint64_t> sbuf_seen{0}; // number of seen sbufs.
     std::atomic<uint64_t> dup_bytes_encountered{0}; // amount of dup data encountered
     atomic_map<scanner_t* , struct stats> scanner_stats{}; // maps scanner name to performance stats
@@ -180,7 +183,7 @@ public:
     virtual std::vector<std::string> feature_file_list() const;                     // returns the list of feature files
     size_t histogram_count() const { return fs.histogram_count(); }; // passthrough, mostly for debugging
     size_t feature_recorder_count() const { return fs.feature_recorder_count(); };
-    void dump_name_count_stats(class dfxml_writer& w) const { fs.dump_name_count_stats(w); }; // passthrough
+    void dump_name_count_stats() const { if(writer) fs.dump_name_count_stats(*writer); }; // passthrough
 
     // Management of previously seen data
     // hex hash values of sbuf pages that have been seen
@@ -190,7 +193,6 @@ public:
     /* Run-time configuration for all of the scanners (per-scanner configuration is stored in sc)
      * Default values are hard-coded below.
      */
-
 
     // Scanning
     scanner_params::phase_t current_phase{scanner_params::PHASE_INIT};
@@ -207,6 +209,8 @@ public:
     bool is_scanner_enabled(const std::string& name);      // report if it is enabled or not
     std::vector<std::string> get_enabled_scanners() const; // put names of the enabled scanners into the vector
     bool is_find_scanner_enabled();                        // return true if a find scanner is enabled
+    void dump_enabled_scanner_config() const;  // dump the enabled scanners to dfxml writer
+    void dump_scanner_stats() const;           // dump scanner stats to dfxml writer
 
     // hash support
     virtual std::string hash(const sbuf_t& sbuf) const;

@@ -8,13 +8,31 @@
 #include <string>
 #include <vector>
 #include <thread>
+#include <fstream>
 
 
-/* needed solely for loading shared libraries */
+/* needed loading shared libraries and getting free memory*/
 #include "config.h"
+
+#ifdef HAVE_LINUX_SYSCTL_H
+#include <linux/sysctl.h>
+#endif
+
 
 #ifdef HAVE_DLFCN_H
 #include <dlfcn.h>
+#endif
+
+#include <sys/types.h>
+
+#ifdef HAVE_SYS_VMMETER_H
+#include <sys/vmmeter.h>
+#endif
+
+#ifdef HAVE_MACH_MACH_H
+#include <mach/mach.h>
+#include <mach/mach_host.h>
+#include <mach/host_info.h>
 #endif
 
 #include "thread-pool/thread_pool.hpp"
@@ -92,17 +110,6 @@ scanner_t* scanner_set::get_scanner_by_name(const std::string search_name) const
  *** thread interface
  ****************************************************************/
 
-void scanner_set::notify_thread()
-{
-    while(true){
-        time_t rawtime = time (0);
-        struct tm *timeinfo = localtime (&rawtime);
-        std::cerr << asctime(timeinfo) << "\n";
-        print_tp_stats();
-        std::this_thread::sleep_for(std::chrono::seconds(1));
-    }
-}
-
 void scanner_set::launch_workers(int count)
 {
     assert(pool == nullptr);
@@ -133,23 +140,78 @@ void scanner_set::thread_set_status(const std::string &status)
     thread_status[std::this_thread::get_id()] = status;
 }
 
+uint64_t scanner_set::get_available_memory()
+{
+    // If there is a /proc/meminfo, use it
+    std::ifstream meminfo("/proc/meminfo");
+    if (meminfo.is_open()) {
+        std::string line;
+        while (std::getline(meminfo, line)) {
+            if (line.substr(0,13)=="MemAvailable:") {
+                return std::stoll(line.substr(14))*1024;
+            }
+        }
+    }
+
+#ifdef HAVE_HOST_STATISTICS64
+    // on macs, use this
+    // https://opensource.apple.com/source/system_cmds/system_cmds-496/vm_stat.tproj/vm_stat.c.auto.html
+
+    vm_statistics64_data_t	vm_stat;
+    vm_size_t pageSize = 4096; 	/* Default */
+    mach_port_t myHost = mach_host_self();
+    if (host_page_size(myHost, &pageSize) != KERN_SUCCESS) {
+        pageSize = 4096;                // put the default back
+    }
+    vm_statistics64_t stat = &vm_stat;
+
+    unsigned int count = HOST_VM_INFO64_COUNT;
+    if (host_statistics64(myHost, HOST_VM_INFO64, (host_info64_t)stat, &count) != KERN_SUCCESS) {
+        return 0;
+    }
+    return stat->free_count * pageSize;
+#endif
+    return 0;                           // can't figure it out
+}
+
 /*
  * Print the status of each thread in the threadpool.
  */
-void scanner_set::print_tp_stats()
-{
-    if (pool==nullptr) return;
+const std::string THREAD_COUNT_STR {"thread_count"};
+const std::string TASKS_QUEUED_STR {"tasks_queued"};
+const std::string DEPTH0_SBUFS_QUEUED_STR {"depth0_sbufs_queued"};
+const std::string DEPTH0_BYTES_QUEUED_STR {"depth0_bytes_queued"};
+const std::string SBUFS_QUEUED_STR {"sbufs_queued"};
+const std::string BYTES_QUEUED_STR {"bytes_queued"};
+const std::string AVAILABLE_MEMORY_STR {"available_memory"};
+const std::string SBUFS_CREATED_STR {"sbufs_created"};
+const std::string SBUFS_REMAINING_STR {"sbufs_remaining"};
 
-    std::cout << "---enter print_tp_status----------------\n";
-    std::cerr << "tasks queued: " << pool->get_tasks_queued() << "\n";
-    std::cerr << "depth 0 sbufs in queue " << depth0_sbufs_in_queue << "\n";
-    std::cerr << "depth 0 bytes in queue " << depth0_bytes_in_queue << "\n";
-    std::cerr << "sbufs in queue " << sbufs_in_queue << "\n";
-    std::cerr << "bytes in queue " << bytes_in_queue << "\n";
-#ifdef BSD_STYLE
-    show_free_bsd(std::cerr);
-#endif
-    std::cout << "----------------------------------------\n";
+
+std::map<std::string, std::string> scanner_set::get_realtime_stats() const
+{
+    std::map<std::string, std::string> ret;
+    if (pool!=nullptr){
+        ret[THREAD_COUNT_STR]   = std::to_string(pool->get_thread_count());
+        ret[TASKS_QUEUED_STR]   = std::to_string(pool->get_tasks_queued());
+        ret[DEPTH0_SBUFS_QUEUED_STR] = std::to_string(depth0_sbufs_in_queue);
+        ret[DEPTH0_BYTES_QUEUED_STR] = std::to_string(depth0_bytes_in_queue);
+        ret[SBUFS_QUEUED_STR] = std::to_string(sbufs_in_queue);
+        ret[BYTES_QUEUED_STR] = std::to_string(bytes_in_queue);
+    }
+    int counter = 0;
+    for (const auto &it : thread_status.values()) {
+        std::stringstream ss;
+        ss << "thread-" << ++counter;
+        ret[ ss.str() ] = std::string(*it);
+    }
+    uint64_t available_memory = get_available_memory();
+    if (available_memory!=0){
+        ret[AVAILABLE_MEMORY_STR] = std::to_string(available_memory);
+    }
+    ret[SBUFS_CREATED_STR] = std::to_string(sbuf_t::sbuf_total);
+    ret[SBUFS_REMAINING_STR] = std::to_string(sbuf_t::sbuf_count);
+    return ret;
 }
 
 void scanner_set::join()
@@ -157,11 +219,6 @@ void scanner_set::join()
     if (pool != nullptr) {
         pool->wait_for_tasks();
     }
-}
-
-void scanner_set::launch_notify_thread()
-{
-    notifier = new std::thread(&scanner_set::notify_thread, this);
 }
 
 /****************************************************************
@@ -434,11 +491,14 @@ void scanner_set::apply_scanner_commands() {
         }
     }
 
-    /* Create all of the requested feature recorders.
+    /* Create feature recorders for each enabled scanner.
      * Multiple scanners may request the same feature recorder without generating an error.
      */
     fs.create_alert_recorder();
     for (const auto &sit : scanner_info_db) {
+        if (! is_scanner_enabled(sit.second->name )){
+            continue;
+        }
         for (const auto &it : sit.second->feature_defs) {
             fs.create_feature_recorder(it);
         }
@@ -490,6 +550,34 @@ bool scanner_set::is_find_scanner_enabled()
 }
 
 
+/* written as part of <configuration> */
+void scanner_set::dump_enabled_scanner_config() const
+{
+    if (!writer) return;
+    writer->push("scanners");
+    /* Generate a list of the scanners in use */
+    for (const auto &it : get_enabled_scanners()) {
+        writer->xmlout("scanner",it);
+    }
+    writer->pop("scanners");		// scanners
+}
+
+/* Typically written during shutdown */
+void scanner_set::dump_scanner_stats() const
+{
+    if (writer==nullptr) return;
+    writer->push("scanner_stats");
+    for (const auto &it: scanner_stats.items()) {
+        writer->set_oneline(true);
+        writer->push("scanner");
+        writer->xmlout("name", get_scanner_name( it.key ));
+        writer->xmlout("ns", it.value->ns);
+        writer->xmlout("calls", it.value->calls);
+        writer->pop();
+        writer->set_oneline(false);
+    }
+    writer->pop();
+}
 
 /****************************************************************
  *** PHASE_ENABLE methods.
@@ -497,7 +585,7 @@ bool scanner_set::is_find_scanner_enabled()
 
 const std::filesystem::path scanner_set::get_input_fname() const
 {
-return sc.input_fname;
+    return sc.input_fname;
 }
 
 
@@ -528,7 +616,6 @@ void scanner_set::process_sbuf(class sbuf_t* sbufp) {
     assert(sbufp != nullptr);
     assert(sbufp->children == 0); // we are going to free it, so it better not have any children.
     thread_set_status( sbufp->pos0.str() + " process_sbuf (" + std::to_string(sbufp->bufsize) + ")" );
-    //std::cerr << "process_sbuf: " << *sbufp << "\n";
 
     /* If we  have not transitioned to PHASE::SCAN, error */
     if (current_phase != scanner_params::PHASE_SCAN) {
@@ -587,6 +674,7 @@ void scanner_set::process_sbuf(class sbuf_t* sbufp) {
     /* Make the scanner params once, rather than every time through */
     scanner_params sp(sc, this, scanner_params::PHASE_SCAN, sbufp, scanner_params::PrintOptions(), nullptr);
     for (const auto &it : scanner_info_db) {
+
         // Look for reasons not to run a scanner
         // this is a lot of find operations - could we make a vector of the enabled scanner_info_dbs?
         const auto &name = it.second->name; // scanner name
@@ -619,8 +707,6 @@ void scanner_set::process_sbuf(class sbuf_t* sbufp) {
         if (sbuf.bufsize < it.second->min_sbuf_size) {
             continue;
         }
-
-        bool record_call_stats = false;
 
         try {
 
@@ -686,7 +772,6 @@ void scanner_set::process_sbuf(class sbuf_t* sbufp) {
 void scanner_set::schedule_sbuf(sbuf_t *sbufp)
 {
     assert (sbufp != nullptr );
-    //std::cerr << "schedule_sbuf: " << *sbufp << "\n";
     /* Run in same thread? */
     if (pool==nullptr || (sbufp->depth() > 0 && sbufp->bufsize < SAME_THREAD_SBUF_SIZE)) {
         process_sbuf(sbufp);
@@ -695,7 +780,6 @@ void scanner_set::schedule_sbuf(sbuf_t *sbufp)
 
     sbufp->scheduled = true;
     update_queue_stats( sbufp, +1 );
-    print_tp_stats();
 
     /* Run in a different thread */
     pool->push_task( [this, sbufp]{ this->process_sbuf(sbufp); } );
@@ -704,16 +788,12 @@ void scanner_set::schedule_sbuf(sbuf_t *sbufp)
 
 void scanner_set::delete_sbuf(sbuf_t *sbufp)
 {
-    //std::cerr << "delete_sbuf: " << *sbufp << "\n";
     if (sbufp->scheduled) {
         update_queue_stats( sbufp, -1 );
     }
     thread_set_status(sbufp->pos0.str() + " delete_sbuf");
-    print_tp_stats();
     if (sbufp->depth()==0 && writer) {
-        std::stringstream attribute;
-        attribute << "t='" << time(0) << "'";
-        writer->xmlout("sbuf_delete", sbufp->pos0.str(), attribute.str(), false);
+        writer->xmlout("sbuf_delete", sbufp->pos0.str(), aftimer::now_str("t='","'"), false);
     }
     delete sbufp;
 }
@@ -725,15 +805,12 @@ void scanner_set::delete_sbuf(sbuf_t *sbufp)
 
 void scanner_set::log(const std::string message)
 {
-    std::stringstream attribute;
-    attribute << "t='" << time(0) << "'";
-    std::cerr  << "log: " << message << " " << attribute.str() << "\n";
     if (writer){
-        writer->xmlout("log", message, attribute.str(), false);
+        writer->xmlout("log", message, aftimer::now_str("t='","'"), false);
         writer->flush();
     }
     else {
-        std::cerr << "writer is null\n";
+        std::cerr  << "log: " << message << "\n";
     }
 }
 
@@ -777,21 +854,7 @@ void scanner_set::shutdown() {
     fs.histograms_generate();
 
     /* Output the scanner stats */
-    if (writer) {
-        writer->push("scanner_stats");
-#if 0
-        for (scanner_t *scanner : scanner_stats.keys()) {
-            struct scanner_set::stats &st = scanner_stats[scanner];
-            writer->set_oneline("true");
-            writer->push("scanner");
-            writer->xmlout("name", get_scanner_name(scanner));
-            writer->xmlout("ns", st.ns);
-            writer->xmlout("calls", st.calls);
-            writer->pop();
-        }
-#endif
-        writer->pop();
-    }
+    dump_scanner_stats();
 }
 
 /*

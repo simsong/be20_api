@@ -13,7 +13,7 @@ bool histogram_def::match(std::u32string u32key, std::string* displayString) con
 
     /* If a string is required and it is not present, return */
     if (require.size() > 0 && u8key.find_first_of(require) == std::string::npos) {
-        std::cerr << "fail1\n";
+        std::cerr << "fail1 require=" << require << " u8key=" << u8key << "\n";
         return false;
     }
 
