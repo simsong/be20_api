@@ -39,8 +39,13 @@
 #include <string>
 #include <sstream>
 
+#ifdef HAVE_SYS_MMAN_H
 #include <sys/mman.h>
+#endif
+
+#ifdef HAVE_UNISTD_H
 #include <unistd.h>
+#endif
 
 #include "pos0.h"
 
@@ -499,8 +504,8 @@ public:;
         return hp;
     }
 
-    static std::atomic<int> sbuf_total;   // how many are in use
-    static std::atomic<int> sbuf_count;   // how many are in use
+    static std::atomic<int64_t> sbuf_total;   // how many are in use
+    static std::atomic<int64_t> sbuf_count;   // how many are in use
     mutable std::atomic<int> children{0}; // number of child sbufs; incremented when data in *buf is used by a child
 private:
     // explicit allocation is only allowed in internal implementation

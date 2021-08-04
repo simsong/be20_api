@@ -28,8 +28,8 @@
 #endif
 
 /* Keep track of how many sbufs we have */
-std::atomic<int> sbuf_t::sbuf_total = 0;
-std::atomic<int> sbuf_t::sbuf_count = 0;
+std::atomic<int64_t> sbuf_t::sbuf_total = 0;
+std::atomic<int64_t> sbuf_t::sbuf_count = 0;
 
 /* Make an empty sbuf */
 sbuf_t::sbuf_t()

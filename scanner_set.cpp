@@ -8,19 +8,22 @@
 #include <string>
 #include <vector>
 #include <thread>
+#include <fstream>
+
 
 /* needed loading shared libraries and getting free memory*/
 #include "config.h"
+
+#ifdef HAVE_LINUX_SYSCTL_H
+#include <linux/sysctl.h>
+#endif
+
 
 #ifdef HAVE_DLFCN_H
 #include <dlfcn.h>
 #endif
 
 #include <sys/types.h>
-
-#ifdef HAVE_SYS_SYSCTL_H
-#include <sys/sysctl.h>
-#endif
 
 #ifdef HAVE_SYS_VMMETER_H
 #include <sys/vmmeter.h>
@@ -137,23 +140,21 @@ void scanner_set::thread_set_status(const std::string &status)
     thread_status[std::this_thread::get_id()] = status;
 }
 
-// https://askubuntu.com/questions/867068/what-is-available-memory-while-using-free-command
 uint64_t scanner_set::get_available_memory()
 {
-#if defined(HAVE_SYS_SYSCTL_H) && defined(HAVE_SYS_VMMETER_H)
-    u_int page_size;
-    struct vmtotal vmt;
-    size_t vmt_size, uint_size;
-    int rc = sysctlbyname("vm.vmtotal", &vmt, &vmt_size, NULL, 0);
-    if (rc ==0){
-        rc = sysctlbyname("vm.stats.vm.v_page_size", &page_size, &uint_size, NULL, 0);
-        if (rc ==0 ){
-            return vmt.t_avm * page_size;
+    // If there is a /proc/meminfo, use it
+    std::ifstream meminfo("/proc/meminfo");
+    if (meminfo.is_open()) {
+        std::string line;
+        while (std::getline(meminfo, line)) {
+            if (line.substr(0,13)=="MemAvailable:") {
+                return std::stoll(line.substr(14))*1024;
+            }
         }
     }
-#endif
 
 #ifdef HAVE_HOST_STATISTICS64
+    // on macs, use this
     // https://opensource.apple.com/source/system_cmds/system_cmds-496/vm_stat.tproj/vm_stat.c.auto.html
 
     vm_statistics64_data_t	vm_stat;
@@ -176,16 +177,27 @@ uint64_t scanner_set::get_available_memory()
 /*
  * Print the status of each thread in the threadpool.
  */
+const std::string THREAD_COUNT_STR {"thread_count"};
+const std::string TASKS_QUEUED_STR {"tasks_queued"};
+const std::string DEPTH0_SBUFS_QUEUED_STR {"depth0_sbufs_queued"};
+const std::string DEPTH0_BYTES_QUEUED_STR {"depth0_bytes_queued"};
+const std::string SBUFS_QUEUED_STR {"sbufs_queued"};
+const std::string BYTES_QUEUED_STR {"bytes_queued"};
+const std::string AVAILABLE_MEMORY_STR {"available_memory"};
+const std::string SBUFS_CREATED_STR {"sbufs_created"};
+const std::string SBUFS_REMAINING_STR {"sbufs_remaining"};
+
+
 std::map<std::string, std::string> scanner_set::get_realtime_stats() const
 {
     std::map<std::string, std::string> ret;
     if (pool!=nullptr){
-        ret["thread_count"]   = std::to_string(pool->get_thread_count());
-        ret["tasks_queued"]   = std::to_string(pool->get_tasks_queued());
-        ret["depth0_sbufs_queued"] = std::to_string(depth0_sbufs_in_queue);
-        ret["depth0_bytes_queued"] = std::to_string(depth0_bytes_in_queue);
-        ret["sbufs_queued"] = std::to_string(sbufs_in_queue);
-        ret["bytes_queued"] = std::to_string(bytes_in_queue);
+        ret[THREAD_COUNT_STR]   = std::to_string(pool->get_thread_count());
+        ret[TASKS_QUEUED_STR]   = std::to_string(pool->get_tasks_queued());
+        ret[DEPTH0_SBUFS_QUEUED_STR] = std::to_string(depth0_sbufs_in_queue);
+        ret[DEPTH0_BYTES_QUEUED_STR] = std::to_string(depth0_bytes_in_queue);
+        ret[SBUFS_QUEUED_STR] = std::to_string(sbufs_in_queue);
+        ret[BYTES_QUEUED_STR] = std::to_string(bytes_in_queue);
     }
     int counter = 0;
     for (const auto &it : thread_status.values()) {
@@ -195,8 +207,10 @@ std::map<std::string, std::string> scanner_set::get_realtime_stats() const
     }
     uint64_t available_memory = get_available_memory();
     if (available_memory!=0){
-        ret["available_memory"] = std::to_string(available_memory);
+        ret[AVAILABLE_MEMORY_STR] = std::to_string(available_memory);
     }
+    ret[SBUFS_CREATED_STR] = std::to_string(sbuf_t::sbuf_total);
+    ret[SBUFS_REMAINING_STR] = std::to_string(sbuf_t::sbuf_count);
     return ret;
 }
 
