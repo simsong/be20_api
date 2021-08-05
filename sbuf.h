@@ -454,15 +454,22 @@ public:;
     ssize_t find(uint8_t ch, size_t start = 0) const;
 
     /**
-     * Find the next occurance of a char* string in the buffer
-     * starting at a give point.
+     * Find the next occurance of a char* string (null-terminated) or a binary block
+     * in the buffer starting at a give point.
      * Return offset or -1 if there is none to find.
      * This would benefit from a boyer-Moore implementation
      */
-    ssize_t find(const char* str, size_t start = 0) const;
-    const std::string substr(size_t loc, size_t len) const;     // make a substring
+    ssize_t findbin(const uint8_t *buf, size_t bufsize, size_t start=0) const;
+    ssize_t find(const char* str, size_t start = 0) const {
+        return findbin(reinterpret_cast<const uint8_t *>(str), strlen(str), start);
+    };
+
     bool is_constant(size_t loc, size_t len, uint8_t ch) const; // verify that it's constant
     bool is_constant(uint8_t ch) const { return is_constant(0, this->pagesize, ch); }
+
+    /* Make derrivative strings and sbufs */
+
+    const std::string substr(size_t loc, size_t len) const;     // make a substring
 
     // Return a pointer to a structure contained within the sbuf if there is
     // room, otherwise return a null pointer.

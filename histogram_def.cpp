@@ -1,20 +1,52 @@
 #include "histogram_def.h"
 
-bool histogram_def::match(std::u32string u32key, std::string* displayString) const {
-    if (flags.lowercase) { u32key = utf32_lowercase(u32key); }
+histogram_def::histogram_def(const std::string& name_,
+                             const std::string& feature_, // which feature file to use
+                             const std::string& pattern_, // which pattern to abstract
+                             const std::string& require_, // text required on the line
+                             const std::string& suffix_,  // which suffix to add to the feature file name for the histogram
+                             const struct flags_t& flags_):
+    name(name_), feature(feature_), pattern(pattern_), reg(pattern_), require(require_), suffix(suffix_), flags(flags_) {
+        std::cerr << "histogram_def name=" <<name <<" flags: " << flags << "\n";
+}
 
-    if (flags.numeric) { u32key = utf32_extract_numeric(u32key); }
+
+
+bool histogram_def::match(std::u32string u32key, std::string* displayString, const std::string *context) const {
+    if (flags.lowercase) {
+        u32key = utf32_lowercase(u32key);
+    }
+
+    if (flags.numeric) {
+        u32key = utf32_extract_numeric(u32key);
+    }
 
     /* TODO: When we have the ability to do regular expressions in utf32, do that here.
-     * We don't have that, so do the rest in utf8 */
+     * We don't have that, so do the rest in utf8
+     */
 
     /* Convert match string to u8key */
     std::string u8key = convert_utf32_to_utf8(u32key);
 
-    /* If a string is required and it is not present, return */
-    if (require.size() > 0 && u8key.find_first_of(require) == std::string::npos) {
-        std::cerr << "fail1 require=" << require << " u8key=" << u8key << "\n";
-        return false;
+    if (require.size() > 0 ){
+        std::cerr << "\n";
+        std::cerr << "require= " << require;
+        if (flags.require_feature) std::cerr << "require_feature ";
+        if (flags.require_context) std::cerr << "require_context ";
+
+        if (displayString) std::cerr << " displayString= " << *displayString;
+        if (context) std::cerr << " context= " << *context;
+
+        /* If a string is required and it is not present, return */
+        if (flags.require_feature && u8key.find(require)   == std::string::npos) {
+            std::cerr << " fail1 require=" << require << " u8key=" << u8key << "\n";
+            return false;
+        }
+
+        if (flags.require_context && context->find(require) == std::string::npos) {
+            std::cerr << " fail2 require=" << require << " context=" << *context << "\n";
+            return false;
+        }
     }
 
     /* Check for pattern */
@@ -31,9 +63,20 @@ bool histogram_def::match(std::u32string u32key, std::string* displayString) con
     return true;
 }
 
-bool histogram_def::match(std::string u32key, std::string* displayString) const {
-    return match(convert_utf8_to_utf32(u32key), displayString);
+bool histogram_def::match(std::string u32key, std::string* displayString, const std::string *context) const {
+    return match(convert_utf8_to_utf32(u32key), displayString, context);
 }
+
+std::ostream& operator<<(std::ostream& os, const histogram_def::flags_t& f) {
+    os << "<histogram_def::flags(";
+    if (f.lowercase) os << " lowercase";
+    if (f.numeric) os << " numeric";
+    if (f.require_feature) os << " require_feature";
+    if (f.require_context) os << " require_context";
+    os << "> ";
+    return os;
+}
+
 
 std::ostream& operator<<(std::ostream& os, const histogram_def& hd) {
     os << "<histogram_def( name:" << hd.name << " feature:" << hd.feature << " pattern:" << hd.pattern

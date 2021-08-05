@@ -255,7 +255,7 @@ void feature_recorder::write(const pos0_t& pos0, const std::string& feature_, co
 #endif
 
     /* add the feature to any histograms; the regex is applied in the histogram */
-    this->histograms_add_feature(feature);
+    this->histograms_add_feature(feature, context);
 
     /* Finally write out the feature and the context */
     this->write0(pos0, feature, context);
@@ -495,9 +495,9 @@ void feature_recorder::histogram_add(const struct histogram_def& hdef) {
  * add a feature to all of the feature recorder's histograms
  * @param feature - the feature to add.
  */
-void feature_recorder::histograms_add_feature(const std::string& feature) {
+void feature_recorder::histograms_add_feature(const std::string& feature, const std::string& context) {
     for (auto& h : histograms) {
-        h->add(feature); // add the original feature
+        h->add(feature, context); // add the original feature
     }
 }
 
