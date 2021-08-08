@@ -197,7 +197,9 @@ public:;
     sbuf_t slice(size_t off) const;
     sbuf_t *new_slice(size_t off) const; // allocates; must be deleted
     virtual ~sbuf_t();
-    sbuf_t operator+(size_t off) const { return slice(off); }
+    // It turns out that slice is not free, so don't do it so casually
+    //sbuf_t operator+(size_t off) const { return slice(off); }
+    sbuf_t operator+(size_t off) const = delete;
 
     inline static const std::string U10001C = "\xf4\x80\x80\x9c"; // default delimeter character in bulk_extractor
     static std::string map_file_delimiter;                        // character placed

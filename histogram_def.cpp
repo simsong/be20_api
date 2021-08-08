@@ -7,7 +7,6 @@ histogram_def::histogram_def(const std::string& name_,
                              const std::string& suffix_,  // which suffix to add to the feature file name for the histogram
                              const struct flags_t& flags_):
     name(name_), feature(feature_), pattern(pattern_), reg(pattern_), require(require_), suffix(suffix_), flags(flags_) {
-        std::cerr << "histogram_def name=" <<name <<" flags: " << flags << "\n";
 }
 
 
@@ -29,22 +28,13 @@ bool histogram_def::match(std::u32string u32key, std::string* displayString, con
     std::string u8key = convert_utf32_to_utf8(u32key);
 
     if (require.size() > 0 ){
-        std::cerr << "\n";
-        std::cerr << "require= " << require;
-        if (flags.require_feature) std::cerr << "require_feature ";
-        if (flags.require_context) std::cerr << "require_context ";
-
-        if (displayString) std::cerr << " displayString= " << *displayString;
-        if (context) std::cerr << " context= " << *context;
 
         /* If a string is required and it is not present, return */
-        if (flags.require_feature && u8key.find(require)   == std::string::npos) {
-            std::cerr << " fail1 require=" << require << " u8key=" << u8key << "\n";
+        if (flags.require_feature && u8key.find(require)  == std::string::npos) {
             return false;
         }
 
         if (flags.require_context && context->find(require) == std::string::npos) {
-            std::cerr << " fail2 require=" << require << " context=" << *context << "\n";
             return false;
         }
     }
