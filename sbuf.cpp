@@ -27,9 +27,11 @@
 #define O_BINARY 0
 #endif
 
+bool sbuf_t::debug_range_exception = false; // alert exceptions
+
 /* Keep track of how many sbufs we have */
-std::atomic<int> sbuf_t::sbuf_total = 0;
-std::atomic<int> sbuf_t::sbuf_count = 0;
+std::atomic<int64_t> sbuf_t::sbuf_total = 0;
+std::atomic<int64_t> sbuf_t::sbuf_count = 0;
 
 /* Make an empty sbuf */
 sbuf_t::sbuf_t()
@@ -487,17 +489,17 @@ ssize_t sbuf_t::find(uint8_t ch, size_t start) const
     return -1;
 }
 
-ssize_t sbuf_t::find(const char* str, size_t start ) const
+ssize_t sbuf_t::findbin(const uint8_t* b2, size_t buflen, size_t start ) const
 {
-    if (str[0] == 0) return -1; // nothing to search for
+    if (buflen == 0) return -1; // nothing to search for
 
     for (; start < pagesize; start++) {
-        const uint8_t* p = (const uint8_t*)memchr(buf + start, str[0], bufsize - start);
+        const uint8_t* p = static_cast<const uint8_t *>(memchr(buf + start, b2[0], bufsize - start)); // perhaps memchr be optimized
         if (p == 0) return -1; // first character not present,
         size_t loc = p - buf;
-        for (size_t i = 0; loc + i < bufsize && str[i]; i++) {
-            if (buf[loc + i] != str[i]) break;
-            if (str[i + 1] == 0) return loc; // next char is null, so we are found!
+        for (size_t i = 0; loc + i < bufsize && i<buflen; i++) {
+            if ( buf[loc + i] != b2[i]) break;
+            if ( i==buflen-1 ) return loc;  // reached end of buffer
         }
         start = loc + 1; // advance to character after found character
     }

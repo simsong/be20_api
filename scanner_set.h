@@ -140,6 +140,7 @@ private:
     class thread_pool *pool {nullptr}; // nullptr means we are not threading
 
 public:;
+    static uint64_t get_available_memory();
 
     int get_thread_count() { return (pool!=nullptr) ? pool->get_thread_count() : 1; };
     std::atomic<int> depth0_sbufs_in_queue {0};

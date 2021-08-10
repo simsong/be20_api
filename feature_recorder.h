@@ -130,6 +130,8 @@ struct Feature {
         : pos(pos_), feature(feature_), context(context_){};
     Feature(std::string pos_, std::string feature_, std::string context_)
         : pos(pos_), feature(feature_), context(context_){};
+    Feature(std::string pos_, std::string feature_)
+        : pos(pos_), feature(feature_), context(""){};
 
     const pos0_t pos;
     const std::string feature;
@@ -280,7 +282,7 @@ public:
 
     /* These must be specialized */
     virtual void histogram_flush(AtomicUnicodeHistogram& h);         // flush a specific histogram
-    virtual void histograms_add_feature(const std::string& feature); // propose a feature to all of the histograms
+    virtual void histograms_add_feature(const std::string& feature, const std::string& context); // propose a feature to all of the histograms
 
     virtual size_t histogram_count() { return histograms.size(); } // how many histograms it has
     virtual void histogram_add(const struct histogram_def& def);   // add a new histogram

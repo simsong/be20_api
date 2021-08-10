@@ -39,8 +39,13 @@
 #include <string>
 #include <sstream>
 
+#ifdef HAVE_SYS_MMAN_H
 #include <sys/mman.h>
+#endif
+
+#ifdef HAVE_UNISTD_H
 #include <unistd.h>
+#endif
 
 #include "pos0.h"
 
@@ -133,7 +138,6 @@ public:;
      */
     static sbuf_t* sbuf_malloc(const pos0_t pos0, const std::string &str);
 
-
     /****************************************************************
      * Allocate a sbuf from a file mapped into memory.
      * When the sbuf is deleted, the memory is unmapped and the file is closed.
@@ -192,7 +196,9 @@ public:;
     sbuf_t slice(size_t off) const;
     sbuf_t *new_slice(size_t off) const; // allocates; must be deleted
     virtual ~sbuf_t();
-    sbuf_t operator+(size_t off) const { return slice(off); }
+    // It turns out that slice is not free, so don't do it so casually
+    //sbuf_t operator+(size_t off) const { return slice(off); }
+    sbuf_t operator+(size_t off) const = delete;
 
     inline static const std::string U10001C = "\xf4\x80\x80\x9c"; // default delimeter character in bulk_extractor
     static std::string map_file_delimiter;                        // character placed
@@ -246,16 +252,27 @@ public:;
      * sbuf_t raises an sbuf_range_exception when an attempt is made to read
      * past the end of buf.
      */
+    static bool debug_range_exception;  // print range exceptions to stdout
     class range_exception_t : public std::exception {
         size_t off {0};
         size_t len {0};
+        std::string message() const {
+            std::stringstream ss;
+            ss << "<< sbuf_t::range_exception_t: Read past end of sbuf off=" << off << " len=" << len << " >>";
+            return ss.str();
+        }
     public:
-        range_exception_t(size_t off_, size_t len_):off(off_), len(len_){};
+        range_exception_t(size_t off_, size_t len_):off(off_), len(len_){
+            if (debug_range_exception){
+                std::cerr << __func__ ;
+                std::cerr << message() << " ";
+                std::cerr << "\n";
+            }
+        };
         virtual const char* what() const throw() {
             static char buf[64];        // big enough to hold a single error
-            std::stringstream ss;
-            ss << "Error: Read past end of sbuf (off=" << off << " len=" << len << " )";
-            strncpy(buf,ss.str().c_str(),sizeof(buf)-1);
+            std::string str = message();
+            strncpy(buf,str.c_str(),sizeof(buf)-1);
             buf[sizeof(buf)-1] = '\000'; // safety
             return buf;
         }
@@ -449,15 +466,22 @@ public:;
     ssize_t find(uint8_t ch, size_t start = 0) const;
 
     /**
-     * Find the next occurance of a char* string in the buffer
-     * starting at a give point.
+     * Find the next occurance of a char* string (null-terminated) or a binary block
+     * in the buffer starting at a give point.
      * Return offset or -1 if there is none to find.
      * This would benefit from a boyer-Moore implementation
      */
-    ssize_t find(const char* str, size_t start = 0) const;
-    const std::string substr(size_t loc, size_t len) const;     // make a substring
+    ssize_t findbin(const uint8_t *buf, size_t bufsize, size_t start=0) const;
+    ssize_t find(const char* str, size_t start = 0) const {
+        return findbin(reinterpret_cast<const uint8_t *>(str), strlen(str), start);
+    };
+
     bool is_constant(size_t loc, size_t len, uint8_t ch) const; // verify that it's constant
     bool is_constant(uint8_t ch) const { return is_constant(0, this->pagesize, ch); }
+
+    /* Make derrivative strings and sbufs */
+
+    const std::string substr(size_t loc, size_t len) const;     // make a substring
 
     // Return a pointer to a structure contained within the sbuf if there is
     // room, otherwise return a null pointer.
@@ -499,8 +523,8 @@ public:;
         return hp;
     }
 
-    static std::atomic<int> sbuf_total;   // how many are in use
-    static std::atomic<int> sbuf_count;   // how many are in use
+    static std::atomic<int64_t> sbuf_total;   // how many are in use
+    static std::atomic<int64_t> sbuf_count;   // how many are in use
     mutable std::atomic<int> children{0}; // number of child sbufs; incremented when data in *buf is used by a child
 private:
     // explicit allocation is only allowed in internal implementation

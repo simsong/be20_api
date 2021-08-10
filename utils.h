@@ -13,15 +13,17 @@
 #error utils.h requires that autoconf-generated config.h be included first
 #endif
 
-//#include <cstdint>
-//#include <sys/time.h>
-//#include <sys/types.h>
-#include <unistd.h>
-
+#include <array>
+#include <cstdio>
 #include <exception>
 #include <filesystem>
+#include <iostream>
+#include <memory>
+#include <stdexcept>
 #include <string>
+#include <unistd.h>
 #include <vector>
+#include <sstream>
 
 #include "utf8.h"
 
@@ -166,4 +168,19 @@ inline bool directory_empty(std::filesystem::path path) {
 }
 
 uint64_t scaled_stoi64(const std::string &str);
+
+// https://stackoverflow.com/questions/478898/how-do-i-execute-a-command-and-get-the-output-of-the-command-within-c-using-po
+inline std::string subprocess_call(const char* cmd) {
+    std::array<char, 4096> buffer;
+    std::stringstream ss;
+    std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(cmd, "r"), pclose);
+    if (!pipe) {
+        throw std::runtime_error("popen() failed!");
+    }
+    while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
+        ss << buffer.data();
+    }
+    return ss.str();
+}
+
 #endif

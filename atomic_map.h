@@ -160,12 +160,17 @@ public:
     /* This is used for dumping the contents in a mostly threadsafe manner.
      * The item that is return is a reference to what's in the atomic_map, so it better not be deleted,
      * and if you want multiple threads to access it, the elements should be atomic.
+     * There is no reference counting on the pointer, so be careful!
      * It would be useful to have a priority queue to get the topN.
      */
     struct item {
+        item(const item& s): key(s.key), value(s.value){};
+        item(item &&that) noexcept : key(that.key), value(that.value) {}
+        item& operator=(const item& s) { this->key = s.key; this->value = s.value; return *this;}
+
         item(T1 key_, T2 *value_) : key(key_), value(value_){};
         T1 key{};                      // reference to the key in the histogram
-        T2 *value{};                    // a pointer to the histogram's object
+        T2 *value{};                   // a pointer to the histogram's object
         // these comparisions only look at the keys
         bool operator==(const item& a) const { return (this->key == a.key); }
         bool operator!=(const item& a) const { return !(*this == a); }

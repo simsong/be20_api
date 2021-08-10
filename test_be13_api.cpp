@@ -226,6 +226,19 @@ TEST_CASE("atomic_map", "[atomic]") {
 }
 
 /****************************************************************
+ * utils.h
+ */
+
+TEST_CASE("scale_stoi64","[utils]") {
+    REQUIRE(scaled_stoi64("10") == 10);
+    REQUIRE(scaled_stoi64("2k") == 2048);
+    REQUIRE(scaled_stoi64("4m") == 4194304);
+    REQUIRE(scaled_stoi64("1g") == 1073741824);
+}
+
+/*** BE-specific tests continue ***/
+
+/****************************************************************
  * histogram_def.h
  */
 #include "histogram_def.h"
@@ -261,10 +274,10 @@ TEST_CASE("AtomicUnicodeHistogram_1", "[atomic][regex]") {
     /* Histogram that matches everything */
     histogram_def d1("name", "feature_file", "(.*)", "", "suffix1", histogram_def::flags_t());
     AtomicUnicodeHistogram h(d1);
-    h.add("foo");
-    h.add("foo");
-    h.add("foo");
-    h.add("bar");
+    h.add("foo", "");
+    h.add("foo", "bar");
+    h.add("foo", "ignore");
+    h.add("bar", "me");
 
     /* Now make sure things were added with the right counts */
     AtomicUnicodeHistogram::FrequencyReportVector f = h.makeReport();
@@ -289,7 +302,7 @@ TEST_CASE("AtomicUnicodeHistogram_2", "[atomic][regex]") {
     /* Histogram that matches everything */
     histogram_def d1("extraction", "extraction", "^(.....)", "", "", histogram_def::flags_t());
     AtomicUnicodeHistogram h(d1);
-    h.add("abcdefghijklmnop");
+    h.add("abcdefghijklmnop", "");
 
     /* Now make sure things were added with the right counts */
     AtomicUnicodeHistogram::FrequencyReportVector f = h.makeReport();
@@ -315,12 +328,12 @@ TEST_CASE("AtomicUnicodeHistogram_3", "[histogram]") {
     histogram_def h1("phones", "p", "([0-9]+)", "", "phones", flags);
     AtomicUnicodeHistogram hm(h1);
 
-    hm.add("100");
-    hm.add("200");
-    hm.add("300");
-    hm.add("200");
-    hm.add("300");
-    hm.add("foo 300 bar");
+    hm.add("100", "");
+    hm.add("200", "1");
+    hm.add("300", "2");
+    hm.add("200", "3");
+    hm.add("300", "4");
+    hm.add("foo 300 bar", "");
 
     std::vector<AtomicUnicodeHistogram::auh_t::item> r = hm.makeReport(0);
     REQUIRE(r.size() == 3);
@@ -341,7 +354,7 @@ TEST_CASE("AtomicUnicodeHistogram_3", "[histogram]") {
     /* Add a UTF-16 300 */
     char buf300[6]{'\000', '3', '\000', '0', '\000', '0'};
     std::string b300(buf300, 6);
-    hm.add(b300);
+    hm.add(b300, "");
     r = hm.makeReport(0);
     REQUIRE(r.at(0).key == "300");
     REQUIRE(r.at(0).value->count == 4);
@@ -803,6 +816,12 @@ TEST_CASE("scanner", "[scanner]") { /* check that scanner params made from an ex
  */
 #include "scan_sha1_test.h"
 #include "scanner_set.h"
+
+TEST_CASE("get_available_memory", "[scanner]") {
+    REQUIRE(scanner_set::get_available_memory() != 0);
+}
+
+
 
 /* Just make sure that they can be created and deleted without error.
  * Previously we got errors before we moved the destructor to the .cpp file from the .h file.

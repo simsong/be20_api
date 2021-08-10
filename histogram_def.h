@@ -19,11 +19,15 @@ struct histogram_def {
         flags_t(const flags_t& a) {
             this->lowercase = a.lowercase;
             this->numeric = a.numeric;
+            this->require_feature = a.require_feature;
+            this->require_context = a.require_context;
         };
 
         flags_t& operator=(const flags_t& a) {
             this->lowercase = a.lowercase;
             this->numeric = a.numeric;
+            this->require_feature = a.require_feature;
+            this->require_context = a.require_context;
             return *this;
         };
 
@@ -31,17 +35,25 @@ struct histogram_def {
             if (this->lowercase < a.lowercase) return true;
             if (this->lowercase > a.lowercase) return false;
             if (this->numeric < a.numeric) return true;
+            if (this->numeric > a.numeric) return false;
+
+            if (this->require_feature < a.require_feature) return true;
+            if (this->require_feature > a.require_feature) return false;
+            if (this->require_context < a.require_context) return true;
+            if (this->require_context > a.require_context) return false;
             return false;
         }
 
         bool operator==(const flags_t& a) const {
-            return (this->lowercase == a.lowercase) && (this->numeric == a.numeric);
+            return (this->lowercase == a.lowercase) && (this->numeric == a.numeric) && (this->require_feature==a.require_feature) && (this->require_context==a.require_context);
         }
 
         flags_t(){};
         flags_t(bool lowercase_, bool numeric_) : lowercase(lowercase_), numeric(numeric_) {}
-        bool lowercase{false}; // make all flags lowercase
-        bool numeric{false};   // extract digits only
+        bool lowercase       {false}; // make all flags lowercase
+        bool numeric         {false};   // extract digits only
+        bool require_feature {true};  // require text is applied to feature
+        bool require_context {false};  // require text is applied to context
     };
 
     /**
@@ -57,11 +69,7 @@ struct histogram_def {
                   const std::string& pattern_, // which pattern to abstract
                   const std::string& require_, // text required on the line
                   const std::string& suffix_,  // which suffix to add to the feature file name for the histogram
-                  const struct flags_t& flags_)
-        : // flags - see below
-          name(name_), feature(feature_), pattern(pattern_), reg(pattern_), require(require_), suffix(suffix_),
-          flags(flags_) {}
-
+                  const struct flags_t& flags_);
     std::string name{};    // name of the hsitogram
     std::string feature{}; // feature file to extract
     std::string
@@ -126,10 +134,11 @@ struct histogram_def {
      * set match to Extract and match: Does this string match
      */
 
-    bool match(std::u32string u32key, std::string* displayString = nullptr) const;
-    bool match(std::string u32key, std::string* displayString = nullptr) const;
+    bool match(std::u32string u32key, std::string* displayString = nullptr, const std::string *context=nullptr) const;
+    bool match(std::string u32key,    std::string* displayString = nullptr, const std::string *context=nullptr) const;
 };
 
+std::ostream& operator<<(std::ostream& os, const histogram_def::flags_t& f);
 std::ostream& operator<<(std::ostream& os, const histogram_def& hd);
 
 #endif

@@ -56,7 +56,8 @@ struct AtomicUnicodeHistogram {
     virtual ~AtomicUnicodeHistogram(){};
 
     void clear();                     // empties the histogram
-    void add(const std::string& key); // adds Unicode string to the histogram count
+     // adds Unicode string to the histogram count. context is used for histogram_def
+    void add(const std::string& feature, const std::string&context);
     size_t size() const;              // returns the size of the histogram, whatever that means
 
     /** makeReport() makes a report and returns a

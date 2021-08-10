@@ -65,7 +65,7 @@ std::vector<AtomicUnicodeHistogram::auh_t::item> AtomicUnicodeHistogram::makeRep
 uint32_t AtomicUnicodeHistogram::debug_histogram_malloc_fail_frequency = 0;
 void AtomicUnicodeHistogram::clear() { h.clear(); }
 
-void AtomicUnicodeHistogram::add(const std::string& key_unknown_encoding) {
+void AtomicUnicodeHistogram::add(const std::string& key_unknown_encoding, const std::string& context) {
     if (key_unknown_encoding.size() == 0) return; // don't deal with zero-length keys
 
     /* On input, the key may be UTF8 or UTF16. See if we can figure it out */
@@ -102,7 +102,8 @@ void AtomicUnicodeHistogram::add(const std::string& key_unknown_encoding) {
     std::string u8key = convert_utf32_to_utf8(u32key);
     std::string displayString;
 
-    if (def.match(u8key, &displayString)) {
+    if (def.match(u8key, &displayString, &context)) {
+
         /* Escape as necessary */
         displayString = validateOrEscapeUTF8(displayString, true, true, false);
 
