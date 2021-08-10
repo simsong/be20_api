@@ -138,7 +138,6 @@ public:;
      */
     static sbuf_t* sbuf_malloc(const pos0_t pos0, const std::string &str);
 
-
     /****************************************************************
      * Allocate a sbuf from a file mapped into memory.
      * When the sbuf is deleted, the memory is unmapped and the file is closed.
@@ -253,16 +252,27 @@ public:;
      * sbuf_t raises an sbuf_range_exception when an attempt is made to read
      * past the end of buf.
      */
+    static bool debug_range_exception;  // print range exceptions to stdout
     class range_exception_t : public std::exception {
         size_t off {0};
         size_t len {0};
+        std::string message() const {
+            std::stringstream ss;
+            ss << "<< sbuf_t::range_exception_t: Read past end of sbuf off=" << off << " len=" << len << " >>";
+            return ss.str();
+        }
     public:
-        range_exception_t(size_t off_, size_t len_):off(off_), len(len_){};
+        range_exception_t(size_t off_, size_t len_):off(off_), len(len_){
+            if (debug_range_exception){
+                std::cerr << __func__ ;
+                std::cerr << message() << " ";
+                std::cerr << "\n";
+            }
+        };
         virtual const char* what() const throw() {
             static char buf[64];        // big enough to hold a single error
-            std::stringstream ss;
-            ss << "Error: Read past end of sbuf (off=" << off << " len=" << len << " )";
-            strncpy(buf,ss.str().c_str(),sizeof(buf)-1);
+            std::string str = message();
+            strncpy(buf,str.c_str(),sizeof(buf)-1);
             buf[sizeof(buf)-1] = '\000'; // safety
             return buf;
         }

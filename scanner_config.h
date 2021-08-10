@@ -38,10 +38,13 @@ struct scanner_config {
     virtual ~scanner_config(){};
     scanner_config(){};
     scanner_config(const scanner_config&) = default;
-    std::filesystem::path input_fname{NO_INPUT}; // where input comes from
-    std::filesystem::path outdir{NO_OUTDIR};     // where output goes
-    std::string hash_algorithm{"sha1"};          // which hash algorithm are using; default to SHA1
+    std::filesystem::path input_fname {NO_INPUT}; // where input comes from
+    std::filesystem::path outdir {NO_OUTDIR};     // where output goes
+    std::string hash_algorithm {"sha1"};          // which hash algorithm are using; default to SHA1
     std::string help() { return help_str; };
+
+    bool allow_recurse { true};         // can be turned off for testing
+
     inline static const std::string NO_INPUT = "<NO-INPUT>"; // 'filename' indicator that the FRS has no input file
     inline static const std::string NO_OUTDIR =
         "<NO-OUTDIR>"; // 'dirname' indicator that the FRS produces no file output

@@ -27,6 +27,8 @@
 #define O_BINARY 0
 #endif
 
+bool sbuf_t::debug_range_exception = false; // alert exceptions
+
 /* Keep track of how many sbufs we have */
 std::atomic<int64_t> sbuf_t::sbuf_total = 0;
 std::atomic<int64_t> sbuf_t::sbuf_count = 0;
