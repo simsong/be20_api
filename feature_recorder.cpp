@@ -425,6 +425,10 @@ std::string feature_recorder::carve(const sbuf_t& header, const sbuf_t& data, st
         // const std::filesystem::path scannerDir { fs.get_outdir() / name};
 
         std::string fname  = data.pos0.str() + ext;
+        auto rpos = fname.rfind('/');   // see if there is a '/' in the string
+        if (rpos != std::string::npos ){
+            fname = fname.substr(rpos+1); // remove everything up to the last /
+        }
 
         // carved relative path goes in the feature file
         carved_relative_path = name + "/" + thousands + "/" + fname;
