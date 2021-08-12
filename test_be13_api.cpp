@@ -32,6 +32,7 @@
 
 #include "atomic_unicode_histogram.h"
 #include "sbuf.h"
+#include "sbuf_stream.h"
 #include "utils.h"
 #include "dfxml_cpp/src/hash_t.h"
 
@@ -475,9 +476,44 @@ TEST_CASE("fname", "[feature_recorder]") {
         delete sbuf1c;
     }
     REQUIRE( sbuf1.children == 0 );
+}
 
+/** test the sbuf_stream interface.
+ */
+TEST_CASE("sbuf_stream", "[sbuf]") {
+    auto sbuf1 = sbuf_t("\001\002\003\004\005\006\007\010");
+    std::cerr << "sbuf1: " << sbuf1 << "\n";
+    REQUIRE( sbuf1.bufsize == 8);
+    auto sbs = sbuf_stream( sbuf1 );
+
+    REQUIRE( sbs.tell() == 0 );
+    REQUIRE( sbs.get8u() == 1);
+    REQUIRE( sbs.get8u() == 2);
+    REQUIRE( sbs.get8u() == 3);
+    REQUIRE( sbs.get8u() == 4);
+    REQUIRE( sbs.tell() == 4 );
+
+    REQUIRE( sbs.get16u() == 0x0605);   // ah, LE
+    REQUIRE( sbs.get16u() == 0x0807);
+
+    sbs.seek(4);
+    REQUIRE( sbs.get32u() == 0x08070605 );
+
+    sbs.seek(0);
+    REQUIRE( sbs.get64u() == 0x0807060504030201L );
+
+    sbs.seek(4);
+    REQUIRE( sbs.get16iBE() == 0x0506);
+    REQUIRE( sbs.get16iBE() == 0x0708);
+
+    sbs.seek(4);
+    REQUIRE( sbs.get32iBE() == 0x05060708 );
+
+    sbs.seek(0);
+    REQUIRE( sbs.get64iBE() == 0x0102030405060708L );
 
 }
+
 
 /****************************************************************
  * feature_recorder_set.h
@@ -680,9 +716,11 @@ TEST_CASE("hello_sbuf", "[sbuf]") {
     REQUIRE(sb7.asString() == "");
 }
 
+/* Make sure we can allocate writable space in a sbuf. */
 TEST_CASE("sbuf_malloc", "[sbuf]") {
-    sbuf_t *sb1 = sbuf_t::sbuf_malloc(pos0_t(), 256);
-    for(int i=0; i<256; i++){
+    const size_t BUFSIZE=256;
+    sbuf_t *sb1 = sbuf_t::sbuf_malloc(pos0_t(), BUFSIZE, BUFSIZE);
+    for(int i=0; i<BUFSIZE; i++){
         sb1->wbuf(i, 255-i);
     }
     REQUIRE_THROWS_AS( sb1->wbuf(600,0), std::runtime_error);
@@ -744,7 +782,7 @@ TEST_CASE("sbuf_malloc2", "[sbuf]") {
         ss << root;
     }
     std::string bufstr = ss.str();
-    auto *dbuf = sbuf_t::sbuf_malloc(root.pos0+"MSXML", bufstr.size());
+    auto *dbuf = sbuf_t::sbuf_malloc(root.pos0+"MSXML", bufstr.size(), bufstr.size());
     memcpy(dbuf->malloc_buf(), bufstr.c_str(), bufstr.size());
     delete dbuf;
 }
