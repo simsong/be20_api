@@ -44,11 +44,11 @@ public:
 
 // https://stackoverflow.com/questions/16177295/get-time-since-epoch-in-milliseconds-preferably-using-c11-chrono
 inline std::string aftimer::now_str(std::string prefix,std::string suffix) {
-    unsigned long milliseconds_since_epoch =
-        std::chrono::duration_cast<std::chrono::milliseconds>
-        (std::chrono::system_clock::now().time_since_epoch()).count();
+    //uint64_t nanoseconds_since_epoch  = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now());
+    //std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count();
+    uint64_t microseconds_since_epoch = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
     std::stringstream ss;
-    ss << std::setprecision(4) << std::fixed << prefix << milliseconds_since_epoch/1000 << suffix;
+    ss << std::setprecision(4) << std::fixed << prefix << microseconds_since_epoch/1000 << suffix;
     return ss.str();
 }
 

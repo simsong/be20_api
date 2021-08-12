@@ -772,6 +772,15 @@ void scanner_set::process_sbuf(class sbuf_t* sbufp) {
 void scanner_set::schedule_sbuf(sbuf_t *sbufp)
 {
     assert (sbufp != nullptr );
+    if (sbufp->depth()==0 && writer) {
+        std::stringstream ss;
+        ss << "threadid='"  << std::this_thread::get_id() << "'"
+           << " pos0='"     << dfxml_writer::xmlescape(sbufp->pos0.str()) << "'"
+           << " pagesize='" << sbufp->pagesize << "'"
+           << " bufsize='"  << sbufp->bufsize << "' "
+           << aftimer::now_str("t='","'");
+        writer->xmlout("debug:work_start","",ss.str(), true);
+    }
     /* Run in same thread? */
     if (pool==nullptr || (sbufp->depth() > 0 && sbufp->bufsize < SAME_THREAD_SBUF_SIZE)) {
         process_sbuf(sbufp);
@@ -793,7 +802,11 @@ void scanner_set::delete_sbuf(sbuf_t *sbufp)
     }
     thread_set_status(sbufp->pos0.str() + " delete_sbuf");
     if (sbufp->depth()==0 && writer) {
-        writer->xmlout("sbuf_delete", sbufp->pos0.str(), aftimer::now_str("t='","'"), false);
+        std::stringstream ss;
+        ss << "threadid='" << std::this_thread::get_id() << "'"
+           << " pos0='" << dfxml_writer::xmlescape(sbufp->pos0.str()) << "' "
+           << aftimer::now_str("t='","'");
+        writer->xmlout("debug:work_end", "", ss.str(), true);
     }
     delete sbufp;
 }
