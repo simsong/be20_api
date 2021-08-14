@@ -135,22 +135,22 @@ int64_t sbuf_stream::get64iBE() {
  * signed integers, byte order specified
  */
 int8_t sbuf_stream::get8i(sbuf_t::byte_order_t bo) {
-    uint8_t value = sbuf.get8i(offset, bo);
+    int8_t value = sbuf.get8i(offset, bo);
     offset++;
     return value;
 }
 int16_t sbuf_stream::get16i(sbuf_t::byte_order_t bo) {
-    uint16_t value = sbuf.get16i(offset, bo);
+    int16_t value = sbuf.get16i(offset, bo);
     offset += 2;
     return value;
 }
 int32_t sbuf_stream::get32i(sbuf_t::byte_order_t bo) {
-    uint32_t value = sbuf.get32i(offset, bo);
+    int32_t value = sbuf.get32i(offset, bo);
     offset += 4;
     return value;
 }
 int64_t sbuf_stream::get64i(sbuf_t::byte_order_t bo) {
-    uint64_t value = sbuf.get64i(offset, bo);
+    int64_t value = sbuf.get64i(offset, bo);
     offset += 8;
     return value;
 }

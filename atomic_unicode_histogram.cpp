@@ -26,9 +26,10 @@ std::ostream& operator<<(std::ostream& os, const AtomicUnicodeHistogram::Frequen
 }
 
 /* Output is in UTF-8 */
+const bool show_zeros = true;
 std::ostream& operator<<(std::ostream& os, const AtomicUnicodeHistogram::auh_t::item& e) {
     os << "n=" << e.value->count << "\t" << validateOrEscapeUTF8(e.key, true, false, false);
-    if (e.value->count16 > 0) os << "\t(utf16=" << e.value->count16 << ")";
+    if (show_zeros || e.value->count16 > 0) os << "\t(utf16=" << e.value->count16 << ")";
     os << "\n";
     return os;
 }
@@ -39,7 +40,9 @@ std::ostream& operator<<(std::ostream& os, const AtomicUnicodeHistogram::auh_t::
  */
 std::vector<AtomicUnicodeHistogram::auh_t::item> AtomicUnicodeHistogram::makeReport(size_t topN) {
     std::vector<AtomicUnicodeHistogram::auh_t::item> ret = h.items();
-    std::sort(ret.rbegin(), ret.rend(), AtomicUnicodeHistogram::auh_t::item::compare); // reverse sort
+
+    std::sort(ret.begin(), ret.end(), AtomicUnicodeHistogram::histogram_compare); // reverse sort
+
     /* If we only want some of them, delete the extra */
     if ((topN > 0) && (topN < ret.size())) {
         ret.erase( ret.begin()+topN, ret.end());
@@ -73,11 +76,16 @@ void AtomicUnicodeHistogram::add(const std::string& key_unknown_encoding, const 
     bool little_endian = false; // was it little_endian?
     std::u32string u32key;      // u32key. Doesn't matter if LE or BE, because we never write it out.
 
+    std::cerr << "check " << key_unknown_encoding << "\n";
+
     if (looks_like_utf16(key_unknown_encoding, little_endian)) {
         // We have an endian-guessing implementation that converts from 16 to 8, so convert from 16 to 8
         // and then convert it to utf32
         u32key = convert_utf8_to_utf32(convert_utf16_to_utf8(key_unknown_encoding, little_endian));
         found_utf16 = true;
+
+        std::cerr << "*** looks_like_utf16=true! *** \n";
+
     } else {
         u32key = convert_utf8_to_utf32(key_unknown_encoding);
     }
