@@ -26,10 +26,9 @@ std::ostream& operator<<(std::ostream& os, const AtomicUnicodeHistogram::Frequen
 }
 
 /* Output is in UTF-8 */
-const bool show_zeros = true;
 std::ostream& operator<<(std::ostream& os, const AtomicUnicodeHistogram::auh_t::item& e) {
     os << "n=" << e.value->count << "\t" << validateOrEscapeUTF8(e.key, true, false, false);
-    if (show_zeros || e.value->count16 > 0) os << "\t(utf16=" << e.value->count16 << ")";
+    if (e.value->count16 > 0) os << "\t(utf16=" << e.value->count16 << ")";
     os << "\n";
     return os;
 }
@@ -72,11 +71,11 @@ void AtomicUnicodeHistogram::add(const std::string& key_unknown_encoding, const 
     if (key_unknown_encoding.size() == 0) return; // don't deal with zero-length keys
 
     /* On input, the key may be UTF8 or UTF16. See if we can figure it out */
-    bool found_utf16 = false;   // did we find a utf16?
+    bool found_utf16   = false;   // did we find a utf16?
     bool little_endian = false; // was it little_endian?
     std::u32string u32key;      // u32key. Doesn't matter if LE or BE, because we never write it out.
 
-    std::cerr << "check " << key_unknown_encoding << "\n";
+    std::cerr << "AtomicUnicodeHistogram::add check " << key_unknown_encoding << "\n";
 
     if (looks_like_utf16(key_unknown_encoding, little_endian)) {
         // We have an endian-guessing implementation that converts from 16 to 8, so convert from 16 to 8
@@ -84,8 +83,7 @@ void AtomicUnicodeHistogram::add(const std::string& key_unknown_encoding, const 
         u32key = convert_utf8_to_utf32(convert_utf16_to_utf8(key_unknown_encoding, little_endian));
         found_utf16 = true;
 
-        std::cerr << "*** looks_like_utf16=true! *** \n";
-
+        std::cerr << "AtomicUnicodeHistogram::add *** looks_like_utf16=true! *** \n";
     } else {
         u32key = convert_utf8_to_utf32(key_unknown_encoding);
     }

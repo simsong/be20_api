@@ -1056,7 +1056,7 @@ TEST_CASE("unicode_escape", "[unicode]") {
     REQUIRE(convert_utf8_to_utf32(convert_utf32_to_utf8(u32s)) == u32s);
 }
 
-TEST_CASE("unicode_detection", "[unicode]") {
+TEST_CASE("unicode_detection1", "[unicode]") {
     auto sb16p = sbuf_t::map_file(tests_dir() / "unilang.htm");
     auto& sb16 = *sb16p;
 
@@ -1072,6 +1072,39 @@ TEST_CASE("unicode_detection", "[unicode]") {
     REQUIRE(t8 == false);
     delete sb8p;
 }
+
+TEST_CASE("unicode_detection2", "[unicode]") {
+    char c[] {"h\000t\000t\000p\000:\000/\000/\000w\000w\000w\000.\000h\000h\000s\000.\000g\000o\000v\000/\000o\000"
+            "c\000r\000/\000h\000i\000p\000a\000a\000/\000c\000o\000n\000s\000u\000m\000"
+            "e\000r\000_\000r\000i\000g\000h\000t\000s\000.\000p\000d\000f\000"};
+    std::string str(c,sizeof(c)-1);     // phantum null at end
+    std::string utf8 {"http://www.hhs.gov/ocr/hipaa/consumer_rights.pdf"};
+
+    REQUIRE( utf8.size()==48 );
+
+    for (size_t i = 0; i + 1 < str.size(); i += 2) {
+        std::cerr << "str[" << i << "]= " << (int)str[i] << " " << str[i] << "   str[" << i+1 << "]=" << (int)str[i+1] << " " << str[i+1] << "\n";
+        /* TODO: Should we look for FFFE or FEFF and act accordingly ? */
+    }
+
+
+    REQUIRE(sizeof(c)==97);             // 90 bytes above
+    REQUIRE(strlen(c)==1);              // but the second byte is a NULL
+    REQUIRE(str.size()==96);
+
+    /* validate the string */
+    for(size_t i=0;i<utf8.size();i++){
+        std::cerr << "i=" << i << "\n";
+        REQUIRE( utf8[i] == str[i*2] );
+        REQUIRE( str[i*2+1] == 0);
+    }
+
+    bool little_endian = false;
+    bool r = looks_like_utf16( str, little_endian );
+    REQUIRE( r == true );
+    REQUIRE( little_endian == true);
+}
+
 
 TEST_CASE("directory_support", "[utilities]") {
     namespace fs = std::filesystem;
