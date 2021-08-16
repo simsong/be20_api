@@ -160,16 +160,12 @@ void feature_recorder::quote_if_necessary(std::string& feature, std::string& con
         escape_backslash = false;
     }
 
-    std::cerr << "calling validateOrEscape with escape_bad_utf8=" << int(escape_bad_utf8) << " escape_backslash=" << int(escape_backslash) << "\n";
-
     feature = validateOrEscapeUTF8(feature, escape_bad_utf8, escape_backslash, validateOrEscapeUTF8_validate);
 
     if (feature.size() > def.max_feature_size) { feature.resize(def.max_feature_size); }
 
     if (def.flags.no_context == false) {
-        std::cerr  << "  context before=" << context << "\n";
         context = validateOrEscapeUTF8(context, escape_bad_utf8, escape_backslash, validateOrEscapeUTF8_validate);
-        std::cerr  << "  context after=" << context << "\n";
         if (context.size() > def.max_context_size) { context.resize(def.max_context_size); }
     }
 }
@@ -214,7 +210,6 @@ void feature_recorder::write(const pos0_t& pos0, const std::string &original_fea
     std::string feature_utf8 = make_utf8( original_feature);
     std::string context      = def.flags.no_context ? "" : original_context;
 
-    std::cerr << "  original_context=" << original_context << " len=" << original_context.size() << "\n";
     quote_if_necessary(feature_utf8, context);
 
     if (feature_utf8.size() == 0) {
