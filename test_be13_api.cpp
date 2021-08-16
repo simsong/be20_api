@@ -482,7 +482,6 @@ TEST_CASE("fname", "[feature_recorder]") {
  */
 TEST_CASE("sbuf_stream", "[sbuf]") {
     auto sbuf1 = sbuf_t("\001\002\003\004\005\006\007\010");
-    std::cerr << "sbuf1: " << sbuf1 << "\n";
     REQUIRE( sbuf1.bufsize == 8);
     auto sbs = sbuf_stream( sbuf1 );
 
@@ -1033,7 +1032,7 @@ TEST_CASE("word_and_context_list", "[feature_recorder]") {
 #include "unicode_escape.h"
 TEST_CASE("unicode_escape", "[unicode]") {
     const char* U1F601 = "\xF0\x9F\x98\x81"; // UTF8 for Grinning face with smiling eyes
-    REQUIRE(hexesc('a') == "\\x61");         // escape the escape!
+    REQUIRE(octal_escape('a') == "\\141");         // escape the escape!
     REQUIRE(utf8cont('a') == false);
     REQUIRE(utf8cont(U1F601[0]) == false); // the first character is not a continuation character
     REQUIRE(utf8cont(U1F601[1]) == true);  // the second is
@@ -1049,11 +1048,20 @@ TEST_CASE("unicode_escape", "[unicode]") {
             for (int c = 0; c < 2; c++) { REQUIRE(validateOrEscapeUTF8(hellos, a, b, c) == hellos); }
         }
     }
-    REQUIRE(validateOrEscapeUTF8("backslash=\\", false, true, false) == "backslash=\\x5C");
+    // Below is confusing because \\ is turned into \ in C++
+    REQUIRE(validateOrEscapeUTF8("backslash=\\", false, true, false) == "backslash=\\134");
 
-    /* Try some round-trips */
+    /* Try a round-trips */
     std::u32string u32s = U"我想玩";
     REQUIRE(convert_utf8_to_utf32(convert_utf32_to_utf8(u32s)) == u32s);
+
+    // Handle embedded NULLs and Control-A
+    std::string test1 {"aab"};
+    test1[1]='\001';
+    REQUIRE(validateOrEscapeUTF8( test1, true, false, false)  == "a\\001b");
+    REQUIRE(validateOrEscapeUTF8( test1, true, true, false)   == "a\\001b");
+
+    //REQUIRE_THROWS_AS( validateOrEscapeUTF8( test1, false, false, true), BadUnicode );
 }
 
 TEST_CASE("unicode_detection1", "[unicode]") {
@@ -1082,11 +1090,12 @@ TEST_CASE("unicode_detection2", "[unicode]") {
 
     REQUIRE( utf8.size()==48 );
 
+#if 0
     for (size_t i = 0; i + 1 < str.size(); i += 2) {
         std::cerr << "str[" << i << "]= " << (int)str[i] << " " << str[i] << "   str[" << i+1 << "]=" << (int)str[i+1] << " " << str[i+1] << "\n";
         /* TODO: Should we look for FFFE or FEFF and act accordingly ? */
     }
-
+#endif
 
     REQUIRE(sizeof(c)==97);             // 90 bytes above
     REQUIRE(strlen(c)==1);              // but the second byte is a NULL
@@ -1094,7 +1103,7 @@ TEST_CASE("unicode_detection2", "[unicode]") {
 
     /* validate the string */
     for(size_t i=0;i<utf8.size();i++){
-        std::cerr << "i=" << i << "\n";
+        //std::cerr << "i=" << i << "\n";
         REQUIRE( utf8[i] == str[i*2] );
         REQUIRE( str[i*2+1] == 0);
     }

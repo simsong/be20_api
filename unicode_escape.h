@@ -22,9 +22,9 @@
  */
 /** \file */
 
-/* Our standard escaping is \\ for backslash and \x00 for null, etc. */
+/* Our standard escaping is \\ for backslash and \000 for null, \001 for control-a, etc. */
 
-std::string hexesc(unsigned char ch);       // escape this character
+std::string octal_escape(unsigned char ch);       // escape this character
 bool utf8cont(unsigned char ch);            // true if a UTF8 continuation character
 bool valid_utf8codepoint(uint32_t unichar); // not all unichars are valid codepoints
 
@@ -44,6 +44,13 @@ struct unicode {
 /* Create safe UTF8 from unsafe UTF8.
  * if validate is true and the others are false, throws an exception with bad UTF8.
  */
+class BadUnicode : public std::exception {
+    std::string bad_string{};
+public:
+    BadUnicode(std::string_view bad) : bad_string(bad) {};
+    const char *what() const noexcept override { return bad_string.c_str(); };
+};
+
 std::string validateOrEscapeUTF8(const std::string& input, bool escape_bad_UTF8, bool escape_backslash, bool validate);
 
 /* Guess if this is valid utf16 and return likely endian */

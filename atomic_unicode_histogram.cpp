@@ -68,14 +68,13 @@ uint32_t AtomicUnicodeHistogram::debug_histogram_malloc_fail_frequency = 0;
 void AtomicUnicodeHistogram::clear() { h.clear(); }
 
 void AtomicUnicodeHistogram::add(const std::string& key_unknown_encoding, const std::string& context) {
+    std::cerr << "--- AtomicUnicodeHistogram::add --- size(key)=" << key_unknown_encoding.size() << "\n";
     if (key_unknown_encoding.size() == 0) return; // don't deal with zero-length keys
 
     /* On input, the key may be UTF8 or UTF16. See if we can figure it out */
     bool found_utf16   = false;   // did we find a utf16?
     bool little_endian = false; // was it little_endian?
     std::u32string u32key;      // u32key. Doesn't matter if LE or BE, because we never write it out.
-
-    std::cerr << "AtomicUnicodeHistogram::add check " << key_unknown_encoding << "\n";
 
     if (looks_like_utf16(key_unknown_encoding, little_endian)) {
         // We have an endian-guessing implementation that converts from 16 to 8, so convert from 16 to 8

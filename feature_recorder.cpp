@@ -160,12 +160,16 @@ void feature_recorder::quote_if_necessary(std::string& feature, std::string& con
         escape_backslash = false;
     }
 
+    std::cerr << "calling validateOrEscape with escape_bad_utf8=" << int(escape_bad_utf8) << " escape_backslash=" << int(escape_backslash) << "\n";
+
     feature = validateOrEscapeUTF8(feature, escape_bad_utf8, escape_backslash, validateOrEscapeUTF8_validate);
 
     if (feature.size() > def.max_feature_size) { feature.resize(def.max_feature_size); }
 
     if (def.flags.no_context == false) {
+        std::cerr  << "  context before=" << context << "\n";
         context = validateOrEscapeUTF8(context, escape_bad_utf8, escape_backslash, validateOrEscapeUTF8_validate);
+        std::cerr  << "  context after=" << context << "\n";
         if (context.size() > def.max_context_size) { context.resize(def.max_context_size); }
     }
 }
@@ -185,46 +189,54 @@ void feature_recorder::write0(const pos0_t& pos0, const std::string& feature, co
 
 /**
  * write() is the main entry point for writing a feature at a given position with context.
- * write() checks the stoplist and escapes non-UTF8 characters, then calls write0().
+ * Activities:
+ * - checks the stoplist.
+ * - escapes non-UTF8 characters and calls write0().
+ * - Takes the original feature and sends to the histogram system.
  */
-void feature_recorder::write(const pos0_t& pos0, const std::string& feature_, const std::string& context_) {
+void feature_recorder::write(const pos0_t& pos0, const std::string &original_feature, const std::string &original_context) {
     if (fs.flags.disabled) return; // disabled
 
+    /* The 'pedantic' flag is meant for debugging scanners and feature recorders, not for production use. */
     if (fs.flags.pedantic) {
-        if (feature_.size() > def.max_feature_size) {
+        if (original_feature.size() > def.max_feature_size) {
             throw std::runtime_error(std::string("feature_recorder::write : feature_.size()=") +
-                                     std::to_string(feature_.size()));
+                                     std::to_string(original_feature.size()));
         }
-        if (context_.size() > def.max_context_size) {
+        if (original_context.size() > def.max_context_size) {
             throw std::runtime_error(std::string("feature_recorder::write : context_.size()=") +
-                                     std::to_string(context_.size()));
+                                     std::to_string(original_context.size()));
         }
     }
 
     /* TODO: This needs to be change to do all processing in utf32 and not utf8 */
 
-    std::string feature = feature_;
-    std::string context = def.flags.no_context ? "" : context_;
-    std::string feature_utf8 = make_utf8(feature);
+    std::string feature_utf8 = make_utf8( original_feature);
+    std::string context      = def.flags.no_context ? "" : original_context;
 
-    quote_if_necessary(feature, context);
+    std::cerr << "  original_context=" << original_context << " len=" << original_context.size() << "\n";
+    quote_if_necessary(feature_utf8, context);
 
-    if (feature.size() == 0) {
+    if (feature_utf8.size() == 0) {
         std::cerr << name << ": zero length feature at " << pos0 << "\n";
-        if (fs.flags.pedantic) assert(0);
+        if (fs.flags.pedantic) {
+            throw std::runtime_error(std::string("zero length feature at") + pos0.str());
+        }
         return;
     }
     if (fs.flags.pedantic) {
         /* Check for tabs or newlines in feature and and context */
-        for (size_t i = 0; i < feature.size(); i++) {
-            if (feature[i] == '\t') throw std::runtime_error("feature contains \\t");
-            if (feature[i] == '\n') throw std::runtime_error("feature contains \\n");
-            if (feature[i] == '\r') throw std::runtime_error("feature contains \\r");
+        for (size_t i = 0; i < feature_utf8.size(); i++) {
+            if (feature_utf8[i] == '\000') throw std::runtime_error("feature_utf8 contains NULL");
+            if (feature_utf8[i] == '\t') throw std::runtime_error("feature_utf8 contains TAB");
+            if (feature_utf8[i] == '\n') throw std::runtime_error("feature_utf8 contains NL");
+            if (feature_utf8[i] == '\r') throw std::runtime_error("feature_utf8 contains CR");
         }
         for (size_t i = 0; i < context.size(); i++) {
-            if (context[i] == '\t') throw std::runtime_error("context contains \\t");
-            if (context[i] == '\n') throw std::runtime_error("context contains \\n");
-            if (context[i] == '\r') throw std::runtime_error("context contains \\r");
+            if (context[i] == '\000') throw std::runtime_error("context contains NULL");
+            if (context[i] == '\t') throw std::runtime_error("context contains TAB");
+            if (context[i] == '\n') throw std::runtime_error("context contains NL");
+            if (context[i] == '\r') throw std::runtime_error("context contains CR");
         }
     }
 
@@ -232,9 +244,11 @@ void feature_recorder::write(const pos0_t& pos0, const std::string& feature_, co
      * Only do this if we have a stop_list_recorder (the stop list recorder itself
      * does not have a stop list recorder. If it did we would infinitely recurse.
      */
-    if (def.flags.no_stoplist == false && fs.stop_list && fs.stop_list_recorder &&
-        fs.stop_list->check_feature_context(feature_utf8, context)) {
-        fs.stop_list_recorder->write(pos0, feature, context);
+    if (def.flags.no_stoplist == false
+        && fs.stop_list
+        && fs.stop_list_recorder
+        && fs.stop_list->check_feature_context(feature_utf8, context)) {
+        fs.stop_list_recorder->write(pos0, feature_utf8, context);
         return;
     }
 
@@ -254,11 +268,16 @@ void feature_recorder::write(const pos0_t& pos0, const std::string& feature_, co
     }
 #endif
 
-    /* add the feature to any histograms; the regex is applied in the histogram */
-    this->histograms_add_feature(feature, context);
+    /* Write out the feature and the context */
+    this->write0(pos0, feature_utf8, context);
 
-    /* Finally write out the feature and the context */
-    this->write0(pos0, feature, context);
+    /* Add the feature to any histograms.
+     * histograms_add_feature tracks whether it is getting utf-8 or utf-16 string.
+     * Note that this means that the utf-16 determination has to be made twice.
+     * Oh well.
+     */
+    this->histograms_add_feature(original_feature, original_context);
+
 }
 
 /**
