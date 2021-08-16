@@ -125,7 +125,7 @@ public:;
      * Use malloc_buf() to get the buffer.
      * Data is automatically freed when deleted.
      */
-    static sbuf_t* sbuf_malloc(const pos0_t pos0_, size_t len_ );
+    static sbuf_t* sbuf_malloc(const pos0_t pos0_, size_t bufsize_, size_t pagesize_ );
     void *malloc_buf() const;        // the writable buf
     void wbuf(size_t i, uint8_t val);   // write to location i with val
     // the following must be used like this:

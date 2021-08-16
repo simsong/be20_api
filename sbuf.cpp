@@ -161,7 +161,7 @@ sbuf_t* sbuf_t::sbuf_new(pos0_t pos0_, const uint8_t* buf_, size_t bufsize_, siz
  */
 sbuf_t* sbuf_t::sbuf_malloc(pos0_t pos0, const std::string &str)
 {
-    sbuf_t *ret = sbuf_t::sbuf_malloc(pos0,  str.size());
+    sbuf_t *ret = sbuf_t::sbuf_malloc(pos0,  str.size(), str.size());
     memcpy( ret->malloc_buf(), str.c_str(), str.size());
     return ret;
 }
@@ -221,7 +221,7 @@ sbuf_t *sbuf_t::new_slice(size_t off, size_t len) const
 sbuf_t *sbuf_t::new_slice_copy(size_t off, size_t len) const
 {
     auto src  = slice(off,len);
-    auto *dst = sbuf_t::sbuf_malloc(src.pos0, src.bufsize);
+    auto *dst = sbuf_t::sbuf_malloc(src.pos0, src.bufsize, src.bufsize);
     memcpy( dst->malloc_buf(), src.buf, src.bufsize);
     return dst;
 }
@@ -302,11 +302,12 @@ sbuf_t* sbuf_t::map_file(const std::filesystem::path fname) {
  * In the future we will add guard bytes. Byte 0 is at pos0.
  * There's no parent, because this sbuf owns the memory.
  */
-sbuf_t* sbuf_t::sbuf_malloc(pos0_t pos0_, size_t len_)
+sbuf_t* sbuf_t::sbuf_malloc(pos0_t pos0_, size_t bufsize_, size_t pagesize_)
 {
-    void *new_malloced = malloc(len_);
+    assert( bufsize_ >= pagesize_ );
+    void *new_malloced = malloc(bufsize_);
     sbuf_t *ret = new sbuf_t(pos0_, nullptr,
-                             static_cast<const uint8_t *>(new_malloced), len_, len_, NO_FD, flags_t());
+                             static_cast<const uint8_t *>(new_malloced), bufsize_, pagesize_, NO_FD, flags_t());
     ret->malloced = new_malloced;
     ret->buf_writable = static_cast<uint8_t *>(new_malloced);
     assert(ret->buf == ret->malloced);

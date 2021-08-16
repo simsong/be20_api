@@ -39,7 +39,9 @@ std::ostream& operator<<(std::ostream& os, const AtomicUnicodeHistogram::auh_t::
  */
 std::vector<AtomicUnicodeHistogram::auh_t::item> AtomicUnicodeHistogram::makeReport(size_t topN) {
     std::vector<AtomicUnicodeHistogram::auh_t::item> ret = h.items();
-    std::sort(ret.rbegin(), ret.rend(), AtomicUnicodeHistogram::auh_t::item::compare); // reverse sort
+
+    std::sort(ret.begin(), ret.end(), AtomicUnicodeHistogram::histogram_compare); // reverse sort
+
     /* If we only want some of them, delete the extra */
     if ((topN > 0) && (topN < ret.size())) {
         ret.erase( ret.begin()+topN, ret.end());
@@ -69,7 +71,7 @@ void AtomicUnicodeHistogram::add(const std::string& key_unknown_encoding, const 
     if (key_unknown_encoding.size() == 0) return; // don't deal with zero-length keys
 
     /* On input, the key may be UTF8 or UTF16. See if we can figure it out */
-    bool found_utf16 = false;   // did we find a utf16?
+    bool found_utf16   = false;   // did we find a utf16?
     bool little_endian = false; // was it little_endian?
     std::u32string u32key;      // u32key. Doesn't matter if LE or BE, because we never write it out.
 

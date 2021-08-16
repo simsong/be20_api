@@ -32,6 +32,7 @@
 
 #include "atomic_unicode_histogram.h"
 #include "sbuf.h"
+#include "sbuf_stream.h"
 #include "utils.h"
 #include "dfxml_cpp/src/hash_t.h"
 
@@ -475,9 +476,43 @@ TEST_CASE("fname", "[feature_recorder]") {
         delete sbuf1c;
     }
     REQUIRE( sbuf1.children == 0 );
+}
 
+/** test the sbuf_stream interface.
+ */
+TEST_CASE("sbuf_stream", "[sbuf]") {
+    auto sbuf1 = sbuf_t("\001\002\003\004\005\006\007\010");
+    REQUIRE( sbuf1.bufsize == 8);
+    auto sbs = sbuf_stream( sbuf1 );
+
+    REQUIRE( sbs.tell() == 0 );
+    REQUIRE( sbs.get8u() == 1);
+    REQUIRE( sbs.get8u() == 2);
+    REQUIRE( sbs.get8u() == 3);
+    REQUIRE( sbs.get8u() == 4);
+    REQUIRE( sbs.tell() == 4 );
+
+    REQUIRE( sbs.get16u() == 0x0605);   // ah, LE
+    REQUIRE( sbs.get16u() == 0x0807);
+
+    sbs.seek(4);
+    REQUIRE( sbs.get32u() == 0x08070605 );
+
+    sbs.seek(0);
+    REQUIRE( sbs.get64u() == 0x0807060504030201L );
+
+    sbs.seek(4);
+    REQUIRE( sbs.get16iBE() == 0x0506);
+    REQUIRE( sbs.get16iBE() == 0x0708);
+
+    sbs.seek(4);
+    REQUIRE( sbs.get32iBE() == 0x05060708 );
+
+    sbs.seek(0);
+    REQUIRE( sbs.get64iBE() == 0x0102030405060708L );
 
 }
+
 
 /****************************************************************
  * feature_recorder_set.h
@@ -680,9 +715,11 @@ TEST_CASE("hello_sbuf", "[sbuf]") {
     REQUIRE(sb7.asString() == "");
 }
 
+/* Make sure we can allocate writable space in a sbuf. */
 TEST_CASE("sbuf_malloc", "[sbuf]") {
-    sbuf_t *sb1 = sbuf_t::sbuf_malloc(pos0_t(), 256);
-    for(int i=0; i<256; i++){
+    const size_t BUFSIZE=256;
+    sbuf_t *sb1 = sbuf_t::sbuf_malloc(pos0_t(), BUFSIZE, BUFSIZE);
+    for(int i=0; i<BUFSIZE; i++){
         sb1->wbuf(i, 255-i);
     }
     REQUIRE_THROWS_AS( sb1->wbuf(600,0), std::runtime_error);
@@ -744,7 +781,7 @@ TEST_CASE("sbuf_malloc2", "[sbuf]") {
         ss << root;
     }
     std::string bufstr = ss.str();
-    auto *dbuf = sbuf_t::sbuf_malloc(root.pos0+"MSXML", bufstr.size());
+    auto *dbuf = sbuf_t::sbuf_malloc(root.pos0+"MSXML", bufstr.size(), bufstr.size());
     memcpy(dbuf->malloc_buf(), bufstr.c_str(), bufstr.size());
     delete dbuf;
 }
@@ -995,7 +1032,7 @@ TEST_CASE("word_and_context_list", "[feature_recorder]") {
 #include "unicode_escape.h"
 TEST_CASE("unicode_escape", "[unicode]") {
     const char* U1F601 = "\xF0\x9F\x98\x81"; // UTF8 for Grinning face with smiling eyes
-    REQUIRE(hexesc('a') == "\\x61");         // escape the escape!
+    REQUIRE(octal_escape('a') == "\\141");         // escape the escape!
     REQUIRE(utf8cont('a') == false);
     REQUIRE(utf8cont(U1F601[0]) == false); // the first character is not a continuation character
     REQUIRE(utf8cont(U1F601[1]) == true);  // the second is
@@ -1011,14 +1048,23 @@ TEST_CASE("unicode_escape", "[unicode]") {
             for (int c = 0; c < 2; c++) { REQUIRE(validateOrEscapeUTF8(hellos, a, b, c) == hellos); }
         }
     }
-    REQUIRE(validateOrEscapeUTF8("backslash=\\", false, true, false) == "backslash=\\x5C");
+    // Below is confusing because \\ is turned into \ in C++
+    REQUIRE(validateOrEscapeUTF8("backslash=\\", false, true, false) == "backslash=\\134");
 
-    /* Try some round-trips */
+    /* Try a round-trips */
     std::u32string u32s = U"我想玩";
     REQUIRE(convert_utf8_to_utf32(convert_utf32_to_utf8(u32s)) == u32s);
+
+    // Handle embedded NULLs and Control-A
+    std::string test1 {"aab"};
+    test1[1]='\001';
+    REQUIRE(validateOrEscapeUTF8( test1, true, false, false)  == "a\\001b");
+    REQUIRE(validateOrEscapeUTF8( test1, true, true, false)   == "a\\001b");
+
+    //REQUIRE_THROWS_AS( validateOrEscapeUTF8( test1, false, false, true), BadUnicode );
 }
 
-TEST_CASE("unicode_detection", "[unicode]") {
+TEST_CASE("unicode_detection1", "[unicode]") {
     auto sb16p = sbuf_t::map_file(tests_dir() / "unilang.htm");
     auto& sb16 = *sb16p;
 
@@ -1034,6 +1080,40 @@ TEST_CASE("unicode_detection", "[unicode]") {
     REQUIRE(t8 == false);
     delete sb8p;
 }
+
+TEST_CASE("unicode_detection2", "[unicode]") {
+    char c[] {"h\000t\000t\000p\000:\000/\000/\000w\000w\000w\000.\000h\000h\000s\000.\000g\000o\000v\000/\000o\000"
+            "c\000r\000/\000h\000i\000p\000a\000a\000/\000c\000o\000n\000s\000u\000m\000"
+            "e\000r\000_\000r\000i\000g\000h\000t\000s\000.\000p\000d\000f\000"};
+    std::string str(c,sizeof(c)-1);     // phantum null at end
+    std::string utf8 {"http://www.hhs.gov/ocr/hipaa/consumer_rights.pdf"};
+
+    REQUIRE( utf8.size()==48 );
+
+#if 0
+    for (size_t i = 0; i + 1 < str.size(); i += 2) {
+        std::cerr << "str[" << i << "]= " << (int)str[i] << " " << str[i] << "   str[" << i+1 << "]=" << (int)str[i+1] << " " << str[i+1] << "\n";
+        /* TODO: Should we look for FFFE or FEFF and act accordingly ? */
+    }
+#endif
+
+    REQUIRE(sizeof(c)==97);             // 90 bytes above
+    REQUIRE(strlen(c)==1);              // but the second byte is a NULL
+    REQUIRE(str.size()==96);
+
+    /* validate the string */
+    for(size_t i=0;i<utf8.size();i++){
+        //std::cerr << "i=" << i << "\n";
+        REQUIRE( utf8[i] == str[i*2] );
+        REQUIRE( str[i*2+1] == 0);
+    }
+
+    bool little_endian = false;
+    bool r = looks_like_utf16( str, little_endian );
+    REQUIRE( r == true );
+    REQUIRE( little_endian == true);
+}
+
 
 TEST_CASE("directory_support", "[utilities]") {
     namespace fs = std::filesystem;

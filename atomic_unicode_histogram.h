@@ -52,6 +52,16 @@ struct AtomicUnicodeHistogram {
     typedef atomic_map<std::string, struct AtomicUnicodeHistogram::HistogramTally> auh_t;
     typedef std::vector<auh_t::item> FrequencyReportVector;
 
+    /* Returns true if a<b for sort order.
+     * Sort high counts before low counts, but if the count is the same sort in alphabetical order.
+     */
+    static bool histogram_compare(const auh_t::item &a, const auh_t::item &b) {
+        if (a.value->count > b.value->count) return true;
+        if (a.value->count < b.value->count) return false;
+        if (a.key < b.key) return true;
+        return false;
+    }
+
     AtomicUnicodeHistogram(const struct histogram_def& def_) : def(def_) {}
     virtual ~AtomicUnicodeHistogram(){};
 

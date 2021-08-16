@@ -34,10 +34,9 @@
 #include "unicode_escape.h"
 #include "utf8.h"
 
-/**************** BULK_EXTRACTOR 1.0 CODE ****************/
-std::string hexesc(unsigned char ch) {
-    char buf[10];
-    snprintf(buf, sizeof(buf), "\\x%02X", ch);
+std::string octal_escape(unsigned char ch) {
+    char buf[8];                        // [5] would be sufficient.
+    snprintf(buf, sizeof(buf), "\\%03o", ch);
     return std::string(buf);
 }
 
@@ -107,13 +106,13 @@ std::string validateOrEscapeUTF8(const std::string& input, bool escape_bad_utf8,
         // utf8 1 byte prefix (0xxx xxxx)
         if ((ch & 0x80) == 0x00) {                // 00 .. 0x7f
             if (ch == '\\' && escape_backslash) { // escape the escape character as \x92
-                output += hexesc(ch);
+                output += octal_escape(ch);
                 i++;
                 continue;
             }
 
             if (ch < ' ') { // not printable are escaped
-                output += hexesc(ch);
+                output += octal_escape(ch);
                 i++;
                 continue;
             }
@@ -167,40 +166,41 @@ std::string validateOrEscapeUTF8(const std::string& input, bool escape_bad_utf8,
 
         if (escape_bad_utf8) {
             // Just escape the next byte and carry on
-            output += hexesc((uint8_t)input.at(i++));
+            output += octal_escape((uint8_t)input.at(i++));
         } else {
             // fatal if we are debug pedantic, otherwise just ignore
             // note: we shouldn't be here anyway, since if we are not escaping and we are not
             // pedantic we should have returned above
             if (validateOrEscapeUTF8_validate) {
-                std::ofstream os("bad_unicode.txt");
-                os << input << "\n";
-                os.close();
-                throw std::runtime_error("INTERNAL ERROR: bad unicode stored in bad_unicode.txt\n");
+                throw BadUnicode(input);
             }
         }
     }
     return output;
 }
 
-/* static */
 bool looks_like_utf16(const std::string& str, bool& little_endian) {
-    if ((uint8_t)str[0] == 0xff && (uint8_t)str[1] == 0xfe) {
+    /* first check for BOMs */
+    if (static_cast<uint8_t>(str[0]) == 0xff && static_cast<uint8_t>(str[1]) == 0xfe) {
         little_endian = true;
         return true; // begins with FFFE
     }
-    if ((uint8_t)str[0] == 0xfe && (uint8_t)str[1] == 0xff) {
+    if (static_cast<uint8_t>(str[0]) == 0xfe && static_cast<uint8_t>(str[1]) == 0xff) {
         little_endian = false;
         return true; // begins with FEFF
     }
-    /* If none of the even characters are NULL and some of the odd characters are NULL, it's UTF-16 */
+    /* If none of the even characters are NULL and some of the odd
+     * characters are NULL, it's UTF-16
+     */
     uint32_t even_null_count = 0;
     uint32_t odd_null_count = 0;
     for (size_t i = 0; i + 1 < str.size(); i += 2) {
-        if (str[i] == 0) even_null_count++;
+        if (str[i] == 0)     even_null_count++;
         if (str[i + 1] == 0) odd_null_count++;
+        //std::cerr << "str[" << i << "]= " << (int)str[i] << " " << str[i] << "   str[" << i+1 << "]=" << (int)str[i+1] << " " << str[i+1] << "\n";
         /* TODO: Should we look for FFFE or FEFF and act accordingly ? */
     }
+    //std::cerr << "even_null_count = " << even_null_count << " odd_null_count=" << odd_null_count << "\n";
     if (even_null_count == 0 && odd_null_count > 1) {
         little_endian = true;
         return true;
