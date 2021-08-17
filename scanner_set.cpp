@@ -866,8 +866,6 @@ void scanner_set::shutdown() {
     /* Tell every feature recorder to flush all of its histograms */
     fs.histograms_generate();
 
-    /* Output the scanner stats */
-    dump_scanner_stats();
 }
 
 /*
