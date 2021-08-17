@@ -280,9 +280,11 @@ public:
      */
     std::vector<std::unique_ptr<AtomicUnicodeHistogram>> histograms{};
 
-    /* These must be specialized */
-    virtual void histogram_flush(AtomicUnicodeHistogram& h);         // flush a specific histogram
-    virtual void histograms_add_feature(const std::string& feature, const std::string& context); // propose a feature to all of the histograms
+    // flush a specific histogram at the end of PHASE1
+    virtual void histogram_flush(AtomicUnicodeHistogram& h) = 0;
+
+    // propose a feature to all of the histograms
+    virtual void histograms_add_feature(const std::string& feature, const std::string& context);
 
     virtual size_t histogram_count() { return histograms.size(); } // how many histograms it has
     virtual void histogram_add(const struct histogram_def& def);   // add a new histogram

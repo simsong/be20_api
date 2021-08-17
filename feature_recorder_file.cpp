@@ -213,8 +213,14 @@ void feature_recorder_file::histogram_flush(AtomicUnicodeHistogram& h) {
     if (!hfile.is_open()) {
         throw std::runtime_error("Cannot open feature histogram file " + fname.string());
     }
+
+    bool first = true;
     auto r = h.makeReport(0); // sorted and clear
     for(const auto &it : r){
+        if ( first ) {
+            banner_stamp( hfile, histogram_file_header );
+            first = false;
+        }
         hfile << it;
     }
     hfile.close();
