@@ -19,6 +19,8 @@ BE13_API_SRC= \
 	$(BE13_API_DIR)/histogram_def.h  \
 	$(BE13_API_DIR)/net_ethernet.h \
 	$(BE13_API_DIR)/packet_info.h \
+	$(BE13_API_DIR)/path_printer.h \
+	$(BE13_API_DIR)/path_printer.cpp \
 	$(BE13_API_DIR)/pcap_fake.cpp \
 	$(BE13_API_DIR)/pcap_fake.h \
 	$(BE13_API_DIR)/pos0.h \

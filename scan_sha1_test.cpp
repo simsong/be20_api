@@ -13,6 +13,7 @@
 #include <sys/types.h>
 
 #include "dfxml_cpp/src/hash_t.h"
+#include "dfxml_cpp/src/dfxml_writer.h"
 #include "scan_sha1_test.h"
 #include "scanner_params.h"
 #include "scanner_set.h"
@@ -51,10 +52,9 @@ void scan_sha1_test(struct scanner_params& sp) {
 
         /* Perhaps we want to cache getting the recorders? */
         sha1_recorder->write(sp.sbuf->pos0, hexdigest, ""); // write the hash with no context
-
-        static const std::string hash0("<hashdigest type='SHA1'>");
-        static const std::string hash1("</hashdigest>");
-        if (sp.sxml) { (*sp.sxml) << hash0 << hexdigest << hash1; }
+        if (sp.ss->writer) {
+            sp.ss->writer->xmlout("hashdigest",hexdigest,"type='SHA1'",false);
+        }
         return;
     }
 }

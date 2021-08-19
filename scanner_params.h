@@ -4,7 +4,10 @@
 #define SCANNER_PARAMS_H
 
 /*
- * Interface for individual scanners.
+ * A reference to the scanner_params.h structure is sole argument of scanner.
+ * It includes the sbuf to be scanned, the feature recorder set where results are stored,
+ *  and instructions for how recursion should be handled.
+ * (Whether recursion involves scanning new sbufs or simply decoding them for path printing.)
  */
 
 #include <cassert>
@@ -19,7 +22,8 @@
 #include <iterator>
 #include <memory>
 
-// Note: Do not include scanner_set.h, because it needs scanner_params.h!
+// Note: Do not include scanner_set.h or path_printer.h, because they both need scanner_params.h!
+//
 
 #include "histogram_def.h"
 //#include "packet_info.h"
@@ -37,12 +41,11 @@ typedef void scanner_t(struct scanner_params& sp);
  * communicates with the scanners.
  *
  * A pointer to the scanner_params struct is provided as the first argument to each scanner when it is called.
+ * @param sc_           - The scanner config
+ * @param ss_           - The scanner_set for all current scanners
+ * @param pp_           - The path printer object if we are printing paths
  * @param phase_        - the PHASE
- * @param sbuf          - (only valid in the scanning phase) the buffer to be scanned
- * @param fs            - where the features should be saved.
- *                        This is an element of the scanner_set class.
- *                        We could pass the entier scanner_set, but there is no reason to do so.
- * @param config        - The current configuration. Typically only accessed as initialization
+ * @param sbuf          - (only valid in the scanning phase) the buffer to be scanned or printed
  *
  * The scanner_params struct is a way for sending parameters to the scanner
  * regarding the particular sbuf to be scanned.
@@ -133,32 +136,9 @@ struct scanner_params {
               feature_defs(source.feature_defs), flags(source.flags), histogram_defs(source.histogram_defs) {}
     };
 
-    /* Scanners can also be asked to assist in printing. */
-    enum print_mode_t { MODE_NONE = 0, MODE_HEX, MODE_RAW, MODE_HTTP };
     const int SCANNER_PARAMS_VERSION{20210531};
     int scanner_params_version{SCANNER_PARAMS_VERSION};
     void check_version() { assert(this->scanner_params_version == SCANNER_PARAMS_VERSION); }
-
-    typedef std::map<std::string, std::string> PrintOptions;
-    static print_mode_t getPrintMode(const PrintOptions& po) {
-        PrintOptions::const_iterator p = po.find("print_mode_t");
-        if (p != po.end()) {
-            if (p->second == "MODE_NONE") return MODE_NONE;
-            if (p->second == "MODE_HEX") return MODE_HEX;
-            if (p->second == "MODE_RAW") return MODE_RAW;
-            if (p->second == "MODE_HTTP") return MODE_HTTP;
-        }
-        return MODE_NONE;
-    }
-    static void setPrintMode(PrintOptions& po, int mode) {
-        switch (mode) {
-        default:
-        case MODE_NONE: po["print_mode_t"] = "MODE_NONE"; return;
-        case MODE_HEX: po["print_mode_t"] = "MODE_HEX"; return;
-        case MODE_RAW: po["print_mode_t"] = "MODE_RAW"; return;
-        case MODE_HTTP: po["print_mode_t"] = "MODE_HTTP"; return;
-        }
-    }
 
     // phase_t specifies when the scanner is being called.
     // the scans are implemented in the scanner set
@@ -180,46 +160,36 @@ struct scanner_params {
     scanner_params& operator=(const scanner_params&) = delete;
 
     /* A scanner params with all of the instance variables, typically for scanning  */
-    scanner_params(struct scanner_config &sc_, class scanner_set  *ss_, phase_t phase_,
-                   const sbuf_t* sbuf_, PrintOptions print_options_, std::stringstream* xmladd);
+    scanner_params(struct scanner_config &sc_, class scanner_set  *ss_, const class path_printer *pp_, phase_t phase_, const sbuf_t* sbuf_);
 
+    /** Construct a scanner_params for recursion from an existing sp and a new sbuf. */
+    scanner_params(const scanner_params& sp_existing, const sbuf_t* sbuf_);
+
+    virtual ~scanner_params(){};
 
     /* User-servicable parts; these are here for scanners */
-    virtual ~scanner_params(){};
     virtual feature_recorder& named_feature_recorder(const std::string feature_recorder_name) const;
     template <typename T> void get_config(const std::string& name, T* val, const std::string& help) const {
         sc.get_config(name, val, help);
     };
 
-    /** Construct a scanner_params for recursion from an existing sp and a new sbuf.
-     * Defaults to phase1.
-     * This is the complicated one!
-     */
-    scanner_params(const scanner_params& sp_existing, const sbuf_t* sbuf_);
-#if 0
-    /* A scanner params with no print options */
-    scanner_params(phase_t phase_, const sbuf_t &sbuf_, class feature_recorder_set &fs_):
-        phase(phase_),sbuf(sbuf_),fs(fs_){ }
+    struct scanner_config &sc;          // configuration.
+    class scanner_set *ss {nullptr};    // null in PHASE_INIT.
+    const class path_printer *pp {nullptr};   // null in PHASE_INIT and if not path printing
+    const phase_t phase{};              // what scanner should do
+    const sbuf_t* sbuf{nullptr};        // what to scan / only valid in SCAN_PHASE
+    std::string  pp_path {};                  // if we are path printing, this is the forensic path being decoded
+    const struct PrintOptions *pp_po {nullptr}; // if we are path printing, this is the print options.
 
-    /* A scanner params with no print options but an xmlstream */
-    scanner_params(phase_t phase_, const sbuf_t &sbuf_, class feature_recorder_set &fs_,
-                   std::stringstream *xmladd):
-        phase(phase_),sbuf(sbuf_),fs(fs_),sxml(xmladd){ }
-
-#endif
-
-    struct scanner_config &sc;                 // configuration.
-    class scanner_set *ss {nullptr}; // null in PHASE_INIT. the scanner set calling this scanner. Failed when we made it a &ss. Not that this is frequently a mt_scanner_set.
+    /* output variables */
     std::unique_ptr<struct scanner_info> info {nullptr};  // filled in by callback in PHASE_INIT
-    const phase_t phase{};        // what scanner should do
-    const sbuf_t* sbuf{nullptr};  // what to scan / only valid in SCAN_PHASE
-    PrintOptions print_options{}; // how to print. Default is that there are no options
-    const uint32_t depth{0};      //  how far down are we? / only valid in SCAN_PHASE
-    std::stringstream* sxml{};    //  on scanning and shutdown: CDATA added to XML stream if provided
-    std::filesystem::path const get_input_fname() const; // not sure why this is needed?
 
-    virtual void recurse(sbuf_t* sbuf) const; // recursive call by scanner
-    virtual bool check_previously_processed(const sbuf_t &sbuf) const;
+    virtual void recurse(sbuf_t* sbuf) const; // recursive call by scanner. Calls either scanner_set or path_printer.
+    //virtual bool check_previously_processed(const sbuf_t &sbuf) const;
+    //std::stringstream* sxml{};          //  on scanning and shutdown: CDATA added to XML stream if provided.; can't we get from scanner_set?
+    //const uint32_t depth{0};      //  how far down are we? / only valid in SCAN_PHASE; can be inferred from sbuf path?
+    // convenience functions
+    std::filesystem::path const get_input_fname() const {return sc.input_fname;}; // not sure why this is needed?
 };
 
 //template <> void scanner_params::get_config(const std::string& name, std::string* val, const std::string& help);

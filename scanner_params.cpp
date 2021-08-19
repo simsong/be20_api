@@ -2,22 +2,17 @@
 #include "feature_recorder.h"
 #include "feature_recorder_set.h"
 #include "scanner_set.h"
+#include "path_printer.h"
 
-scanner_params::scanner_params(struct scanner_config &sc_, class scanner_set  *ss_, phase_t phase_,
-                               const sbuf_t* sbuf_, PrintOptions print_options_, std::stringstream* xmladd)
-    : sc(sc_), ss(ss_), phase(phase_), sbuf(sbuf_), print_options(print_options_), sxml(xmladd)
+scanner_params::scanner_params(struct scanner_config &sc_, class scanner_set  *ss_,
+                               const path_printer *pp_, phase_t phase_, const sbuf_t* sbuf_)
+    : sc(sc_), ss(ss_), phase(phase_), sbuf(sbuf_)
 {
-    //std::cerr << "scanner_params: make1 this=" << this << "\n";
-    //ss->info();
 }
 
 scanner_params::scanner_params(const scanner_params& sp_existing, const sbuf_t* sbuf_)
-    : sc(sp_existing.sc), ss(sp_existing.ss),
-      phase(sp_existing.phase), sbuf(sbuf_),
-      print_options(sp_existing.print_options),
-      depth(sp_existing.depth + 1), sxml(sp_existing.sxml)
+    : sc(sp_existing.sc), ss(sp_existing.ss), phase(sp_existing.phase), sbuf(sbuf_)
 {
-    //std::cerr << "scanner_params: make2 this=" << this << "\n";
 }
 
 
@@ -28,19 +23,30 @@ feature_recorder& scanner_params::named_feature_recorder(const std::string featu
     return ss->named_feature_recorder(feature_recorder_name);
 }
 
+#if 0
 const std::filesystem::path scanner_params::get_input_fname() const
 {
     assert(ss!=nullptr);
     return ss->get_input_fname();
 
 }
+#endif
 
+#if 0
 bool scanner_params::check_previously_processed(const sbuf_t &s) const
 {
+    assert(ss!=nullptr);
     return ss->previously_processed_count(s)==0;
 }
+#endif
 
 void scanner_params::recurse(sbuf_t* new_sbuf) const {
+    if (pp!=nullptr) {                  // we have a path printer; call that instead
+        scanner_params sp_new(*this, new_sbuf);
+        pp->process_sp( sp_new );           // where do we keep the path being processed? In scanner_params...
+        return;
+    }
+
     assert(ss!=nullptr);
     if (ss->sc.allow_recurse) {
         ss->schedule_sbuf(new_sbuf);    /* sbuf will be deleted after it is processed */

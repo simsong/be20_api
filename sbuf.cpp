@@ -198,7 +198,7 @@ sbuf_t *sbuf_t::realloc(size_t newsize)
  * from within an existing sbuf.
  * The allocated buf MUST be freed before the parent, since no copy is made...
  */
-sbuf_t *sbuf_t::new_slice(size_t off, size_t len) const
+sbuf_t *sbuf_t::new_slice(pos0_t new_pos0, size_t off, size_t len) const
 {
     if (off > bufsize)     throw range_exception_t(off, len); // check to make sure off is in the buffer
     if (off+len > bufsize) throw range_exception_t(off, len); // check to make sure off+len is in the buffer
@@ -211,10 +211,16 @@ sbuf_t *sbuf_t::new_slice(size_t off, size_t len) const
         new_pagesize = len;             // we only have this much left
     }
 
-    return new sbuf_t(pos0 + off, highest_parent(),
+    return new sbuf_t(new_pos0, highest_parent(),
                       buf + off, len, new_pagesize,
                       NO_FD, flags_t());
 }
+
+sbuf_t *sbuf_t::new_slice(size_t off, size_t len) const
+{
+    return new_slice(pos0+off, off, len);
+}
+
 
 /** Copy a subset of an sbuf's memory to a child sbuf.
  */

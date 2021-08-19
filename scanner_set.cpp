@@ -42,6 +42,7 @@
 #include "formatter.h"
 #include "scanner_config.h"
 #include "scanner_set.h"
+#include "path_printer.h"
 
 /****************************************************************
  *** SCANNER SET IMPLEMENTATION (previously the PLUG-IN SYSTEM)
@@ -269,8 +270,8 @@ void scanner_set::add_scanner(scanner_t scanner) {
      * Use an empty sbuf and an empty feature recorder to create an empty scanner params that is in PHASE_STARTUP.
      * We then ask the scanner to initialize.
      */
-    scanner_params::PrintOptions po;
-    scanner_params sp(sc, this, scanner_params::PHASE_INIT, nullptr, po, nullptr);
+    PrintOptions po;
+    scanner_params sp(sc, this, nullptr, scanner_params::PHASE_INIT, nullptr);
 
     // Send the scanner the PHASE_INIT message, which will cause it to fill in the sp.info field.
     (*scanner)(sp);
@@ -514,8 +515,7 @@ void scanner_set::apply_scanner_commands() {
 
     /* Tell each of the enabled scanners to init */
     current_phase = scanner_params::PHASE_INIT2;
-    scanner_params::PrintOptions po; // empty po
-    scanner_params sp(sc, this, scanner_params::PHASE_INIT2, nullptr, po, nullptr);
+    scanner_params sp(sc, this, nullptr, scanner_params::PHASE_INIT2, nullptr);
     for (const auto &it : enabled_scanners) { (*it)(sp); }
 
     /* set the carve defaults */
@@ -672,7 +672,7 @@ void scanner_set::process_sbuf(class sbuf_t* sbufp) {
     }
 
     /* Make the scanner params once, rather than every time through */
-    scanner_params sp(sc, this, scanner_params::PHASE_SCAN, sbufp, scanner_params::PrintOptions(), nullptr);
+    scanner_params sp(sc, this, nullptr, scanner_params::PHASE_SCAN, sbufp);
     for (const auto &it : scanner_info_db) {
 
         // Look for reasons not to run a scanner
@@ -857,8 +857,8 @@ void scanner_set::shutdown() {
     current_phase = scanner_params::PHASE_SHUTDOWN;
 
     /* Tell the scanners we are shutting down */
-    scanner_params::PrintOptions po; // empty po
-    scanner_params sp(sc, this, scanner_params::PHASE_SHUTDOWN, nullptr, po, nullptr);
+    PrintOptions po; // empty po
+    scanner_params sp(sc, this, nullptr, scanner_params::PHASE_SHUTDOWN, nullptr);
     for (const auto &it : enabled_scanners) { (*it)(sp); }
 
     fs.feature_recorders_shutdown();

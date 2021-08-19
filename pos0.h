@@ -44,9 +44,9 @@ public:
     const std::string path{}; /* forensic path of decoders*/
     const uint64_t offset{0}; /* location of buf[0] */
 
-    explicit pos0_t() {}                                                                // the beginning of a nothing
-    pos0_t(std::string s, uint64_t o = 0) : path(s), offset(o) {} // a specific offset in a place
-    pos0_t(const pos0_t& obj) : path(obj.path), offset(obj.offset) {}                   // copy operator
+    explicit pos0_t() {}                                                 // the beginning of a nothing
+    pos0_t(std::string s, uint64_t o = 0) : path(s), offset(o) {}        // s can be a full path
+    pos0_t(const pos0_t& obj) : path(obj.path), offset(obj.offset) {}    // copy operator
 
     /* Every new layer is indicated by a "-" followed by a letter.
      * This threadsafe, but it may need to be computed twice if two

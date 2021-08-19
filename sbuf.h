@@ -182,11 +182,14 @@ public:;
      *
      * slice() returns an object on the stack.
      *
-     * new_slice() returns a new object that shares the object's memory. The object must be deleted.
-     * new_slice_copy() makes a copy of the memory, and must be deleted.
+     * new_slice() returns a new object that shares the object's memory.
+     * new_slice_copy() makes a copy of the memory.
+     * be sure to delete the object created by new_.
      */
+    sbuf_t slice(pos0_t pos, size_t len) const;
     sbuf_t slice(size_t off, size_t len) const;
     sbuf_t *new_slice(size_t off, size_t len) const;
+    sbuf_t *new_slice(pos0_t pos0, size_t off, size_t len) const; // use the given pos0, but slice from off to len
     sbuf_t *new_slice_copy(size_t off, size_t len) const;
 
     /**
@@ -196,8 +199,7 @@ public:;
     sbuf_t slice(size_t off) const;
     sbuf_t *new_slice(size_t off) const; // allocates; must be deleted
     virtual ~sbuf_t();
-    // It turns out that slice is not free, so don't do it so casually
-    //sbuf_t operator+(size_t off) const { return slice(off); }
+    // It turns out that slice is not free, so don't do it casually with an addition:
     sbuf_t operator+(size_t off) const = delete;
 
     inline static const std::string U10001C = "\xf4\x80\x80\x9c"; // default delimeter character in bulk_extractor

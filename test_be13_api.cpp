@@ -478,6 +478,36 @@ TEST_CASE("fname", "[feature_recorder]") {
     REQUIRE( sbuf1.children == 0 );
 }
 
+/** test the path printer
+ */
+#include "path_printer.h"
+TEST_CASE("functions", "[path_printer]") {
+    REQUIRE(path_printer::lowerstr("ZIP") == "zip");
+
+    std::string path {"100-ZIP-200-GZIP-300"};
+    std::string part = path_printer::get_and_remove_token(path);
+    REQUIRE(part=="100");
+    REQUIRE(path=="ZIP-200-GZIP-300");
+
+    part = path_printer::get_and_remove_token(path);
+    REQUIRE(part=="ZIP");
+    REQUIRE(path=="200-GZIP-300");
+
+    part = path_printer::get_and_remove_token(path);
+    REQUIRE(part=="200");
+    REQUIRE(path=="GZIP-300");
+
+    part = path_printer::get_and_remove_token(path);
+    REQUIRE(part=="GZIP");
+    REQUIRE(path=="300");
+
+    part = path_printer::get_and_remove_token(path);
+    REQUIRE(part=="300");
+    REQUIRE(path=="");
+
+}
+
+
 /** test the sbuf_stream interface.
  */
 TEST_CASE("sbuf_stream", "[sbuf]") {
