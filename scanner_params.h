@@ -185,7 +185,7 @@ struct scanner_params {
     std::unique_ptr<struct scanner_info> info {nullptr};  // filled in by callback in PHASE_INIT
 
     virtual void recurse(sbuf_t* sbuf) const; // recursive call by scanner. Calls either scanner_set or path_printer.
-    //virtual bool check_previously_processed(const sbuf_t &sbuf) const;
+    virtual bool check_previously_processed(const sbuf_t &sbuf) const;
     //std::stringstream* sxml{};          //  on scanning and shutdown: CDATA added to XML stream if provided.; can't we get from scanner_set?
     //const uint32_t depth{0};      //  how far down are we? / only valid in SCAN_PHASE; can be inferred from sbuf path?
     // convenience functions

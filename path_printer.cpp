@@ -5,6 +5,30 @@
 #include "scanner_set.h"
 #include "utils.h"
 
+std::string PrintOptions::get(std::string key, std::string default_) const
+{
+    auto search = this->find(key);
+    if (search != this->end()) {
+        return search->second;
+    }
+    return default_;
+}
+
+
+void PrintOptions::add_rfc822_header(std::ostream &os,std::string line)
+{
+    size_t colon = line.find(":");
+    if (colon==std::string::npos){
+        os << "HTTP/1.1 502 Malformed HTTP request" << HTTP_EOL;
+        return;
+    }
+    std::string name = line.substr(0,colon);
+    std::string val  = line.substr(colon+1);
+    while(val.size()>0 && (val[0]==' '||val[0]=='\t')) val = val.substr(1);
+    (*this)[name]=val;
+}
+
+
 /**
  * lowerstr - Turns an ASCII string into all lowercase case (should be UTF-8)
  */
@@ -97,14 +121,14 @@ void path_printer::process_sp(const scanner_params &sp) const
 
 	switch (sp.pp_po->print_mode){
 	case PrintOptions::MODE_HTTP:
-	    std::cout << "Content-Length: "		<< content_length  << HTTP_EOL;
-	    std::cout << "Content-Range: bytes "	<< print_start << "-" << print_start+content_length-1 << HTTP_EOL;
-	    std::cout << "X-Range-Available: bytes " << 0 << "-" << sp.sbuf->bufsize-1 << HTTP_EOL;
-	    std::cout << HTTP_EOL;
+	    std::cout << "Content-Length: "		<< content_length  << PrintOptions::HTTP_EOL;
+	    std::cout << "Content-Range: bytes "	<< print_start << "-" << print_start+content_length-1 << PrintOptions::HTTP_EOL;
+	    std::cout << "X-Range-Available: bytes " << 0 << "-" << sp.sbuf->bufsize-1 << PrintOptions::HTTP_EOL;
+	    std::cout << PrintOptions::HTTP_EOL;
 	    sp.sbuf->raw_dump(std::cout, print_start, content_length); // send to stdout as binary
 	    break;
 	case PrintOptions::MODE_RAW:
-	    std::cout << content_length << HTTP_EOL;
+	    std::cout << content_length << PrintOptions::HTTP_EOL;
 	    std::cout.flush();
 	    sp.sbuf->raw_dump(std::cout,print_start,content_length); // send to stdout as binary
 	    break;
@@ -114,7 +138,7 @@ void path_printer::process_sp(const scanner_params &sp) const
 	case PrintOptions::MODE_NONE:
 	    break;
 	}
-        throw printing_done;   // our job here is done
+        throw path_printer_finished();   // our job here is done
     }
     /* If we are in an offset block, process recursively with the offset */
     if (isdigit(prefix[0])){
@@ -155,16 +179,11 @@ void path_printer::display_path(std::string path, const PrintOptions &po) const
 {
     if ( reader==nullptr) {
 	if (po.http_mode) {
-	    os << "HTTP/1.1 502 Filename not provided" << HTTP_EOL << HTTP_EOL;
+	    os << "HTTP/1.1 502 Filename not provided" << PrintOptions::HTTP_EOL << PrintOptions::HTTP_EOL;
 	} else {
             os << "Filename not provided\n";
 	}
         return;
-    }
-
-    /* Check for "/r" in path which means print raw */
-    if (path.size()>2 && path.substr(path.size()-2,2)=="/r"){
-	path = path.substr(0,path.size()-2);
     }
 
     std::string  prefix = get_and_remove_token(path);
@@ -197,7 +216,11 @@ void path_printer::display_path(std::string path, const PrintOptions &po) const
     scanner_params sp(sc, ss, this, scanner_params::phase_t::PHASE_SCAN, sbufp);
     sp.pp_po   = &po;
     sp.pp_path = path+"-PRINT";
-    process_sp(sp);
+    try {
+        process_sp(sp);
+    } catch (path_printer_finished &e) {
+        // nothing to do after printing is finished!
+    }
     delete sbufp;
 }
 
@@ -213,11 +236,11 @@ void path_printer::process_path(std::string path)
     /* Just get a path and display it */
 
     PrintOptions po;
-    if (path.size()>2 && path.substr(path.size()-2,2)=="/r"){
+    if (ends_with(path,"/r")) {
 	path = path.substr(0,path.size()-2);
 	po.print_mode = PrintOptions::MODE_RAW;
     }
-    if (path.size()>2 && path.substr(path.size()-2,2)=="/h"){
+    if (ends_with(path,"/h")) {
 	path = path.substr(0,path.size()-2);
 	po.print_mode = PrintOptions::MODE_HEX;
     }
@@ -255,12 +278,12 @@ void path_printer::process_http(std::istream &is)
         getline(is,line);
         truncate_at(line,'\r');
         if (line.substr(0,4)!="GET "){
-            out << "HTTP/1.1 501 Method not implemented" << HTTP_EOL << HTTP_EOL;
+            out << "HTTP/1.1 501 Method not implemented" << PrintOptions::HTTP_EOL << PrintOptions::HTTP_EOL;
             return;
         }
         size_t space = line.find(" HTTP/1.1");
         if (space==std::string::npos){
-            out << "HTTP/1.1 501 Only HTTP/1.1 is implemented" << HTTP_EOL << HTTP_EOL;
+            out << "HTTP/1.1 501 Only HTTP/1.1 is implemented" << PrintOptions::HTTP_EOL << PrintOptions::HTTP_EOL;
             return;
         }
         std::string p2 = line.substr(4,space-4);
@@ -269,24 +292,16 @@ void path_printer::process_http(std::istream &is)
         do {
             getline(is,line);
             truncate_at(line,'\r');
-            if (line.size()==0) break; // double new-line
-            size_t colon = line.find(":");
-            if (colon==std::string::npos){
-                os << "HTTP/1.1 502 Malformed HTTP request" << HTTP_EOL;
-                return;
-            }
-            std::string name = line.substr(0,colon);
-            std::string val  = line.substr(colon+1);
-            while(val.size()>0 && (val[0]==' '||val[0]=='\t')) val = val.substr(1);
-            po[name]=val;
+            if (line.size()==0) break;         // newline
+            po.add_rfc822_header(out, line);
         } while(true);
 
         /* Process some specific URLs */
         if (p2=="/info"){
-            out << "X-Image-Size: " << reader->image_size() << HTTP_EOL;
-            out << "X-Image-Filename: " << reader->image_fname() << HTTP_EOL;
-            out << "Content-Length: 0" << HTTP_EOL;
-            out << HTTP_EOL;
+            out << "X-Image-Size: " << reader->image_size() << PrintOptions::HTTP_EOL;
+            out << "X-Image-Filename: " << reader->image_fname() << PrintOptions::HTTP_EOL;
+            out << "Content-Length: 0" << PrintOptions::HTTP_EOL;
+            out << PrintOptions::HTTP_EOL;
             continue;
         }
 

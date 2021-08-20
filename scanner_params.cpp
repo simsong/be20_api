@@ -32,13 +32,14 @@ const std::filesystem::path scanner_params::get_input_fname() const
 }
 #endif
 
-#if 0
+/*
+ * Allow call by scanners using the sp. Currently used in scan_zip
+ */
 bool scanner_params::check_previously_processed(const sbuf_t &s) const
 {
     assert(ss!=nullptr);
     return ss->previously_processed_count(s)==0;
 }
-#endif
 
 void scanner_params::recurse(sbuf_t* new_sbuf) const {
     if (pp!=nullptr) {                  // we have a path printer; call that instead

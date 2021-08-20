@@ -12,13 +12,14 @@
 // https://stackoverflow.com/questions/951234/forward-declaration-of-nested-types-classes-in-c
 
 struct PrintOptions : public std::map<std::string, std::string> {
+    static inline const std::string HTTP_EOL {"\r\n"};		// stdout is in binary form
+    static inline const size_t DEFAULT_BUFSIZE = 16384;
     enum print_mode_t { MODE_NONE = 0, MODE_HEX, MODE_RAW, MODE_HTTP };
     print_mode_t print_mode {MODE_NONE};
-    size_t process_path_bufsize;
+    size_t process_path_bufsize {DEFAULT_BUFSIZE};
     bool http_mode {false};
-    std::string get(std::string key, std::string default_) const {
-        return this->find(key)==this->end() ? this->find(key)->second : default_;
-    }
+    std::string get(std::string key, std::string default_) const;
+    void add_rfc822_header(std::ostream &os, std::string line);
 };
 
 
@@ -32,14 +33,13 @@ class path_printer {
         virtual const char *what() const throw() {
             return "path printer finished.";
         }
-    } printing_done;
+    };
 
     path_printer(const path_printer &) = delete;
     path_printer &operator=(const path_printer &) = delete;
 
 public:;
     path_printer(scanner_set *ss_, abstract_image_reader *reader_, std::ostream &out);
-    static inline const std::string HTTP_EOL {"\r\n"};		// stdout is in binary form
     static inline const std::string PRINT {"PRINT"};
     static inline const std::string CONTENT_LENGTH {"Content-Length"};
     static inline const std::string DEFAULT_CONTENT_LENGTH {"4096"};

@@ -505,6 +505,14 @@ TEST_CASE("functions", "[path_printer]") {
     REQUIRE(part=="300");
     REQUIRE(path=="");
 
+    PrintOptions po;
+    po.add_rfc822_header(std::cerr, "Content-Length: 100");
+    part = po.get("Content-Length","200");
+    REQUIRE(part=="100");
+
+    part = po.get("Content-Color","red");
+    REQUIRE(part=="red");
+
 }
 
 
@@ -1041,7 +1049,7 @@ TEST_CASE("run", "[scanner]") {
     REQUIRE(ss.histogram_count() == 1);
     std::string fname_hist = get_tempdir() + "/sha1_bufs_first5.txt";
     lines = getLines(fname_hist);
-    REQUIRE(lines.size() == 1);
+    REQUIRE(lines.size() == 6);         // includes header!
 }
 
 /****************************************************************
