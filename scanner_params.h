@@ -143,11 +143,11 @@ struct scanner_params {
     // phase_t specifies when the scanner is being called.
     // the scans are implemented in the scanner set
     enum phase_t {
-        PHASE_INIT,    // called in main thread when scanner loads
-        PHASE_ENABLED, // enable/disable commands called
-        PHASE_INIT2,    // called in main thread to get the feature recorders and so forth.
-        PHASE_SCAN,    // called in worker thread for every ENABLED scanner to scan an sbuf
-        PHASE_SHUTDOWN // called in main thread for every ENABLED scanner when scanner is shutting down. Allows XML
+        PHASE_INIT=1,    // called in main thread when scanner loads
+        PHASE_INIT2=2,    // called in main thread to get the feature recorders and so forth.
+        PHASE_ENABLED=3, // enable/disable commands called
+        PHASE_SCAN=4,    // called in worker thread for every ENABLED scanner to scan an sbuf
+        PHASE_SHUTDOWN=5 // called in main thread for every ENABLED scanner when scanner is shutting down. Allows XML
                        // closing.
     };
 
@@ -162,8 +162,8 @@ struct scanner_params {
     /* A scanner params with all of the instance variables, typically for scanning  */
     scanner_params(struct scanner_config &sc_, class scanner_set  *ss_, const class path_printer *pp_, phase_t phase_, const sbuf_t* sbuf_);
 
-    /** Construct a scanner_params for recursion from an existing sp and a new sbuf. */
-    scanner_params(const scanner_params& sp_existing, const sbuf_t* sbuf_);
+    /** Construct a scanner_params for recursion from an existing sp and a new sbuf, and a new pp_path. */
+    scanner_params(const scanner_params& sp_existing, const sbuf_t* sbuf_, std::string pp_path_);
 
     virtual ~scanner_params(){};
 

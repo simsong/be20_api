@@ -74,6 +74,7 @@ path_printer::path_printer(scanner_set *ss_, abstract_image_reader *reader_, std
     reader(reader_),
     out(os_)
 {
+    ss->phase_scan();                   // advance to phase scan
 }
 
 
@@ -92,7 +93,7 @@ void path_printer::process_sp(const scanner_params &sp) const
     std::string prefix = get_and_remove_token(new_path);
 
     /* Time to print ?*/
-    if (prefix.size()==0 || prefix==PRINT){
+    if (prefix.size()==0 || prefix==PRINT || (prefix=="0" && new_path=="PRINT")){
 
 	uint64_t print_start = 0;
 	uint64_t content_length = 0;
@@ -148,7 +149,11 @@ void path_printer::process_sp(const scanner_params &sp) const
 	    return;
 	}
         sbuf_t *child = sp.sbuf->new_slice(new_path, offset, sp.sbuf->bufsize - offset);
-	process_sp(scanner_params(sp, child));
+        try {
+            scanner_params sp2(sp, child, new_path);
+            process_sp( sp2 );
+        } catch (path_printer_finished &e) {
+        }
         delete child;
 	return;
     }
@@ -162,7 +167,7 @@ void path_printer::process_sp(const scanner_params &sp) const
     // we use the slice method because .. well, it works!
     sbuf_t *child = sp.sbuf->new_slice(pos0_t(), 0, sp.sbuf->bufsize);
     try {
-        scanner_params sp2(sp, child);
+        scanner_params sp2(sp, child, new_path);
         (*s)(sp2);
     } catch (path_printer_finished &e) {
         // nothing to do after printing is finished!

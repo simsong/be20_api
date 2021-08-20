@@ -6,12 +6,13 @@
 
 scanner_params::scanner_params(struct scanner_config &sc_, class scanner_set  *ss_,
                                const path_printer *pp_, phase_t phase_, const sbuf_t* sbuf_)
-    : sc(sc_), ss(ss_), phase(phase_), sbuf(sbuf_)
+    : sc(sc_), ss(ss_), pp(pp_), phase(phase_), sbuf(sbuf_)
 {
 }
 
-scanner_params::scanner_params(const scanner_params& sp_existing, const sbuf_t* sbuf_)
-    : sc(sp_existing.sc), ss(sp_existing.ss), phase(sp_existing.phase), sbuf(sbuf_)
+scanner_params::scanner_params(const scanner_params& sp_existing, const sbuf_t* sbuf_, std::string pp_path_)
+    : sc(sp_existing.sc), ss(sp_existing.ss), pp(sp_existing.pp), phase(sp_existing.phase), sbuf(sbuf_),
+      pp_path(pp_path_), pp_po(sp_existing.pp_po)
 {
 }
 
@@ -43,7 +44,7 @@ bool scanner_params::check_previously_processed(const sbuf_t &s) const
 
 void scanner_params::recurse(sbuf_t* new_sbuf) const {
     if (pp!=nullptr) {                  // we have a path printer; call that instead
-        scanner_params sp_new(*this, new_sbuf);
+        scanner_params sp_new(*this, new_sbuf, this->pp_path);
         pp->process_sp( sp_new );           // where do we keep the path being processed? In scanner_params...
         return;
     }

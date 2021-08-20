@@ -79,7 +79,7 @@ class scanner_set {
 public:
     /* constructor and destructor */
     /* @param sc - the config variables
-       @param f - the flags
+       @param f - the flags for the feature recorder set we make
        @param writer - the DFXML writer to use, or nullptr.
     */
     scanner_set(scanner_config& sc, const feature_recorder_set::flags_t& f, class dfxml_writer* writer);

@@ -51,8 +51,9 @@ private:
     const std::string input_fname{}; // input file; copy for convenience.
     const std::string outdir{};      // where output goes; must know.
 
-    /* map of feature recorders, name->feature recorder
-     * It is read-write when BE is running single-threaded. After we go into multi-threaded mode, it is read-only.
+    /* map of feature recorders, name->feature recorder It is
+     * read-write when BE is running single-threaded. After we go into
+     * multi-threaded mode, it is read-only.
      */
     feature_recorder_map_t frm{};
     bool frm_frozen {false};            // once the frm is frozen, it is read-only.
@@ -78,6 +79,12 @@ public:
         bool record_files{true};                // record to files
         bool record_sql{false};                 // record to SQL
     } flags;
+
+    static flags_t flags_disabled() {           // return a frs that is disabled
+        flags_t f;
+        f.disabled = true;
+        return f;
+    }
 
     /** Constructor:
      * create an emptry feature recorder set. If disabled, create a disabled recorder.

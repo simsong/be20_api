@@ -505,6 +505,11 @@ TEST_CASE("functions", "[path_printer]") {
     REQUIRE(part=="300");
     REQUIRE(path=="");
 
+    path = "PRINT";
+    part = path_printer::get_and_remove_token(path);
+    REQUIRE(part=="PRINT");
+    REQUIRE(path=="");
+
     PrintOptions po;
     po.add_rfc822_header(std::cerr, "Content-Length: 100");
     part = po.get("Content-Length","200");
