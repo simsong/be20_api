@@ -1,6 +1,9 @@
 #ifndef ABSTRACT_IMAGE_READER
 #define  ABSTRACT_IMAGE_READER
 
+#include <string>
+#include <cstdint>
+
 class abstract_image_reader {
 public:
     abstract_image_reader() {};
