@@ -26,8 +26,8 @@ struct PrintOptions : public std::map<std::string, std::string> {
 class path_printer {
     class scanner_set *ss {nullptr};
     abstract_image_reader *reader {nullptr};
-    mutable std::stringstream os;
-    std::ostream &out;
+    mutable std::stringstream os;       // for temp creation
+    std::ostream &out;                  // for output
     class path_printer_finished: public std::exception {
     public:
         virtual const char *what() const throw() {

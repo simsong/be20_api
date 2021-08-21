@@ -762,7 +762,7 @@ TEST_CASE("hello_sbuf", "[sbuf]") {
 TEST_CASE("sbuf_malloc", "[sbuf]") {
     const size_t BUFSIZE=256;
     sbuf_t *sb1 = sbuf_t::sbuf_malloc(pos0_t(), BUFSIZE, BUFSIZE);
-    for(int i=0; i<BUFSIZE; i++){
+    for(u_int i=0; i<BUFSIZE; i++){
         sb1->wbuf(i, 255-i);
     }
     REQUIRE_THROWS_AS( sb1->wbuf(600,0), std::runtime_error);

@@ -122,19 +122,18 @@ void path_printer::process_sp(const scanner_params &sp) const
 
 	switch (sp.pp_po->print_mode){
 	case PrintOptions::MODE_HTTP:
-	    std::cout << "Content-Length: "		<< content_length  << PrintOptions::HTTP_EOL;
-	    std::cout << "Content-Range: bytes "	<< print_start << "-" << print_start+content_length-1 << PrintOptions::HTTP_EOL;
-	    std::cout << "X-Range-Available: bytes " << 0 << "-" << sp.sbuf->bufsize-1 << PrintOptions::HTTP_EOL;
-	    std::cout << PrintOptions::HTTP_EOL;
-	    sp.sbuf->raw_dump(std::cout, print_start, content_length); // send to stdout as binary
+	    os << "Content-Length: "		<< content_length  << PrintOptions::HTTP_EOL;
+	    os << "Content-Range: bytes "	<< print_start << "-" << print_start+content_length-1 << PrintOptions::HTTP_EOL;
+	    os << "X-Range-Available: bytes " << 0 << "-" << sp.sbuf->bufsize-1 << PrintOptions::HTTP_EOL;
+	    os << PrintOptions::HTTP_EOL;
+	    sp.sbuf->raw_dump(os, print_start, content_length); // send to stdout as binary
 	    break;
 	case PrintOptions::MODE_RAW:
-	    std::cout << content_length << PrintOptions::HTTP_EOL;
-	    std::cout.flush();
-	    sp.sbuf->raw_dump(std::cout,print_start,content_length); // send to stdout as binary
+	    os << content_length << PrintOptions::HTTP_EOL;
+	    sp.sbuf->raw_dump(os, print_start,content_length); // send to stdout as binary
 	    break;
 	case PrintOptions::MODE_HEX:
-	    sp.sbuf->hex_dump(std::cout,print_start,content_length);
+	    sp.sbuf->hex_dump(os,print_start,content_length);
 	    break;
 	case PrintOptions::MODE_NONE:
 	    break;
@@ -145,7 +144,7 @@ void path_printer::process_sp(const scanner_params &sp) const
     if (isdigit(prefix[0])){
 	uint64_t offset = stoi64(prefix);
 	if ( offset > sp.sbuf->bufsize ){
-            std::cout << "Error: " << new_path << " only has " << sp.sbuf->bufsize << " bytes; can't offset to " << offset << "\n";
+            std::cerr << "Error: " << new_path << " only has " << sp.sbuf->bufsize << " bytes; can't offset to " << offset << "\n";
 	    return;
 	}
         sbuf_t *child = sp.sbuf->new_slice(new_path, offset, sp.sbuf->bufsize - offset);

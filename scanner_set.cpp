@@ -464,8 +464,11 @@ void scanner_set::info_scanners(std::ostream& out, bool detailed_info, bool deta
 
 void scanner_set::apply_scanner_commands() {
     if (current_phase != scanner_params::PHASE_INIT) {
-        throw std::runtime_error(Formatter() << "apply_scanner_commands can only be run in scanner_params::PHASE_INIT."
-                                 " current phase=" << current_phase);
+        throw std::runtime_error(
+                                 Formatter()
+                                 << "apply_scanner_commands can only be run in scanner_params::PHASE_INIT."
+                                 << " current phase="
+                                 << (unsigned int)(current_phase));
     }
     for (const auto &cmd : sc.scanner_commands) {
         if (cmd.scannerName == scanner_config::scanner_command::ALL_SCANNERS) {
