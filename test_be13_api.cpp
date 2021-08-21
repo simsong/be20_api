@@ -478,6 +478,49 @@ TEST_CASE("fname", "[feature_recorder]") {
     REQUIRE( sbuf1.children == 0 );
 }
 
+/** test the path printer
+ */
+#include "path_printer.h"
+TEST_CASE("functions", "[path_printer]") {
+    REQUIRE(path_printer::lowerstr("ZIP") == "zip");
+
+    std::string path {"100-ZIP-200-GZIP-300"};
+    std::string part = path_printer::get_and_remove_token(path);
+    REQUIRE(part=="100");
+    REQUIRE(path=="ZIP-200-GZIP-300");
+
+    part = path_printer::get_and_remove_token(path);
+    REQUIRE(part=="ZIP");
+    REQUIRE(path=="200-GZIP-300");
+
+    part = path_printer::get_and_remove_token(path);
+    REQUIRE(part=="200");
+    REQUIRE(path=="GZIP-300");
+
+    part = path_printer::get_and_remove_token(path);
+    REQUIRE(part=="GZIP");
+    REQUIRE(path=="300");
+
+    part = path_printer::get_and_remove_token(path);
+    REQUIRE(part=="300");
+    REQUIRE(path=="");
+
+    path = "PRINT";
+    part = path_printer::get_and_remove_token(path);
+    REQUIRE(part=="PRINT");
+    REQUIRE(path=="");
+
+    PrintOptions po;
+    po.add_rfc822_header(std::cerr, "Content-Length: 100");
+    part = po.get("Content-Length","200");
+    REQUIRE(part=="100");
+
+    part = po.get("Content-Color","red");
+    REQUIRE(part=="red");
+
+}
+
+
 /** test the sbuf_stream interface.
  */
 TEST_CASE("sbuf_stream", "[sbuf]") {
@@ -719,7 +762,7 @@ TEST_CASE("hello_sbuf", "[sbuf]") {
 TEST_CASE("sbuf_malloc", "[sbuf]") {
     const size_t BUFSIZE=256;
     sbuf_t *sb1 = sbuf_t::sbuf_malloc(pos0_t(), BUFSIZE, BUFSIZE);
-    for(int i=0; i<BUFSIZE; i++){
+    for(u_int i=0; i<BUFSIZE; i++){
         sb1->wbuf(i, 255-i);
     }
     REQUIRE_THROWS_AS( sb1->wbuf(600,0), std::runtime_error);
@@ -1011,7 +1054,7 @@ TEST_CASE("run", "[scanner]") {
     REQUIRE(ss.histogram_count() == 1);
     std::string fname_hist = get_tempdir() + "/sha1_bufs_first5.txt";
     lines = getLines(fname_hist);
-    REQUIRE(lines.size() == 1);
+    REQUIRE(lines.size() == 6);         // includes header!
 }
 
 /****************************************************************

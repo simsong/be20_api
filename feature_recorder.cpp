@@ -529,15 +529,16 @@ void feature_recorder::histograms_add_feature(const std::string& feature, const 
  * SQLite3 to create the histograms.
  */
 
-void feature_recorder::histogram_flush(AtomicUnicodeHistogram& h) {
-    std::cerr << "feature_recorder::histogram_flush should not be called yet.\n";
-}
+//void feature_recorder::histogram_flush(AtomicUnicodeHistogram& h) {
+//    std::cerr << "feature_recorder::histogram_flush should not be called yet.\n";
+//}
 
 bool feature_recorder::histogram_flush_largest() {
     /* TODO - implement */
     return false;
 }
 
+/* Write all of the histograms associated with this feature recorder. */
 void feature_recorder::histogram_flush_all() {
     for (auto& h : histograms) { this->histogram_flush(*h); }
 }
