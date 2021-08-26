@@ -160,7 +160,7 @@ feature_recorder& feature_recorder_set::create_feature_recorder(const feature_re
 
     feature_recorder* fr = nullptr;
     if (flags.record_files) { fr = new feature_recorder_file(*this, def); }
-#ifdef HAVE_SQLITE3_H
+#if defined(HAVE_SQLITE3_H) && defined(USE_SQLITE3)
     if (flags.record_sql) { fr = new feature_recorder_sql(*this, def); }
 #endif
     fr->context_window = sc.context_window_default;
@@ -266,7 +266,7 @@ size_t feature_recorder_set::histogram_count() const {
  */
 void feature_recorder_set::histograms_generate() {
     for (auto *frp : frm.values()) {
-        frp->histogram_flush_all();
+        frp->histogram_write_all();
     }
 }
 

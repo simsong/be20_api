@@ -65,7 +65,10 @@ struct AtomicUnicodeHistogram {
     AtomicUnicodeHistogram(const struct histogram_def& def_) : def(def_) {}
     virtual ~AtomicUnicodeHistogram(){};
 
-    void clear();                     // empties the histogram
+    bool empty() { return h.size()==0;}   // is it empty?
+    void clear();                       // empties the histogram
+    // low-level add, directly to what we display
+    void add0(const std::string& u8key, bool found_utf16);
      // adds Unicode string to the histogram count. context is used for histogram_def
     void add(const std::string& feature, const std::string&context);
     size_t size() const;              // returns the size of the histogram, whatever that means

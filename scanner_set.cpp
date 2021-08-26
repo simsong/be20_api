@@ -773,17 +773,28 @@ void scanner_set::process_sbuf(class sbuf_t* sbufp) {
     return;
 }
 
+void scanner_set::record_work_start(const std::string &pos0, size_t pagesize, size_t bufsize)
+{
+    if (writer) {
+        std::stringstream ss;
+        ss << "threadid='"  << std::this_thread::get_id() << "'"
+           << " pos0='"     << dfxml_writer::xmlescape(pos0) << "'";
+        if (pagesize){
+            ss << " pagesize='" << pagesize << "'";
+        }
+        if (bufsize){
+            ss << " bufsize='"  << bufsize << "'";
+        }
+        ss   << aftimer::now_str(" t='","'");
+        writer->xmlout("debug:work_start","",ss.str(), true);
+    }
+}
+
 void scanner_set::schedule_sbuf(sbuf_t *sbufp)
 {
     assert (sbufp != nullptr );
-    if (sbufp->depth()==0 && writer) {
-        std::stringstream ss;
-        ss << "threadid='"  << std::this_thread::get_id() << "'"
-           << " pos0='"     << dfxml_writer::xmlescape(sbufp->pos0.str()) << "'"
-           << " pagesize='" << sbufp->pagesize << "'"
-           << " bufsize='"  << sbufp->bufsize << "' "
-           << aftimer::now_str("t='","'");
-        writer->xmlout("debug:work_start","",ss.str(), true);
+    if (sbufp->depth()==0) {
+        record_work_start(sbufp->pos0.str(), sbufp->pagesize, sbufp->bufsize);
     }
     /* Run in same thread? */
     if (pool==nullptr || (sbufp->depth() > 0 && sbufp->bufsize < SAME_THREAD_SBUF_SIZE)) {
@@ -867,7 +878,8 @@ void scanner_set::shutdown() {
 
     fs.feature_recorders_shutdown();
 
-    /* Tell every feature recorder to flush all of its histograms */
+    /* Tell every feature recorder to flush all of its histograms if they haven't been generated.
+     */
     fs.histograms_generate();
 
 }

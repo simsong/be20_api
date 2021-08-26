@@ -236,6 +236,7 @@ public:;
 private:;
     void process_sbuf(sbuf_t* sbuf); // process the sbuf, then delete it.
 public:;
+    void record_work_start(const std::string &pos0, size_t pagesize, size_t bufsize); // note std::string
     void schedule_sbuf(sbuf_t* sbuf);  // schedule the sbuf to be processed, after which it is deleted
     void delete_sbuf(sbuf_t *sbuf);    // delete after processing
 

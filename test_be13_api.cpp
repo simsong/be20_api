@@ -478,6 +478,20 @@ TEST_CASE("fname", "[feature_recorder]") {
     REQUIRE( sbuf1.children == 0 );
 }
 
+/** feature_recorder_file functions */
+TEST_CASE("file_support","[feature_recorder_file]") {
+    std::string line {"one\ttwo\tthree\\133"};
+    std::string feature;
+    std::string context;
+    REQUIRE( feature_recorder_file::extract_feature_context(line, feature, context) == true);
+    REQUIRE( feature=="two");
+    REQUIRE( context=="three[");
+
+    REQUIRE( feature_recorder_file::extract_feature_context("nothing", feature, context) == false);
+
+}
+
+
 /** test the path printer
  */
 #include "path_printer.h"

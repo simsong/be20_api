@@ -1,6 +1,8 @@
 #ifndef FEATURE_RECORDER_FILE_H
 #define FEATURE_RECORDER_FILE_H
 
+#include "config.h"
+
 #include <cassert>
 #include <cinttypes>
 
@@ -20,20 +22,31 @@
 
 class feature_recorder_file : public feature_recorder {
 public:
+    inline static const std::string feature_file_header   {"# Feature-File-Version: 1.1\n"};
+    inline static const std::string histogram_file_header {"# Histogram-File-Version: 1.1\n"};
+    inline static const std::string bulk_extractor_version_header {
+        "# " PACKAGE_NAME "-Version: " PACKAGE_VERSION "\n"};
+
+    static std::string unquote_string(const std::string& s);
+
     feature_recorder_file(class feature_recorder_set& fs, const feature_recorder_def def);
     virtual ~feature_recorder_file();
     virtual void flush() override;
+    static const inline int MAX_HISTOGRAM_FILES = 10; // don't make more than 10 files in low-memory conditions
+    static bool extract_feature_context(const std::string& line, std::string &feature, std::string &context); // extract feature and context, return true if successful
+    static bool isodigit(uint8_t ch){
+        return ch>='0' && ch<='7';
+    }
 
 private:
     std::mutex Mios{};  // mutex for IOS
     std::fstream ios{}; // where features are written
-    bool debug{false};  // for debugging
 
     void banner_stamp(std::ostream& os, const std::string& header) const; // stamp banner, and header
 
-    static const std::string histogram_file_header;
-    static const std::string feature_file_header;
-    static const std::string bulk_extractor_version_header;
+    //static const std::string histogram_file_header;
+    //static const std::string feature_file_header;
+    //static const std::string bulk_extractor_version_header;
 
     virtual void shutdown() override;
 
@@ -63,7 +76,10 @@ public:
     virtual void add_histogram(const histogram_def &def); // adds a histogram to process
 #endif
 
-    virtual void histogram_flush(AtomicUnicodeHistogram& h) override;
+    virtual void histogram_add(const struct histogram_def& def) override;   // add a new histogram
+    virtual void histograms_add_feature(const std::string& feature, const std::string& context);
+    virtual void histogram_write0(AtomicUnicodeHistogram& h); // actually write this histogram
+    virtual void histogram_write(AtomicUnicodeHistogram& h) override; // write this histogram
 
     // virtual void dump_histogram_file(const histogram_def &def,void *user,feature_recorder::dump_callback_t cb) const;
     // virtual size_t count_histograms() const;

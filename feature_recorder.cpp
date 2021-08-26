@@ -63,51 +63,6 @@ feature_recorder::~feature_recorder() {}
 void feature_recorder::flush() {}
 
 
-#if 0
-/**
- * Unquote Python or octal-style quoting of a string
- */
-std::string feature_recorder::unquote_string(const std::string& s) {
-    size_t len = s.size();
-    if (len < 4) return s; // too small for a quote
-
-    std::string out;
-    for (size_t i = 0; i < len; i++) {
-        /* Look for octal coding */
-        if (i + 3 < len && s[i] == '\\' && isodigit(s[i + 1]) && isodigit(s[i + 2]) && isodigit(s[i + 3])) {
-            uint8_t code = (s[i + 1] - '0') * 64 + (s[i + 2] - '0') * 8 + (s[i + 3] - '0');
-            out.push_back(code);
-            i += 3; // skip over the digits
-            continue;
-        }
-        /* Look for hex coding */
-        if (i + 3 < len && s[i] == '\\' && s[i + 1] == 'x' && isxdigit(s[i + 2]) && isxdigit(s[i + 3])) {
-            uint8_t code = (hexval(s[i + 2]) * 16) | hexval(s[i + 3]);
-            out.push_back(code);
-            i += 3; // skip over the digits
-            continue;
-        }
-        out.push_back(s[i]);
-    }
-    return out;
-}
-#endif
-
-/**
- * Get the feature which is defined as being between a \t and [\t\n]
- */
-
-#if 0
-/*static*/ std::string feature_recorder::extract_feature(const std::string& line) {
-    size_t tab1 = line.find('\t');
-    if (tab1 == std::string::npos) return ""; // no feature
-    size_t feature_start = tab1 + 1;
-    size_t tab2 = line.find('\t', feature_start);
-    if (tab2 != std::string::npos) return line.substr(feature_start, tab2 - feature_start);
-    return line.substr(feature_start); // no context to remove
-}
-#endif
-
 const std::filesystem::path feature_recorder::get_outdir() const // cannot be inline becuase it accesses fs
 {
     return fs.get_outdir();
@@ -265,14 +220,6 @@ void feature_recorder::write(const pos0_t& pos0, const std::string &original_fea
 
     /* Write out the feature and the context */
     this->write0(pos0, feature_utf8, context);
-
-    /* Add the feature to any histograms.
-     * histograms_add_feature tracks whether it is getting utf-8 or utf-16 string.
-     * Note that this means that the utf-16 determination has to be made twice.
-     * Oh well.
-     */
-    this->histograms_add_feature(original_feature, original_context);
-
 }
 
 /**
@@ -281,9 +228,6 @@ void feature_recorder::write(const pos0_t& pos0, const std::string &original_fea
  * for writing from within the lexical analyzers.
  */
 
-/* for debugging, halt at this position */
-const pos0_t debug_halt_pos0("", 9999999);
-const size_t debug_halt_pos(9999999);
 void feature_recorder::write_buf(const sbuf_t& sbuf, size_t pos, size_t len) {
     if (fs.flags.debug) {
         std::cerr << "*** write_buf " << name << " sbuf=" << sbuf << " pos=" << pos << " len=" << len << "\n";
@@ -346,8 +290,8 @@ std::string replace(const std::string& src, char f, char t) {
  * 2013-06-08 - filenames are the forensic path.
  */
 
-#if 0
-std::string valid_dosname(std::string in) {
+std::string feature_recorder::sanitize_filename(std::string in)
+{
     std::string out;
     for (size_t i = 0; i < in.size(); i++) {
         uint8_t ch = in.at(i);
@@ -361,7 +305,6 @@ std::string valid_dosname(std::string in) {
     }
     return out;
 }
-#endif
 
 /*
  * write buffer to specified dirname/filename for writing data.
@@ -411,9 +354,9 @@ std::string feature_recorder::carve(const sbuf_t& header, const sbuf_t& data, st
 
     /* See if we have previously carved this object, in which case do not carve it again */
     std::string carved_hash_hexvalue = hash(data);
-    bool in_cache = carve_cache.check_for_presence_and_insert(carved_hash_hexvalue);
     std::string carved_relative_path; // carved path reported in feature file, relative to outdir
     std::filesystem::path carved_absolute_path; // used for opening
+    bool in_cache = carve_cache.check_for_presence_and_insert(carved_hash_hexvalue);
 
     if (in_cache) {
         carved_relative_path = CACHED;
@@ -424,11 +367,6 @@ std::string feature_recorder::carve(const sbuf_t& header, const sbuf_t& data, st
         seq << std::setw(3) << std::setfill('0') << int(myfileNumber / 1000);
         const std::string thousands{seq.str()};
 
-        //No longer sequentially numbering
-        //std::ostringstream num;
-        //num << std::setw(8) << std::setfill('0') << int(myfileNumber);
-        //const std::string units{num.str()};
-
         /* Create the directory.
          * If it exists, the call fails.
          * (That's faster than checking to see if it exists and then creating the directory)
@@ -436,13 +374,12 @@ std::string feature_recorder::carve(const sbuf_t& header, const sbuf_t& data, st
         std::filesystem::create_directory(fs.get_outdir() / name);
         std::filesystem::create_directory(fs.get_outdir() / name / thousands);
 
-        // const std::filesystem::path scannerDir { fs.get_outdir() / name};
-
         std::string fname  = data.pos0.str() + ext;
         auto rpos = fname.rfind('/');   // see if there is a '/' in the string
         if (rpos != std::string::npos ){
             fname = fname.substr(rpos+1); // remove everything up to the last /
         }
+        fname  = sanitize_filename(fname);
 
         // carved relative path goes in the feature file
         carved_relative_path = name + "/" + thousands + "/" + fname;
@@ -494,31 +431,6 @@ const std::string feature_recorder::hash(const sbuf_t& sbuf) const {
 void feature_recorder::shutdown() {}
 
 
-/****************************************************************
- ** Histogram Support
- ****************************************************************/
-
-/**
- * add a new histogram to this feature recorder.
- * @param def - the histogram definition
- */
-void feature_recorder::histogram_add(const struct histogram_def& hdef) {
-    if (features_written != 0) {
-        throw std::runtime_error("Cannot add histograms after features have been written.");
-    }
-    histograms.push_back(std::make_unique<AtomicUnicodeHistogram>(hdef));
-}
-
-/**
- * add a feature to all of the feature recorder's histograms
- * @param feature - the feature to add.
- */
-void feature_recorder::histograms_add_feature(const std::string& feature, const std::string& context) {
-    for (auto& h : histograms) {
-        h->add(feature, context); // add the original feature
-    }
-}
-
 /**
  * flush the largest histogram to the disk. This is a way to release
  * allocated memory.
@@ -529,18 +441,20 @@ void feature_recorder::histograms_add_feature(const std::string& feature, const 
  * SQLite3 to create the histograms.
  */
 
-//void feature_recorder::histogram_flush(AtomicUnicodeHistogram& h) {
-//    std::cerr << "feature_recorder::histogram_flush should not be called yet.\n";
+//void feature_recorder::histogram_write(AtomicUnicodeHistogram& h) {
+//    std::cerr << "feature_recorder::histogram_write should not be called yet.\n";
 //}
 
-bool feature_recorder::histogram_flush_largest() {
+bool feature_recorder::histogram_write_largest() {
     /* TODO - implement */
     return false;
 }
 
 /* Write all of the histograms associated with this feature recorder. */
-void feature_recorder::histogram_flush_all() {
-    for (auto& h : histograms) { this->histogram_flush(*h); }
+void feature_recorder::histogram_write_all() {
+    for (auto& h : histograms) {
+        this->histogram_write(*h);
+    }
 }
 
 #if 0

@@ -162,7 +162,16 @@ protected:
     virtual const std::filesystem::path get_outdir() const; // cannot be inline because it accesses fs
 
 public:
-    ;
+    /* if debugging (fs.flags.debug is set), halt at this position.
+     * The idea is that you change the position, but it could be updated and set by a DEBUG environment variable
+     */
+    // debugging variables
+    bool   debug {false};
+    pos0_t debug_halt_pos0 {"", 9999999}; // halts at this position
+    size_t debug_halt_pos {9999999}; // or at this position
+    bool   disable_incremental_histogram { false }; // force histogram to read from a file at end; used if restarting or for debugging
+
+    static std::string sanitize_filename(std::string in);
     /* The main public interface:
      * Note that feature_recorders exist in a feature_recorder_set and have a name.
      */
@@ -281,16 +290,15 @@ public:
     std::vector<std::unique_ptr<AtomicUnicodeHistogram>> histograms{};
 
     // flush a specific histogram at the end of PHASE1
-    virtual void histogram_flush(AtomicUnicodeHistogram& h) = 0;
+    virtual void histogram_write(AtomicUnicodeHistogram& h) = 0; // flush a specific histogram associated with a feature recorder
+    virtual void histogram_write_all(); // flushes all histograms associated with a feature recorder. Happens at end of processing
 
     // propose a feature to all of the histograms
-    virtual void histograms_add_feature(const std::string& feature, const std::string& context);
 
     virtual size_t histogram_count() { return histograms.size(); } // how many histograms it has
-    virtual void histogram_add(const struct histogram_def& def);   // add a new histogram
+    virtual void histogram_add(const struct histogram_def& def) = 0;   // add a new histogram
     virtual bool
-    histogram_flush_largest();          // flushes largest histogram. returns false if no histogram could be flushed.
-    virtual void histogram_flush_all(); // flushes all histograms
+    histogram_write_largest();          // flushes largest histogram. returns false if no histogram could be flushed.
     // virtual void histogram_merge(const struct histogram_def &def); // merge sort on this histogram
     // virtual void histogram_merge_all();                            // merge sort on all histograms
 };
