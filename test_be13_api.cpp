@@ -275,10 +275,10 @@ TEST_CASE("AtomicUnicodeHistogram_1", "[atomic][regex]") {
     /* Histogram that matches everything */
     histogram_def d1("name", "feature_file", "(.*)", "", "suffix1", histogram_def::flags_t());
     AtomicUnicodeHistogram h(d1);
-    h.add("foo", "");
-    h.add("foo", "bar");
-    h.add("foo", "ignore");
-    h.add("bar", "me");
+    h.add_feature_context("foo", "");
+    h.add_feature_context("foo", "bar");
+    h.add_feature_context("foo", "ignore");
+    h.add_feature_context("bar", "me");
 
     /* Now make sure things were added with the right counts */
     AtomicUnicodeHistogram::FrequencyReportVector f = h.makeReport();
@@ -303,7 +303,7 @@ TEST_CASE("AtomicUnicodeHistogram_2", "[atomic][regex]") {
     /* Histogram that matches everything */
     histogram_def d1("extraction", "extraction", "^(.....)", "", "", histogram_def::flags_t());
     AtomicUnicodeHistogram h(d1);
-    h.add("abcdefghijklmnop", "");
+    h.add_feature_context("abcdefghijklmnop", "");
 
     /* Now make sure things were added with the right counts */
     AtomicUnicodeHistogram::FrequencyReportVector f = h.makeReport();
@@ -329,12 +329,12 @@ TEST_CASE("AtomicUnicodeHistogram_3", "[histogram]") {
     histogram_def h1("phones", "p", "([0-9]+)", "", "phones", flags);
     AtomicUnicodeHistogram hm(h1);
 
-    hm.add("100", "");
-    hm.add("200", "1");
-    hm.add("300", "2");
-    hm.add("200", "3");
-    hm.add("300", "4");
-    hm.add("foo 300 bar", "");
+    hm.add_feature_context("100", "");
+    hm.add_feature_context("200", "1");
+    hm.add_feature_context("300", "2");
+    hm.add_feature_context("200", "3");
+    hm.add_feature_context("300", "4");
+    hm.add_feature_context("foo 300 bar", "");
 
     std::vector<AtomicUnicodeHistogram::auh_t::item> r = hm.makeReport(0);
     REQUIRE(r.size() == 3);
@@ -355,7 +355,7 @@ TEST_CASE("AtomicUnicodeHistogram_3", "[histogram]") {
     /* Add a UTF-16 300 */
     char buf300[6]{'\000', '3', '\000', '0', '\000', '0'};
     std::string b300(buf300, 6);
-    hm.add(b300, "");
+    hm.add_feature_context(b300, "");
     r = hm.makeReport(0);
     REQUIRE(r.at(0).key == "300");
     REQUIRE(r.at(0).value->count == 4);
@@ -1036,11 +1036,13 @@ TEST_CASE("run", "[scanner]") {
     /* Test the regular expression */
     /* And it should write to a feature file that has a suffix of "_first5" */
 
-    REQUIRE(fr.histograms[0]->def.feature == "sha1_bufs");
-    REQUIRE(fr.histograms[0]->def.pattern == "^(.....)");
-    REQUIRE(fr.histograms[0]->def.suffix == "first5");
-    REQUIRE(fr.histograms[0]->def.flags.lowercase == true);
-    REQUIRE(fr.histograms[0]->def.flags.numeric == false);
+    feature_recorder_file *frp = reinterpret_cast<feature_recorder_file *>(&fr);
+
+    REQUIRE(frp->histograms[0]->def.feature == "sha1_bufs");
+    REQUIRE(frp->histograms[0]->def.pattern == "^(.....)");
+    REQUIRE(frp->histograms[0]->def.suffix == "first5");
+    REQUIRE(frp->histograms[0]->def.flags.lowercase == true);
+    REQUIRE(frp->histograms[0]->def.flags.numeric == false);
 
     /* Test the hasher */
     sbuf_t* hello = new sbuf_t(hello8);

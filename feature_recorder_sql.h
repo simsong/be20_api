@@ -31,6 +31,6 @@ class feature_recorder_sql : public feature_recorder {
 public:
     feature_recorder_sql(class feature_recorder_set& fs, feature_recorder_def def);
     virtual ~feature_recorder_sql();
-    virtual void histogram_write(AtomicUnicodeHistogram& h) override; // flush a specific histogram
+    //virtual void histogram_write(AtomicUnicodeHistogram& h) override; // flush a specific histogram
 };
 #endif

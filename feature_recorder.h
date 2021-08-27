@@ -168,7 +168,7 @@ public:
     // debugging variables
     bool   debug {false};
     pos0_t debug_halt_pos0 {"", 9999999}; // halts at this position
-    size_t debug_halt_pos {9999999}; // or at this position
+    size_t debug_halt_pos {9999999};      // or at this position
     bool   disable_incremental_histogram { false }; // force histogram to read from a file at end; used if restarting or for debugging
 
     static std::string sanitize_filename(std::string in);
@@ -284,23 +284,20 @@ public:
     }
 
     /*
-     * Each feature_recorder can have multiple histograms. They are generated on-the-fly for the file-based
-     * feature-recorder, and generated in SQL for the SQL-based feature-recorder.
+     * Each feature_recorder can have multiple histograms.
+     * They are defined by the histogram_def structure. How they are counted is up to the implementation
      */
-    std::vector<std::unique_ptr<AtomicUnicodeHistogram>> histograms{};
 
-    // flush a specific histogram at the end of PHASE1
-    virtual void histogram_write(AtomicUnicodeHistogram& h) = 0; // flush a specific histogram associated with a feature recorder
-    virtual void histogram_write_all(); // flushes all histograms associated with a feature recorder. Happens at end of processing
+    // set up the histogram
+    virtual void histogram_add(const histogram_def &h) = 0;                // add a new histogram definition
+    virtual size_t histogram_count() = 0;            // how many histograms this feature recorder has
+    virtual bool histograms_write_largest() = 0;      // flushes largest histogram. returns false if no histogram could be flushed. For low memory.
+    virtual void histograms_write_all() = 0;
 
-    // propose a feature to all of the histograms
+    // Called after each feature and context are processed, to support incremental histograms.
+    // May not be used in all histogram implementation, in which case it should just return.
+    virtual void histograms_add_feature(const std::string& feature, const std::string& context) = 0;
 
-    virtual size_t histogram_count() { return histograms.size(); } // how many histograms it has
-    virtual void histogram_add(const struct histogram_def& def) = 0;   // add a new histogram
-    virtual bool
-    histogram_write_largest();          // flushes largest histogram. returns false if no histogram could be flushed.
-    // virtual void histogram_merge(const struct histogram_def &def); // merge sort on this histogram
-    // virtual void histogram_merge_all();                            // merge sort on all histograms
 };
 
 #endif

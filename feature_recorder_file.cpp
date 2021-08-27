@@ -231,18 +231,47 @@ void feature_recorder_file::write0(const pos0_t& pos0, const std::string& featur
     }
 
     write0(ss.str());                                 // and do the actual write
-
-    /* Add the feature to any histograms.
-     * histograms_add_feature tracks whether it is getting utf-8 or utf-16 string.
-     * Note that this means that the utf-16 determination has to be made twice.
-     * Oh well.
-     */
-    this->histograms_add_feature(feature, context);
 }
 
 /****************************************************************
- *** MEMORY HISTOGRAMS
+ *** INCREMENTAL HISTOGRAMS
  ****************************************************************/
+
+/**
+ * add a new histogram to this feature recorder.
+ * @param def - the histogram definition
+ *
+ * The SQL implementation might keep histograms in an SQL table.
+ */
+void feature_recorder_file::histogram_add(const struct histogram_def& hdef)
+{
+    if (features_written != 0) {
+        throw std::runtime_error("Cannot add histograms after features have been written.");
+    }
+    histograms.push_back(std::make_unique<AtomicUnicodeHistogram>(hdef));
+}
+
+
+// how many histograms it has
+size_t feature_recorder_file::histogram_count()
+{
+    return histograms.size();
+}
+
+bool feature_recorder_file::histograms_write_largest()
+{
+    std::cerr << "TODO: Implement histograms_write_largest\n";
+    return false;                       // need to implement
+}
+
+/* Write all of the histograms associated with this feature recorder. */
+void feature_recorder_file::histograms_write_all()
+{
+    for (auto& h : histograms) {
+        this->histogram_write(*h);
+    }
+}
+
 
 /** Flush a specific histogram.
  * This is how the feature recorder triggers the histogram to be written.
@@ -323,24 +352,13 @@ void feature_recorder_file::histogram_write(AtomicUnicodeHistogram& h)
 
 
 /**
- * add a new histogram to this feature recorder.
- * @param def - the histogram definition
- */
-void feature_recorder_file::histogram_add(const struct histogram_def& hdef)
-{
-    if (features_written != 0) {
-        throw std::runtime_error("Cannot add histograms after features have been written.");
-    }
-    histograms.push_back(std::make_unique<AtomicUnicodeHistogram>(hdef));
-}
-
-/**
  * add a feature to all of the feature recorder's histograms
  * @param feature - the feature to add.
+ * @param context - the context
  */
 void feature_recorder_file::histograms_add_feature(const std::string& feature, const std::string& context)
 {
     for (auto &h : histograms) {
-        h->add(feature, context); // add the original feature
+        h->add_feature_context(feature, context); // add the original feature
     }
 }

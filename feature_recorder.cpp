@@ -144,6 +144,8 @@ void feature_recorder::write0(const pos0_t& pos0, const std::string& feature, co
  * - checks the stoplist.
  * - escapes non-UTF8 characters and calls write0().
  * - Takes the original feature and sends to the histogram system.
+ *
+ * This is not overwritten by subclasses.
  */
 void feature_recorder::write(const pos0_t& pos0, const std::string &original_feature, const std::string &original_context) {
     if (fs.flags.disabled) return; // disabled
@@ -162,7 +164,7 @@ void feature_recorder::write(const pos0_t& pos0, const std::string &original_fea
 
     /* TODO: This needs to be change to do all processing in utf32 and not utf8 */
 
-    std::string feature_utf8 = make_utf8( original_feature);
+    std::string feature_utf8 = make_utf8( original_feature );
     std::string context      = def.flags.no_context ? "" : original_context;
 
     quote_if_necessary(feature_utf8, context);
@@ -220,6 +222,18 @@ void feature_recorder::write(const pos0_t& pos0, const std::string &original_fea
 
     /* Write out the feature and the context */
     this->write0(pos0, feature_utf8, context);
+
+    /* Add the feature to any histograms.
+     * histograms_add_feature tracks whether it is getting utf-8 or utf-16 string.
+     *
+     * Note that this means that the utf-16 determination has to be made twice.
+     * Oh well.
+     *
+     * In the feature_recorder_file this will be subclasses.
+     * In the feature_recorder_sql, it is a NOOP.
+     */
+    this->histograms_add_feature(original_feature, original_context);
+
 }
 
 /**
@@ -444,18 +458,6 @@ void feature_recorder::shutdown() {}
 //void feature_recorder::histogram_write(AtomicUnicodeHistogram& h) {
 //    std::cerr << "feature_recorder::histogram_write should not be called yet.\n";
 //}
-
-bool feature_recorder::histogram_write_largest() {
-    /* TODO - implement */
-    return false;
-}
-
-/* Write all of the histograms associated with this feature recorder. */
-void feature_recorder::histogram_write_all() {
-    for (auto& h : histograms) {
-        this->histogram_write(*h);
-    }
-}
 
 #if 0
 /*

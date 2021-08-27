@@ -266,7 +266,7 @@ size_t feature_recorder_set::histogram_count() const {
  */
 void feature_recorder_set::histograms_generate() {
     for (auto *frp : frm.values()) {
-        frp->histogram_write_all();
+        frp->histograms_write_all();
     }
 }
 

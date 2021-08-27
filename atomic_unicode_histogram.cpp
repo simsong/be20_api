@@ -96,7 +96,7 @@ void AtomicUnicodeHistogram::add0(const std::string& u8key, bool found_utf16)
 
 }
 
-void AtomicUnicodeHistogram::add(const std::string& key_unknown_encoding, const std::string& context)
+void AtomicUnicodeHistogram::add_feature_context(const std::string& key_unknown_encoding, const std::string& context)
 {
     if (key_unknown_encoding.size() == 0) return; // don't deal with zero-length keys
 
