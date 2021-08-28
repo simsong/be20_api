@@ -242,14 +242,18 @@ std::string convert_utf16_to_utf8(const std::string& key, bool little_endian) {
 
 std::string convert_utf16_to_utf8(const std::string& key) {
     bool little_endian = false;
-    if (looks_like_utf16(key, little_endian)) { return convert_utf16_to_utf8(key, little_endian); }
+    if (looks_like_utf16(key, little_endian)) {
+        return convert_utf16_to_utf8(key, little_endian);
+    }
     throw utf8::invalid_utf16(0);
 }
 
 std::string make_utf8(const std::string& str) {
     try {
         return convert_utf16_to_utf8(str);
-    } catch (const utf8::invalid_utf16&) { return validateOrEscapeUTF8(str, true, true, true); }
+    } catch (const utf8::invalid_utf16&) {
+        return validateOrEscapeUTF8(str, true, true, true);
+    }
 }
 
 /*

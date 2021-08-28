@@ -45,7 +45,9 @@ struct AtomicUnicodeHistogram {
         bool operator<(const HistogramTally& a) const {
             return (this->count < a.count) || ((this->count == a.count && (this->count16 < a.count16)));
         }
-        size_t bytes() const { return sizeof(*this); }
+        size_t bytes() const {
+            return sizeof(*this);
+        }
     };
 
     /* A FrequencyReportVector is a vector of report elements when the report is generated.*/
@@ -65,16 +67,22 @@ struct AtomicUnicodeHistogram {
     AtomicUnicodeHistogram(const struct histogram_def& def_) : def(def_) {}
     virtual ~AtomicUnicodeHistogram(){};
 
-    void clear();                     // empties the histogram
+    bool empty() { return h.size()==0;}   // is it empty?
+    void clear();                       // empties the histogram
+    // low-level add, directly to what we display, if the match function checks out.
+    void add0(const std::string& u8key, const std::string &context, bool found_utf16);
+
      // adds Unicode string to the histogram count. context is used for histogram_def
-    void add(const std::string& feature, const std::string&context);
-    size_t size() const;              // returns the size of the histogram, whatever that means
+    void add_feature_context(const std::string& feature, const std::string&context);
+    size_t size()  const;              // returns the number of entries in the historam
+    size_t bytes() const;              // returns the number of bytes used by the histogram
 
     /** makeReport() makes a report and returns a
      * FrequencyReportVector.
      */
     std::vector<auh_t::item> makeReport(size_t topN=0);          // returns items of <count,key>
     const struct histogram_def def;            // the definition we are making
+    bool debug {false};                        // set to enable debugging
 
 private:
     auh_t h {}; // the histogram

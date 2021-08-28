@@ -67,7 +67,38 @@ std::vector<AtomicUnicodeHistogram::auh_t::item> AtomicUnicodeHistogram::makeRep
 uint32_t AtomicUnicodeHistogram::debug_histogram_malloc_fail_frequency = 0;
 void AtomicUnicodeHistogram::clear() { h.clear(); }
 
-void AtomicUnicodeHistogram::add(const std::string& key_unknown_encoding, const std::string& context) {
+// low-level add after key has been converted to UTF8
+void AtomicUnicodeHistogram::add0(const std::string& u8key, const std::string &context, bool found_utf16)
+{
+    std::string displayString;
+
+    if (def.match(u8key, &displayString, context)) {
+
+        if (debug) std::cerr << "  AtomicUnicodeHistogram::add0 match u8key=" << u8key << std::endl;
+
+        /* Escape as necessary */
+        displayString = validateOrEscapeUTF8(displayString, true, true, false);
+
+        /* For debugging low-memory handling logic,
+         * specify DEBUG_MALLOC_FAIL to make malloc occasionally fail
+         */
+        if (debug_histogram_malloc_fail_frequency) {
+            if ((h.size() % debug_histogram_malloc_fail_frequency) == (debug_histogram_malloc_fail_frequency - 1)) {
+                throw std::bad_alloc();
+            }
+        }
+
+        /* Add the key to the histogram. Note that this is threadsafe */
+        h[displayString].count++;
+        if (found_utf16) {
+            h[displayString].count16++; // track how many UTF16s were converted
+        }
+        if (debug) std::cerr << "  AtomicUnicodeHistogram::add0 h[" <<displayString << "].count=" << h[displayString].count << std::endl;
+    }
+}
+
+void AtomicUnicodeHistogram::add_feature_context(const std::string& key_unknown_encoding, const std::string& context)
+{
     if (key_unknown_encoding.size() == 0) return; // don't deal with zero-length keys
 
     /* On input, the key may be UTF8 or UTF16. See if we can figure it out */
@@ -102,31 +133,15 @@ void AtomicUnicodeHistogram::add(const std::string& key_unknown_encoding, const 
      */
 
     std::string u8key = convert_utf32_to_utf8(u32key);
-    std::string displayString;
-
-    if (def.match(u8key, &displayString, &context)) {
-
-        /* Escape as necessary */
-        displayString = validateOrEscapeUTF8(displayString, true, true, false);
-
-        /* For debugging low-memory handling logic,
-         * specify DEBUG_MALLOC_FAIL to make malloc occasionally fail
-         */
-        if (debug_histogram_malloc_fail_frequency) {
-            if ((h.size() % debug_histogram_malloc_fail_frequency) == (debug_histogram_malloc_fail_frequency - 1)) {
-                throw std::bad_alloc();
-            }
-        }
-
-        /* Add the key to the histogram. Note that this is threadsafe */
-        h[displayString].count++;
-        if (found_utf16) {
-            h[displayString].count16++; // track how many UTF16s were converted
-        }
-    }
+    add0(u8key, context, found_utf16);
 }
 
 size_t AtomicUnicodeHistogram::size() const // returns the total number of bytes of the histogram,.
 {
     return h.size();
+}
+
+size_t AtomicUnicodeHistogram::bytes() const // returns the total number of bytes of the histogram,.
+{
+    return sizeof(*this) + h.bytes();
 }

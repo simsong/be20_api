@@ -11,7 +11,7 @@ histogram_def::histogram_def(const std::string& name_,
 
 
 
-bool histogram_def::match(std::u32string u32key, std::string* displayString, const std::string *context) const {
+bool histogram_def::match(std::u32string u32key, std::string* displayString, const std::string &context) const {
     if (flags.lowercase) {
         u32key = utf32_lowercase(u32key);
     }
@@ -34,7 +34,7 @@ bool histogram_def::match(std::u32string u32key, std::string* displayString, con
             return false;
         }
 
-        if (flags.require_context && context->find(require) == std::string::npos) {
+        if (flags.require_context && context.find(require) == std::string::npos) {
             return false;
         }
     }
@@ -53,7 +53,7 @@ bool histogram_def::match(std::u32string u32key, std::string* displayString, con
     return true;
 }
 
-bool histogram_def::match(std::string u32key, std::string* displayString, const std::string *context) const {
+bool histogram_def::match(std::string u32key, std::string* displayString, const std::string &context) const {
     return match(convert_utf8_to_utf32(u32key), displayString, context);
 }
 

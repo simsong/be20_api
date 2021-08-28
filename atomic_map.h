@@ -118,18 +118,16 @@ public:
         const std::lock_guard<std::mutex> lock(M);
         return mymap.size();
     }
-#if 0
     /* implement this later */
     /* bytes */
     size_t bytes() const {
         const std::lock_guard<std::mutex> lock(M);
         size_t count = sizeof(*this);
         for (const auto &it : mymap) {
-            count += sizeof(it.first) + sizeof(it.second) + it.first.size() + it.second->size();
+            count += sizeof(it.first) + sizeof(it.second) + it.first.size() + it.second->bytes();
         }
         return count;
     }
-#endif
 
     bool contains(T1 key) const {
         const std::lock_guard<std::mutex> lock(M);
