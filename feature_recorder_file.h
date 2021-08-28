@@ -77,7 +77,8 @@ public:
 
     // Adding features to the histogram
 
-    virtual void histogram_write0(AtomicUnicodeHistogram& h); // actually write this histogram
+    virtual void histogram_write_from_memory(AtomicUnicodeHistogram& h); // actually write this histogram
+    virtual void histogram_write_from_file(AtomicUnicodeHistogram& h); // actually write this histogram
     virtual void histogram_write(AtomicUnicodeHistogram& h); // write this histogram
     virtual void histograms_add_feature(const std::string& feature, const std::string& context) override;
     virtual bool histograms_write_largest() override;

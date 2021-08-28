@@ -121,7 +121,7 @@ feature_recorder_file::feature_recorder_file(class feature_recorder_set& fs_, co
     ios.open(fname.c_str(), std::ios_base::out);
     if (!ios.is_open()) {
         std::cerr << "*** feature_recorder_file::open Cannot open feature file for writing " << fname << ":"
-                  << strerror(errno) << "\n";
+                  << strerror(errno) << std::endl;
         throw std::invalid_argument("cannot open feature file for writing");
     }
 }
@@ -143,7 +143,7 @@ void feature_recorder_file::banner_stamp(std::ostream& os, const std::string& he
                 if (line.size() > 0 && ((*line.end() == '\r') || (*line.end() == '\n'))) {
                     line.erase(line.end()); /* remove the last character while it is a \n or \r */
                 }
-                os << "# " << line << "\n";
+                os << "# " << line << std::endl;
                 banner_lines++;
             }
             i.close();
@@ -152,9 +152,9 @@ void feature_recorder_file::banner_stamp(std::ostream& os, const std::string& he
     if (banner_lines == 0) { os << "# BANNER FILE NOT PROVIDED (-b option)\n"; }
 
     os << bulk_extractor_version_header;
-    os << "# Feature-Recorder: " << name << "\n";
+    os << "# Feature-Recorder: " << name << std::endl;
 
-    if (!fs.get_input_fname().empty()) { os << "# Filename: " << fs.get_input_fname().string() << "\n"; }
+    if (!fs.get_input_fname().empty()) { os << "# Filename: " << fs.get_input_fname().string() << std::endl; }
     if (feature_recorder_file::debug != 0) {
         os << "# DEBUG: " << debug << " (";
         if (feature_recorder_file::debug & DEBUG_PEDANTIC) os << " DEBUG_PEDANTIC ";
@@ -188,8 +188,8 @@ void feature_recorder_file::write0(const std::string& str)
     feature_recorder::write0(str);      // call super class
     if (fs.flags.pedantic && (utf8::find_invalid(str.begin(), str.end()) != str.end())) {
         std::cerr << "******************************************\n";
-        std::cerr << "feature recorder: " << name << "\n";
-        std::cerr << "invalid utf-8 in write: " << str << "\n";
+        std::cerr << "feature recorder: " << name << std::endl;
+        std::cerr << "invalid utf-8 in write: " << str << std::endl;
         throw std::runtime_error("Invalid utf-8 in write");
     }
 
@@ -248,7 +248,9 @@ void feature_recorder_file::histogram_add(const struct histogram_def& hdef)
     if (features_written != 0) {
         throw std::runtime_error("Cannot add histograms after features have been written.");
     }
-    histograms.push_back(std::make_unique<AtomicUnicodeHistogram>(hdef));
+    histograms.push_back( std::make_unique<AtomicUnicodeHistogram>(hdef) );
+    histograms.back()->debug = debug_histograms;
+
 }
 
 
@@ -276,11 +278,13 @@ void feature_recorder_file::histograms_write_all()
 /** Flush a specific histogram.
  * This is how the feature recorder triggers the histogram to be written.
  */
-void feature_recorder_file::histogram_write0(AtomicUnicodeHistogram& h)
+void feature_recorder_file::histogram_write_from_memory(AtomicUnicodeHistogram& h)
 {
-    /* If we have an in-memory histogram, write it out.
-     * If we have a file-based histogram, read the file.
-     */
+    if (debug_histograms){
+        std::cerr << std::endl
+                  << "feature_recorder_file::histogram_write_from_memory " << h.def << std::endl
+                  << " h.size=" << h.size() << " h.bytes=" << h.bytes() << std::endl;
+    }
 
     /* Get the next filename */
     auto fname = fname_in_outdir(h.def.suffix, NEXT_COUNT);
@@ -303,25 +307,21 @@ void feature_recorder_file::histogram_write0(AtomicUnicodeHistogram& h)
     h.clear();                          // free up the memory
 }
 
-void feature_recorder_file::histogram_write(AtomicUnicodeHistogram& h)
+void feature_recorder_file::histogram_write_from_file(AtomicUnicodeHistogram& h)
 {
-    /* If 'h' actually has data, write it with histogram_write0().
-     * If 'h' does not have data, read the feature files and dump 'h' write write0 each time there is an out-of-memory
-     */
-    if (h.empty() == false) {
-        histogram_write0(h);
-        return;
-    }
-
     /* Read each line of the feature file and add it to the histogram.
      * If we run out of memory, dump that histogram to a file and start
      * on the next histogram.
      */
+
+    if (debug_histograms) std::cerr << "feature_recorder_file::histogram_write_from_file " << h.def << std::endl;
+
+
     /* This is a file based histogram. We will be reading from one file and writing to another */
     std::string ifname = fname_in_outdir("", NO_COUNT);  // source of features
     std::ifstream f(ifname.c_str());
     if(!f.is_open()){
-        std::cerr << "Cannot open histogram input file: " << ifname << "\n";
+        std::cerr << "Cannot open histogram input file: " << ifname << std::endl;
         return;
     }
     for (int histogram_counter = 0 ; histogram_counter<MAX_HISTOGRAM_FILES; histogram_counter++){
@@ -337,17 +337,30 @@ void feature_recorder_file::histogram_write(AtomicUnicodeHistogram& h)
                 /* if the feature is in the context, feature is in utf8, otherwise it was utf16 and converted */
                 bool found_utf16 = (context.find(feature) == std::string::npos);
                 try {
-                    h.add0( feature, found_utf16 );
+                    h.add0( feature, context, found_utf16 );
                 }
                 catch (const std::bad_alloc &e) {
-                    std::cerr << "MEMORY OVERFLOW GENERATING HISTOGRAM  " << name << ". Dumping Histogram " << histogram_counter << "\n";
-                    histogram_write0(h);
+                    std::cerr << "MEMORY OVERFLOW GENERATING HISTOGRAM  " << name << ". Dumping Histogram " << histogram_counter << std::endl;
+                    histogram_write_from_memory(h);
                 }
             }
         }
     }
     f.close();
-    histogram_write0(h);                // write out the histogram
+    histogram_write_from_memory(h);                // write out the histogram
+}
+
+void feature_recorder_file::histogram_write(AtomicUnicodeHistogram& h)
+{
+    /* If 'h' actually has data, write it with histogram_write0().
+     * If 'h' does not have data, read the feature files and dump 'h' write write0 each time there is an out-of-memory
+     */
+    if (debug_histograms) std::cerr << std::endl << "feature_recorder_file::histogram_write " << h.def << std::endl;
+    if (disable_incremental_histogram) {
+        histogram_write_from_file(h);
+    } else {
+        histogram_write_from_memory(h);
+    }
 }
 
 
@@ -358,6 +371,9 @@ void feature_recorder_file::histogram_write(AtomicUnicodeHistogram& h)
  */
 void feature_recorder_file::histograms_add_feature(const std::string& feature, const std::string& context)
 {
+    if (debug_histograms) {
+        std::cerr << "feature_recorder_file::histograms_add_feature feature=" << feature << " context=" << context << std::endl;
+    }
     for (auto &h : histograms) {
         h->add_feature_context(feature, context); // add the original feature
     }

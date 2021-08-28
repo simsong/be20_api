@@ -23,43 +23,18 @@
 #include "utils.h"
 #include "word_and_context_list.h"
 
-#if 0
-static inline bool isodigit(char c) { return c >= '0' && c <= '7'; }
-
-/* Feature recorder functions that don't have anything to do with files  or SQL databases */
-static inline int hexval(char ch) {
-    switch (ch) {
-    case '0': return 0;
-    case '1': return 1;
-    case '2': return 2;
-    case '3': return 3;
-    case '4': return 4;
-    case '5': return 5;
-    case '6': return 6;
-    case '7': return 7;
-    case '8': return 8;
-    case '9': return 9;
-    case 'a':
-    case 'A': return 10;
-    case 'b':
-    case 'B': return 11;
-    case 'c':
-    case 'C': return 12;
-    case 'd':
-    case 'D': return 13;
-    case 'e':
-    case 'E': return 14;
-    case 'f':
-    case 'F': return 15;
-    }
-    return 0;
-}
-#endif
 
 /* These are all overridden in the subclass */
 feature_recorder::feature_recorder(class feature_recorder_set& fs_, const struct feature_recorder_def def_)
-    : fs(fs_), name(def_.name), def(def_) {}
-feature_recorder::~feature_recorder() {}
+    : fs(fs_), name(def_.name), def(def_)
+{
+    debug_histograms = (std::getenv(DEBUG_HISTOGRAM_ENV) != nullptr);
+}
+
+/* This is here for the vtable */
+feature_recorder::~feature_recorder() { }
+
+/* This doesn't need to be overridden, but it can be */
 void feature_recorder::flush() {}
 
 

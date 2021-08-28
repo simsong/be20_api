@@ -134,8 +134,8 @@ struct histogram_def {
      * set match to Extract and match: Does this string match
      */
 
-    bool match(std::u32string u32key, std::string* displayString = nullptr, const std::string *context=nullptr) const;
-    bool match(std::string u32key,    std::string* displayString = nullptr, const std::string *context=nullptr) const;
+    bool match(std::u32string u32key, std::string* displayString, const std::string &context) const;
+    bool match(std::string u32key,    std::string* displayString, const std::string &context) const;
 };
 
 std::ostream& operator<<(std::ostream& os, const histogram_def::flags_t& f);

@@ -254,15 +254,15 @@ TEST_CASE("comparision_functions", "[histogram_def]") {
 
 TEST_CASE("histogram_def-8", "[histogram_def]") {
     histogram_def d0("numbers", "numbers", "([0-9]+)", "", "s0", histogram_def::flags_t());
-    REQUIRE(d0.match("123") == true);
-    REQUIRE(d0.match("abc") == false);
+    REQUIRE(d0.match("123", nullptr, "") == true);
+    REQUIRE(d0.match("abc", nullptr, "") == false);
 
     std::string s1;
-    REQUIRE(d0.match("abc123def", &s1) == true);
+    REQUIRE(d0.match("abc123def", &s1, "") == true);
     REQUIRE(s1 == "123");
 
     histogram_def d1("extraction", "extraction", "^(.....)", "", "", histogram_def::flags_t());
-    REQUIRE(d1.match("abcdefghijklmnop", &s1) == true);
+    REQUIRE(d1.match("abcdefghijklmnop", &s1, "") == true);
     REQUIRE(s1 == "abcde");
 };
 

@@ -9,6 +9,7 @@
 #include <vector>
 #include <thread>
 #include <fstream>
+#include <cstdlib>
 
 
 /* needed loading shared libraries and getting free memory*/
@@ -60,15 +61,15 @@
 scanner_set::scanner_set(scanner_config& sc_, const feature_recorder_set::flags_t& f, class dfxml_writer* writer_)
     : sc(sc_), writer(writer_), fs(f, sc_)
 {
-    if (getenv("DEBUG_SCANNER_SET_PRINT_STEPS")) debug_flags.debug_print_steps = true;
-    if (getenv("DEBUG_SCANNER_SET_NO_SCANNERS")) debug_flags.debug_no_scanners = true;
-    if (getenv("DEBUG_SCANNER_SET_SCANNER")) debug_flags.debug_scanner = true;
-    if (getenv("DEBUG_SCANNER_SET_DUMP_DATA")) debug_flags.debug_dump_data = true;
-    if (getenv("DEBUG_SCANNER_SET_DECODING")) debug_flags.debug_decoding = true;
-    if (getenv("DEBUG_SCANNER_SET_INFO")) debug_flags.debug_info = true;
-    if (getenv("DEBUG_SCANNER_SET_EXIT_EARLY")) debug_flags.debug_exit_early = true;
-    if (getenv("DEBUG_SCANNER_SET_REGISTER")) debug_flags.debug_register = true;
-    const char *dsi = getenv("DEBUG_SCANNERS_IGNORE");
+    if (std::getenv("DEBUG_SCANNER_SET_PRINT_STEPS")) debug_flags.debug_print_steps = true;
+    if (std::getenv("DEBUG_SCANNER_SET_NO_SCANNERS")) debug_flags.debug_no_scanners = true;
+    if (std::getenv("DEBUG_SCANNER_SET_SCANNER")) debug_flags.debug_scanner = true;
+    if (std::getenv("DEBUG_SCANNER_SET_DUMP_DATA")) debug_flags.debug_dump_data = true;
+    if (std::getenv("DEBUG_SCANNER_SET_DECODING")) debug_flags.debug_decoding = true;
+    if (std::getenv("DEBUG_SCANNER_SET_INFO")) debug_flags.debug_info = true;
+    if (std::getenv("DEBUG_SCANNER_SET_EXIT_EARLY")) debug_flags.debug_exit_early = true;
+    if (std::getenv("DEBUG_SCANNER_SET_REGISTER")) debug_flags.debug_register = true;
+    const char *dsi = std::getenv("DEBUG_SCANNERS_IGNORE");
     if (dsi!=nullptr) debug_flags.debug_scanners_ignore=dsi;
 }
 

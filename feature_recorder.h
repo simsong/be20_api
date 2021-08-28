@@ -169,6 +169,8 @@ public:
     bool   debug {false};
     pos0_t debug_halt_pos0 {"", 9999999}; // halts at this position
     size_t debug_halt_pos {9999999};      // or at this position
+    bool   debug_histograms {false};
+    static inline const char* DEBUG_HISTOGRAM_ENV {"DEBUG_HISTOGRAMS"}; // set this to enable debug_histograms
     bool   disable_incremental_histogram { false }; // force histogram to read from a file at end; used if restarting or for debugging
 
     static std::string sanitize_filename(std::string in);
