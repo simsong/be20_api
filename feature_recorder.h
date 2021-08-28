@@ -170,8 +170,9 @@ public:
     pos0_t debug_halt_pos0 {"", 9999999}; // halts at this position
     size_t debug_halt_pos {9999999};      // or at this position
     bool   debug_histograms {false};
-    static inline const char* DEBUG_HISTOGRAM_ENV {"DEBUG_HISTOGRAMS"}; // set this to enable debug_histograms
-    bool   disable_incremental_histogram { false }; // force histogram to read from a file at end; used if restarting or for debugging
+    static inline const char* DEBUG_HISTOGRAMS_ENV {"DEBUG_HISTOGRAMS"}; // set this to enable debug_histograms
+    static inline const char* DEBUG_HISTOGRAMS_NO_INCREMENTAL_ENV {"DEBUG_HISTOGRAMS_NO_INCREMENTAL"}; // set this to enable debug_histograms
+    bool   disable_incremental_histograms { false }; // force histogram to read from a file at end; used if restarting or for debugging
 
     static std::string sanitize_filename(std::string in);
     /* The main public interface:
@@ -298,7 +299,7 @@ public:
 
     // Called after each feature and context are processed, to support incremental histograms.
     // May not be used in all histogram implementation, in which case it should just return.
-    virtual void histograms_add_feature(const std::string& feature, const std::string& context) = 0;
+    virtual void histograms_incremental_add_feature_context(const std::string& feature, const std::string& context) = 0;
 
 };
 

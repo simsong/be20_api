@@ -356,7 +356,7 @@ void feature_recorder_file::histogram_write(AtomicUnicodeHistogram& h)
      * If 'h' does not have data, read the feature files and dump 'h' write write0 each time there is an out-of-memory
      */
     if (debug_histograms) std::cerr << std::endl << "feature_recorder_file::histogram_write " << h.def << std::endl;
-    if (disable_incremental_histogram) {
+    if (disable_incremental_histograms) {
         histogram_write_from_file(h);
     } else {
         histogram_write_from_memory(h);
@@ -369,10 +369,10 @@ void feature_recorder_file::histogram_write(AtomicUnicodeHistogram& h)
  * @param feature - the feature to add.
  * @param context - the context
  */
-void feature_recorder_file::histograms_add_feature(const std::string& feature, const std::string& context)
+void feature_recorder_file::histograms_incremental_add_feature_context(const std::string& feature, const std::string& context)
 {
     if (debug_histograms) {
-        std::cerr << "feature_recorder_file::histograms_add_feature feature=" << feature << " context=" << context << std::endl;
+        std::cerr << "feature_recorder_file::histograms_incremental_add_feature_context feature=" << feature << " context=" << context << std::endl;
     }
     for (auto &h : histograms) {
         h->add_feature_context(feature, context); // add the original feature

@@ -80,7 +80,7 @@ public:
     virtual void histogram_write_from_memory(AtomicUnicodeHistogram& h); // actually write this histogram
     virtual void histogram_write_from_file(AtomicUnicodeHistogram& h); // actually write this histogram
     virtual void histogram_write(AtomicUnicodeHistogram& h); // write this histogram
-    virtual void histograms_add_feature(const std::string& feature, const std::string& context) override;
+    virtual void histograms_incremental_add_feature_context(const std::string& feature, const std::string& context) override;
     virtual bool histograms_write_largest() override;
     virtual void histograms_write_all() override;
 };

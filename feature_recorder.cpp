@@ -28,7 +28,8 @@
 feature_recorder::feature_recorder(class feature_recorder_set& fs_, const struct feature_recorder_def def_)
     : fs(fs_), name(def_.name), def(def_)
 {
-    debug_histograms = (std::getenv(DEBUG_HISTOGRAM_ENV) != nullptr);
+    debug_histograms = (std::getenv(DEBUG_HISTOGRAMS_ENV) != nullptr);
+    disable_incremental_histograms = (std::getenv(DEBUG_HISTOGRAMS_NO_INCREMENTAL_ENV) != nullptr);
 }
 
 /* This is here for the vtable */
@@ -207,7 +208,9 @@ void feature_recorder::write(const pos0_t& pos0, const std::string &original_fea
      * In the feature_recorder_file this will be subclasses.
      * In the feature_recorder_sql, it is a NOOP.
      */
-    this->histograms_add_feature(original_feature, original_context);
+    if (disable_incremental_histograms == false ){
+        this->histograms_incremental_add_feature_context(original_feature, original_context);
+    }
 
 }
 
