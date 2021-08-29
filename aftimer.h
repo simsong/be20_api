@@ -1,7 +1,8 @@
 #ifndef __AFTIMER_H__
 #define __AFTIMER_H__
 
-#define __STDC_WANT_LIB_EXT1__ 1
+//#define __STDC_WANT_LIB_EXT1__ 1
+#include <atomic>
 #include <ctime>
 #include <cstdio>
 #include <string>
@@ -9,21 +10,22 @@
 #include <sstream>
 #include <iomanip>
 
+/**
+ * threadsafe timer.
+ */
 class aftimer {
     std::chrono::time_point<std::chrono::steady_clock> t0 {};
-    bool   running{};
-    uint64_t elapsed_ns {}; //  for all times we have started and stopped
-    uint64_t last_ns    {}; // time from when we last did a "start"
+    std::atomic<bool>     running    {};
+    std::atomic<uint64_t> elapsed_ns {}; //  for all times we have started and stopped
+    std::atomic<uint64_t> last_ns    {}; // time from when we last did a "start"
 public:
     static std::string now_str(std::string prefix="",std::string suffix="");              // return a high-resolution string as now.
     aftimer()  {}
 
     void start(); // start the timer
     void stop();  // stop the timer
+    void lap();   // note the time for elapsed_seconds() below
 
-    //std::chrono::time_point<std::chrono::system_clock> tstart() const {
-    //return t0;       // time we started
-//}
     double elapsed_seconds() const;                   // how long timer has been running; timer can be running
     uint64_t elapsed_nanoseconds() const;
     uint64_t lap_seconds() const;                          // how long the timer is running this time
@@ -66,7 +68,10 @@ inline void aftimer::stop() {
     running = false;
 }
 
-//inline aftimer::duration aftimer::lap_time() const { return last_ns; }
+inline void aftimer::lap() {
+    stop();
+    start();
+}
 
 inline double aftimer::elapsed_seconds() const {
     return elapsed_ns / (1000.0 * 1000.0 * 1000.0);
