@@ -4,12 +4,13 @@
  * bulk_extractor backend stuff, used for both standalone executable and bulk_extractor.
  */
 
+#include <algorithm>
 #include <cassert>
-#include <string>
-#include <vector>
-#include <thread>
-#include <fstream>
 #include <cstdlib>
+#include <fstream>
+#include <string>
+#include <thread>
+#include <vector>
 
 
 /* needed loading shared libraries and getting free memory*/
@@ -179,17 +180,6 @@ uint64_t scanner_set::get_available_memory()
 /*
  * Print the status of each thread in the threadpool.
  */
-const std::string THREAD_COUNT_STR {"thread_count"};
-const std::string TASKS_QUEUED_STR {"tasks_queued"};
-const std::string DEPTH0_SBUFS_QUEUED_STR {"depth0_sbufs_queued"};
-const std::string DEPTH0_BYTES_QUEUED_STR {"depth0_bytes_queued"};
-const std::string SBUFS_QUEUED_STR {"sbufs_queued"};
-const std::string BYTES_QUEUED_STR {"bytes_queued"};
-const std::string AVAILABLE_MEMORY_STR {"available_memory"};
-const std::string SBUFS_CREATED_STR {"sbufs_created"};
-const std::string SBUFS_REMAINING_STR {"sbufs_remaining"};
-
-
 std::map<std::string, std::string> scanner_set::get_realtime_stats() const
 {
     std::map<std::string, std::string> ret;
@@ -202,11 +192,18 @@ std::map<std::string, std::string> scanner_set::get_realtime_stats() const
         ret[BYTES_QUEUED_STR] = std::to_string(bytes_in_queue);
     }
     int counter = 0;
+    uint64_t max_offset = 0;
     for (const auto &it : thread_status.values()) {
         std::stringstream ss;
         ss << "thread-" << ++counter;
-        ret[ ss.str() ] = std::string(*it);
+        std::string status = std::string(*it);
+        ret[ ss.str() ] = status;
+        if (strtoll(status.c_str(), nullptr, 10) > max_offset) {
+            max_offset = strtoll(status.c_str(), nullptr, 10);
+        }
     }
+    ret[MAX_OFFSET] = std::to_string(max_offset);
+
     uint64_t available_memory = get_available_memory();
     if (available_memory!=0){
         ret[AVAILABLE_MEMORY_STR] = std::to_string(available_memory);

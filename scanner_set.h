@@ -142,6 +142,20 @@ private:
 public:;
     static uint64_t get_available_memory();
 
+    static const inline std::string THREAD_COUNT_STR {"thread_count"};
+    static const inline std::string TASKS_QUEUED_STR {"tasks_queued"};
+    static const inline std::string DEPTH0_SBUFS_QUEUED_STR {"depth0_sbufs_queued"};
+    static const inline std::string DEPTH0_BYTES_QUEUED_STR {"depth0_bytes_queued"};
+    static const inline std::string SBUFS_QUEUED_STR {"sbufs_queued"};
+    static const inline std::string BYTES_QUEUED_STR {"bytes_queued"};
+    static const inline std::string AVAILABLE_MEMORY_STR {"available_memory"};
+    static const inline std::string SBUFS_CREATED_STR {"sbufs_created"};
+    static const inline std::string SBUFS_REMAINING_STR {"sbufs_remaining"};
+    static const inline std::string MAX_OFFSET {"max_offset"};
+
+
+
+
     int get_thread_count() { return (pool!=nullptr) ? pool->get_thread_count() : 1; };
     std::atomic<int> depth0_sbufs_in_queue {0};
     std::atomic<uint64_t> depth0_bytes_in_queue {0};
