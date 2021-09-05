@@ -1,3 +1,4 @@
+#include "config.h"
 #include "scanner_params.h"
 #include "feature_recorder.h"
 #include "feature_recorder_set.h"

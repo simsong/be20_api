@@ -22,7 +22,8 @@ feature_recorder *sha1_recorder  = nullptr;
 void scan_sha1_test(struct scanner_params& sp) {
     if (sp.phase == scanner_params::PHASE_INIT) {
         /* Create a scanner_info block to register this scanner */
-        sp.info = std::make_unique<scanner_params::scanner_info>(scan_sha1_test, "sha1_test");
+        sp.info = std::make_unique<scanner_params::scanner_info>(scan_sha1_test);
+        sp.info->set_name("sha1_test");
         sp.info->author = "Simson L. Garfinkel";
         sp.info->description = "Compute the SHA1 of every sbuf.";
         sp.info->url = "https://digitalcorpora.org/bulk_extractor";

@@ -25,12 +25,15 @@
 // Note: Do not include scanner_set.h or path_printer.h, because they both need scanner_params.h!
 //
 
+#include "utils.h"
 #include "histogram_def.h"
-//#include "packet_info.h"
 #include "feature_recorder.h"
 #include "feature_recorder_set.h"
 #include "sbuf.h"
 #include "scanner_config.h"
+
+//#include "packet_info.h"
+
 
 /** A scanner is a function that takes a reference to scanner params and a recrusion control block */
 typedef void scanner_t(struct scanner_params& sp);
@@ -188,25 +191,19 @@ struct scanner_params {
     std::filesystem::path const get_input_fname() const {return sc.input_fname;}; // not sure why this is needed?
 
     // These methods are implemented in the plugin system for the scanner to get config information.
-    // The get_config methods should be called on the si object during PHASE_STARTUP (or when help is printed)
+    // The get_scanner_config methods should be called on the si object during PHASE_STARTUP (or when help is printed)
     /* When we are asked to get the config:
      * - first build the help string
      * - Second, if an option was specified, then set it as requested.
      */
-    static std::string from_string(std::string ignore, std::string v) { return v; }
-    static int from_string(int ignore, std::string v) { return std::stoi(v); }
-    static bool from_string(bool ignore, std::string v) {
-        return v.size()>0 && (v[0]=='Y' || v[0]=='y' || v[0]=='T' || v[0]=='t' || v[0]=='1');
-    }
-
-    template <typename T> void get_config(const std::string& name, T* val, const std::string& help) const {
+    template <typename T> void get_scanner_config(const std::string& name, T* val, const std::string& help) const {
         std::stringstream s;
-        s << "   -s " << name << "=" << *val << "    " << help << " (" << name << ")\n";
+        s << "     -s " << name << "=" << *val << "    " << help << " (" << name << ")\n";
         info->help_options += s.str(); // add the help in
 
         auto it = sc.namevals.find(name);
         if (it != sc.namevals.end() && val) {
-            *val = from_string(val, it->second);
+            set_from_string(val, it->second);
         }
     }
 

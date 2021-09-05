@@ -481,6 +481,9 @@ public:;
     bool is_constant(size_t loc, size_t len, uint8_t ch) const; // verify that it's constant
     bool is_constant(uint8_t ch) const { return is_constant(0, this->pagesize, ch); }
 
+    /* Return number of distinct character counts in a region */
+    uint16_t distinct_characters(size_t loc, size_t len) const;
+
     /* Make derrivative strings and sbufs */
 
     const std::string substr(size_t loc, size_t len) const;     // make a substring

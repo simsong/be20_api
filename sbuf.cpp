@@ -447,6 +447,22 @@ bool sbuf_t::is_constant(size_t off, size_t len, uint8_t ch) const // verify tha
     return true;
 }
 
+uint16_t sbuf_t::distinct_characters(size_t off, size_t len) const // verify that it's constant
+{
+    uint32_t counts[256];
+    memset(counts,0,sizeof(counts));
+    uint16_t distinct_counts = 0;
+    /* How many distinct counts do we have? */
+    while ( len >0 )	{
+        if (++counts[ (*this)[off] ]  == 1 ){
+            distinct_counts++;
+        }
+        off++;
+        len--;
+    }
+    return distinct_counts;
+}
+
 void sbuf_t::hex_dump(std::ostream& os) const { hex_dump(os, 0, bufsize); }
 
 /**

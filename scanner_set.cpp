@@ -276,7 +276,7 @@ void scanner_set::add_scanner(scanner_t scanner) {
     (*scanner)(sp);
 
     // The scanner should have set the info field.
-    if (sp.info.name == "") {
+    if (sp.info->name == "") {
         throw std::runtime_error("scanner_set::add_scanner: a scanner did not set its name.  "
                                  "Re-run with DEBUG_SCANNER_SET_REGISTER=1 to find those that did.");
     }
@@ -445,6 +445,8 @@ void scanner_set::info_scanners(std::ostream& out, bool detailed_info, bool deta
         out << "These scanners enabled; disable with -" << disable_opt << ":\n";
         for (const auto &it : enabled_scanner_names) {
             out << "   -" << disable_opt << " " << it << " - disable scanner " << it << "\n";
+            /* Print its options if it has any */
+            out << scanner_info_db[get_scanner_by_name(it)]->help_options;
         }
     }
     if (disabled_scanner_names.size()) {
@@ -452,6 +454,8 @@ void scanner_set::info_scanners(std::ostream& out, bool detailed_info, bool deta
         sort(disabled_scanner_names.begin(), disabled_scanner_names.end());
         for (const auto &it : disabled_scanner_names) {
             out << "   -" << enable_opt << " " << it << " - enable scanner " << it << "\n";
+            /* Print its options if it has any */
+            out << scanner_info_db[get_scanner_by_name(it)]->help_options;
         }
     }
 }

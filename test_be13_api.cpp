@@ -882,11 +882,11 @@ TEST_CASE("scanner_config", "[scanner]") {
     sc.set_config("age", "5");
 
     std::string val{"sunday"};
-    sc.get_config("first-day", &val, "value for first-day");
+    sc.get_scanner_config("first-day", &val, "value for first-day");
     REQUIRE(val == "monday");
 
     uint64_t ival{0};
-    sc.get_config("age", &ival, "age in years");
+    sc.get_scanner_config("age", &ival, "age in years");
     REQUIRE(ival == 5);
     REQUIRE(sc.help() == help_expected);
 
