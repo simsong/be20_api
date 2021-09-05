@@ -206,7 +206,7 @@ void feature_recorder_file::write0(const std::string& str)
         /* Output the feature */
         ios << str << '\n';
         if (ios.fail()) {
-            throw std::runtime_error("Disk full. Free up space and re-restart.");
+            throw DiskWriteError();
         }
     }
 }

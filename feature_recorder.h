@@ -151,6 +151,7 @@ public:
     Feature operator*();
 };
 
+/* Feature recorder abstract base class */
 class feature_recorder {
     /* default copy construction and assignment are meaningless and not implemented */
     feature_recorder(const feature_recorder&) = delete;
@@ -162,6 +163,12 @@ protected:
     virtual const std::filesystem::path get_outdir() const; // cannot be inline because it accesses fs
 
 public:
+    class DiskWriteError : public std::exception {
+    public:
+        DiskWriteError() {}
+        const char* what() const noexcept override { return "Disk write error."; }
+    };
+
     /* if debugging (fs.flags.debug is set), halt at this position.
      * The idea is that you change the position, but it could be updated and set by a DEBUG environment variable
      */
