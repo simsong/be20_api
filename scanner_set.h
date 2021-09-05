@@ -209,16 +209,8 @@ public:;
      * Default values are hard-coded below.
      */
 
-    std::string global_help_options {};
     template <typename T> void get_global_config(const std::string& name, T* val, const std::string& help) {
-        std::stringstream s;
-        s << "   -s " << name << "=" << *val << "    " << help << " (" << name << ")\n";
-        global_help_options += s.str(); // add the help in
-
-        auto it = sc.namevals.find(name);
-        if (it != sc.namevals.end() && val) {
-            set_from_string(&val, it->second);
-        }
+        return sc.get_global_config(name, val, help);
     }
 
 

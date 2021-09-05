@@ -1,6 +1,9 @@
-#include "scanner_config.h"
+#include "config.h"
+
 #include <iostream>
 #include <sstream>
+
+#include "scanner_config.h"
 
 /************************************
  *** HELP and  option processing  ***
