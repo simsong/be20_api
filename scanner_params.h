@@ -58,13 +58,6 @@ struct scanner_params {
      *
      */
     struct scanner_info {
-        // std::stringstream helpstream {}; // where scanner info help messages are saved.
-
-        // default copy construction and assignment are meaningless
-        // and not implemented
-        // scanner_info(const scanner_info &i)=delete;
-        // scanner_info &operator=(const scanner_info &i)=delete;
-
         const static inline size_t DEFAULT_MIN_SBUF_SIZE=16; // by default, do not scan sbufs smaller than this.
 
         struct scanner_flags_t {
@@ -106,14 +99,12 @@ struct scanner_params {
         }
 
         // constructor. We must have the name and the pointer. Everything else is optional
-        scanner_info(scanner_t* scanner_, std::string name_) :
-            scanner(scanner_), name(name_), pathPrefix(ToUpper(name_)){
-        };
+        scanner_info(scanner_t* scanner_) : scanner(scanner_){ };
         /* PASSED FROM SCANNER to API: */
         scanner_t* scanner;            // the scanner
         std::string name;              // scanner name
         std::string pathPrefix{};      //   this scanner's path prefix for recursive scanners. e.g. "GZIP". Typically name uppercase
-        std::string helpstr{};         // the help string
+        std::string help_options{};         // the help string
         std::string author{};          //   who wrote me?
         std::string description{};     //   what do I do?
         std::string url{};             //   where I come from
@@ -123,6 +114,11 @@ struct scanner_params {
         uint64_t flags{};              //   flags
         std::vector<histogram_def> histogram_defs{};      //   histogram definitions that the scanner needs
 
+        void set_name(std::string name_){
+            name = name_;
+            pathPrefix = ToUpper(name_);
+        }
+
         // Derrived:
 
         // void              *packet_user {};        //   data for network callback
@@ -131,10 +127,13 @@ struct scanner_params {
         // Move constructor
         scanner_info(scanner_info&& source)
             : scanner(source.scanner), name(source.name), pathPrefix(source.pathPrefix),
-              helpstr(source.helpstr), description(source.description),
+              help_options(source.help_options), description(source.description),
               url(source.url), scanner_version(source.scanner_version),
               feature_defs(source.feature_defs), flags(source.flags), histogram_defs(source.histogram_defs) {}
+
     };
+
+
 
     const int SCANNER_PARAMS_VERSION{20210531};
     int scanner_params_version{SCANNER_PARAMS_VERSION};
@@ -169,9 +168,6 @@ struct scanner_params {
 
     /* User-servicable parts; these are here for scanners */
     virtual feature_recorder& named_feature_recorder(const std::string feature_recorder_name) const;
-    template <typename T> void get_config(const std::string& name, T* val, const std::string& help) const {
-        sc.get_config(name, val, help);
-    };
 
     struct scanner_config &sc;          // configuration.
     class scanner_set *ss {nullptr};    // null in PHASE_INIT.
@@ -190,12 +186,34 @@ struct scanner_params {
     //const uint32_t depth{0};      //  how far down are we? / only valid in SCAN_PHASE; can be inferred from sbuf path?
     // convenience functions
     std::filesystem::path const get_input_fname() const {return sc.input_fname;}; // not sure why this is needed?
-};
 
-//template <> void scanner_params::get_config(const std::string& name, std::string* val, const std::string& help);
-//template <> void scanner_params::get_config(const std::string& name, signed char* val, const std::string& help);
-//template <> void scanner_params::get_config(const std::string& name, unsigned char* val, const std::string& help);
-//template <> void scanner_params::get_config(const std::string& name, bool* val, const std::string& help);
+    // These methods are implemented in the plugin system for the scanner to get config information.
+    // The get_config methods should be called on the si object during PHASE_STARTUP (or when help is printed)
+    /* When we are asked to get the config:
+     * - first build the help string
+     * - Second, if an option was specified, then set it as requested.
+     */
+    static std::string from_string(std::string ignore, std::string v) { return v; }
+    static int from_string(int ignore, std::string v) { return std::stoi(v); }
+    static bool from_string(bool ignore, std::string v) {
+        return v.size()>0 && (v[0]=='Y' || v[0]=='y' || v[0]=='T' || v[0]=='t' || v[0]=='1');
+    }
+
+    template <typename T> void get_config(const std::string& name, T* val, const std::string& help) const {
+        std::stringstream s;
+        s << "   -s " << name << "=" << *val << "    " << help << " (" << name << ")\n";
+        info->help_options += s.str(); // add the help in
+
+        auto it = sc.namevals.find(name);
+        if (it != sc.namevals.end() && val) {
+            *val = from_string(val, it->second);
+        }
+    }
+
+    std::string help() { return info->help_options;}
+
+
+};
 
 inline std::ostream& operator<<(std::ostream& os, const scanner_params& sp) {
     os << "scanner_params(" << sp.sbuf << ")";
