@@ -23,16 +23,36 @@
 #include <string>
 #include <vector>
 
+#include "utils.h"
+
+/* There is only one scanner-config object. It is called for all of the scanners
+ */
 struct scanner_config {
 
+    /* The global configuration */
     typedef std::map<std::string, std::string> config_t; // configuration for scanner passed in
     config_t namevals{};                                 //  (input) name=val map
-    std::string help_str{};                              // help string that is built
+    void set_config(std::string name, std::string val) {
+        namevals[name] = val;
+    }
+
+    std::string global_help_options {""};
+    std::string help(){return global_help_options;}
+    template <typename T> void get_global_config(const std::string& name, T* val, const std::string& help) {
+        std::stringstream s;
+        s << "    -s " << name << "=" << *val << "    " << help << " (" << name << ")\n";
+        global_help_options += s.str(); // add the help in
+
+        auto it = namevals.find(name);
+        if (it != namevals.end() && val) {
+            set_from_string(val, it->second);
+        }
+    }
+
 
     size_t context_window_default{16}; // global option
     uint64_t offset_add{0}; // add this number to the first offset in every feature file (used for parallelism)
     std::filesystem::path banner_file{}; // add the contents of this file to the top of every feature file
-
     static inline const u_int DEFAULT_MAX_DEPTH {12};
     static inline const u_int DEFAULT_MAX_NGRAM {10};
     virtual ~scanner_config(){};
@@ -41,7 +61,6 @@ struct scanner_config {
     std::filesystem::path input_fname {NO_INPUT}; // where input comes from
     std::filesystem::path outdir {NO_OUTDIR};     // where output goes
     std::string hash_algorithm {"sha1"};          // which hash algorithm are using; default to SHA1
-    std::string help() { return help_str; };
 
     bool allow_recurse { true};         // can be turned off for testing
 
@@ -49,13 +68,7 @@ struct scanner_config {
     inline static const std::string NO_OUTDIR =
         "<NO-OUTDIR>"; // 'dirname' indicator that the FRS produces no file output
 
-    // These methods are implemented in the plugin system for the scanner to get config information.
-    // which is why they need to be virtual functions.
-    // The get_config methods should be called on the si object during PHASE_STARTUP
-    // void get_config(const scanner_info::config_t &c, const std::string &name,std::string *val,const std::string
-    // &help);
-    void set_config(const std::string& name, const std::string& val);
-    template <typename T> void get_config(const std::string& name, T* val, const std::string& help);
+    /* Set configuration; added to the static config */
     u_int    max_depth {DEFAULT_MAX_DEPTH};
     uint32_t max_ngram {DEFAULT_MAX_NGRAM};                         // maximum ngram size to scan for
 
@@ -84,22 +97,10 @@ struct scanner_config {
     scanner_commands_t scanner_commands{};
 
     /* Control which scanners are enabled */
-    void push_scanner_command(const std::string& scannerName,
-                              scanner_command::command_t c); // enable/disable a specific scanner
+    // enable/disable a specific scanner
+    void push_scanner_command(const std::string& scannerName, scanner_command::command_t c) {
+        scanner_commands.push_back(scanner_command(scannerName, c));
+    }
 };
-
-template <> void scanner_config::get_config(const std::string& name, std::string* val, const std::string& help);
-template <> void scanner_config::get_config(const std::string& name, signed char* val, const std::string& help);
-template <> void scanner_config::get_config(const std::string& name, unsigned char* val, const std::string& help);
-template <> void scanner_config::get_config(const std::string& name, bool* val, const std::string& help);
-
-template <typename T> void scanner_config::get_config(const std::string& n, T* val, const std::string& help) {
-    std::stringstream ss;
-    ss << *val;
-    std::string v(ss.str());
-    get_config(n, &v, help);
-    ss.str(v);
-    ss >> *val;
-}
 
 #endif
