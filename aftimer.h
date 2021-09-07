@@ -34,6 +34,7 @@ public:
     std::string elapsed_text() const;                 /* how long we have been running */
     std::string eta_text(double fraction_done) const; // h:m:s
     std::string eta_time(double fraction_done) const; // the actual time
+    std::string eta_date(double fraction_done) const; // the actual date and time
 };
 
 /* This code is from:
@@ -140,7 +141,7 @@ inline std::string aftimer::eta_date(double fraction_done) const {
     localtime_r(&t, &tm);
     char buf[64];
     snprintf(buf, sizeof(buf), "%04d-%02d-%02d %02d:%02d:%02d",
-             tm.tm_year+1900, tm.tm_mon+1, tm.tm_day,
+             tm.tm_year+1900, tm.tm_mon+1, tm.tm_mday,
              tm.tm_hour, tm.tm_min, tm.tm_sec);
     return std::string(buf);
 }
