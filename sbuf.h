@@ -128,9 +128,12 @@ public:;
     static sbuf_t* sbuf_malloc(const pos0_t pos0_, size_t bufsize_, size_t pagesize_ );
     void *malloc_buf() const;        // the writable buf
     void wbuf(size_t i, uint8_t val);   // write to location i with val
-    // the following must be used like this:
-    // sbuf = sbuf->realloc(newsize);
-    // this is the only way to modify the const bufsize and pagesize.
+
+    /*
+     * the following must be used like this:
+     * sbuf = sbuf->realloc(newsize);
+     * this is the only way to modify the const bufsize and pagesize.
+     */
     sbuf_t *realloc(size_t newsize);
 
     /* Allocate writable from a string. It will automatically be freed when deleted.
@@ -148,10 +151,7 @@ public:;
     /****************************************************************
      * Create an sbuf from a block of memory that does not need to be freed when the sbuf is deleted.
      */
-    sbuf_t(pos0_t pos0_, const uint8_t *buf_, size_t bufsize_):
-        pos0(pos0_), bufsize(bufsize_), pagesize(bufsize_),
-        parent(), buf(buf_), malloced(nullptr) {
-    }
+    sbuf_t(pos0_t pos0_, const uint8_t *buf_, size_t bufsize_);
 
     /****************************************************************
      *** Child allocators --- allocate an sbuf from another sbuf
@@ -525,8 +525,8 @@ public:;
         return hp;
     }
 
-    static std::atomic<int64_t> sbuf_total;   // how many are in use
-    static std::atomic<int64_t> sbuf_count;   // how many are in use
+    static std::atomic<int64_t> sbuf_total;   // how many were created in total
+    static std::atomic<int64_t> sbuf_count;   // how many are currently in use
     mutable std::atomic<int> children{0}; // number of child sbufs; incremented when data in *buf is used by a child
 private:
     // explicit allocation is only allowed in internal implementation
