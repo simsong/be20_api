@@ -321,6 +321,17 @@ sbuf_t* sbuf_t::sbuf_malloc(pos0_t pos0_, size_t bufsize_, size_t pagesize_)
     return ret;
 }
 
+/****************************************************************
+ * Create an sbuf from a block of memory that does not need to be freed when the sbuf is deleted.
+ */
+sbuf_t::sbuf_t(pos0_t pos0_, const uint8_t *buf_, size_t bufsize_):
+    pos0(pos0_), bufsize(bufsize_), pagesize(bufsize_),
+    parent(), buf(buf_), malloced(nullptr) {
+    sbuf_total += 1;
+    sbuf_count += 1;
+}
+
+
 void sbuf_t::wbuf(size_t i, uint8_t val)
 {
     if ( buf_writable==nullptr) {

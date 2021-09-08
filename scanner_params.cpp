@@ -25,15 +25,6 @@ feature_recorder& scanner_params::named_feature_recorder(const std::string featu
     return ss->named_feature_recorder(feature_recorder_name);
 }
 
-#if 0
-const std::filesystem::path scanner_params::get_input_fname() const
-{
-    assert(ss!=nullptr);
-    return ss->get_input_fname();
-
-}
-#endif
-
 /*
  * Allow call by scanners using the sp. Currently used in scan_zip
  */

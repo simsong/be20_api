@@ -48,8 +48,8 @@ private:
 
     friend class feature_recorder;
 
-    const std::string input_fname{}; // input file; copy for convenience.
-    const std::string outdir{};      // where output goes; must know.
+    //const std::string input_fname{}; // input file; copy for convenience.
+    //const std::string outdir{};      // where output goes; must know.
 
     /* map of feature recorders, name->feature recorder It is
      * read-write when BE is running single-threaded. After we go into

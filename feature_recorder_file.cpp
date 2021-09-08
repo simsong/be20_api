@@ -154,7 +154,9 @@ void feature_recorder_file::banner_stamp(std::ostream& os, const std::string& he
     os << bulk_extractor_version_header;
     os << "# Feature-Recorder: " << name << std::endl;
 
-    if (!fs.get_input_fname().empty()) { os << "# Filename: " << fs.get_input_fname().string() << std::endl; }
+    if (!fs.get_input_fname().empty()) {
+        os << "# Filename: " << fs.get_input_fname().string() << std::endl;
+    }
     if (feature_recorder_file::debug != 0) {
         os << "# DEBUG: " << debug << " (";
         if (feature_recorder_file::debug & DEBUG_PEDANTIC) os << " DEBUG_PEDANTIC ";
