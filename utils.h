@@ -27,6 +27,7 @@
 
 #include "utf8.h"
 
+bool starts_with(const std::string& buf, const std::string& with);
 bool ends_with(const std::string& buf, const std::string& with);
 bool ends_with(const std::wstring& buf, const std::wstring& with);
 std::vector<std::string>& split(const std::string& s, char delim, std::vector<std::string>& elems);
