@@ -387,13 +387,6 @@ TODO: Re-implement using C++17 directory reading.
  * We need to load them to do this, so they are loaded with empty config
  * Note that scanners can only be loaded once, so this exits.
  */
-#if 0
-bool cmp(const struct scanner_params::scanner_info* a,
-         const struct scanner_params::scanner_info* b)
-{
-    return a->name < b->name;
-}
-#endif
 void scanner_set::info_scanners(std::ostream& out, bool detailed_info, bool detailed_settings,
                                 const char enable_opt,
                                 const char disable_opt) {
@@ -681,6 +674,25 @@ void scanner_set::process_sbuf(class sbuf_t* sbufp) {
 
     /* Make the scanner params once, rather than every time through */
     scanner_params sp(sc, this, nullptr, scanner_params::PHASE_SCAN, sbufp);
+
+    /* Determine if this scanner is likely to have memory or a file system */
+    bool sbuf_possibly_has_memory     = (sbuf.pos0.depth() == 0);
+    bool sbuf_possibly_has_filesystem = (sbuf.pos0.depth() == 0);
+    std::string lastAddedPart = sbuf.pos0.lastAddedPart();
+    if (lastAddedPart.size()>0) {
+        for(int i=0;i<lastAddedPart.size();i++){
+            lastAddedPart[i] = tolower(lastAddedPart[i]);
+        }
+        /* Get the scanner and find it it makes those things */
+        scanner_t *parent_scanner = get_scanner_by_name(lastAddedPart);
+        if (parent_scanner==nullptr ){
+            std::cerr << "Cannot find scanner named '" << lastAddedPart << "' when processing " << sbuf << std::endl;
+            throw std::runtime_error("cannot find scanner");
+        }
+        sbuf_possibly_has_memory = scanner_info_db[parent_scanner]->scanner_flags.scanner_produces_memory;
+        sbuf_possibly_has_filesystem = scanner_info_db[parent_scanner]->scanner_flags.scanner_produces_filesystems;
+    }
+
     for (const auto &it : scanner_info_db) {
 
         // Look for reasons not to run a scanner
@@ -713,6 +725,15 @@ void scanner_set::process_sbuf(class sbuf_t* sbufp) {
 
         // is sbuf large enough?
         if (sbuf.bufsize < it.second->min_sbuf_size) {
+            continue;
+        }
+
+        // Check to see if scanner wants memory or filesystems and if we possibly have them
+        if (it.second->scanner_flags.scanner_wants_memory && sbuf_possibly_has_memory==false){
+            continue;
+        }
+
+        if (it.second->scanner_flags.scanner_wants_filesystems && sbuf_possibly_has_filesystem==false){
             continue;
         }
 

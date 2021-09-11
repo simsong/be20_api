@@ -71,11 +71,15 @@ struct scanner_params {
             bool recurse{false};        //  this scanner will recurse
             bool recurse_expand{false}; //  recurses AND result is >= original size
             bool recurse_always{false};    //  this scanner performs no data validation and ALWAYS recurses.
-            bool scan_ngram_buffer{
-                false}; //  Scanner can run even if the entire gets buffer is filled with constant n-grams
+            bool scan_ngram_buffer{false}; //  Scanner can run even if the entire gets buffer is filled with constant n-grams
             bool scan_seen_before{false}; //  Scanner can run even if buffer has seen before
             bool fast_find{false};        //  This scanner is a very fast FIND scanner
             bool depth0_only{false};      //  scanner only runs at depth 0 by default
+
+            bool scanner_wants_memory{false}; // only run scanner on sbufs that might contain memory
+            bool scanner_wants_filesystems{false}; // only run scanners on sbufs that might contain file system structures
+            bool scanner_produces_memory{false}; // results of scanner may produce memory
+            bool scanner_produces_filesystems{false}; //results of scanner may produce file systems.
 
             const std::string asString() const {
                 std::string ret;

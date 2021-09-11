@@ -38,7 +38,7 @@ inline int64_t stoi64(std::string str) {
 }
 
 class pos0_t {
-    mutable int depth_ {-1};               // if -1, it needs to be calculated
+    mutable int depth_ {-1};               // if -1, it needs to be calculated. 0 is top.
 
 public:
     const std::string path{}; /* forensic path of decoders*/

@@ -49,7 +49,6 @@ struct scanner_config {
         }
     }
 
-
     size_t context_window_default{16}; // global option
     uint64_t offset_add{0}; // add this number to the first offset in every feature file (used for parallelism)
     std::filesystem::path banner_file{}; // add the contents of this file to the top of every feature file
