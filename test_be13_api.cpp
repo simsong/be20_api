@@ -896,8 +896,8 @@ TEST_CASE("map_file", "[sbuf]") {
 #include "scanner_config.h"
 TEST_CASE("scanner_config", "[scanner]") {
     std::string help_expected {
-        "    -s first-day=sunday    value for first-day (first-day)\n"
-        "    -s age=0    age in years (age)\n"
+        "    -S first-day=sunday    value for first-day (first-day)\n"
+        "    -S age=0    age in years (age)\n"
     };
     scanner_config sc;
     /* Normally the set_configs would be called by main()

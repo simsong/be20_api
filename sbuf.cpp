@@ -490,8 +490,11 @@ void sbuf_t::hex_dump(std::ostream& os) const { hex_dump(os, 0, bufsize); }
 size_t sbuf_t::find_ngram_size(const size_t max_ngram) const {
     for (size_t ngram_size = 1; ngram_size < max_ngram; ngram_size++) {
         bool ngram_match = true;
-        for (size_t i = ngram_size; i < pagesize && ngram_match; i++) {
-            if ((*this)[i % ngram_size] != (*this)[i]) ngram_match = false;
+        for (size_t i = ngram_size; i < pagesize ; i++) {
+            if ((buf[i % ngram_size]) != buf[i]) {
+                ngram_match = false;
+                break;
+            }
         }
         if (ngram_match) return ngram_size;
     }
@@ -500,16 +503,20 @@ size_t sbuf_t::find_ngram_size(const size_t max_ngram) const {
 
 bool sbuf_t::getline(size_t& pos, size_t& line_start, size_t& line_len) const
 {
-    /* Scan forward until pos is at the beginning of a line */
+    /* Scan forward until pos is at the beginning of a line.
+     * The line needs to start in the page, not in the margin
+     */
     if (pos >= this->pagesize) return false;
     if (pos > 0) {
-        while ((pos < this->pagesize) && (*this)[pos - 1] != '\n') { ++(pos); }
+        while ((pos < this->pagesize) && buf[pos - 1] != '\n') {
+            ++pos;
+        }
         if (pos >= this->pagesize) return false; // didn't find another start of a line
     }
     line_start = pos;
     /* Now scan to end of the line, or the end of the buffer */
-    while (++pos < this->pagesize) {
-        if ((*this)[pos] == '\n') { break; }
+    while (++pos < this->bufsize) {
+        if (buf[pos] == '\n') { break; }
     }
     line_len = (pos - line_start);
     return true;
@@ -523,6 +530,9 @@ ssize_t sbuf_t::find(uint8_t ch, size_t start) const
     return -1;
 }
 
+/*
+ * High-speed find a binary object within an sbuf.
+ */
 ssize_t sbuf_t::findbin(const uint8_t* b2, size_t buflen, size_t start ) const
 {
     if (buflen == 0) return -1; // nothing to search for
