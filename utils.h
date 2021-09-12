@@ -27,6 +27,7 @@
 
 #include "utf8.h"
 
+bool starts_with(const std::string& buf, const std::string& with);
 bool ends_with(const std::string& buf, const std::string& with);
 bool ends_with(const std::wstring& buf, const std::wstring& with);
 std::vector<std::string>& split(const std::string& s, char delim, std::vector<std::string>& elems);
@@ -35,6 +36,18 @@ inline void truncate_at(std::string& line, char ch) {
     size_t pos = line.find(ch);
     if (pos != std::string::npos) line.resize(pos);
 };
+
+inline void set_from_string(int *ret, std::string v) { *ret = std::stoi(v); };
+inline void set_from_string(unsigned int *ret, std::string v) { *ret = std::stoul(v); };
+inline void set_from_string(uint64_t *ret, std::string v) { *ret = std::stoull(v); };
+inline void set_from_string(uint8_t *ret, std::string v) { *ret = std::stoul(v); };
+
+inline void set_from_string(std::string *ret, std::string v) { *ret =  v; };
+inline void set_from_string(bool *ret, std::string v) {
+    *ret = (v.size()>0 && (v[0]=='Y' || v[0]=='y' || v[0]=='T' || v[0]=='t' || v[0]=='1'));
+};
+
+
 
 #ifndef HAVE_LOCALTIME_R
 #ifdef __MINGW32__

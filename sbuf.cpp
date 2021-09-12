@@ -33,6 +33,10 @@ bool sbuf_t::debug_range_exception = false; // alert exceptions
 std::atomic<int64_t> sbuf_t::sbuf_total = 0;
 std::atomic<int64_t> sbuf_t::sbuf_count = 0;
 
+/****************************************************************
+ *** All allocators go here.
+ ***/
+
 /* Make an empty sbuf */
 sbuf_t::sbuf_t()
 {
@@ -40,10 +44,7 @@ sbuf_t::sbuf_t()
     sbuf_count += 1;
 }
 
-/****************************************************************
- ** from an offset
- ****************************************************************/
-// start at offset and get the rest of the sbuf as a child
+/* from an offset */
 sbuf_t::sbuf_t(const sbuf_t &src, size_t offset):
     pos0(src.pos0 + (offset < src.bufsize ? offset : src.bufsize)),
     bufsize( offset < src.bufsize ? src.bufsize - offset : 0),
@@ -67,9 +68,15 @@ sbuf_t::sbuf_t(const sbuf_t &src, size_t offset, size_t len):
     sbuf_count += 1;
 }
 
+/* Create an sbuf from a block of memory that does not need to be freed when the sbuf is deleted. */
+sbuf_t::sbuf_t(pos0_t pos0_, const uint8_t *buf_, size_t bufsize_):
+    pos0(pos0_), bufsize(bufsize_), pagesize(bufsize_),
+    parent(), buf(buf_), malloced(nullptr) {
+    sbuf_total += 1;
+    sbuf_count += 1;
+}
 
-
-/* Core allocator used by all others */
+/* Flexible allocator used by _new static methods below*/
 sbuf_t::sbuf_t(pos0_t pos0_, const sbuf_t *parent_,
                const uint8_t* buf_, size_t bufsize_, size_t pagesize_,
                int fd_, flags_t flags_):
@@ -83,6 +90,10 @@ sbuf_t::sbuf_t(pos0_t pos0_, const sbuf_t *parent_,
     sbuf_count += 1;
 }
 
+
+/****************************************************************
+ *** deallocator ***
+ ****************************************************************/
 
 sbuf_t::~sbuf_t()
 {
@@ -128,19 +139,7 @@ void sbuf_t::del_child(const sbuf_t& child) const
     children   -= 1;
     assert(children >= 0);
     references -= 1;
-    // I'm not sure how to delete us when there are no children left. Perhaps we could be added to a list to be wiped?
-    //dereference();                      // child no longer has my reference
 }
-
-#if 0
-void sbuf_t::dereference()
-{
-    references--;
-    if (references==0) {
-        delete this;
-    }
-}
-#endif
 
 /****************************************************************
  ** Allocators.
@@ -447,6 +446,22 @@ bool sbuf_t::is_constant(size_t off, size_t len, uint8_t ch) const // verify tha
     return true;
 }
 
+uint16_t sbuf_t::distinct_characters(size_t off, size_t len) const // verify that it's constant
+{
+    uint32_t counts[256];
+    memset(counts,0,sizeof(counts));
+    uint16_t distinct_counts = 0;
+    /* How many distinct counts do we have? */
+    while ( len >0 )	{
+        if (++counts[ (*this)[off] ]  == 1 ){
+            distinct_counts++;
+        }
+        off++;
+        len--;
+    }
+    return distinct_counts;
+}
+
 void sbuf_t::hex_dump(std::ostream& os) const { hex_dump(os, 0, bufsize); }
 
 /**
@@ -463,8 +478,11 @@ void sbuf_t::hex_dump(std::ostream& os) const { hex_dump(os, 0, bufsize); }
 size_t sbuf_t::find_ngram_size(const size_t max_ngram) const {
     for (size_t ngram_size = 1; ngram_size < max_ngram; ngram_size++) {
         bool ngram_match = true;
-        for (size_t i = ngram_size; i < pagesize && ngram_match; i++) {
-            if ((*this)[i % ngram_size] != (*this)[i]) ngram_match = false;
+        for (size_t i = ngram_size; i < pagesize ; i++) {
+            if ((buf[i % ngram_size]) != buf[i]) {
+                ngram_match = false;
+                break;
+            }
         }
         if (ngram_match) return ngram_size;
     }
@@ -473,16 +491,20 @@ size_t sbuf_t::find_ngram_size(const size_t max_ngram) const {
 
 bool sbuf_t::getline(size_t& pos, size_t& line_start, size_t& line_len) const
 {
-    /* Scan forward until pos is at the beginning of a line */
+    /* Scan forward until pos is at the beginning of a line.
+     * The line needs to start in the page, not in the margin
+     */
     if (pos >= this->pagesize) return false;
     if (pos > 0) {
-        while ((pos < this->pagesize) && (*this)[pos - 1] != '\n') { ++(pos); }
+        while ((pos < this->pagesize) && buf[pos - 1] != '\n') {
+            ++pos;
+        }
         if (pos >= this->pagesize) return false; // didn't find another start of a line
     }
     line_start = pos;
     /* Now scan to end of the line, or the end of the buffer */
-    while (++pos < this->pagesize) {
-        if ((*this)[pos] == '\n') { break; }
+    while (++pos < this->bufsize) {
+        if (buf[pos] == '\n') { break; }
     }
     line_len = (pos - line_start);
     return true;
@@ -496,6 +518,9 @@ ssize_t sbuf_t::find(uint8_t ch, size_t start) const
     return -1;
 }
 
+/*
+ * High-speed find a binary object within an sbuf.
+ */
 ssize_t sbuf_t::findbin(const uint8_t* b2, size_t buflen, size_t start ) const
 {
     if (buflen == 0) return -1; // nothing to search for

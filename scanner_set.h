@@ -11,6 +11,7 @@
 #include <vector>
 #include <memory>
 
+#include "utils.h"
 #include "thread-pool/thread_pool.hpp"
 #include "atomic_map.h"
 #include "sbuf.h"
@@ -207,6 +208,12 @@ public:;
     /* Run-time configuration for all of the scanners (per-scanner configuration is stored in sc)
      * Default values are hard-coded below.
      */
+
+    template <typename T> void get_global_config(const std::string& name, T* val, const std::string& help) {
+        return sc.get_global_config(name, val, help);
+    }
+
+
 
     // Scanning
     scanner_params::phase_t current_phase{scanner_params::PHASE_INIT};

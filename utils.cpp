@@ -57,6 +57,12 @@ void gmtime_r(time_t* t, struct tm* tm) {
 }
 #endif
 
+bool starts_with(const std::string& buf, const std::string& with) {
+    size_t buflen = buf.size();
+    size_t withlen = with.size();
+    return buflen > withlen && buf.substr(0,withlen) == with;
+}
+
 bool ends_with(const std::string& buf, const std::string& with) {
     size_t buflen = buf.size();
     size_t withlen = with.size();

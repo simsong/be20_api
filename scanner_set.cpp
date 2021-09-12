@@ -208,7 +208,7 @@ std::map<std::string, std::string> scanner_set::get_realtime_stats() const
     if (available_memory!=0){
         ret[AVAILABLE_MEMORY_STR] = std::to_string(available_memory);
     }
-    ret[SBUFS_CREATED_STR] = std::to_string(sbuf_t::sbuf_total);
+    ret[SBUFS_CREATED_STR]   = std::to_string(sbuf_t::sbuf_total);
     ret[SBUFS_REMAINING_STR] = std::to_string(sbuf_t::sbuf_count);
     return ret;
 }
@@ -272,11 +272,12 @@ void scanner_set::add_scanner(scanner_t scanner) {
     scanner_params sp(sc, this, nullptr, scanner_params::PHASE_INIT, nullptr);
 
     // Send the scanner the PHASE_INIT message, which will cause it to fill in the sp.info field.
+    sp.info = std::make_unique<scanner_params::scanner_info>(scanner);
     (*scanner)(sp);
 
     // The scanner should have set the info field.
-    if (sp.info == nullptr) {
-        throw std::runtime_error("scanner_set::add_scanner: a scanner did not set the sp.info field.  "
+    if (sp.info->name == "") {
+        throw std::runtime_error("scanner_set::add_scanner: a scanner did not set its name.  "
                                  "Re-run with DEBUG_SCANNER_SET_REGISTER=1 to find those that did.");
     }
     if (debug_flags.debug_scanners_ignore.find(sp.info->name) != std::string::npos){
@@ -386,14 +387,8 @@ TODO: Re-implement using C++17 directory reading.
  * We need to load them to do this, so they are loaded with empty config
  * Note that scanners can only be loaded once, so this exits.
  */
-#if 0
-bool cmp(const struct scanner_params::scanner_info* a,
-         const struct scanner_params::scanner_info* b)
-{
-    return a->name < b->name;
-}
-#endif
-void scanner_set::info_scanners(std::ostream& out, bool detailed_info, bool detailed_settings, const char enable_opt,
+void scanner_set::info_scanners(std::ostream& out, bool detailed_info, bool detailed_settings,
+                                const char enable_opt,
                                 const char disable_opt) {
     /* Get a list of scanner names */
     std::vector<std::string> all_scanner_names,enabled_scanner_names, disabled_scanner_names;
@@ -428,7 +423,7 @@ void scanner_set::info_scanners(std::ostream& out, bool detailed_info, bool deta
             out << "\n";
             if (detailed_settings) {
                 out << "Settable Options (and their defaults): \n";
-                out << scanner_info.helpstr;
+                out << scanner_info.help_options;
             }
             out << "------------------------------------------------\n\n";
         }
@@ -443,6 +438,8 @@ void scanner_set::info_scanners(std::ostream& out, bool detailed_info, bool deta
         out << "These scanners enabled; disable with -" << disable_opt << ":\n";
         for (const auto &it : enabled_scanner_names) {
             out << "   -" << disable_opt << " " << it << " - disable scanner " << it << "\n";
+            /* Print its options if it has any */
+            out << scanner_info_db[get_scanner_by_name(it)]->help_options;
         }
     }
     if (disabled_scanner_names.size()) {
@@ -450,6 +447,8 @@ void scanner_set::info_scanners(std::ostream& out, bool detailed_info, bool deta
         sort(disabled_scanner_names.begin(), disabled_scanner_names.end());
         for (const auto &it : disabled_scanner_names) {
             out << "   -" << enable_opt << " " << it << " - enable scanner " << it << "\n";
+            /* Print its options if it has any */
+            out << scanner_info_db[get_scanner_by_name(it)]->help_options;
         }
     }
 }
@@ -675,6 +674,31 @@ void scanner_set::process_sbuf(class sbuf_t* sbufp) {
 
     /* Make the scanner params once, rather than every time through */
     scanner_params sp(sc, this, nullptr, scanner_params::PHASE_SCAN, sbufp);
+
+    /* Determine if this scanner is likely to have memory or a file system */
+    bool sbuf_possibly_has_memory     = (sbuf.pos0.depth() == 0);
+    bool sbuf_possibly_has_filesystem = (sbuf.pos0.depth() == 0);
+    std::string lastAddedPart = sbuf.pos0.lastAddedPart();
+    if (lastAddedPart.size()>0) {
+        for(int i=0;i<lastAddedPart.size();i++){
+            lastAddedPart[i] = tolower(lastAddedPart[i]);
+        }
+        /* Get the scanner and find it it makes those things. If we
+         * can't find it, the last added scanner is probably a
+         * filename or something.  Another way to handle this would be
+         * for pos0_t to actually have a vector that tracks all of the
+         * stacked scanners (as scanner_t *), but that would result in
+         * a *lot* of overhead that would be rarely used.
+         */
+        try {
+            scanner_t *parent_scanner = get_scanner_by_name(lastAddedPart);
+            sbuf_possibly_has_memory = scanner_info_db[parent_scanner]->scanner_flags.scanner_produces_memory;
+            sbuf_possibly_has_filesystem = scanner_info_db[parent_scanner]->scanner_flags.scanner_produces_filesystems;
+        } catch (scanner_set::NoSuchScanner &e) {
+            // ignore the exception
+        }
+    }
+
     for (const auto &it : scanner_info_db) {
 
         // Look for reasons not to run a scanner
@@ -707,6 +731,15 @@ void scanner_set::process_sbuf(class sbuf_t* sbufp) {
 
         // is sbuf large enough?
         if (sbuf.bufsize < it.second->min_sbuf_size) {
+            continue;
+        }
+
+        // Check to see if scanner wants memory or filesystems and if we possibly have them
+        if (it.second->scanner_flags.scanner_wants_memory && sbuf_possibly_has_memory==false){
+            continue;
+        }
+
+        if (it.second->scanner_flags.scanner_wants_filesystems && sbuf_possibly_has_filesystem==false){
             continue;
         }
 
