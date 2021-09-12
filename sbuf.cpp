@@ -33,6 +33,10 @@ bool sbuf_t::debug_range_exception = false; // alert exceptions
 std::atomic<int64_t> sbuf_t::sbuf_total = 0;
 std::atomic<int64_t> sbuf_t::sbuf_count = 0;
 
+/****************************************************************
+ *** All allocators go here.
+ ***/
+
 /* Make an empty sbuf */
 sbuf_t::sbuf_t()
 {
@@ -40,10 +44,7 @@ sbuf_t::sbuf_t()
     sbuf_count += 1;
 }
 
-/****************************************************************
- ** from an offset
- ****************************************************************/
-// start at offset and get the rest of the sbuf as a child
+/* from an offset */
 sbuf_t::sbuf_t(const sbuf_t &src, size_t offset):
     pos0(src.pos0 + (offset < src.bufsize ? offset : src.bufsize)),
     bufsize( offset < src.bufsize ? src.bufsize - offset : 0),
@@ -67,9 +68,15 @@ sbuf_t::sbuf_t(const sbuf_t &src, size_t offset, size_t len):
     sbuf_count += 1;
 }
 
+/* Create an sbuf from a block of memory that does not need to be freed when the sbuf is deleted. */
+sbuf_t::sbuf_t(pos0_t pos0_, const uint8_t *buf_, size_t bufsize_):
+    pos0(pos0_), bufsize(bufsize_), pagesize(bufsize_),
+    parent(), buf(buf_), malloced(nullptr) {
+    sbuf_total += 1;
+    sbuf_count += 1;
+}
 
-
-/* Core allocator used by all others */
+/* Flexible allocator used by _new static methods below*/
 sbuf_t::sbuf_t(pos0_t pos0_, const sbuf_t *parent_,
                const uint8_t* buf_, size_t bufsize_, size_t pagesize_,
                int fd_, flags_t flags_):
@@ -83,6 +90,10 @@ sbuf_t::sbuf_t(pos0_t pos0_, const sbuf_t *parent_,
     sbuf_count += 1;
 }
 
+
+/****************************************************************
+ *** deallocator ***
+ ****************************************************************/
 
 sbuf_t::~sbuf_t()
 {
@@ -128,19 +139,7 @@ void sbuf_t::del_child(const sbuf_t& child) const
     children   -= 1;
     assert(children >= 0);
     references -= 1;
-    // I'm not sure how to delete us when there are no children left. Perhaps we could be added to a list to be wiped?
-    //dereference();                      // child no longer has my reference
 }
-
-#if 0
-void sbuf_t::dereference()
-{
-    references--;
-    if (references==0) {
-        delete this;
-    }
-}
-#endif
 
 /****************************************************************
  ** Allocators.
@@ -320,17 +319,6 @@ sbuf_t* sbuf_t::sbuf_malloc(pos0_t pos0_, size_t bufsize_, size_t pagesize_)
     assert(ret->buf == ret->buf_writable);
     return ret;
 }
-
-/****************************************************************
- * Create an sbuf from a block of memory that does not need to be freed when the sbuf is deleted.
- */
-sbuf_t::sbuf_t(pos0_t pos0_, const uint8_t *buf_, size_t bufsize_):
-    pos0(pos0_), bufsize(bufsize_), pagesize(bufsize_),
-    parent(), buf(buf_), malloced(nullptr) {
-    sbuf_total += 1;
-    sbuf_count += 1;
-}
-
 
 void sbuf_t::wbuf(size_t i, uint8_t val)
 {
