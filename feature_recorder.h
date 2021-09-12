@@ -56,9 +56,10 @@
 
 struct feature_recorder_def {
     std::string name{}; // the name of the feature recorder
-    /* These used to be static variables in the feature recorder class. They are more properly here */
-    uint32_t max_context_size{1024 * 1024}; // 1024*1024 was in BE1.4
-    uint32_t max_feature_size{1024 * 1024}; // 1024*1024 was in BE1.4
+    static inline uint32_t MAX_CONTEXT_SIZE_DEFAULT {1024*1024};
+    static inline uint32_t MAX_FEATURE_SIZE_DEFAULT {1024*1024};
+    uint32_t max_context_size {MAX_CONTEXT_SIZE_DEFAULT}; // 1024*1024 was in BE1.4
+    uint32_t max_feature_size {MAX_FEATURE_SIZE_DEFAULT}; // 1024*1024 was in BE1.4
 
     /**
      * Carving support.
@@ -85,10 +86,10 @@ struct feature_recorder_def {
      */
     /** Disable this recorder. */
     struct flags_t {
-        bool disabled{false};     // feature recorder is Disabled
+        bool disabled{false};     // feature recorder is disabled by default
         bool no_context{false};   // Do not write context.
-        bool no_stoplist{false};  // Do not honor the stoplist/alertlist.
-        bool no_alertlist{false}; // Do not honor the stoplist/alertlist.
+        bool no_stoplist{false};  // Do not honor the stoplist
+        bool no_alertlist{false}; // Do not honor the /alertlist.
         bool no_features{false};  // do not record features (used for in-memory histogram recorder)
                                   /**
                                    * Normally feature recorders automatically quote non-UTF8 characters
@@ -101,12 +102,14 @@ struct feature_recorder_def {
          * Use this flag the feature recorder is sending UTF-8 XML.
          * non-UTF8 will be quoted but "\" will not be escaped.
          */
-        bool xml{false}; // will be sending XML
+        bool xml   {false};        // callers will will be sending XML
+        bool carve {false};        // calls will request carving
 
         bool operator==(const flags_t& a) const {
             return this->disabled == a.disabled && this->no_context == a.no_context &&
-                   this->no_stoplist == a.no_stoplist && this->no_alertlist == a.no_alertlist &&
-                   this->no_features == a.no_features && this->no_quote == a.no_quote && this->xml == a.xml;
+                this->no_stoplist == a.no_stoplist && this->no_alertlist == a.no_alertlist &&
+                this->no_features == a.no_features && this->no_quote == a.no_quote &&
+                this->xml == a.xml && this->carve == a.carve;
         }
         bool operator!=(const flags_t& a) const { return !(*this == a); }
     } flags{};

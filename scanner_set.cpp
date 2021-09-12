@@ -683,14 +683,20 @@ void scanner_set::process_sbuf(class sbuf_t* sbufp) {
         for(int i=0;i<lastAddedPart.size();i++){
             lastAddedPart[i] = tolower(lastAddedPart[i]);
         }
-        /* Get the scanner and find it it makes those things */
-        scanner_t *parent_scanner = get_scanner_by_name(lastAddedPart);
-        if (parent_scanner==nullptr ){
-            std::cerr << "Cannot find scanner named '" << lastAddedPart << "' when processing " << sbuf << std::endl;
-            throw std::runtime_error("cannot find scanner");
+        /* Get the scanner and find it it makes those things. If we
+         * can't find it, the last added scanner is probably a
+         * filename or something.  Another way to handle this would be
+         * for pos0_t to actually have a vector that tracks all of the
+         * stacked scanners (as scanner_t *), but that would result in
+         * a *lot* of overhead that would be rarely used.
+         */
+        try {
+            scanner_t *parent_scanner = get_scanner_by_name(lastAddedPart);
+            sbuf_possibly_has_memory = scanner_info_db[parent_scanner]->scanner_flags.scanner_produces_memory;
+            sbuf_possibly_has_filesystem = scanner_info_db[parent_scanner]->scanner_flags.scanner_produces_filesystems;
+        } catch (scanner_set::NoSuchScanner &e) {
+            // ignore the exception
         }
-        sbuf_possibly_has_memory = scanner_info_db[parent_scanner]->scanner_flags.scanner_produces_memory;
-        sbuf_possibly_has_filesystem = scanner_info_db[parent_scanner]->scanner_flags.scanner_produces_filesystems;
     }
 
     for (const auto &it : scanner_info_db) {
