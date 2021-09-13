@@ -136,6 +136,14 @@ struct Feature {
     Feature(std::string pos_, std::string feature_)
         : pos(pos_), feature(feature_), context(""){};
 
+    Feature(const Feature &that)
+        : pos(that.pos), feature(that.feature), context(that.context) {};
+
+    Feature(Feature &&that) = delete;
+    Feature &operator=(const Feature &that) = delete;
+
+
+
     const pos0_t pos;
     const std::string feature;
     const std::string context;
