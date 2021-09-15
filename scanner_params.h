@@ -202,7 +202,7 @@ struct scanner_params {
      */
     template <typename T> void get_scanner_config(const std::string& name, T* val, const std::string& help) const {
         std::stringstream s;
-        s << "     -s " << name << "=" << *val << "    " << help << " (" << name << ")\n";
+        s << "     -S " << name << "=" << *val << "    " << help << std::endl;
         info->help_options += s.str(); // add the help in
 
         auto it = sc.namevals.find(name);
