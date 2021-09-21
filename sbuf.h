@@ -123,7 +123,7 @@ public:;
     /* Allocate writable memory, with buf[0] being at pos0_..
      * Throws std::bad_alloc() if memory is not available.
      * Use malloc_buf() to get the buffer.
-     * Data is automatically freed when deleted.
+     * Data is automatically freed when deleted. Don't forget to delete the sbuf!
      */
     static sbuf_t* sbuf_malloc(const pos0_t pos0_, size_t bufsize_, size_t pagesize_ );
     void *malloc_buf() const;        // the writable buf

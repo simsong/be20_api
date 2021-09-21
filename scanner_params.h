@@ -109,7 +109,7 @@ struct scanner_params {
         scanner_info(scanner_t* scanner_) : scanner(scanner_){ };
         /* PASSED FROM SCANNER to API: */
         scanner_t* scanner;            // the scanner
-        std::string name;              // scanner name
+        std::string name {};           // scanner name
         std::string pathPrefix{};      //   this scanner's path prefix for recursive scanners. e.g. "GZIP". Typically name uppercase
         std::string help_options{};         // the help string
         std::string author{};          //   who wrote me?

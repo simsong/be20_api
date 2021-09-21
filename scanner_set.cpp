@@ -133,7 +133,9 @@ void scanner_set::update_queue_stats(sbuf_t *sbufp, int dir)
     bytes_in_queue += sbufp->bufsize * dir;
 
     assert(sbufs_in_queue >= 0);
-    assert(sbufs_in_queue >= depth0_sbufs_in_queue);
+    if (sbufs_in_queue < depth0_sbufs_in_queue){
+        throw std::runtime_error(Formatter() << "sbufs_in_queue=" << sbufs_in_queue << " depth0_sbufs_in_queue=" << depth0_sbufs_in_queue);
+    }
     assert(bytes_in_queue >= depth0_bytes_in_queue);
 }
 
@@ -184,12 +186,12 @@ std::map<std::string, std::string> scanner_set::get_realtime_stats() const
 {
     std::map<std::string, std::string> ret;
     if (pool!=nullptr){
-        ret[THREAD_COUNT_STR]   = std::to_string(pool->get_thread_count());
-        ret[TASKS_QUEUED_STR]   = std::to_string(pool->get_tasks_queued());
+        ret[THREAD_COUNT_STR]        = std::to_string(pool->get_thread_count());
+        ret[TASKS_QUEUED_STR]        = std::to_string(pool->get_tasks_queued());
         ret[DEPTH0_SBUFS_QUEUED_STR] = std::to_string(depth0_sbufs_in_queue);
         ret[DEPTH0_BYTES_QUEUED_STR] = std::to_string(depth0_bytes_in_queue);
-        ret[SBUFS_QUEUED_STR] = std::to_string(sbufs_in_queue);
-        ret[BYTES_QUEUED_STR] = std::to_string(bytes_in_queue);
+        ret[SBUFS_QUEUED_STR]        = std::to_string(sbufs_in_queue);
+        ret[BYTES_QUEUED_STR]        = std::to_string(bytes_in_queue);
     }
     int counter = 0;
     uint64_t max_offset = 0;
@@ -197,9 +199,10 @@ std::map<std::string, std::string> scanner_set::get_realtime_stats() const
         std::stringstream ss;
         ss << "thread-" << ++counter;
         std::string status = std::string(*it);
+        uint64_t status_offset = static_cast<uint64_t>(strtoll(status.c_str(), nullptr, 10));
         ret[ ss.str() ] = status;
-        if (strtoll(status.c_str(), nullptr, 10) > max_offset) {
-            max_offset = strtoll(status.c_str(), nullptr, 10);
+        if (status_offset > max_offset) {
+            max_offset = status_offset;
         }
     }
     ret[MAX_OFFSET] = std::to_string(max_offset);

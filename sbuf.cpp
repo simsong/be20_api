@@ -225,7 +225,9 @@ sbuf_t *sbuf_t::new_slice(size_t off, size_t len) const
  */
 sbuf_t *sbuf_t::new_slice_copy(size_t off, size_t len) const
 {
-    auto src  = slice(off,len);
+    auto src  = slice(off, len);
+    assert(src.bufsize  <= len);
+    assert(src.pagesize <= len);
     auto *dst = sbuf_t::sbuf_malloc(src.pos0, src.bufsize, src.bufsize);
     memcpy( dst->malloc_buf(), src.buf, src.bufsize);
     return dst;
@@ -310,11 +312,12 @@ sbuf_t* sbuf_t::map_file(const std::filesystem::path fname) {
 sbuf_t* sbuf_t::sbuf_malloc(pos0_t pos0_, size_t bufsize_, size_t pagesize_)
 {
     assert( bufsize_ >= pagesize_ );
-    void *new_malloced = malloc(bufsize_);
+    uint8_t *new_malloced = static_cast<uint8_t *>(malloc(bufsize_));
     sbuf_t *ret = new sbuf_t(pos0_, nullptr,
-                             static_cast<const uint8_t *>(new_malloced), bufsize_, pagesize_, NO_FD, flags_t());
-    ret->malloced = new_malloced;
-    ret->buf_writable = static_cast<uint8_t *>(new_malloced);
+                             new_malloced, bufsize_, pagesize_,
+                             NO_FD, flags_t());
+    ret->malloced = static_cast<void *>(new_malloced);
+    ret->buf_writable = new_malloced;
     assert(ret->buf == ret->malloced);
     assert(ret->buf == ret->buf_writable);
     return ret;
