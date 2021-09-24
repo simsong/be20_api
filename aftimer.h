@@ -1,10 +1,10 @@
 #ifndef __AFTIMER_H__
 #define __AFTIMER_H__
 
-//#define __STDC_WANT_LIB_EXT1__ 1
 #include <atomic>
 #include <ctime>
 #include <cstdio>
+#include <cassert>
 #include <string>
 #include <chrono>
 #include <sstream>
