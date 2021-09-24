@@ -655,29 +655,6 @@ TEST_CASE("char_class", "[char_class]") {
 
 /****************************************************************
  *
- * distinct_character_counter.h
- */
-#include "distinct_character_counter.h"
-TEST_CASE("distinct", "[distinct_character_counter]") {
-    distinct_character_counter d;
-    REQUIRE(d.distinct_count==0);
-    d.add('a');
-    d.add('b');
-    d.add('c');
-    REQUIRE(d.distinct_count==3);
-    d.add('a');
-    d.add('a');
-    d.add('a');
-    REQUIRE(d.distinct_count==3);
-    d.remove('a');
-    REQUIRE(d.distinct_count==3);
-    d.remove('b');
-    REQUIRE(d.distinct_count==2);
-    REQUIRE_THROWS_AS(d.remove('b'), distinct_character_counter::underflow);
-}
-
-/****************************************************************
- *
  * pos0.h:
  */
 
