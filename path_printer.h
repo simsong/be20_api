@@ -20,6 +20,7 @@ struct PrintOptions : public std::map<std::string, std::string> {
     bool http_mode {false};
     std::string get(std::string key, std::string default_) const;
     void add_rfc822_header(std::ostream &os, std::string line);
+    size_t content_length {0};
 };
 
 
