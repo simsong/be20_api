@@ -575,7 +575,7 @@ void scanner_set::dump_scanner_stats() const
         writer->set_oneline(true);
         writer->push("scanner");
         writer->xmlout("name", get_scanner_name( it.key ));
-        writer->xmlout("ns", it.value->ns);
+        writer->xmlout("seconds", static_cast<double>(it.value->ns) / 1E9);
         writer->xmlout("calls", it.value->calls);
         writer->pop();
         writer->set_oneline(false);
@@ -683,7 +683,7 @@ void scanner_set::process_sbuf(class sbuf_t* sbufp) {
     bool sbuf_possibly_has_filesystem = (sbuf.pos0.depth() == 0);
     std::string lastAddedPart = sbuf.pos0.lastAddedPart();
     if (lastAddedPart.size()>0) {
-        for(int i=0;i<lastAddedPart.size();i++){
+        for (size_t i=0;i<lastAddedPart.size();i++){
             lastAddedPart[i] = tolower(lastAddedPart[i]);
         }
         /* Get the scanner and find it it makes those things. If we

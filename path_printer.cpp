@@ -109,7 +109,7 @@ void path_printer::process_sp(const scanner_params &sp) const
 	    }
 	} else {
             print_start = 0;
-            content_length = stoi64( sp.pp_po->get(CONTENT_LENGTH,DEFAULT_CONTENT_LENGTH));
+            content_length = stoi64( sp.pp_po->get(CONTENT_LENGTH, DEFAULT_CONTENT_LENGTH));
         }
 
 	if (print_start > sp.sbuf->bufsize){
@@ -119,6 +119,10 @@ void path_printer::process_sp(const scanner_params &sp) const
 	if (content_length>0 && print_start+content_length > sp.sbuf->bufsize){
 	    content_length = sp.sbuf->bufsize-print_start;
 	}
+
+        if (sp.pp_po->content_length!=0) {
+            content_length = sp.pp_po->content_length;
+        }
 
 	switch (sp.pp_po->print_mode){
 	case PrintOptions::MODE_HTTP:
@@ -130,10 +134,10 @@ void path_printer::process_sp(const scanner_params &sp) const
 	    break;
 	case PrintOptions::MODE_RAW:
 	    os << content_length << PrintOptions::HTTP_EOL;
-	    sp.sbuf->raw_dump(os, print_start,content_length); // send to stdout as binary
+	    sp.sbuf->raw_dump(os, print_start, content_length); // send to stdout as binary
 	    break;
 	case PrintOptions::MODE_HEX:
-	    sp.sbuf->hex_dump(os,print_start,content_length);
+	    sp.sbuf->hex_dump(os, print_start, content_length);
 	    break;
 	case PrintOptions::MODE_NONE:
 	    break;
@@ -248,6 +252,14 @@ void path_printer::process_path(std::string path)
 	path = path.substr(0,path.size()-2);
 	po.print_mode = PrintOptions::MODE_HEX;
     }
+
+    /* See if there is an extent */
+    size_t colon = path.find(':');
+    if (colon != std::string::npos) {
+        po.content_length = stoi64( path.substr(colon+1) );
+        path.resize(colon);
+    }
+
     display_path(path, po);
     out << os.str();
     os.str(std::string());
@@ -271,16 +283,15 @@ void path_printer::process_interactive(std::istream &is)
 
 void path_printer::process_http(std::istream &is)
 {
-
     while (!is.eof()) {
         /* get the HTTP query */
         std::string line;		// the specific query
         PrintOptions po;
-        po.http_mode = true;
+        po.http_mode  = true;
         po.print_mode = PrintOptions::MODE_HTTP;	// options for this query
 
-        getline(is,line);
-        truncate_at(line,'\r');
+        getline(is, line);
+        truncate_at(line,'\r');         // truncate at \r if we end with \r\n
         if (line.substr(0,4)!="GET "){
             out << "HTTP/1.1 501 Method not implemented" << PrintOptions::HTTP_EOL << PrintOptions::HTTP_EOL;
             return;

@@ -113,7 +113,6 @@ public:
         }
         uint64_t ns{0};    // nanoseconds
         uint64_t calls{0}; // calls
-
     };
 
     struct debug_flags_t {
