@@ -208,7 +208,7 @@ void feature_recorder_file::write0(const std::string& str)
         /* Output the feature */
         ios << str << '\n';
         if (ios.fail()) {
-            throw DiskWriteError();
+            throw DiskWriteError("");
         }
     }
 }

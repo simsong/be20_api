@@ -176,8 +176,14 @@ protected:
 public:
     class DiskWriteError : public std::exception {
     public:
-        DiskWriteError() {}
-        const char* what() const noexcept override { return "Disk write error."; }
+        std::string msg;
+        DiskWriteError(const char *m) {
+            msg = std::string("Disk write error: ") + m;
+        }
+        DiskWriteError(const std::string &m) {
+            msg = std::string("Disk write error: ") + m;
+        }
+        const char* what() const noexcept override { return msg.c_str(); };
     };
 
     /* if debugging (fs.flags.debug is set), halt at this position.

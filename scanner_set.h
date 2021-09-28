@@ -157,10 +157,11 @@ public:;
 
 
     int get_thread_count() { return (pool!=nullptr) ? pool->get_thread_count() : 1; };
-    std::atomic<int> depth0_sbufs_in_queue {0};
+    std::atomic<int>      depth0_sbufs_in_queue {0};
     std::atomic<uint64_t> depth0_bytes_in_queue {0};
-    std::atomic<int> sbufs_in_queue {0};
+    std::atomic<int>      sbufs_in_queue {0};
     std::atomic<uint64_t> bytes_in_queue {0};
+    std::atomic<int>      disk_write_errors {0};
 
     // thread status and notification
     atomic_map<std::thread::id, std::string> thread_status {}; // the status of each thread::id

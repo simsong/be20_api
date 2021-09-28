@@ -234,8 +234,7 @@ void feature_recorder::write_buf(const sbuf_t& sbuf, size_t pos, size_t len) {
     if (pos >= sbuf.pagesize && pos < sbuf.bufsize) { return; }
 
     if (pos >= sbuf.bufsize) { /* Sanity checks */
-        throw std::runtime_error(std::string("*** write_buf: WRITE OUTSIDE BUFFER. pos=") + std::to_string(pos) +
-                                 " sbuf=");
+        throw std::runtime_error(Formatter() << "*** write_buf: WRITE OUTSIDE BUFFER. pos=" << std::to_string(pos)  << " sbuf=" << sbuf);
     }
 
     /* Asked to write beyond bufsize; bring it in */
@@ -331,7 +330,8 @@ std::string feature_recorder::sanitize_filename(std::string in)
  */
 
 #include <iomanip>
-std::string feature_recorder::carve(const sbuf_t& header, const sbuf_t& data, std::string ext, time_t mtime) {
+std::string feature_recorder::carve(const sbuf_t& header, const sbuf_t& data, std::string ext, time_t mtime)
+{
     switch (carve_mode) {
     case feature_recorder_def::CARVE_NONE:
         return NO_CARVED_FILE; // carve nothing
@@ -398,12 +398,14 @@ std::string feature_recorder::carve(const sbuf_t& header, const sbuf_t& data, st
         os.open(carved_absolute_path, std::ios::out | std::ios::binary | std::ios::trunc);
         if (!os.is_open()) {
             perror(carved_absolute_path.c_str());
-            throw std::runtime_error(Formatter() << "cannot open file for writing:" << carved_absolute_path);
+            throw feature_recorder::DiskWriteError(Formatter() << "cannot open file for writing:" << carved_absolute_path);
         }
         header.write(os);
         data.write(os);
         os.close();
-        if (os.bad()) { throw std::runtime_error(Formatter() << "error writing file " << carved_absolute_path); }
+        if (os.bad()) {
+            throw feature_recorder::DiskWriteError(Formatter() << "error writing file " << carved_absolute_path);
+        }
 
         /* Set timestamp if necessary. Note that we do not use std::filesystem::last_write_time()
          * as there seems to be no portable way to use it.
@@ -416,12 +418,14 @@ std::string feature_recorder::carve(const sbuf_t& header, const sbuf_t& data, st
     return carved_relative_path;
 }
 
-const std::string feature_recorder::hash(const sbuf_t& sbuf) const {
+const std::string feature_recorder::hash(const sbuf_t& sbuf) const
+{
     return sbuf.hash(fs.hasher.func);
 }
 
-void feature_recorder::shutdown() {}
-
+void feature_recorder::shutdown()
+{
+}
 
 /**
  * flush the largest histogram to the disk. This is a way to release
@@ -432,25 +436,3 @@ void feature_recorder::shutdown() {}
  * need to be recombined in post-processing. SQL feature recorder uses the
  * SQLite3 to create the histograms.
  */
-
-//void feature_recorder::histogram_write(AtomicUnicodeHistogram& h) {
-//    std::cerr << "feature_recorder::histogram_write should not be called yet.\n";
-//}
-
-#if 0
-/*
- * histogram_merge:
- * If possible, read all histogram files into memory and write them
- * out as a single histogram file. If we run out of memory during the process, fail.
- *
- */
-void feature_recorder::histogram_merge(const struct histogram_def &def)
-{
-    throw std::runtime_error("Implement histogram_merge");
-}
-
-void feature_recorder::histogram_merge_all()
-{
-    throw std::runtime_error("Implement histogram_merge_all");
-}
-#endif

@@ -613,7 +613,7 @@ template <typename T> void update_maximum(std::atomic<T>& maximum_value, T const
     while (prev_value < value && !maximum_value.compare_exchange_weak(prev_value, value)) {}
 }
 
-/* Process an sbuf!
+/* Process an sbuf (typically in its own thread).
  * Deletes the buf after processing.
  */
 void scanner_set::process_sbuf(class sbuf_t* sbufp) {
@@ -763,7 +763,7 @@ void scanner_set::process_sbuf(class sbuf_t* sbufp) {
 
             /* Call the scanner.*/
             aftimer t;
-            thread_set_status( sbuf.pos0.str() + ": " + name + " (" + std::to_string(sbuf.bufsize) + ")" );
+            thread_set_status( sbuf.pos0.str() + ": " + name + " (" + std::to_string(sbuf.bufsize) + " bytes)" );
 
             if (debug_flags.debug_print_steps) {
                 std::cerr << "sbuf.pos0=" << sbuf.pos0 << " calling scanner " << name << "\n";
@@ -782,28 +782,34 @@ void scanner_set::process_sbuf(class sbuf_t* sbufp) {
                     std::cerr << "sbuf.pos0=" << sbuf.pos0 << " scanner " << name << " t=" << t.elapsed_seconds() << "\n";
                 }
             }
-        } catch (const std::exception& e) {
-            std::stringstream ss;
-            ss << "std::exception Scanner: " << name << " Exception: " << e.what() << " sbuf.pos0: " << sbuf.pos0
-               << " bufsize=" << sbuf.bufsize << "\n";
-            std::cerr << ss.str();
+        }
+        catch (const feature_recorder::DiskWriteError &e) {
+            sp.ss->disk_write_errors ++;
             try {
                 fs.get_alert_recorder().write(sbuf.pos0, "scanner=" + name,
-                                              std::string("<exception>") + e.what() + "</exception>");
-            } catch (feature_recorder_set::NoSuchFeatureRecorder& e2) {}
-        } catch (...) {
-            std::stringstream ss;
-            ss << "std::exception Scanner: " << name << " Unknown Exception "
-               << " sbuf.pos0: " << sbuf.pos0 << " bufsize=" << sbuf.bufsize << "\n";
-            std::cerr << ss.str();
+                                              Formatter() << "<exception>" << e.what() << "</exception>");
+            }
+            catch (feature_recorder_set::NoSuchFeatureRecorder& e2) {
+            }
+        }
+
+        catch (const std::exception& e) {
             try {
                 fs.get_alert_recorder().write(sbuf.pos0, "scanner=" + name,
-                                              std::string("<unknown_exception></unknown_exception>"));
+                                              Formatter() << "<exception>" << e.what() << "</exception>");
+            }
+            catch (feature_recorder_set::NoSuchFeatureRecorder& e2) {
+            }
+        }
+        catch (...) {
+            try {
+                fs.get_alert_recorder().write(sbuf.pos0, "scanner=" + name, "<unknown_exception></unknown_exception>");
             } catch (feature_recorder_set::NoSuchFeatureRecorder& e) {}
         }
     }
     timer.stop();
     delete_sbuf(sbufp);
+    thread_set_status("IDLE");
     return;
 }
 

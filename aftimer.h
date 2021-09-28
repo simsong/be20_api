@@ -26,8 +26,9 @@ public:
     void stop();  // stop the timer
     void lap();   // note the time for elapsed_seconds() below
 
+    uint64_t running_nanoseconds() const;               // for how long have we been running?
     double elapsed_seconds() const;                   // how long timer has been running; timer can be running
-    uint64_t elapsed_nanoseconds() const;
+    uint64_t elapsed_nanoseconds() const;             // from the beginning
     uint64_t lap_seconds() const;                          // how long the timer is running this time
     double eta(double fraction_done) const;           // calculate ETA in seconds, given fraction
     std::string hms(long t) const;                    // turn a number of seconds into h:m:s
@@ -61,11 +62,15 @@ inline void aftimer::start() {
     running = true;
 }
 
+inline uint64_t aftimer::running_nanoseconds() const {
+    auto v = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - t0 );
+    return v.count();
+}
+
 inline void aftimer::stop() {
     assert (running==true);
-    auto v = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - t0 );
-    last_ns = v.count();
-    elapsed_ns += v.count();
+    last_ns = running_nanoseconds();
+    elapsed_ns += last_ns;
     running = false;
 }
 
@@ -74,12 +79,16 @@ inline void aftimer::lap() {
     start();
 }
 
-inline double aftimer::elapsed_seconds() const {
-    return elapsed_ns / (1000.0 * 1000.0 * 1000.0);
+inline uint64_t aftimer::elapsed_nanoseconds() const {
+    if (running) {
+        return elapsed_ns + running_nanoseconds();
+    } else {
+        return elapsed_ns;
+    }
 }
 
-inline uint64_t aftimer::elapsed_nanoseconds() const {
-    return elapsed_ns;
+inline double aftimer::elapsed_seconds() const {
+    return elapsed_nanoseconds() / (1000.0 * 1000.0 * 1000.0);
 }
 
 inline std::string aftimer::hms(long t) const {

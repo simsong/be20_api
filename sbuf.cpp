@@ -15,6 +15,7 @@
 #include "dfxml_cpp/src/hash_t.h"
 #include "formatter.h"
 #include "unicode_escape.h"
+#include "feature_recorder.h"
 
 /****************************************************************
  *** SBUF_T
@@ -429,7 +430,9 @@ void sbuf_t::write(std::filesystem::path path) const {
     }
     this->write(os);
     os.close();
-    if (os.bad()) { throw std::runtime_error(Formatter() << "error writing file " << path); }
+    if (os.bad()) {
+        throw feature_recorder::DiskWriteError(Formatter() << "error writing file " << path);
+    }
 }
 
 /* Return a substring */
