@@ -5,8 +5,10 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/time.h>
-#include <sys/times.h>
 #include <unistd.h>
+
+// not present under mingw:
+//#include <sys/times.h>
 
 #include <ctime>
 #include <cstdarg>

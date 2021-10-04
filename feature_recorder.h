@@ -176,7 +176,7 @@ protected:
 public:
     class DiskWriteError : public std::exception {
     public:
-        std::string msg;
+        std::string msg {};
         DiskWriteError(const char *m) {
             msg = std::string("Disk write error: ") + m;
         }
