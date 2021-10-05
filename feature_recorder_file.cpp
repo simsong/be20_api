@@ -320,7 +320,7 @@ void feature_recorder_file::histogram_write_from_file(AtomicUnicodeHistogram& h)
 
 
     /* This is a file based histogram. We will be reading from one file and writing to another */
-    std::string ifname = fname_in_outdir("", NO_COUNT);  // source of features
+    std::filesystem::path ifname = fname_in_outdir("", NO_COUNT);  // source of features
     std::ifstream f(ifname.c_str());
     if(!f.is_open()){
         std::cerr << "Cannot open histogram input file: " << ifname << std::endl;

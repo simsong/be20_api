@@ -163,12 +163,6 @@ inline bool validASCIIName(const std::string name) {
     return true;
 }
 
-inline std::filesystem::path NamedTemporaryDirectory() {
-    char tmpl[] = "/tmp/be_dirXXXXXX";
-    if (mkdtemp(tmpl) == nullptr) { throw std::runtime_error("NamedTemporaryDirectory: Cannot create directory"); }
-    return std::filesystem::path(tmpl);
-}
-
 inline bool directory_empty(std::filesystem::path path) {
     namespace fs = std::filesystem;
     if (fs::is_directory(path)) {

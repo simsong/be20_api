@@ -13,6 +13,7 @@
 #include <string>
 #include <thread>
 #include <ctime>
+#include <mutex>
 
 #include "atomic_set.h"
 #include "atomic_unicode_histogram.h"
@@ -176,7 +177,7 @@ protected:
 public:
     class DiskWriteError : public std::exception {
     public:
-        std::string msg;
+        std::string msg {};
         DiskWriteError(const char *m) {
             msg = std::string("Disk write error: ") + m;
         }
@@ -278,6 +279,7 @@ public:
      */
     virtual void write_buf(const sbuf_t& sbuf, size_t pos, size_t len); /* writes with context */
 
+    mutable std::mutex Mcarve {};	// the carving mutex
     std::atomic<feature_recorder_def::carve_mode_t> carve_mode{feature_recorder_def::CARVE_ALL};
     std::atomic<size_t> min_carve_size {200};
     std::atomic<size_t> max_carve_size {16*1024*1024};
@@ -301,6 +303,26 @@ public:
     virtual std::string carve(const sbuf_t& sbuf, std::string ext, time_t mtime = 0) {
         return carve(sbuf_t(), sbuf, ext, mtime);
     }
+
+#ifdef _WIN32
+  // https://stackoverflow.com/questions/321849/strptime-equivalent-on-windows/321940
+  char* strptime(const char* s, const char* f, struct tm* tm)
+  {
+    // Isn't the C++ standard lib nice? std::get_time is defined such that its
+    // format parameters are the exact same as strptime. Of course, we have to
+    // create a string stream first, and imbue it with the current C locale, and
+    // we also have to make sure we return the right things if it fails, or
+    // if it succeeds, but this is still far simpler an implementation than any
+    // of the versions in any of the C standard libraries.
+    std::istringstream input(s);
+    input.imbue(std::locale(setlocale(LC_ALL, nullptr)));
+    input >> std::get_time(tm, f);
+    if (input.fail()) {
+      return nullptr;
+    }
+    return (char*)(s + input.tellg());
+  }
+#endif
 
     // carve the data in the sbuf to a file that ends with ext, with ISO8601 string as time
     virtual std::string carve(const sbuf_t& sbuf, std::string ext, std::string mtime) {

@@ -40,11 +40,6 @@ m4_include([m4/slg_gcc_all_warnings.m4])
 ################################################################
 # Specify our headers
 
-# Autoupdate added the next two lines to ensure that your configure
-# script's behavior did not change.  They are probably safe to remove.
-AC_CHECK_INCLUDES_DEFAULT
-AC_PROG_EGREP
-
 ## Check for headers used by bulk Extractor
 ## do not put pthread here
 
@@ -63,5 +58,7 @@ if test "${with_opt}" = "no" ; then
   CFLAGS=`echo   -g "$CFLAGS"   | sed s/-O[[0-9]]//`             # note the double quoting!
   CXXFLAGS=`echo -g "$CXXFLAGS" | sed s/-O[[0-9]]//`
 fi
+
+LIBS="-lstdc++ $LIBS"
 
 AC_OUTPUT

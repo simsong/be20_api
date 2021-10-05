@@ -52,8 +52,8 @@ struct scanner_config {
     size_t context_window_default{16}; // global option
     uint64_t offset_add{0}; // add this number to the first offset in every feature file (used for parallelism)
     std::filesystem::path banner_file{}; // add the contents of this file to the top of every feature file
-    static inline const u_int DEFAULT_MAX_DEPTH {12};
-    static inline const u_int DEFAULT_MAX_NGRAM {10};
+    static inline const uint32_t DEFAULT_MAX_DEPTH {12};
+    static inline const uint32_t DEFAULT_MAX_NGRAM {10};
     virtual ~scanner_config(){};
     scanner_config(){};
     scanner_config(const scanner_config&) = default;
@@ -68,7 +68,7 @@ struct scanner_config {
         "<NO-OUTDIR>"; // 'dirname' indicator that the FRS produces no file output
 
     /* Set configuration; added to the static config */
-    u_int    max_depth {DEFAULT_MAX_DEPTH};
+    uint32_t max_depth {DEFAULT_MAX_DEPTH};
     uint32_t max_ngram {DEFAULT_MAX_NGRAM};                         // maximum ngram size to scan for
 
     /**

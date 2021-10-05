@@ -89,6 +89,8 @@ std::string get_exe() {
     } else {
         throw std::runtime_error("bufsize too small");
     }
+#elif defined(_WIN32)
+    GetModuleFileNameA(nullptr, rpath, PATH_MAX);
 #else
     ssize_t ret = readlink("/proc/self/exe", rpath, sizeof(rpath));
     if (ret < 0) { throw std::runtime_error("readlink failed"); }
@@ -436,21 +438,18 @@ TEST_CASE("fname", "[feature_recorder]") {
     feature_recorder_set::flags_t flags;
     flags.no_alert = true;
     scanner_config sc;
-    sc.outdir = NamedTemporaryDirectory();
+    sc.outdir = std::filesystem::temp_directory_path();
     feature_recorder_set frs(flags, sc);
     frs.create_feature_recorder("test");
     feature_recorder& fr = frs.named_feature_recorder("test");
 
-    const std::string n = fr.fname_in_outdir("foo", feature_recorder::NO_COUNT);
-    std::filesystem::path p(n);
+    auto p = fr.fname_in_outdir("foo", feature_recorder::NO_COUNT);
     REQUIRE(p.filename() == "test_foo.txt");
 
-    const std::string n1 = fr.fname_in_outdir("bar", feature_recorder::NEXT_COUNT);
-    std::filesystem::path p1(n1);
+    auto p1 = fr.fname_in_outdir("bar", feature_recorder::NEXT_COUNT);
     REQUIRE(p1.filename() == "test_bar.txt");
 
-    const std::string n2 = fr.fname_in_outdir("bar", feature_recorder::NEXT_COUNT);
-    std::filesystem::path p2(n2);
+    auto p2 = fr.fname_in_outdir("bar", feature_recorder::NEXT_COUNT);
     REQUIRE(p2.filename() == "test_bar_1.txt");
 
     fr.carve_mode = feature_recorder_def::CARVE_ALL;
@@ -1178,17 +1177,19 @@ TEST_CASE("unicode_detection2", "[unicode]") {
 
 TEST_CASE("directory_support", "[utilities]") {
     namespace fs = std::filesystem;
-    std::string tmpdir = NamedTemporaryDirectory();
+    auto tmpdir = std::filesystem::temp_directory_path();
     REQUIRE(fs::is_directory("no such directory") == false);
     REQUIRE(fs::is_directory(tmpdir) == true);
     REQUIRE(directory_empty(tmpdir) == true);
-    std::string foo_txt = tmpdir + "/foo.txt";
-    FILE* f = fopen(foo_txt.c_str(), "w");
-    fprintf(f, "foo\n");
-    fclose(f);
+    std::filesystem::path foo_txt = tmpdir / "foo.txt";
+    std::ofstream os;
+    os.open(foo_txt);
+    REQUIRE(os.is_open());
+    os << "foo\n";
+    os.close();
     REQUIRE(directory_empty(tmpdir) == false);
-    unlink(foo_txt.c_str());
-    rmdir(tmpdir.c_str());
+    std::filesystem::remove(foo_txt);
+    std::filesystem::remove_all(tmpdir);
 }
 
 TEST_CASE("Show_output", "[end]") {
