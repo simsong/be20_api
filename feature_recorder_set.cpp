@@ -66,14 +66,20 @@ feature_recorder_set::feature_recorder_set(const flags_t& flags_, const scanner_
         /* Create the output directory if it doesn't exist */
         if (!fs::is_directory(sc.outdir)) { fs::create_directory(sc.outdir); }
 
-        /* Make sure it is writable */
+        /* Make sure it is a directory */
         if (!fs::is_directory(sc.outdir)) {
             throw std::runtime_error("Could not create directory " + sc.outdir.string());
         }
 
-        if (access(sc.outdir.c_str(), W_OK) != 0) {
+        /* Make sure it is writable */
+        std::filesystem::path testfile = sc.outdir/"test";
+        std::ofstream tmp;
+        tmp.open( testfile );
+        if (!tmp.is_open()) {
             throw std::invalid_argument("output directory " + sc.outdir.string() + " not writable");
         }
+        tmp.close();
+        std::filesystem::remove( testfile );
     }
 
 #if 0
