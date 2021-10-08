@@ -197,10 +197,8 @@ bool looks_like_utf16(const std::string& str, bool& little_endian) {
     for (size_t i = 0; i + 1 < str.size(); i += 2) {
         if (str[i] == 0)     even_null_count++;
         if (str[i + 1] == 0) odd_null_count++;
-        //std::cerr << "str[" << i << "]= " << (int)str[i] << " " << str[i] << "   str[" << i+1 << "]=" << (int)str[i+1] << " " << str[i+1] << "\n";
         /* TODO: Should we look for FFFE or FEFF and act accordingly ? */
     }
-    //std::cerr << "even_null_count = " << even_null_count << " odd_null_count=" << odd_null_count << "\n";
     if (even_null_count == 0 && odd_null_count > 1) {
         little_endian = true;
         return true;

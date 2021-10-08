@@ -1163,7 +1163,6 @@ TEST_CASE("unicode_detection2", "[unicode]") {
 
     /* validate the string */
     for(size_t i=0;i<utf8.size();i++){
-        //std::cerr << "i=" << i << "\n";
         REQUIRE( utf8[i] == str[i*2] );
         REQUIRE( str[i*2+1] == 0);
     }

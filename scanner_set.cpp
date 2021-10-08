@@ -4,6 +4,9 @@
  * bulk_extractor backend stuff, used for both standalone executable and bulk_extractor.
  */
 
+/* needed loading shared libraries and getting free memory*/
+#include "config.h"
+
 #include <algorithm>
 #include <cassert>
 #include <cstdlib>
@@ -12,9 +15,8 @@
 #include <thread>
 #include <vector>
 
+#include "formatter.h"
 
-/* needed loading shared libraries and getting free memory*/
-#include "config.h"
 
 #ifdef HAVE_LINUX_SYSCTL_H
 #include <linux/sysctl.h>
@@ -373,7 +375,7 @@ TODO: Re-implement using C++17 directory reading.
             size_t extloc = fname.rfind('.');
             if(extloc==std::string::npos) continue; // no '.'
             std::string ext = fname.substr(extloc+1);
-#ifdef WIN32
+#ifdef _WIN32
             if(ext!="DLL") continue;    // not a DLL
 #else
             if(ext!="so") continue;     // not a shared library
@@ -655,8 +657,8 @@ void scanner_set::process_sbuf(class sbuf_t* sbufp) {
     }
     auto pool_now = (void *)pool;
     if(pool_now != pool_hold){
-        std::cerr << "scanner_set::process_sbuf: error. pool_hold=" << pool_hold << "but now pool_now=" << pool_now << "\n";
-        assert(pool_now == pool_hold);
+        throw std::runtime_error(
+            Formatter() << "scanner_set::process_sbuf: error. pool_hold=" << pool_hold << "but now pool_now=" << pool_now);
     }
 
     /* Determine if the sbuf consists of a repeating ngram. If so,

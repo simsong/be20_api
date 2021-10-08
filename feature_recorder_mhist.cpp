@@ -1,5 +1,7 @@
 /* -*- mode: C++; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 
+#include "formatter.h"
+
 /**
  * write() is the main entry point for writing a feature at a given position with context.
  * write() checks the stoplist and escapes non-UTF8 characters, then calls write0().
@@ -8,12 +10,10 @@ void feature_recorder::write(const pos0_t& pos0, const std::string& feature_, co
     if (fs.flags.disabled) return; // disabled
     if (fs.flags.pedantic) {
         if (feature_.size() > def.max_feature_size) {
-            std::cerr << "feature_recorder::write : feature_.size()=" << feature_.size() << "\n";
-            assert(0);
+            throw std::runtime_error(Formatter() << "feature_recorder::write : feature_.size()=" << feature_.size());
         }
         if (context_.size() > def.max_context_size) {
-            std::cerr << "feature_recorder::write : context_.size()=" << context_.size() << "\n";
-            assert(0);
+            throw std::runtime_error(Formatter() << "feature_recorder::write : context_.size()=" << context_.size());
         }
     }
 

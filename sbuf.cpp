@@ -6,10 +6,13 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 
+#include <algorithm>
 #include <cctype>
 #include <cstdio>
 #include <filesystem>
 #include <algorithm>
+#include <iostream>
+#include <ios>
 
 #include "sbuf.h"
 #include "dfxml_cpp/src/hash_t.h"
@@ -263,44 +266,47 @@ sbuf_t sbuf_t::slice(size_t off) const
 }
 
 
-/**
- *  Map a file; falls back to read if mmap is not available
- */
-std::string sbuf_t::map_file_delimiter(sbuf_t::U10001C);
-
 /* Map a file when we are given an open fd.
  * The fd is not closed when the file is unmapped.
  * If there is no mmap, just allocate space and read the file
+ *
+ * TODO: Add CreateFileMapping, MapViewOfFile,UnmapViewOfFile and CloseHandle
+ * as described in  https://imadiversion.co.uk/2016/12/08/c-17-and-memory-mapped-io/
  */
 
 sbuf_t* sbuf_t::map_file(const std::filesystem::path fname) {
     flags_t flags;
-    struct stat st;
-    int mfd = ::open(fname.c_str(), O_RDONLY);
-    if (fstat(mfd, &st)) {
-        close(mfd);
-        throw std::filesystem::filesystem_error("fstat", std::error_code(errno, std::generic_category()));
-    }
-
+    int mfd = NO_FD;
+    std::uintmax_t bytes = std::filesystem::file_size( fname );
 #ifdef HAVE_MMAP
-    uint8_t* mbuf = (uint8_t*)mmap(0, st.st_size, PROT_READ, MAP_FILE | MAP_SHARED, mfd, 0);
+    mfd = ::open(fname.c_str(), O_RDONLY);
+    uint8_t* mbuf = (uint8_t*)mmap(0, bytes, PROT_READ, MAP_FILE | MAP_SHARED, mfd, 0);
 #else
-    mmalloced = malloc(st.st_size);
-    if (mmalloced == nullptr) { /* malloc failed */
-        return 0;
+    uint8_t *mbuf = static_cast<uint8_t*>(malloc(bytes));
+    if (mbuf == nullptr) {
+        throw std::bad_alloc();
     }
-    uint8_t* mbuf = static_cast<uint8_t*>(malloced);
-    lseek(mfd, 0, SEEK_SET); // go to beginning of file
-    size_t r = (size_t)read(mfd, (void*)mbuf, st.st_size);
-    if (r != (size_t)st.st_size) {
-        free(malloced); /* read failed */
-        return 0;
+    std::fstream infile(fname, std::ios::in | std::ios::binary);
+    if (!infile.is_open()){
+        throw std::runtime_error(Formatter() << "Cannot open " << fname);
     }
-    close(mfd);
-    mfd = NO_FD;
+    infile.read( reinterpret_cast<char *>(mbuf), bytes);
+    if (infile.rdstate() & std::ios::eofbit) {
+        free(mbuf); /* read failed */
+        throw std::runtime_error(Formatter() << "End of file: " << fname);
+    }
+    if (infile.rdstate() & std::ios::failbit) {
+        free(mbuf); /* read failed */
+        throw std::runtime_error(Formatter() << "Fail file: " << fname);
+    }
+    if (infile.rdstate() & std::ios::badbit) {
+        free(mbuf); /* read failed */
+        throw std::runtime_error(Formatter() << "Bad file: " << fname);
+    }
+    infile.close();
 #endif
-    return new sbuf_t(pos0_t(fname.string() + sbuf_t::map_file_delimiter), nullptr,
-                      mbuf, st.st_size, st.st_size,
+    return new sbuf_t(pos0_t(fname.string() + pos0_t::map_file_delimiter), nullptr,
+                      mbuf, bytes, bytes,
                       mfd, flags);
 }
 
@@ -425,7 +431,6 @@ void sbuf_t::write(std::filesystem::path path) const {
     std::ofstream os;
     os.open(path, std::ios::out | std::ios::binary | std::ios::trunc);
     if (!os.is_open()) {
-        perror(path.c_str());
         throw std::runtime_error(Formatter() << "cannot open file for writing:" << path);
     }
     this->write(os);
@@ -547,11 +552,11 @@ ssize_t sbuf_t::findbin(const uint8_t* b2, size_t buflen, size_t start ) const
 std::ostream& operator<<(std::ostream& os, const sbuf_t& t) {
     os << "sbuf[pos0=" << t.pos0 << " " << "buf[0..8]=";
 
-    for (size_t i=0; i < std::min( 8UL, t.bufsize); i++){
+    for (size_t i=0; i < 8 && i < t.bufsize; i++){
         os << hexch(t[i]) << ' ';
     }
     os << " (" ;
-    for (size_t i=0; i < std::min( 8UL, t.bufsize); i++){
+    for (size_t i=0; i < 8 && i < t.bufsize; i++){
         if (isprint(t[i])) {
             os << t[i];
         }

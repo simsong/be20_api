@@ -70,13 +70,14 @@ const std::filesystem::path feature_recorder::fname_in_outdir(std::string suffix
             std::fstream f;
             f.open(fname);
             if (!f.is_open()) {
-                throw std::runtime_error(Formatter() << "cannot create: " << fname); // should be able to create the file
+                throw std::runtime_error(Formatter() << "cannot create: " << fname);
             }
             f.close();
             return fname;
         }
     }
-    throw std::runtime_error("it is unlikely that there are a million files, so this is probably a logic error.");
+    throw std::runtime_error("It is unlikely that there are a million files, "
+                             "so this is probably a logic error.");
 }
 
 /**

@@ -202,10 +202,6 @@ public:;
     // It turns out that slice is not free, so don't do it casually with an addition:
     sbuf_t operator+(size_t off) const = delete;
 
-    inline static const std::string U10001C = "\xf4\x80\x80\x9c"; // default delimeter character in bulk_extractor
-    static std::string map_file_delimiter;                        // character placed
-    static void set_map_file_delimiter(const std::string new_delim) { map_file_delimiter = new_delim; }
-
     /* Allocate an sbuf from a null-terminated string. Used exclusively for debugging and unit-tests.
      */
     explicit sbuf_t(const char* str)

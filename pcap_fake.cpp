@@ -16,7 +16,7 @@
 #include <cstdlib>
 #include <cstring>
 
-#ifdef WIN32
+#ifdef _WIN32
 #define SET_BINMODE(f) _setmode(_fileno(f), _O_BINARY)
 #else
 #define SET_BINMODE(f) /* ignore */
