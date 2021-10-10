@@ -48,3 +48,4 @@ TAGS
 *.tar.gz
 *.tmp
 be13_api-*-*/
+*.exe

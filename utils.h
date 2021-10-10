@@ -17,13 +17,15 @@
 #include <cstdio>
 #include <exception>
 #include <filesystem>
+#include <fstream>
 #include <iostream>
 #include <memory>
+#include <random>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <unistd.h>
 #include <vector>
-#include <sstream>
 
 #include "utf8.h"
 
@@ -112,7 +114,7 @@ inline std::wstring safe_utf8to16(std::string s) {
     try {
         utf8::utf8to16(s.begin(), s.end(), back_inserter(utf16_line));
     } catch (const utf8::invalid_utf8&) {
-        /* Exception thrown: bad UTF16 encoding */
+        /* Exception thrown: bad UTF8 encoding */
         utf16_line = L"";
     }
     return utf16_line;
@@ -163,6 +165,23 @@ inline bool validASCIIName(const std::string name) {
     return true;
 }
 
+// https://stackoverflow.com/questions/3379956/how-to-create-a-temporary-directory-in-c
+inline std::filesystem::path NamedTemporaryDirectory(unsigned long long max_tries = 1000) {
+    std::random_device dev;
+    std::mt19937 prng(dev());
+    std::uniform_int_distribution<uint64_t> rand(0);
+    std::filesystem::path path;
+    for (unsigned int i=0; i<max_tries; i++ ){
+        std::stringstream ss;
+        ss << "be_tmp" << std::hex << rand(prng);
+        path = std::filesystem::temp_directory_path() / ss.str();
+        if (std::filesystem::create_directory(path)) {
+            return path;
+        }
+    }
+    throw std::runtime_error("could not create NamedTemporaryDirectory");
+}
+
 inline bool directory_empty(std::filesystem::path path) {
     namespace fs = std::filesystem;
     if (fs::is_directory(path)) {
@@ -189,5 +208,25 @@ inline std::string subprocess_call(const char* cmd) {
     }
     return ss.str();
 }
+
+
+#ifndef HAVE_STRPTIME
+// https://stackoverflow.com/questions/321849/strptime-equivalent-on-windows
+inline char* strptime(const char* s, const char* f, struct tm* tm) {
+    // Isn't the C++ standard lib nice? std::get_time is defined such that its
+    // format parameters are the exact same as strptime. Of course, we have to
+    // create a string stream first, and imbue it with the current C locale, and
+    // we also have to make sure we return the right things if it fails, or
+    // if it succeeds, but this is still far simpler an implementation than any
+    // of the versions in any of the C standard libraries.
+    std::istringstream input(s);
+    input.imbue(std::locale(setlocale(LC_ALL, nullptr)));
+    input >> std::get_time(tm, f);
+    if (input.fail()) {
+        return nullptr;
+    }
+    return (char*)(s + input.tellg());
+}
+#endif
 
 #endif

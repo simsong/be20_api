@@ -406,38 +406,52 @@ void sbuf_t::hex_dump(std::ostream& os, uint64_t start, uint64_t len) const {
 }
 
 /* Write to a file descriptor */
-ssize_t sbuf_t::write(int fd_, size_t loc, size_t len) const {
+ssize_t sbuf_t::write(int fd_, size_t loc, size_t len) const
+{
     if (loc >= bufsize) return 0;                 // cannot write
     if (loc + len > bufsize) len = bufsize - loc; // clip at the end
     return ::write(fd_, buf + loc, len);
 }
 
 /* Write to a FILE */
-ssize_t sbuf_t::write(FILE* f, size_t loc, size_t len) const {
+ssize_t sbuf_t::write(FILE* f, size_t loc, size_t len) const
+{
     if (loc >= bufsize) return 0;                 // cannot write
     if (loc + len > bufsize) len = bufsize - loc; // clip at the end
     return ::fwrite(buf + loc, 1, len, f);
 }
 
 /* Write to an output stream */
-ssize_t sbuf_t::write(std::ostream& os) const {
-    os.write(reinterpret_cast<const char*>(buf), bufsize);
-    if (os.bad()) { return 0; }
-    return bufsize;
+ssize_t sbuf_t::write(std::ostream& os, size_t loc, size_t len) const
+{
+    if (loc >= bufsize) return 0;                 // cannot write
+    if (loc + len > bufsize) len = bufsize - loc; // clip at the end
+    os.write(reinterpret_cast<const char*>(buf+loc), len);
+    if (os.rdstate() & (std::ios::failbit||std::ios::badbit)){
+        throw std::runtime_error("sbuf_t::write");
+    }
+    return len;
+}
+
+ssize_t sbuf_t::write(std::ostream &os) const
+{
+    return write(os, 0, bufsize);
 }
 
 /* Write to path */
-void sbuf_t::write(std::filesystem::path path) const {
+ssize_t sbuf_t::write(std::filesystem::path path) const
+{
     std::ofstream os;
     os.open(path, std::ios::out | std::ios::binary | std::ios::trunc);
     if (!os.is_open()) {
         throw std::runtime_error(Formatter() << "cannot open file for writing:" << path);
     }
-    this->write(os);
+    this->write(os, 0, bufsize);
     os.close();
     if (os.bad()) {
         throw feature_recorder::DiskWriteError(Formatter() << "error writing file " << path);
     }
+    return bufsize;
 }
 
 /* Return a substring */

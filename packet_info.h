@@ -19,6 +19,11 @@
 /****************************************************************
  *** pcap.h --- If we don't have it, fake it. ---
  ***/
+#ifdef _WIN32
+#include <winsock2.h>
+#include <windows.h>
+#endif
+
 #ifdef HAVE_NETINET_IF_ETHER_H
 #include <netinet/if_ether.h>
 #endif
@@ -216,22 +221,22 @@ public:
      * @param d - start of MAC packet
      * @param d2 - start of IP data
      */
-    packet_info(const int dlt, const struct pcap_pkthdr* h, const u_char* d, const struct timeval& ts_,
+    packet_info(const int dlt, const struct pcap_pkthdr* h, const uint8_t* d, const struct timeval& ts_,
                 const uint8_t* d2, size_t dl2)
         : pcap_dlt(dlt), pcap_hdr(h), pcap_data(d), ts(ts_), ip_data(d2), ip_datalen(dl2) {}
-    packet_info(const int dlt, const struct pcap_pkthdr* h, const u_char* d)
+    packet_info(const int dlt, const struct pcap_pkthdr* h, const uint8_t* d)
         : pcap_dlt(dlt), pcap_hdr(h), pcap_data(d), ts(h->ts), ip_data(d), ip_datalen(h->caplen) {}
 
     const int pcap_dlt;                 // data link type; needed by libpcap, not provided
     const struct pcap_pkthdr* pcap_hdr; // provided by libpcap
-    const u_char* pcap_data;            // provided by libpcap; where the MAC layer begins
+    const uint8_t* pcap_data;            // provided by libpcap; where the MAC layer begins
     const struct timeval& ts;           // when packet received; possibly modified before packet_info created
     const uint8_t* const ip_data;       // pointer to where ip data begins
     const size_t ip_datalen;            // length of ip data
 
-    static u_short nshort(const u_char* buf, size_t pos); // return a network byte order short at offset pos
+    static uint16_t nshort(const uint8_t* buf, size_t pos); // return a network byte order short at offset pos
     int ip_version() const;                               // returns 4, 6 or 0
-    u_short ether_type() const;                           // returns 0 if not IEEE802, otherwise returns ether_type
+    uint16_t ether_type() const;                           // returns 0 if not IEEE802, otherwise returns ether_type
     int vlan() const;                                     // returns NO_VLAN if not IEEE802 or not VLAN, othererwise VID
     const uint8_t* get_ether_dhost() const;               // returns a pointer to ether dhost if ether packet
     const uint8_t* get_ether_shost() const;               // returns a pointer to ether shost if ether packet
@@ -259,7 +264,7 @@ public:
 };
 
 #ifdef DLT_IEEE802
-inline u_short packet_info::ether_type() const {
+inline uint16_t packet_info::ether_type() const {
 
     if (pcap_dlt == DLT_IEEE802 || pcap_dlt == DLT_EN10MB) {
         const struct ether_header* eth_header = (struct ether_header*)pcap_data;
@@ -313,7 +318,7 @@ inline u_short packet_info::ether_type() const {
 #define ETHERTYPE_LOOPBACK 0x9000 /* used to test interfaces */
 #endif
 
-inline u_short packet_info::nshort(const u_char* buf, size_t pos) { return (buf[pos] << 8) | (buf[pos + 1]); }
+inline uint16_t packet_info::nshort(const uint8_t* buf, size_t pos) { return (buf[pos] << 8) | (buf[pos + 1]); }
 
 inline int packet_info::vlan() const {
     if (ether_type() == ETHERTYPE_VLAN) { return nshort(pcap_data, sizeof(struct ether_header)); }

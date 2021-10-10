@@ -67,8 +67,7 @@ const std::filesystem::path feature_recorder::fname_in_outdir(std::string suffix
     for (int i = 0; i < 1000000; i++) {
         std::filesystem::path fname = base_path.string() + (i > 0 ? "_" + std::to_string(i) : "") + ".txt";
         if (!std::filesystem::exists( fname )){
-            std::fstream f;
-            f.open(fname);
+            std::ofstream f(fname, std::fstream::out | std::fstream::trunc);
             if (!f.is_open()) {
                 throw std::runtime_error(Formatter() << "cannot create: " << fname);
             }

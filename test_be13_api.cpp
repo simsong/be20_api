@@ -438,7 +438,7 @@ TEST_CASE("fname", "[feature_recorder]") {
     feature_recorder_set::flags_t flags;
     flags.no_alert = true;
     scanner_config sc;
-    sc.outdir = std::filesystem::temp_directory_path();
+    sc.outdir = NamedTemporaryDirectory;
     feature_recorder_set frs(flags, sc);
     frs.create_feature_recorder("test");
     feature_recorder& fr = frs.named_feature_recorder("test");
@@ -1175,10 +1175,9 @@ TEST_CASE("unicode_detection2", "[unicode]") {
 
 
 TEST_CASE("directory_support", "[utilities]") {
-    namespace fs = std::filesystem;
-    auto tmpdir = std::filesystem::temp_directory_path();
-    REQUIRE(fs::is_directory("no such directory") == false);
-    REQUIRE(fs::is_directory(tmpdir) == true);
+    auto tmpdir = NamedTemporaryDirectory;
+    REQUIRE(std::filesystem::is_directory("no such directory") == false);
+    REQUIRE(std::filesystem::is_directory(tmpdir) == true);
     REQUIRE(directory_empty(tmpdir) == true);
     std::filesystem::path foo_txt = tmpdir / "foo.txt";
     std::ofstream os;
