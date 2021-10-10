@@ -140,8 +140,6 @@ struct scanner_params {
 
     };
 
-
-
     const int SCANNER_PARAMS_VERSION{20210531};
     int scanner_params_version{SCANNER_PARAMS_VERSION};
     void check_version() { assert(this->scanner_params_version == SCANNER_PARAMS_VERSION); }
@@ -189,7 +187,7 @@ struct scanner_params {
 
     virtual void recurse(sbuf_t* sbuf) const; // recursive call by scanner. Calls either scanner_set or path_printer.
     virtual bool check_previously_processed(const sbuf_t &sbuf) const;
-    //std::stringstream* sxml{};          //  on scanning and shutdown: CDATA added to XML stream if provided.; can't we get from scanner_set?
+    //std::stringstream* sxml{};    //  on scanning and shutdown: CDATA added to XML stream if provided.; can't we get from scanner_set?
     //const uint32_t depth{0};      //  how far down are we? / only valid in SCAN_PHASE; can be inferred from sbuf path?
     // convenience functions
     std::filesystem::path const get_input_fname() const {return sc.input_fname;}; // not sure why this is needed?

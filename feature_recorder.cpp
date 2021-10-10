@@ -5,8 +5,10 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/time.h>
-#include <sys/times.h>
 #include <unistd.h>
+
+// not present under mingw:
+//#include <sys/times.h>
 
 #include <ctime>
 #include <cstdarg>
@@ -52,23 +54,29 @@ const std::filesystem::path feature_recorder::fname_in_outdir(std::string suffix
         throw std::runtime_error("fname_in_outdir called, but outdir==NO_OUTDIR");
     }
 
+    const std::lock_guard<std::mutex> lock(Mcarve); // grab the carving mutex
+
     std::filesystem::path base_path = fs.get_outdir() / this->name;
     if (suffix.size() > 0) { base_path = base_path.string() + "_" + suffix; }
     if (count == NO_COUNT) return base_path.string() + ".txt";
     if (count != NEXT_COUNT) { return base_path.string() + "_" + std::to_string(count) + ".txt"; }
+
     /* Probe for a file that we can create. When we create it, return the name.
-     * Yes, this created a TOCTOU error. We should return the open file descriptor.
+     * This does not create a TOCTOU error because we have the carving mutex
      */
     for (int i = 0; i < 1000000; i++) {
         std::filesystem::path fname = base_path.string() + (i > 0 ? "_" + std::to_string(i) : "") + ".txt";
-        int fd = open(fname.c_str(), O_WRONLY | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR);
-        if (fd >= 0) {
-            /* Created the file. close it. and return.*/
-            close(fd);
+        if (!std::filesystem::exists( fname )){
+            std::ofstream f(fname, std::fstream::out | std::fstream::trunc);
+            if (!f.is_open()) {
+                throw std::runtime_error(Formatter() << "cannot create: " << fname);
+            }
+            f.close();
             return fname;
         }
     }
-    throw std::runtime_error("it is unlikely that there are a million files, so this is probably a logic error.");
+    throw std::runtime_error("It is unlikely that there are a million files, "
+                             "so this is probably a logic error.");
 }
 
 /**
@@ -397,8 +405,7 @@ std::string feature_recorder::carve(const sbuf_t& header, const sbuf_t& data, st
         std::ofstream os;
         os.open(carved_absolute_path, std::ios::out | std::ios::binary | std::ios::trunc);
         if (!os.is_open()) {
-            perror(carved_absolute_path.c_str());
-            throw feature_recorder::DiskWriteError(Formatter() << "cannot open file for writing:" << carved_absolute_path);
+            throw feature_recorder::DiskWriteError(Formatter() << "cannot open file for writing:" << carved_absolute_path << ":" << std::strerror(errno));
         }
         header.write(os);
         data.write(os);
@@ -408,11 +415,13 @@ std::string feature_recorder::carve(const sbuf_t& header, const sbuf_t& data, st
         }
 
         /* Set timestamp if necessary. Note that we do not use std::filesystem::last_write_time()
-         * as there seems to be no portable way to use it.
+         * as there seems to be no portable way to use it under C++17.
          */
         if (mtime > 0) {
+#ifdef HAVE_UTIMES
             const struct timeval times[2] = {{mtime, 0}, {mtime, 0}};
             utimes(carved_absolute_path.c_str(), times);
+#endif
         }
     }
     return carved_relative_path;

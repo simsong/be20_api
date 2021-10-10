@@ -10,6 +10,8 @@
 #include <sstream>
 #include <iomanip>
 
+#include "utils.h"
+
 /**
  * threadsafe timer.
  */

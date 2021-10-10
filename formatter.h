@@ -1,5 +1,8 @@
 // https://stackoverflow.com/questions/12261915/how-to-throw-stdexceptions-with-variable-messages
 
+#ifndef FORMATTER_H
+#define FORMATTER_H
+
 #include <sstream>
 #include <stdexcept>
 
@@ -24,3 +27,5 @@ private:
     Formatter(const Formatter&);
     Formatter& operator=(Formatter&);
 };
+
+#endif

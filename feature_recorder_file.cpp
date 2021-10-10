@@ -8,12 +8,14 @@
 
 #include <cstdarg>
 #include <regex>
+#include <exception>
 
 #include "feature_recorder_file.h"
 #include "feature_recorder_set.h"
 #include "unicode_escape.h"
 #include "utils.h"
 #include "word_and_context_list.h"
+#include "formatter.h"
 
 #ifndef MAXPATHLEN
 #define MAXPATHLEN 65536
@@ -120,9 +122,11 @@ feature_recorder_file::feature_recorder_file(class feature_recorder_set& fs_, co
     /* Just open the stream for output */
     ios.open(fname.c_str(), std::ios_base::out);
     if (!ios.is_open()) {
-        std::cerr << "*** feature_recorder_file::open Cannot open feature file for writing " << fname << ":"
-                  << strerror(errno) << std::endl;
-        throw std::invalid_argument("cannot open feature file for writing");
+        throw std::invalid_argument(Formatter()
+                                    << "*** feature_recorder_file::open Cannot open feature file for writing "
+                                    << fname << ":"
+                                    << strerror(errno));
+
     }
 }
 
@@ -189,10 +193,12 @@ void feature_recorder_file::write0(const std::string& str)
 {
     feature_recorder::write0(str);      // call super class
     if (fs.flags.pedantic && (utf8::find_invalid(str.begin(), str.end()) != str.end())) {
-        std::cerr << "******************************************\n";
-        std::cerr << "feature recorder: " << name << std::endl;
-        std::cerr << "invalid utf-8 in write: " << str << std::endl;
-        throw std::runtime_error("Invalid utf-8 in write");
+        throw std::runtime_error(
+            Formatter()
+            << "******************************************\n"
+            << "feature recorder: " << name
+            << "invalid utf-8 in write: " << str
+            << "Invalid utf-8 in write");
     }
 
     /* this is where the writing happens. lock the output and write */
@@ -320,7 +326,7 @@ void feature_recorder_file::histogram_write_from_file(AtomicUnicodeHistogram& h)
 
 
     /* This is a file based histogram. We will be reading from one file and writing to another */
-    std::string ifname = fname_in_outdir("", NO_COUNT);  // source of features
+    std::filesystem::path ifname = fname_in_outdir("", NO_COUNT);  // source of features
     std::ifstream f(ifname.c_str());
     if(!f.is_open()){
         std::cerr << "Cannot open histogram input file: " << ifname << std::endl;
@@ -342,7 +348,8 @@ void feature_recorder_file::histogram_write_from_file(AtomicUnicodeHistogram& h)
                     h.add0( feature, context, found_utf16 );
                 }
                 catch (const std::bad_alloc &e) {
-                    std::cerr << "MEMORY OVERFLOW GENERATING HISTOGRAM  " << name << ". Dumping Histogram " << histogram_counter << std::endl;
+                    std::cerr << "MEMORY OVERFLOW GENERATING HISTOGRAM  "
+                              << name << ". Dumping Histogram " << histogram_counter << std::endl;
                     histogram_write_from_memory(h);
                 }
             }
@@ -374,7 +381,8 @@ void feature_recorder_file::histogram_write(AtomicUnicodeHistogram& h)
 void feature_recorder_file::histograms_incremental_add_feature_context(const std::string& feature, const std::string& context)
 {
     if (debug_histograms) {
-        std::cerr << "feature_recorder_file::histograms_incremental_add_feature_context feature=" << feature << " context=" << context << std::endl;
+        std::cerr << "feature_recorder_file::histograms_incremental_add_feature_context feature="
+                  << feature << " context=" << context << std::endl;
     }
     for (auto &h : histograms) {
         h->add_feature_context(feature, context); // add the original feature

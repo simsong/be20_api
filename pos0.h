@@ -7,6 +7,7 @@
 #include <cctype>
 #include <sstream>
 #include <string>
+#include <filesystem>
 
 /****************************************************************
  *** pos0_t
@@ -41,11 +42,16 @@ class pos0_t {
     mutable int depth_ {-1};               // if -1, it needs to be calculated. 0 is top.
 
 public:
+    inline static const std::string U10001C = "\xf4\x80\x80\x9c"; // default delimeter character in bulk_extractor
+    static std::string map_file_delimiter;                        // character placed
+    static void set_map_file_delimiter(const std::string new_delim) { map_file_delimiter = new_delim; }
     const std::string path{}; /* forensic path of decoders*/
     const uint64_t offset{0}; /* location of buf[0] */
 
     explicit pos0_t() {}                                                 // the beginning of a nothing
-    pos0_t(std::string s, uint64_t o = 0) : path(s), offset(o) {}        // s can be a full path
+    explicit pos0_t(std::string s, uint64_t o = 0) : path(s), offset(o) {}        // s can be a full path
+    explicit pos0_t(std::filesystem::path fn, std::string s, uint64_t o = 0) :
+        path(fn.string() + pos0_t::map_file_delimiter + s), offset(o) {}
     pos0_t(const pos0_t& obj) : path(obj.path), offset(obj.offset) {}    // copy operator
 
     /* Every new layer is indicated by a "-" followed by a letter.

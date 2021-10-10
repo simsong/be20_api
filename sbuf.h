@@ -202,10 +202,6 @@ public:;
     // It turns out that slice is not free, so don't do it casually with an addition:
     sbuf_t operator+(size_t off) const = delete;
 
-    inline static const std::string U10001C = "\xf4\x80\x80\x9c"; // default delimeter character in bulk_extractor
-    static std::string map_file_delimiter;                        // character placed
-    static void set_map_file_delimiter(const std::string new_delim) { map_file_delimiter = new_delim; }
-
     /* Allocate an sbuf from a null-terminated string. Used exclusively for debugging and unit-tests.
      */
     explicit sbuf_t(const char* str)
@@ -512,10 +508,13 @@ public:;
     void raw_dump(int fd, uint64_t start, uint64_t len) const; // writes to a raw file descriptor
     void hex_dump(std::ostream& os, uint64_t start, uint64_t len) const;
     void hex_dump(std::ostream& os) const;                /* dump all */
+
+    // All of these throw an error if we can't write
     ssize_t write(int fd, size_t loc, size_t len) const;  /* write to a file descriptor, returns # bytes written */
     ssize_t write(FILE* f, size_t loc, size_t len) const; /* write to a file descriptor, returns # bytes written */
-    ssize_t write(std::ostream& os) const;                // write to an os
-    void write(std::filesystem::path path) const;         // throws runtime_error if it can't write
+    ssize_t write(std::ostream &os) const;                // write the entire sbuf
+    ssize_t write(std::ostream &os, size_t loc, size_t len) const;                // write to an ostream
+    ssize_t write(std::filesystem::path path) const;
     /*
      * Returns self or the highest parent of self, whichever is higher.
      * Useful for finding who really owns the buf.

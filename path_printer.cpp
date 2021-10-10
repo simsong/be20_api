@@ -4,6 +4,7 @@
 #include "scanner_params.h"
 #include "scanner_set.h"
 #include "utils.h"
+#include "formatter.h"
 
 std::string PrintOptions::get(std::string key, std::string default_) const
 {
@@ -146,12 +147,12 @@ void path_printer::process_sp(const scanner_params &sp) const
     }
     /* If we are in an offset block, process recursively with the offset */
     if (isdigit(prefix[0])){
-	uint64_t offset = stoi64(prefix);
+	size_t offset = stoi64(prefix);
 	if ( offset > sp.sbuf->bufsize ){
-            std::cerr << "Error: " << new_path << " only has " << sp.sbuf->bufsize << " bytes; can't offset to " << offset << "\n";
-	    return;
+            throw std::runtime_error(Formatter() << "Error: " << new_path << " only has "
+                                     << sp.sbuf->bufsize << " bytes; can't offset to " << offset);
 	}
-        sbuf_t *child = sp.sbuf->new_slice(new_path, offset, sp.sbuf->bufsize - offset);
+        sbuf_t *child = sp.sbuf->new_slice(pos0_t(new_path), offset, (size_t)(sp.sbuf->bufsize - offset));
         try {
             scanner_params sp2(sp, child, new_path);
             process_sp( sp2 );
