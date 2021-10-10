@@ -427,7 +427,7 @@ ssize_t sbuf_t::write(std::ostream& os, size_t loc, size_t len) const
     if (loc >= bufsize) return 0;                 // cannot write
     if (loc + len > bufsize) len = bufsize - loc; // clip at the end
     os.write(reinterpret_cast<const char*>(buf+loc), len);
-    if (os.rdstate() & (std::ios::failbit||std::ios::badbit)){
+    if (os.rdstate() & (std::ios::failbit|std::ios::badbit)){
         throw std::runtime_error("sbuf_t::write");
     }
     return len;
