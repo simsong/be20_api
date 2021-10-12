@@ -34,6 +34,10 @@ bool ends_with(const std::string& buf, const std::string& with);
 bool ends_with(const std::wstring& buf, const std::wstring& with);
 std::vector<std::string>& split(const std::string& s, char delim, std::vector<std::string>& elems);
 std::vector<std::string> split(const std::string& s, char delim);
+
+/* Read all of the lines of a file and return them as a vector */
+std::vector<std::string> getLines(const std::filesystem::path path);
+
 inline void truncate_at(std::string& line, char ch) {
     size_t pos = line.find(ch);
     if (pos != std::string::npos) line.resize(pos);
