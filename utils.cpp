@@ -89,6 +89,30 @@ std::vector<std::string> split(const std::string& s, char delim) {
     return split(s, delim, elems);
 }
 
+/* Read all of the lines of a file and return them as a vector */
+std::vector<std::string> getLines(const std::filesystem::path path)
+{
+    std::vector<std::string> lines;
+    std::string line;
+    std::ifstream inFile;
+    inFile.open( path );
+    if (!inFile.is_open()) {
+        std::cerr << "getLines: Cannot open file: " << path << "\n";
+        std::string cmd("ls -l " + path.parent_path().string());
+        std::cerr << cmd << "\n";
+        if (system( cmd.c_str())) {
+            std::cerr << "error\n";
+        }
+        throw std::runtime_error("test_be:getLines");
+    }
+    while (std::getline(inFile, line)){
+        if (line.size()>0){
+            lines.push_back(line);
+        }
+    }
+    return lines;
+}
+
 uint64_t scaled_stoi64(const std::string &str)
 {
     std::stringstream ss(str);

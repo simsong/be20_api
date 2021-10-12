@@ -119,19 +119,6 @@ const sbuf_t* hello16_sbuf() {
     return sbuf_t::sbuf_new(p0, hello16, sizeof(hello16), sizeof(hello16));
 }
 
-/* Read all of the lines of a file and return them as a vector */
-std::vector<std::string> getLines(const std::string& filename) {
-    std::vector<std::string> lines;
-    std::string line;
-    std::ifstream inFile;
-    inFile.open(filename.c_str());
-    if (!inFile.is_open()) { throw std::runtime_error("getLines: Cannot open file: " + filename); }
-    while (std::getline(inFile, line)) {
-        if (line.size() > 0) { lines.push_back(line); }
-    }
-    return lines;
-}
-
 /*************************
  *** UNIT TESTS FOLLOW ***
  *************************/
