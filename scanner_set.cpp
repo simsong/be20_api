@@ -196,15 +196,17 @@ std::map<std::string, std::string> scanner_set::get_realtime_stats() const
         ret[BYTES_QUEUED_STR]        = std::to_string(bytes_in_queue);
     }
     int counter = 0;
-    uint64_t max_offset = 0;
     for (const auto &it : thread_status.values()) {
         std::stringstream ss;
         ss << "thread-" << ++counter;
         std::string status = std::string(*it);
-        uint64_t status_offset = static_cast<uint64_t>(strtoll(status.c_str(), nullptr, 10));
-        ret[ ss.str() ] = status;
-        if (status_offset > max_offset) {
-            max_offset = status_offset;
+        if (status.size() > 0 && isdigit(status[0])) {
+
+            uint64_t status_offset = static_cast<uint64_t>(strtoll(status.c_str(), nullptr, 10));
+            ret[ ss.str() ] = status;
+            if (status_offset > max_offset) {
+                max_offset = status_offset;
+            }
         }
     }
     ret[MAX_OFFSET] = std::to_string(max_offset);
@@ -654,6 +656,7 @@ void scanner_set::process_sbuf(class sbuf_t* sbufp) {
     bool seen_before = previously_processed_count(sbuf) > 0;
     if (seen_before) {
         dup_bytes_encountered += sbuf.bufsize;
+        std::cerr << "seen_before dup_bytes = " << sbuf.bufsize << std::endl;
     }
     auto pool_now = (void *)pool;
     if(pool_now != pool_hold){
