@@ -656,7 +656,6 @@ void scanner_set::process_sbuf(class sbuf_t* sbufp) {
     bool seen_before = previously_processed_count(sbuf) > 0;
     if (seen_before) {
         dup_bytes_encountered += sbuf.bufsize;
-        std::cerr << "seen_before dup_bytes = " << sbuf.bufsize << std::endl;
     }
     auto pool_now = (void *)pool;
     if(pool_now != pool_hold){
