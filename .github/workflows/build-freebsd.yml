@@ -29,19 +29,17 @@ jobs:
           path: check-SHA
           key: check-SHA-${{ github.sha }}
 
-      - name: Some subsequent steps
+      - name: Some subsequent FreeBSD steps
         if: steps.check_sha.outputs.cache-hit != 'true'
-        run: echo "Execute the subsequent steps because the SHA changed"
+        run: |
+          echo "Execute the subsequent steps because the SHA changed"
+          sudo apt-get install virtualbox
 
       - name: Checkout
         uses: actions/checkout@v2
         with:
           submodules: recursive
           
-      - name: Get Ready for FreeBSD
-        run: |
-          sudo apt-get install virtualbox
-
       - name: make check on FreeBSD
         uses: vmactions/freebsd-vm@v0.1.5
         with:
