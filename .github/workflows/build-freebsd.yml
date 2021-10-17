@@ -37,6 +37,10 @@ jobs:
         uses: actions/checkout@v2
         with:
           submodules: recursive
+          
+      - name: Get Ready for FreeBSD
+        run: |
+          sudo apt-get install virtualbox
 
       - name: make check on FreeBSD
         uses: vmactions/freebsd-vm@v0.1.5
