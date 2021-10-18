@@ -78,6 +78,10 @@ scanner_set::scanner_set(scanner_config& sc_, const feature_recorder_set::flags_
 
 scanner_set::~scanner_set()
 {
+    if (pool) {
+        delete pool;
+        pool = nullptr;
+    }
 }
 
 void scanner_set::set_dfxml_writer(class dfxml_writer *writer_)
