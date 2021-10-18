@@ -29,29 +29,31 @@ jobs:
           path: check-SHA
           key: check-SHA-${{ github.sha }}
 
-      - name: Some subsequent steps
+      - name: Some subsequent FreeBSD steps
         if: steps.check_sha.outputs.cache-hit != 'true'
-        run: echo "Execute the subsequent steps because the SHA changed"
+        run: |
+          echo "Execute the subsequent steps because the SHA changed"
+          sudo apt-get install virtualbox
 
       - name: Checkout
         uses: actions/checkout@v2
         with:
           submodules: recursive
-
+          
       - name: make check on FreeBSD
-        uses: vmactions/freebsd-vm@v0.1.4
+        uses: vmactions/freebsd-vm@v0.1.5
         with:
           usesh: true
-          prepare: pkg install -y libtool libltdl automake openssl-devel pkgconf bash wget texinfo
+          prepare: pkg install -y curl libtool libltdl automake openssl-devel pkgconf bash wget texinfo
           mem: 2048
           run: |
+            pwd
+            ls -lah
+            whoami
+            env
+            freebsd-version
             wget https://ftpmirror.gnu.org/autoconf/autoconf-2.71.tar.gz
             tar xfz autoconf-2.71.tar.gz && cd autoconf-2.71 && ./configure && make && make install
-            echo ==================================================
-            echo "ls -l:"
-            ls -l
-            echo pwd
-            pwd
             echo ==================================================
             bash bootstrap.sh
             ./configure
