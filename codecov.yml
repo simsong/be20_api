@@ -1,4 +1,11 @@
+coverage:
+  range: 40..60
+  round: nearest
+  precision: 2
+
 ignore:
   - "catch.hpp"
+  - "utf8.h"
   - "utf8/*"
   - "tests/regex_demo.cpp"
+  - "test_be13_api.cpp"

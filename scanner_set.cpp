@@ -78,6 +78,10 @@ scanner_set::scanner_set(scanner_config& sc_, const feature_recorder_set::flags_
 
 scanner_set::~scanner_set()
 {
+    if (pool) {
+        delete pool;
+        pool = nullptr;
+    }
 }
 
 void scanner_set::set_dfxml_writer(class dfxml_writer *writer_)
@@ -196,15 +200,17 @@ std::map<std::string, std::string> scanner_set::get_realtime_stats() const
         ret[BYTES_QUEUED_STR]        = std::to_string(bytes_in_queue);
     }
     int counter = 0;
-    uint64_t max_offset = 0;
     for (const auto &it : thread_status.values()) {
         std::stringstream ss;
         ss << "thread-" << ++counter;
         std::string status = std::string(*it);
-        uint64_t status_offset = static_cast<uint64_t>(strtoll(status.c_str(), nullptr, 10));
-        ret[ ss.str() ] = status;
-        if (status_offset > max_offset) {
-            max_offset = status_offset;
+        if (status.size() > 0 && isdigit(status[0])) {
+
+            uint64_t status_offset = static_cast<uint64_t>(strtoll(status.c_str(), nullptr, 10));
+            ret[ ss.str() ] = status;
+            if (status_offset > max_offset) {
+                max_offset = status_offset;
+            }
         }
     }
     ret[MAX_OFFSET] = std::to_string(max_offset);

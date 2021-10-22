@@ -153,15 +153,13 @@ public:;
     static const inline std::string SBUFS_REMAINING_STR {"sbufs_remaining"};
     static const inline std::string MAX_OFFSET {"max_offset"};
 
-
-
-
     int get_thread_count() { return (pool!=nullptr) ? pool->get_thread_count() : 1; };
     std::atomic<int>      depth0_sbufs_in_queue {0};
     std::atomic<uint64_t> depth0_bytes_in_queue {0};
     std::atomic<int>      sbufs_in_queue {0};
     std::atomic<uint64_t> bytes_in_queue {0};
     std::atomic<int>      disk_write_errors {0};
+    mutable std::atomic<uint64_t> max_offset {0}; // largest offset read by any of the threads.
 
     // thread status and notification
     atomic_map<std::thread::id, std::string> thread_status {}; // the status of each thread::id
