@@ -7,6 +7,7 @@
 /* needed loading shared libraries and getting free memory*/
 #include "config.h"
 
+#include <cstdio>
 #include <algorithm>
 #include <cassert>
 #include <cstdlib>
@@ -193,7 +194,7 @@ uint64_t scanner_set::get_available_memory()
 float scanner_set::get_cpu_percent()
 {
     char buf[100];
-    sprintf(buf,"ps -O %%cpu %d",getpid())
+    sprintf(buf,"ps -O %%cpu %d",getpid());
     FILE *f = popen(buf,"r");
     fgets(buf,sizeof(buf),f);           /* read the first line */
     fgets(buf,sizeof(buf),f);           /* read the second line */
