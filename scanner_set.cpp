@@ -73,7 +73,7 @@ scanner_set::scanner_set(scanner_config& sc_, const feature_recorder_set::flags_
     if (std::getenv("DEBUG_SCANNER_SET_INFO")) debug_flags.debug_info = true;
     if (std::getenv("DEBUG_SCANNER_SET_EXIT_EARLY")) debug_flags.debug_exit_early = true;
     if (std::getenv("DEBUG_SCANNER_SET_REGISTER")) debug_flags.debug_register = true;
-    if (std::getenv(DEBUG_BENCHMARK_CPU)) debug_flags.debug_benchmark_cpu = true;
+    if (std::getenv(DEBUG_BENCHMARK_CPU.c_str())) debug_flags.debug_benchmark_cpu = true;
     const char *dsi = std::getenv("DEBUG_SCANNERS_IGNORE");
     if (dsi!=nullptr) debug_flags.debug_scanners_ignore=dsi;
 }
@@ -893,7 +893,7 @@ void scanner_set::delete_sbuf(sbuf_t *sbufp)
            << " pos0='" << dfxml_writer::xmlescape(sbufp->pos0.str()) << "' ";
 
         if (debug_flags.debug_benchmark_cpu) {
-            << " cpu_percent='" << get_cpu_percent() << "' ";
+            ss << " cpu_percent='" << get_cpu_percent() << "' ";
         }
 
         ss << aftimer::now_str("t='","'");
