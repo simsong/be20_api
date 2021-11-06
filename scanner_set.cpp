@@ -72,6 +72,7 @@ scanner_set::scanner_set(scanner_config& sc_, const feature_recorder_set::flags_
     if (std::getenv("DEBUG_SCANNER_SET_INFO")) debug_flags.debug_info = true;
     if (std::getenv("DEBUG_SCANNER_SET_EXIT_EARLY")) debug_flags.debug_exit_early = true;
     if (std::getenv("DEBUG_SCANNER_SET_REGISTER")) debug_flags.debug_register = true;
+    if (std::getenv(DEBUG_BENCHMARK_CPU)) debug_flags.debug_benchmark_cpu = true;
     const char *dsi = std::getenv("DEBUG_SCANNERS_IGNORE");
     if (dsi!=nullptr) debug_flags.debug_scanners_ignore=dsi;
 }
@@ -183,6 +184,26 @@ uint64_t scanner_set::get_available_memory()
     return stat->free_count * pageSize;
 #endif
     return 0;                           // can't figure it out
+}
+
+/**
+ * return the CPU percentage (0-100) used by the current process. Use 'ps -O %cpu <pid> if system call not available.
+ * The popen implementation is not meant to be efficient.
+ */
+float scanner_set::get_cpu_percent()
+{
+    char buf[100];
+    sprintf(buf,"ps -O %%cpu %d",getpid())
+    FILE *f = popen(buf,"r");
+    fgets(buf,sizeof(buf),f);           /* read the first line */
+    fgets(buf,sizeof(buf),f);           /* read the second line */
+    buf[sizeof(buf)-1] = 0;             // in case it needs termination
+    char *loc = index(buf,' ');         /* find the space */
+    if (loc) {
+        return atof(loc);
+    } else {
+        return 0.0;
+    }
 }
 
 /*
@@ -827,6 +848,7 @@ void scanner_set::record_work_start(const std::string &pos0, size_t pagesize, si
         std::stringstream ss;
         ss << "threadid='"  << std::this_thread::get_id() << "'"
            << " pos0='"     << dfxml_writer::xmlescape(pos0) << "'";
+
         if (pagesize){
             ss << " pagesize='" << pagesize << "'";
         }
@@ -867,8 +889,13 @@ void scanner_set::delete_sbuf(sbuf_t *sbufp)
     if (sbufp->depth()==0 && writer) {
         std::stringstream ss;
         ss << "threadid='" << std::this_thread::get_id() << "'"
-           << " pos0='" << dfxml_writer::xmlescape(sbufp->pos0.str()) << "' "
-           << aftimer::now_str("t='","'");
+           << " pos0='" << dfxml_writer::xmlescape(sbufp->pos0.str()) << "' ";
+
+        if (debug_flags.debug_benchmark_cpu) {
+            << " cpu_percent='" << get_cpu_percent() << "' ";
+        }
+
+        ss << aftimer::now_str("t='","'");
         writer->xmlout("debug:work_end", "", ss.str(), true);
     }
     delete sbufp;
