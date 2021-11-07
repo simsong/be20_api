@@ -125,6 +125,7 @@ public:
         bool debug_exit_early{false};      // just print the size of the volume and exit
         bool debug_allocate_512MiB{false}; // allocate 512MiB but don't set any flags
         bool debug_register{false};        // print when scanners register
+        bool debug_benchmark_cpu {false};  // capture CPU usage
         std::string debug_scanners_ignore{}; // ignore these scanners, separated by :
     } debug_flags{};
 
@@ -138,9 +139,11 @@ public:
 private:
     static const inline size_t SAME_THREAD_SBUF_SIZE = 8192; // sbufs smaller than this run in the same thread.
     class thread_pool *pool {nullptr}; // nullptr means we are not threading
+    static inline std::string DEBUG_BENCHMARK_CPU {"DEBUG_BENCHMARK_CPU"};
 
 public:;
-    static uint64_t get_available_memory();
+    static uint64_t get_available_memory(); // in bytes
+    static float    get_cpu_percent();      // of current process
 
     static const inline std::string THREAD_COUNT_STR {"thread_count"};
     static const inline std::string TASKS_QUEUED_STR {"tasks_queued"};
