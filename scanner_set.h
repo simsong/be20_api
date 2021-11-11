@@ -4,7 +4,6 @@
 #define SCANNER_SET_H
 
 #include <map>
-#include <mutex>
 #include <set>
 #include <sstream>
 #include <string>
@@ -12,11 +11,13 @@
 #include <memory>
 
 #include "utils.h"
-#include "thread-pool/thread_pool.hpp"
 #include "atomic_map.h"
 #include "sbuf.h"
 #include "scanner_config.h"
 #include "scanner_params.h"
+
+#include "be_threadpool.h"
+
 
 /**
  * \file
@@ -125,6 +126,7 @@ public:
         bool debug_exit_early{false};      // just print the size of the volume and exit
         bool debug_allocate_512MiB{false}; // allocate 512MiB but don't set any flags
         bool debug_register{false};        // print when scanners register
+        bool debug_benchmark_cpu {false};  // capture CPU usage
         std::string debug_scanners_ignore{}; // ignore these scanners, separated by :
     } debug_flags{};
 
@@ -137,11 +139,12 @@ public:
     // Multi-threaded support
 private:
     static const inline size_t SAME_THREAD_SBUF_SIZE = 8192; // sbufs smaller than this run in the same thread.
-    class thread_pool *pool {nullptr}; // nullptr means we are not threading
+    class  thread_pool *pool {nullptr}; // nullptr means we are not threading
+    static inline std::string DEBUG_BENCHMARK_CPU {"DEBUG_BENCHMARK_CPU"};
 
 public:;
-    static uint64_t get_available_memory();
-    static double get_cpu_percentage();
+    static uint64_t get_available_memory(); // in bytes
+    static float    get_cpu_percentage();   // 0..100
 
     static const inline std::string THREAD_COUNT_STR {"thread_count"};
     static const inline std::string TASKS_QUEUED_STR {"tasks_queued"};
@@ -253,9 +256,8 @@ public:;
 
     /* PHASE SCAN */
     void phase_scan();               // start the scan phase
-private:;
-    void process_sbuf(sbuf_t* sbuf); // process the sbuf, then delete it.
 public:;
+    void process_sbuf(sbuf_t* sbuf); // process the sbuf, then delete it.
     void record_work_start(const std::string &pos0, size_t pagesize, size_t bufsize); // note std::string
     void schedule_sbuf(sbuf_t* sbuf);  // schedule the sbuf to be processed, after which it is deleted
     void delete_sbuf(sbuf_t *sbuf);    // delete after processing

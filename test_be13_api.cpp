@@ -147,7 +147,9 @@ TEST_CASE("atomic_set", "[atomic]") {
     REQUIRE(as.size() == 3);
 }
 
-#include "thread-pool/thread_pool.hpp"
+#include "be_threadpool.h"
+
+#ifdef BARAKSH_THREADPOOL
 TEST_CASE("atomic_set_mt", "[atomic]") {
     thread_pool pool;
     atomic_set<std::string> as;
@@ -185,6 +187,7 @@ TEST_CASE("atomic_map_mt", "[atomic]") {
     am.clear();
     REQUIRE( am.keys().size() == 0 );
 }
+#endif
 
 #include "atomic_map.h"
 int *new_int()

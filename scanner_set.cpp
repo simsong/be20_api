@@ -7,6 +7,7 @@
 /* needed loading shared libraries and getting free memory*/
 #include "config.h"
 
+#include <cstdio>
 #include <algorithm>
 #include <cassert>
 #include <cstdlib>
@@ -16,7 +17,6 @@
 #include <vector>
 
 #include "formatter.h"
-
 
 #ifdef HAVE_LINUX_SYSCTL_H
 #include <linux/sysctl.h>
@@ -39,7 +39,8 @@
 #include <mach/host_info.h>
 #endif
 
-#include "thread-pool/thread_pool.hpp"
+#include "be_threadpool.h"
+
 #include "aftimer.h"
 #include "dfxml_cpp/src/dfxml_writer.h"
 #include "dfxml_cpp/src/hash_t.h"
@@ -47,6 +48,12 @@
 #include "scanner_config.h"
 #include "scanner_set.h"
 #include "path_printer.h"
+
+#ifdef BARAKSH_THREADPOOL
+#else
+#include "threadpool16/threadpool.cpp"
+#endif
+
 
 /****************************************************************
  *** SCANNER SET IMPLEMENTATION (previously the PLUG-IN SYSTEM)
@@ -72,6 +79,7 @@ scanner_set::scanner_set(scanner_config& sc_, const feature_recorder_set::flags_
     if (std::getenv("DEBUG_SCANNER_SET_INFO")) debug_flags.debug_info = true;
     if (std::getenv("DEBUG_SCANNER_SET_EXIT_EARLY")) debug_flags.debug_exit_early = true;
     if (std::getenv("DEBUG_SCANNER_SET_REGISTER")) debug_flags.debug_register = true;
+    if (std::getenv(DEBUG_BENCHMARK_CPU.c_str())) debug_flags.debug_benchmark_cpu = true;
     const char *dsi = std::getenv("DEBUG_SCANNERS_IGNORE");
     if (dsi!=nullptr) debug_flags.debug_scanners_ignore=dsi;
 }
@@ -122,7 +130,11 @@ scanner_t* scanner_set::get_scanner_by_name(const std::string search_name) const
 void scanner_set::launch_workers(int count)
 {
     assert(pool == nullptr);
+#ifdef BARAKSH_THREADPOOL
     pool = new thread_pool(count);
+#else
+    pool = new thread_pool(count, *this);
+#endif
 }
 
 void scanner_set::update_queue_stats(sbuf_t *sbufp, int dir)
@@ -183,6 +195,26 @@ uint64_t scanner_set::get_available_memory()
     return stat->free_count * pageSize;
 #endif
     return 0;                           // can't figure it out
+}
+
+/**
+ * return the CPU percentage (0-100) used by the current process. Use 'ps -O %cpu <pid> if system call not available.
+ * The popen implementation is not meant to be efficient.
+ */
+float scanner_set::get_cpu_percent()
+{
+    char buf[100];
+    sprintf(buf,"ps -O %%cpu %d",getpid());
+    FILE *f = popen(buf,"r");
+    fgets(buf,sizeof(buf),f);           /* read the first line */
+    fgets(buf,sizeof(buf),f);           /* read the second line */
+    buf[sizeof(buf)-1] = 0;             // in case it needs termination
+    char *loc = index(buf,' ');         /* find the space */
+    if (loc) {
+        return atof(loc);
+    } else {
+        return 0.0;
+    }
 }
 
 /*
@@ -637,19 +669,32 @@ template <typename T> void update_maximum(std::atomic<T>& maximum_value, T const
  * Deletes the buf after processing.
  */
 void scanner_set::process_sbuf(class sbuf_t* sbufp) {
-    assert(sbufp != nullptr);
-    assert(sbufp->children == 0); // we are going to free it, so it better not have any children.
-    thread_set_status( sbufp->pos0.str() + " process_sbuf (" + std::to_string(sbufp->bufsize) + ")" );
+    /****************************************************************
+     ** validate runtime enviornment.
+     **/
 
-    /* If we  have not transitioned to PHASE::SCAN, error */
     if (current_phase != scanner_params::PHASE_SCAN) {
         throw std::runtime_error("process_sbuf can only be run in scanner_params::PHASE_SCAN");
     }
+
+    /****************************************************************
+     ** validate sbuf and then record that we are processing it.
+     */
+    assert(sbufp != nullptr);
+    assert(sbufp->children == 0);      // we are going to free it, so it better not have any children.
 
     if (sbufp->bufsize==0){
         delete_sbuf(sbufp);
         return;        // nothing to scan
     }
+
+    /****************************************************************
+     ** note that we are now processing this.
+     **/
+    if (sbufp->depth()==0) {
+        record_work_start(sbufp->pos0.str(), sbufp->pagesize, sbufp->bufsize);
+    }
+    thread_set_status( sbufp->pos0.str() + " process_sbuf (" + std::to_string(sbufp->bufsize) + ")" );
 
     const class sbuf_t& sbuf = *sbufp; // don't allow modification
     aftimer timer;
@@ -666,17 +711,11 @@ void scanner_set::process_sbuf(class sbuf_t* sbufp) {
     }
 
     update_maximum<unsigned int>(max_depth_seen, sbuf.depth());
-    auto pool_hold = (void*)pool;
 
     /* Determine if we have seen this buffer before */
     bool seen_before = previously_processed_count(sbuf) > 0;
     if (seen_before) {
         dup_bytes_encountered += sbuf.bufsize;
-    }
-    auto pool_now = (void *)pool;
-    if(pool_now != pool_hold){
-        throw std::runtime_error(
-            Formatter() << "scanner_set::process_sbuf: error. pool_hold=" << pool_hold << "but now pool_now=" << pool_now);
     }
 
     /* Determine if the sbuf consists of a repeating ngram. If so,
@@ -842,6 +881,7 @@ void scanner_set::record_work_start(const std::string &pos0, size_t pagesize, si
         std::stringstream ss;
         ss << "threadid='"  << std::this_thread::get_id() << "'"
            << " pos0='"     << dfxml_writer::xmlescape(pos0) << "'";
+
         if (pagesize){
             ss << " pagesize='" << pagesize << "'";
         }
@@ -856,9 +896,6 @@ void scanner_set::record_work_start(const std::string &pos0, size_t pagesize, si
 void scanner_set::schedule_sbuf(sbuf_t *sbufp)
 {
     assert (sbufp != nullptr );
-    if (sbufp->depth()==0) {
-        record_work_start(sbufp->pos0.str(), sbufp->pagesize, sbufp->bufsize);
-    }
     /* Run in same thread? */
     if (pool==nullptr || (sbufp->depth() > 0 && sbufp->bufsize < SAME_THREAD_SBUF_SIZE)) {
         process_sbuf(sbufp);
@@ -869,7 +906,11 @@ void scanner_set::schedule_sbuf(sbuf_t *sbufp)
     update_queue_stats( sbufp, +1 );
 
     /* Run in a different thread */
+#ifdef BARAKSH_THREADPOOL
     pool->push_task( [this, sbufp]{ this->process_sbuf(sbufp); } );
+#else
+    pool->push_task(sbufp);
+#endif
 }
 
 
@@ -882,8 +923,13 @@ void scanner_set::delete_sbuf(sbuf_t *sbufp)
     if (sbufp->depth()==0 && writer) {
         std::stringstream ss;
         ss << "threadid='" << std::this_thread::get_id() << "'"
-           << " pos0='" << dfxml_writer::xmlescape(sbufp->pos0.str()) << "' "
-           << aftimer::now_str("t='","'");
+           << " pos0='" << dfxml_writer::xmlescape(sbufp->pos0.str()) << "' ";
+
+        if (debug_flags.debug_benchmark_cpu) {
+            ss << " cpu_percent='" << get_cpu_percent() << "' ";
+        }
+
+        ss << aftimer::now_str("t='","'");
         writer->xmlout("debug:work_end", "", ss.str(), true);
     }
     delete sbufp;
@@ -960,8 +1006,6 @@ uint64_t scanner_set::previously_processed_count(const sbuf_t& sbuf) {
     std::string hash = sbuf.hash();
     return previously_processed_counter[ hash ]++;
 }
-
-
 
 
 /****************************************************************
