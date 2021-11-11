@@ -29,6 +29,7 @@
 #include <iostream>
 #include <random>
 #include <string>
+#include <csignal>
 
 #include "atomic_unicode_histogram.h"
 #include "sbuf.h"
@@ -932,6 +933,27 @@ TEST_CASE("previously_processed", "[scanner_set]") {
     REQUIRE(ss.previously_processed_count(slg) == 1);
     REQUIRE(ss.previously_processed_count(slg) == 2);
 }
+
+#ifndef BARAKSH_THREADPOOL
+[[noreturn]] void alarm_handler(int signal)
+{
+    std::cerr << "alarm\n";
+    throw std::runtime_error("scanner_set_mt timeout");
+}
+
+TEST_CASE("scanner_set_mt", "[thread_pool]") {
+    std::signal(SIGALRM, alarm_handler);
+    alarm(60);
+    for(int i=1;i<100;i++){
+        scanner_config sc;
+        feature_recorder_set::flags_t f;
+        scanner_set ss(sc, f, nullptr);
+        ss.launch_workers( i );
+    }
+    alarm(0);
+}
+#endif
+
 
 #if 0
 TEST_CASE("mt_previously_processed", "[scanner_set]") {

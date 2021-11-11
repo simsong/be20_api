@@ -47,6 +47,7 @@
  * \endverbatim
  */
 
+#include <set>
 #include <queue>
 #include <condition_variable>
 #include <mutex>
@@ -63,7 +64,7 @@ class thread_pool {
     thread_pool &operator=(const thread_pool &)=delete;
 
 public:
-    std::vector<class worker *> 	workers {};
+    int 	                        workers;
     std::mutex                          M;
     std::condition_variable	        TO_MAIN;
     std::condition_variable	        TO_WORKER;
@@ -74,38 +75,46 @@ public:
     std::queue<class sbuf_t *> tasks  {};	// work to be done - here it is just a list of sbufs.
     aftimer		 tp_wait_timer {};	// time spend waiting
 
-    thread_pool(int numthreads, scanner_set &ss_);
+    thread_pool(int num_workers, scanner_set &ss_);
+    ~thread_pool();
     int get_free_count() {
         std::lock_guard<std::mutex> lock(M);
         return freethreads;
     };
     size_t get_thread_count() {
         std::lock_guard<std::mutex> lock(M);
-        return workers.size();
+        return workers;
     }
     size_t get_tasks_queued() {
         std::lock_guard<std::mutex> lock(M);
         return tasks.size();
     }
     void wait_for_tasks()   {
+        //std::cerr << "thread_pool::wait_for_tasks  tasks.size()=" << tasks.size() << std::endl;
         std::unique_lock<std::mutex> lock(M);
+        //std::cerr << "thread_pool::wait_for_tasks  got lock tasks.size()=" << tasks.size() << std::endl;
         // wait until a thread is free (doesn't matter which)
         while (tasks.size() > 0 ){
-            std::cerr << "wait_for_tasks. tasks.size()==" << tasks.size() << "\n";
+            //std::cerr << "wait_for_tasks. tasks.size()==" << tasks.size() << "\n";
             TO_MAIN.wait( lock );
         }
     };
 
     void push_task(sbuf_t *sbuf) {
+        //std::cerr << "thread_pool::push_tasks " << sbuf << std::endl;
         std::unique_lock<std::mutex> lock(M);
+        //std::cerr << "thread_pool::push_tasks got lock " << sbuf << std::endl;
         // wait until a thread is free (doesn't matter which)
         while (freethreads==0){
             tp_wait_timer.start();
+            //std::cerr << "thread_pool::push_tasks TO_MAIN.wait " << std::endl;
             TO_MAIN.wait( lock );
             tp_wait_timer.stop();
         }
         // Now that there is a free worker, send it the task
+        //std::cerr << "push task=" << sbuf << std::endl;
         tasks.push( sbuf );
+        //std::cerr << "tasks.size=" << tasks.size() << std::endl;
         TO_WORKER.notify_one();
     };
 };
@@ -115,22 +124,10 @@ class worker {
     thread_pool            &tp;		// my thread pool
     void *run();                        // run the worker
 public:
-    static void * start_worker(void *arg){ // start the worker
-        return ((worker *)arg)->run();
-    };
-    worker(class thread_pool &tp_): tp(tp_){}
+    static void * start_worker(void *arg); // create and start the worker
+    worker(class thread_pool *tp_): tp(*tp_){} // the worker
     aftimer		worker_wait_timer {};	// time the worker spent
 };
 
-
-inline thread_pool::thread_pool(int numthreads, scanner_set &ss_): freethreads(numthreads), ss(ss_)  {
-    // lock while I create the threads to prevent them from going wild
-    std::lock_guard<std::mutex> lock(M);
-    for (int i=0; i<numthreads; i++){
-        class worker *w = new worker(*this);
-        workers.push_back(w);
-        new std::thread( &worker::start_worker, (void *)w );
-    }
-};
 
 #endif

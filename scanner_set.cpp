@@ -49,10 +49,6 @@
 #include "scanner_set.h"
 #include "path_printer.h"
 
-#ifdef BARAKSH_THREADPOOL
-#else
-#include "threadpool16/threadpool.cpp"
-#endif
 
 
 /****************************************************************
@@ -201,7 +197,7 @@ uint64_t scanner_set::get_available_memory()
  * return the CPU percentage (0-100) used by the current process. Use 'ps -O %cpu <pid> if system call not available.
  * The popen implementation is not meant to be efficient.
  */
-float scanner_set::get_cpu_percent()
+float scanner_set::get_cpu_percentage()
 {
     char buf[100];
     sprintf(buf,"ps -O %%cpu %d",getpid());
@@ -216,18 +212,6 @@ float scanner_set::get_cpu_percent()
         return 0.0;
     }
 }
-
-/*
- * Return the CPU percentage used by the bulk_extractor program.
- */
-double scanner_set::get_cpu_percentage()
-{
-    /* on a mac use:
-     * ps -o %cpu -p<pid>
-     */
-TODO
-}
-
 
 /*
  * Print the status of each thread in the threadpool.
@@ -926,7 +910,7 @@ void scanner_set::delete_sbuf(sbuf_t *sbufp)
            << " pos0='" << dfxml_writer::xmlescape(sbufp->pos0.str()) << "' ";
 
         if (debug_flags.debug_benchmark_cpu) {
-            ss << " cpu_percent='" << get_cpu_percent() << "' ";
+            ss << " cpu_percent='" << get_cpu_percentage() << "' ";
         }
 
         ss << aftimer::now_str("t='","'");
