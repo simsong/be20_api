@@ -18,7 +18,6 @@
 
 #include "formatter.h"
 
-
 #ifdef HAVE_LINUX_SYSCTL_H
 #include <linux/sysctl.h>
 #endif
@@ -40,7 +39,8 @@
 #include <mach/host_info.h>
 #endif
 
-#include "thread-pool/thread_pool.hpp"
+#include "be_threadpool.h"
+
 #include "aftimer.h"
 #include "dfxml_cpp/src/dfxml_writer.h"
 #include "dfxml_cpp/src/hash_t.h"
@@ -48,6 +48,12 @@
 #include "scanner_config.h"
 #include "scanner_set.h"
 #include "path_printer.h"
+
+#ifdef BARAKSH_THREADPOOL
+#else
+#include "threadpool16/threadpool.cpp"
+#endif
+
 
 /****************************************************************
  *** SCANNER SET IMPLEMENTATION (previously the PLUG-IN SYSTEM)
@@ -124,7 +130,11 @@ scanner_t* scanner_set::get_scanner_by_name(const std::string search_name) const
 void scanner_set::launch_workers(int count)
 {
     assert(pool == nullptr);
+#ifdef BARAKSH_THREADPOOL
     pool = new thread_pool(count);
+#else
+    pool = new thread_pool(count, *this);
+#endif
 }
 
 void scanner_set::update_queue_stats(sbuf_t *sbufp, int dir)
@@ -647,19 +657,32 @@ template <typename T> void update_maximum(std::atomic<T>& maximum_value, T const
  * Deletes the buf after processing.
  */
 void scanner_set::process_sbuf(class sbuf_t* sbufp) {
-    assert(sbufp != nullptr);
-    assert(sbufp->children == 0); // we are going to free it, so it better not have any children.
-    thread_set_status( sbufp->pos0.str() + " process_sbuf (" + std::to_string(sbufp->bufsize) + ")" );
+    /****************************************************************
+     ** validate runtime enviornment.
+     **/
 
-    /* If we  have not transitioned to PHASE::SCAN, error */
     if (current_phase != scanner_params::PHASE_SCAN) {
         throw std::runtime_error("process_sbuf can only be run in scanner_params::PHASE_SCAN");
     }
+
+    /****************************************************************
+     ** validate sbuf and then record that we are processing it.
+     */
+    assert(sbufp != nullptr);
+    assert(sbufp->children == 0);      // we are going to free it, so it better not have any children.
 
     if (sbufp->bufsize==0){
         delete_sbuf(sbufp);
         return;        // nothing to scan
     }
+
+    /****************************************************************
+     ** note that we are now processing this.
+     **/
+    if (sbufp->depth()==0) {
+        record_work_start(sbufp->pos0.str(), sbufp->pagesize, sbufp->bufsize);
+    }
+    thread_set_status( sbufp->pos0.str() + " process_sbuf (" + std::to_string(sbufp->bufsize) + ")" );
 
     const class sbuf_t& sbuf = *sbufp; // don't allow modification
     aftimer timer;
@@ -676,17 +699,11 @@ void scanner_set::process_sbuf(class sbuf_t* sbufp) {
     }
 
     update_maximum<unsigned int>(max_depth_seen, sbuf.depth());
-    auto pool_hold = (void*)pool;
 
     /* Determine if we have seen this buffer before */
     bool seen_before = previously_processed_count(sbuf) > 0;
     if (seen_before) {
         dup_bytes_encountered += sbuf.bufsize;
-    }
-    auto pool_now = (void *)pool;
-    if(pool_now != pool_hold){
-        throw std::runtime_error(
-            Formatter() << "scanner_set::process_sbuf: error. pool_hold=" << pool_hold << "but now pool_now=" << pool_now);
     }
 
     /* Determine if the sbuf consists of a repeating ngram. If so,
@@ -864,9 +881,6 @@ void scanner_set::record_work_start(const std::string &pos0, size_t pagesize, si
 void scanner_set::schedule_sbuf(sbuf_t *sbufp)
 {
     assert (sbufp != nullptr );
-    if (sbufp->depth()==0) {
-        record_work_start(sbufp->pos0.str(), sbufp->pagesize, sbufp->bufsize);
-    }
     /* Run in same thread? */
     if (pool==nullptr || (sbufp->depth() > 0 && sbufp->bufsize < SAME_THREAD_SBUF_SIZE)) {
         process_sbuf(sbufp);
@@ -877,7 +891,11 @@ void scanner_set::schedule_sbuf(sbuf_t *sbufp)
     update_queue_stats( sbufp, +1 );
 
     /* Run in a different thread */
+#ifdef BARAKSH_THREADPOOL
     pool->push_task( [this, sbufp]{ this->process_sbuf(sbufp); } );
+#else
+    pool->push_task(sbufp);
+#endif
 }
 
 
@@ -973,8 +991,6 @@ uint64_t scanner_set::previously_processed_count(const sbuf_t& sbuf) {
     std::string hash = sbuf.hash();
     return previously_processed_counter[ hash ]++;
 }
-
-
 
 
 /****************************************************************
