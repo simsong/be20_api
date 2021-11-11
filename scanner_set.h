@@ -141,6 +141,7 @@ private:
 
 public:;
     static uint64_t get_available_memory();
+    static double get_cpu_percentage();
 
     static const inline std::string THREAD_COUNT_STR {"thread_count"};
     static const inline std::string TASKS_QUEUED_STR {"tasks_queued"};

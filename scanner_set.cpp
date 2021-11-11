@@ -186,6 +186,18 @@ uint64_t scanner_set::get_available_memory()
 }
 
 /*
+ * Return the CPU percentage used by the bulk_extractor program.
+ */
+double scanner_set::get_cpu_percentage()
+{
+    /* on a mac use:
+     * ps -o %cpu -p<pid>
+     */
+TODO
+}
+
+
+/*
  * Print the status of each thread in the threadpool.
  */
 std::map<std::string, std::string> scanner_set::get_realtime_stats() const
@@ -821,6 +833,9 @@ void scanner_set::process_sbuf(class sbuf_t* sbufp) {
     return;
 }
 
+/**
+ * Records when each sbuf starts. Used for restarting and graphing CPU utilization during run.
+ */
 void scanner_set::record_work_start(const std::string &pos0, size_t pagesize, size_t bufsize)
 {
     if (writer) {
