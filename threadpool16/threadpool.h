@@ -77,6 +77,10 @@ public:
 
     thread_pool(int num_workers, scanner_set &ss_);
     ~thread_pool();
+    void wait_for_tasks();              // wait until there are no tasks running
+    void push_task(sbuf_t *sbuf);
+
+    // Status for callers
     int get_free_count() {
         std::lock_guard<std::mutex> lock(M);
         return freethreads;
@@ -89,44 +93,16 @@ public:
         std::lock_guard<std::mutex> lock(M);
         return tasks.size();
     }
-    void wait_for_tasks()   {
-        //std::cerr << "thread_pool::wait_for_tasks  tasks.size()=" << tasks.size() << std::endl;
-        std::unique_lock<std::mutex> lock(M);
-        //std::cerr << "thread_pool::wait_for_tasks  got lock tasks.size()=" << tasks.size() << std::endl;
-        // wait until a thread is free (doesn't matter which)
-        while (tasks.size() > 0 ){
-            //std::cerr << "wait_for_tasks. tasks.size()==" << tasks.size() << "\n";
-            TO_MAIN.wait( lock );
-        }
-    };
-
-    void push_task(sbuf_t *sbuf) {
-        //std::cerr << "thread_pool::push_tasks " << sbuf << std::endl;
-        std::unique_lock<std::mutex> lock(M);
-        //std::cerr << "thread_pool::push_tasks got lock " << sbuf << std::endl;
-        // wait until a thread is free (doesn't matter which)
-        while (freethreads==0){
-            tp_wait_timer.start();
-            //std::cerr << "thread_pool::push_tasks TO_MAIN.wait " << std::endl;
-            TO_MAIN.wait( lock );
-            tp_wait_timer.stop();
-        }
-        // Now that there is a free worker, send it the task
-        //std::cerr << "push task=" << sbuf << std::endl;
-        tasks.push( sbuf );
-        //std::cerr << "tasks.size=" << tasks.size() << std::endl;
-        TO_WORKER.notify_one();
-    };
 };
 
 // there is a worker object for each thread
 class worker {
-    thread_pool            &tp;		// my thread pool
-    void *run();                        // run the worker
+    thread_pool            &tp;		       // my thread pool
+    void *run();                               // run the worker
+    worker(class thread_pool *tp_): tp(*tp_){} // the worker
+    aftimer		worker_wait_timer {};  // time the worker spent
 public:
     static void * start_worker(void *arg); // create and start the worker
-    worker(class thread_pool *tp_): tp(*tp_){} // the worker
-    aftimer		worker_wait_timer {};	// time the worker spent
 };
 
 
