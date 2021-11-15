@@ -83,7 +83,8 @@ scanner_set::scanner_set(scanner_config& sc_, const feature_recorder_set::flags_
 scanner_set::~scanner_set()
 {
     if (pool) {
-        delete pool;
+        // We previously deleted the threadpool, but this caused problems, so just leak it.
+        //delete pool;
         pool = nullptr;
     }
 }

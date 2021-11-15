@@ -64,7 +64,8 @@ class thread_pool {
     thread_pool &operator=(const thread_pool &)=delete;
 
 public:
-    int 	                        workers;
+    typedef std::vector<class worker *> worker_vector;
+    worker_vector       workers {};
     std::mutex                          M;
     std::condition_variable	        TO_MAIN;
     std::condition_variable	        TO_WORKER;
@@ -72,37 +73,30 @@ public:
 
     // bulk_extractor specialiations
     class scanner_set &ss;		// one for all the threads; fs and fr are threadsafe
-    std::queue<class sbuf_t *> tasks  {};	// work to be done - here it is just a list of sbufs.
-    aftimer		 tp_wait_timer {};	// time spend waiting
+    std::queue<class sbuf_t *> work_queue  {};	// work to be done - here it is just a list of sbufs.
+    aftimer		       main_wait_timer {};	// time spend waiting
+    int                         mode {0}; // 0=running; 1 = waiting for workers to finish
 
-    thread_pool(int num_workers, scanner_set &ss_);
+    thread_pool(size_t num_workers, scanner_set &ss_);
     ~thread_pool();
     void wait_for_tasks();              // wait until there are no tasks running
     void push_task(sbuf_t *sbuf);
 
     // Status for callers
-    int get_free_count() {
-        std::lock_guard<std::mutex> lock(M);
-        return freethreads;
-    };
-    size_t get_thread_count() {
-        std::lock_guard<std::mutex> lock(M);
-        return workers;
-    }
-    size_t get_tasks_queued() {
-        std::lock_guard<std::mutex> lock(M);
-        return tasks.size();
-    }
+    int get_free_count();
+    size_t get_thread_count();
+    size_t get_tasks_queued();
 };
 
 // there is a worker object for each thread
 class worker {
-    thread_pool            &tp;		       // my thread pool
-    void *run();                               // run the worker
-    worker(class thread_pool *tp_): tp(*tp_){} // the worker
+    thread_pool         &tp;		       // my thread pool
+    void                *run();                               // run the worker
     aftimer		worker_wait_timer {};  // time the worker spent
 public:
-    static void * start_worker(void *arg); // create and start the worker
+    const uint32_t id;
+    static void * start_worker( void *arg );
+    worker(class thread_pool &tp_, uint32_t id_): tp(tp_),id(id_){} // the worker
 };
 
 
