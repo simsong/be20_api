@@ -67,8 +67,8 @@ public:
     typedef std::vector<class worker *> worker_vector;
     worker_vector       workers {};
     std::mutex                          M;
-    std::condition_variable	        TO_MAIN;
-    std::condition_variable	        TO_WORKER;
+    std::condition_variable	        TO_MAIN {};
+    std::condition_variable	        TO_WORKER {};
     std::atomic<int>                    freethreads {0};
 
     // bulk_extractor specialiations
