@@ -131,7 +131,8 @@ public:
     } debug_flags{};
 
     // Scanner database.
-    std::map<scanner_t*, std::unique_ptr<struct scanner_params::scanner_info>> scanner_info_db{};
+    // try making scanner_info_db an atomic_map instead of a std::map
+    std::map<scanner_t*, std::unique_ptr<const struct scanner_params::scanner_info>> scanner_info_db{};
     std::set<scanner_t*> enabled_scanners{}; // the scanners that are enabled
     const std::string get_scanner_name(scanner_t scanner) const; // returns the name of the scanner
     virtual scanner_t* get_scanner_by_name(const std::string name) const;

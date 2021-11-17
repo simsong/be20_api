@@ -108,15 +108,27 @@ class dfxml_writer *scanner_set::get_dfxml_writer() const
  ****************************************************************/
 
 const std::string scanner_set::get_scanner_name(scanner_t scanner) const {
+#if 1
     auto it = scanner_info_db.find(scanner);
     if (it != scanner_info_db.end()) { return it->second->name; }
     return "";
+#else
+    auto info = &scanner_info_db.get(scanner);
+    return info->get()->name;
+#endif
 }
 
 scanner_t* scanner_set::get_scanner_by_name(const std::string search_name) const {
+#if 1
     for (const auto &it : scanner_info_db) {
         if (it.second->name == search_name) { return it.first; }
     }
+#else
+    auto items = scanner_info_db.items();
+    for (const auto &it : items ){
+        if (it.second->get()->name == search_name) { return it.first; };
+    }
+#endif
     throw NoSuchScanner(search_name);
 }
 

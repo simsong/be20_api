@@ -941,10 +941,11 @@ TEST_CASE("previously_processed", "[scanner_set]") {
     throw std::runtime_error("scanner_set_mt timeout");
 }
 
+// This will give an error unless run with MallocNanoZone=0
 TEST_CASE("scanner_set_mt", "[thread_pool]") {
     std::signal(SIGALRM, alarm_handler);
     alarm(60);
-    for(int i=1;i<100;i++){
+    for(int i=1;i<50;i++){
         scanner_config sc;
         feature_recorder_set::flags_t f;
         scanner_set ss(sc, f, nullptr);
