@@ -29,7 +29,13 @@ thread_pool::~thread_pool()
     }
 #endif
     std::cerr << "~thread_pool() 2" << std::endl;
-    wait_for_tasks();                   // wait until no more tasks.
+    //wait_for_tasks();                   // wait until no more tasks.
+    // This is a spin lock until there are no more workers.
+    int count=0;
+    while (get_thread_count()>0){
+        std::this_thread::sleep_for( std::chrono::milliseconds( 100 ));
+        std::cerr << "sleeping " << ++count << std::endl;
+    }
 }
 
 void thread_pool::wait_for_tasks()
@@ -131,6 +137,7 @@ void *worker::run()
             tp.TO_MAIN.notify_one(); // tell the master that we are free!
         }
     }
+    std::cerr << std::this_thread::get_id() << " exiting "<< std::endl;
     return nullptr;
 }
 #endif

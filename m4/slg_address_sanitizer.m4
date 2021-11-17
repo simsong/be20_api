@@ -10,3 +10,13 @@ AC_ARG_ENABLE([address-sanitizer],
               CXXFLAGS="$CXXFLAGS -fsanitize=address -fsanitize-address-use-after-scope"
               ],
               [])
+
+AC_ARG_ENABLE([thread-sanitizer],
+              [AS_HELP_STRING([--enable-thread-sanitizer],
+                              [enabled ThreadSanitizer support for detecting a wide variety of
+                               thread interlocking errors])],
+              [AC_DEFINE(HAVE_THREAD_SANITIZER, 1, [enable ThreadSanitizer])
+              thread_sanitizer="yes"
+              CXXFLAGS="$CXXFLAGS -fsanitize=thread "
+              ],
+              [])
