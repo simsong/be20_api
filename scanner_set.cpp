@@ -65,7 +65,7 @@
 
 /* constructor and destructors */
 scanner_set::scanner_set(scanner_config& sc_, const feature_recorder_set::flags_t& f, class dfxml_writer* writer_)
-    : sc(sc_), writer(writer_), fs(f, sc_)
+    : fs(f, sc_), sc(sc_), writer(writer_)
 {
     if (std::getenv("DEBUG_SCANNER_SET_PRINT_STEPS")) debug_flags.debug_print_steps = true;
     if (std::getenv("DEBUG_SCANNER_SET_NO_SCANNERS")) debug_flags.debug_no_scanners = true;
@@ -82,6 +82,11 @@ scanner_set::scanner_set(scanner_config& sc_, const feature_recorder_set::flags_
 
 scanner_set::~scanner_set()
 {
+    for (auto &it : scanner_info_db){
+        delete it.second;
+        it.second = nullptr;
+    }
+    scanner_info_db.clear();
     if (pool) {
         // We previously deleted the threadpool, but this caused problems, so just leak it.
         //delete pool;
@@ -108,27 +113,15 @@ class dfxml_writer *scanner_set::get_dfxml_writer() const
  ****************************************************************/
 
 const std::string scanner_set::get_scanner_name(scanner_t scanner) const {
-#if 1
     auto it = scanner_info_db.find(scanner);
     if (it != scanner_info_db.end()) { return it->second->name; }
     return "";
-#else
-    auto info = &scanner_info_db.get(scanner);
-    return info->get()->name;
-#endif
 }
 
 scanner_t* scanner_set::get_scanner_by_name(const std::string search_name) const {
-#if 1
     for (const auto &it : scanner_info_db) {
         if (it.second->name == search_name) { return it.first; }
     }
-#else
-    auto items = scanner_info_db.items();
-    for (const auto &it : items ){
-        if (it.second->get()->name == search_name) { return it.first; };
-    }
-#endif
     throw NoSuchScanner(search_name);
 }
 
@@ -324,7 +317,7 @@ void scanner_set::add_scanner(scanner_t scanner) {
     scanner_params sp(sc, this, nullptr, scanner_params::PHASE_INIT, nullptr);
 
     // Send the scanner the PHASE_INIT message, which will cause it to fill in the sp.info field.
-    sp.info = std::make_unique<scanner_params::scanner_info>(scanner);
+    sp.info = new scanner_params::scanner_info(scanner);
     (*scanner)(sp);
 
     // The scanner should have set the info field.
@@ -340,10 +333,8 @@ void scanner_set::add_scanner(scanner_t scanner) {
         std::cerr << "add_scanner( " << sp.info->name << " )\n";
     }
     scanner_info_db[scanner] = std::move(sp.info);
-
     // Make sure it was registered
     if (scanner_info_db.find(scanner) == scanner_info_db.end()) {}
-
     // Enable the scanner if it is not disabled by default.
     if (scanner_info_db[scanner]->scanner_flags.default_enabled) { enabled_scanners.insert(scanner); }
 }
@@ -444,6 +435,7 @@ void scanner_set::info_scanners(std::ostream& out, bool detailed_info, bool deta
                                 const char disable_opt) {
     /* Get a list of scanner names */
     std::vector<std::string> all_scanner_names,enabled_scanner_names, disabled_scanner_names;
+
     for (auto &it : scanner_info_db) {
         all_scanner_names.push_back( it.second->name );
     }
@@ -550,7 +542,7 @@ void scanner_set::apply_scanner_commands() {
      */
     fs.create_alert_recorder();
     for (const auto &sit : scanner_info_db) {
-        if (! is_scanner_enabled(sit.second->name )){
+        if (!is_scanner_enabled(sit.second->name )){
             continue;
         }
         for (const auto &it : sit.second->feature_defs) {
@@ -579,7 +571,9 @@ void scanner_set::apply_scanner_commands() {
 bool scanner_set::is_scanner_enabled(const std::string& name)
 {
     scanner_t* scanner = get_scanner_by_name(name);
-    return enabled_scanners.find(scanner) != enabled_scanners.end();
+    {
+        return enabled_scanners.find(scanner) != enabled_scanners.end();
+    }
 }
 
 // put the enabled scanners into the vector
@@ -751,7 +745,7 @@ void scanner_set::process_sbuf(class sbuf_t* sbufp) {
          */
         try {
             scanner_t *parent_scanner = get_scanner_by_name(lastAddedPart);
-            sbuf_possibly_has_memory = scanner_info_db[parent_scanner]->scanner_flags.scanner_produces_memory;
+            sbuf_possibly_has_memory     = scanner_info_db[parent_scanner]->scanner_flags.scanner_produces_memory;
             sbuf_possibly_has_filesystem = scanner_info_db[parent_scanner]->scanner_flags.scanner_produces_filesystems;
         } catch (scanner_set::NoSuchScanner &e) {
             // ignore the exception

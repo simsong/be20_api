@@ -107,7 +107,6 @@ public:
          * couldn't return a pointer, so we would need to use
          * shared_ptr(), which would incur a higher cost.
          */
-        const std::lock_guard<std::mutex> lock(M);
         for (const auto &it : mymap) {
             delete it.second;
         }

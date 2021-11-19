@@ -182,7 +182,7 @@ struct scanner_params {
     const struct PrintOptions *pp_po {nullptr}; // if we are path printing, this is the print options.
 
     /* output variables */
-    std::unique_ptr<struct scanner_info> info {nullptr};  // filled in by callback in PHASE_INIT
+    struct scanner_info *info {nullptr};  // filled in by callback in PHASE_INIT
     virtual void recurse(sbuf_t* sbuf) const; // recursive call by scanner. Calls either scanner_set or path_printer.
     virtual bool check_previously_processed(const sbuf_t &sbuf) const;
     std::filesystem::path const get_input_fname() const {return sc.input_fname;}; // not sure why this is needed?
