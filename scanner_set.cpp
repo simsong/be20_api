@@ -82,16 +82,14 @@ scanner_set::scanner_set(scanner_config& sc_, const feature_recorder_set::flags_
 
 scanner_set::~scanner_set()
 {
+    join();                             // kill the threads if they are still running
+
+    /* Delete all of the scanner info blocks */
     for (auto &it : scanner_info_db){
         delete it.second;
         it.second = nullptr;
     }
     scanner_info_db.clear();
-    if (pool) {
-        // We previously deleted the threadpool, but this caused problems, so just leak it.
-        //delete pool;
-        pool = nullptr;
-    }
 }
 
 void scanner_set::set_dfxml_writer(class dfxml_writer *writer_)
@@ -114,15 +112,14 @@ class dfxml_writer *scanner_set::get_dfxml_writer() const
 
 const std::string scanner_set::get_scanner_name(scanner_t scanner) const {
     auto it = scanner_info_db.find(scanner);
-    if (it != scanner_info_db.end()) { return it->second->name; }
-    return "";
+    if (it == scanner_info_db.end()) throw NoSuchScanner("get_scanner_name: scanner point not in sanner_info_db.");
+    return it->second->name;
 }
 
 scanner_t* scanner_set::get_scanner_by_name(const std::string search_name) const {
-    for (const auto &it : scanner_info_db) {
-        if (it.second->name == search_name) { return it.first; }
-    }
-    throw NoSuchScanner(search_name);
+    auto it = scanner_names.find(search_name);
+    if (it == scanner_names.end()) throw NoSuchScanner(search_name);
+    return it->second;
 }
 
 /****************************************************************
@@ -195,8 +192,9 @@ uint64_t scanner_set::get_available_memory()
         return 0;
     }
     return stat->free_count * pageSize;
-#endif
+#else
     return 0;                           // can't figure it out
+#endif
 }
 
 /**
@@ -258,10 +256,14 @@ std::map<std::string, std::string> scanner_set::get_realtime_stats() const
     return ret;
 }
 
+/* Kill the threads and delete the threadpool */
 void scanner_set::join()
 {
+    std::this_thread::sleep_for( std::chrono::milliseconds( 100 )); // hack
     if (pool != nullptr) {
-        pool->wait_for_tasks();
+        pool->join();
+        delete pool;
+        pool = nullptr;
     }
 }
 
@@ -332,11 +334,13 @@ void scanner_set::add_scanner(scanner_t scanner) {
     if (debug_flags.debug_register) {
         std::cerr << "add_scanner( " << sp.info->name << " )\n";
     }
-    scanner_info_db[scanner] = std::move(sp.info);
-    // Make sure it was registered
-    if (scanner_info_db.find(scanner) == scanner_info_db.end()) {}
+    scanner_info_db[scanner]     = sp.info; // was std::move(); not needed anymore
+    scanner_names[sp.info->name] = scanner;
+
     // Enable the scanner if it is not disabled by default.
-    if (scanner_info_db[scanner]->scanner_flags.default_enabled) { enabled_scanners.insert(scanner); }
+    if (scanner_info_db[scanner]->scanner_flags.default_enabled) {
+        enabled_scanners.insert(scanner);
+    }
 }
 
 /* add_scanners allows a calling program to add a null-terminated array of scanners. */
@@ -511,7 +515,7 @@ void scanner_set::apply_scanner_commands() {
                                  << " current phase="
                                  << (unsigned int)(current_phase));
     }
-    for (const auto &cmd : sc.scanner_commands) {
+    for (const auto &cmd : sc.get_scanner_commands()) {
         if (cmd.scannerName == scanner_config::scanner_command::ALL_SCANNERS) {
             /* If name is 'all' and the NO_ALL flag is not set for that scanner,
              * then either enable it or disable it as appropriate

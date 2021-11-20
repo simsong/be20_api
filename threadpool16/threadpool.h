@@ -66,7 +66,7 @@ class thread_pool {
 public:
     typedef std::vector<class worker *> worker_vector;
     worker_vector       workers {};
-    std::mutex                          M;
+    mutable std::mutex                  M;
     std::condition_variable	        TO_MAIN {};
     std::condition_variable	        TO_WORKER {};
     std::atomic<int>                    freethreads {0};
@@ -76,16 +76,19 @@ public:
     std::queue<class sbuf_t *> work_queue  {};	// work to be done - here it is just a list of sbufs.
     aftimer		       main_wait_timer {};	// time spend waiting
     int                        mode {0}; // 0=running; 1 = waiting for workers to finish; 2=workers should die
+    bool                       debug {true}; // display debug messages?
 
     thread_pool(size_t num_workers, scanner_set &ss_);
     ~thread_pool();
-    void wait_for_tasks();              // wait until there are no tasks running
+    void wait_for_tasks();              // wait until there are no tasks in work queue
+    void join();                        // wait_for_tasks() and kill the workers
     void push_task(sbuf_t *sbuf);
 
     // Status for callers
-    int get_free_count();
-    size_t get_thread_count();
-    size_t get_tasks_queued();
+    size_t get_thread_count() const;
+    int get_free_count() const;
+    size_t get_tasks_queued() const;
+    void debug_pool(std::ostream &os) const;
 };
 
 // there is a worker object for each thread

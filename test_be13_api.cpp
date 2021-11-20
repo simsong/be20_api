@@ -884,7 +884,7 @@ TEST_CASE("scanner_config", "[scanner]") {
 
     sc.push_scanner_command("scanner1", scanner_config::scanner_command::ENABLE);
     sc.push_scanner_command("scanner2", scanner_config::scanner_command::DISABLE);
-    REQUIRE(sc.scanner_commands.size() == 2);
+    REQUIRE(sc.get_scanner_commands().size() == 2);
 }
 
 /****************************************************************
@@ -949,7 +949,9 @@ TEST_CASE("scanner_set_mt", "[thread_pool]") {
         scanner_config sc;
         feature_recorder_set::flags_t f;
         scanner_set ss(sc, f, nullptr);
+        std::cerr << "i=" << i << std::endl;
         ss.launch_workers( i );
+        ss.debug_pool(std::cerr);
     }
     alarm(0);
 }

@@ -198,9 +198,11 @@ struct scanner_params {
         s << "     -S " << name << "=" << *val << "    " << help << std::endl;
         info->help_options += s.str(); // add the help in
 
-        auto it = sc.namevals.find(name);
-        if (it != sc.namevals.end() && val) {
-            set_from_string(val, it->second);
+        if (val) {
+            std::string v = sc.get_nameval(name);
+            if (v.size()) {
+                set_from_string(val, v);
+            }
         }
     }
     std::string help() const { return info->help_options;}

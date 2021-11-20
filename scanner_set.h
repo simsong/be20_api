@@ -188,8 +188,10 @@ public:
     void update_queue_stats(sbuf_t *sbufp, int dir);   // either +1 increment or -1 decrement
     void thread_set_status(const std::string &status); // designed to be overridden
     void join();                                       // join the threads
-
     void add_scanner_stat(scanner_t *, const struct stats &st);
+    void debug_pool(std::ostream &os) const { pool->debug_pool(os);}
+
+
     uint64_t get_dup_bytes_encountered()  const  { return dup_bytes_encountered; }
     uint32_t get_max_depth_seen() const          { return max_depth_seen;} ; // max seen during scan
 
