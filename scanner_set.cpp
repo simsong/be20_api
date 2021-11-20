@@ -259,7 +259,7 @@ std::map<std::string, std::string> scanner_set::get_realtime_stats() const
 /* Kill the threads and delete the threadpool */
 void scanner_set::join()
 {
-    std::this_thread::sleep_for( std::chrono::milliseconds( 100 )); // hack
+    //std::this_thread::sleep_for( std::chrono::milliseconds( 100 )); // hack
     if (pool != nullptr) {
         pool->join();
         delete pool;

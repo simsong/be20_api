@@ -10,7 +10,7 @@ thread_pool::thread_pool(size_t num_workers, scanner_set &ss_): ss(ss_)
         std::cerr << "b. workers.size() = " << workers.size() << std::endl;
         std::unique_lock<std::mutex> lock(M);
         class worker *w = new worker(*this,i);
-        workers.push_back(w);
+        workers.insert(w);
         std::cerr << "c. workers.size() = " << workers.size() << std::endl;
         new std::thread( &worker::start_worker, static_cast<void *>(w) );
     }
@@ -126,12 +126,14 @@ void *worker::run()
         sbuf_t *sbuf  = nullptr;
         {
             std::unique_lock<std::mutex> lock( tp.M );
+            if (tp.debug) std::cerr << "worker " << std::this_thread::get_id() << " has lock " << std::endl;
             worker_wait_timer.start();  // waiting for work
             tp.freethreads++;           // this thread is free
             while ( tp.work_queue.size()==0 ){   // wait until something is in the task queue
+                if (tp.debug) std::cerr << "worker " << std::this_thread::get_id() << " waiting " << std::endl;
                 /* I didn't get any work; go to sleep */
                 //std::cerr << std::this_thread::get_id() << " #1 tp.tasks.size()=" << tp.tasks.size() << std::endl;
-                //tp.TO_MAIN.notify_one(); // if main is sleeping, wake it up
+                tp.TO_MAIN.notify_one(); // if main is sleeping, wake it up
                 tp.TO_WORKER.wait( lock );
                 //std::cerr << std::this_thread::get_id() << " #2 tp.tasks.size()=" << tp.tasks.size() << std::endl;
             }
@@ -156,6 +158,11 @@ void *worker::run()
         }
     }
     if (tp.debug) std::cerr << std::this_thread::get_id() << " exiting "<< std::endl;
+    {
+        std::unique_lock<std::mutex> lock(tp.M);
+        tp.workers.erase(this);
+    }
+
     return nullptr;
 }
 #endif

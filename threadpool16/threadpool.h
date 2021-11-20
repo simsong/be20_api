@@ -64,8 +64,8 @@ class thread_pool {
     thread_pool &operator=(const thread_pool &)=delete;
 
 public:
-    typedef std::vector<class worker *> worker_vector;
-    worker_vector       workers {};
+    typedef std::set<class worker *> worker_set_t;
+    worker_set_t                        workers {};
     mutable std::mutex                  M;
     std::condition_variable	        TO_MAIN {};
     std::condition_variable	        TO_WORKER {};
