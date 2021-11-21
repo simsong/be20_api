@@ -325,7 +325,9 @@ void scanner_set::add_scanner(scanner_t scanner) {
 
     // Send the scanner the PHASE_INIT message, which will cause it to fill in the sp.info field.
     sp.info = new scanner_params::scanner_info(scanner);
+    auto old_info = sp.info;
     (*scanner)(sp);
+    assert(sp.info == old_info);        // make sure that info wasn't changed on us
 
     // The scanner should have set the info field.
     if (sp.info->name == "") {
