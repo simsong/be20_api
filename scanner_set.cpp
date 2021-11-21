@@ -888,6 +888,11 @@ void scanner_set::record_work_start(const std::string &pos0, size_t pagesize, si
     }
 }
 
+/*
+ * Schedule an sbuf to be processed.
+ * If there is no process pool or if it the sbuf is too small, process it in the current thread.
+ * Othewise put it on the work queue.
+ */
 void scanner_set::schedule_sbuf(sbuf_t *sbufp)
 {
     assert (sbufp != nullptr );

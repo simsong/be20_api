@@ -62,6 +62,7 @@ class thread_pool {
     /*** neither copying nor assignment is implemented ***/
     thread_pool(const thread_pool &)=delete;
     thread_pool &operator=(const thread_pool &)=delete;
+    std::thread::id                     main_thread {std::this_thread::get_id()};
 
 public:
     typedef std::set<class worker *> worker_set_t;

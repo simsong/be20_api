@@ -56,16 +56,27 @@ void thread_pool::join()
     }
 }
 
+/*
+ * This may be called from any thread.
+ * Right now it only works if called by main thread.
+ */
+
 void thread_pool::push_task(sbuf_t *sbuf)
 {
     std::unique_lock<std::mutex> lock(M);
-    while (freethreads==0){               // if there are no free threads, wait.
-        main_wait_timer.start();
-        //TO_WORKER.notify_one();         // if a worker is sleeping, wake it up
-        TO_MAIN.wait( lock );
-        main_wait_timer.stop();
+    if (main_thread == std::this_thread::get_id()) {
+        /* In the main thread, make sure there is a free worker before continiuing */
+        while (freethreads==0){               // if there are no free threads, wait.
+            main_wait_timer.start();
+            //TO_WORKER.notify_one();         // if a worker is sleeping, wake it up
+            TO_MAIN.wait( lock );
+            main_wait_timer.stop();
+        }
     }
+
+    /* Add to the count */
     work_queue.push( sbuf );
+    // this doens't make sense if we can push from any thread:
     //freethreads--;
     TO_WORKER.notify_one();
 };
