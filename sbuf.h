@@ -24,7 +24,7 @@
  * 2020 - complete refactoring for improved performance.
  *
  * 2021 - removed copy constructor. For performance we should never copy, but we
- * can move. Added reference-count garbage collection
+ * can move. Added reference_count garbage collection
  */
 
 #include <atomic>
@@ -515,7 +515,7 @@ public:;
     static std::atomic<int64_t> sbuf_total;    // how many were created in total
     static std::atomic<int64_t> sbuf_count;    // how many are currently in use
     mutable std::atomic<int>    children{0};   // number of child sbufs; incremented when data in *buf is used by a child
-    mutable std::atomic<int>    references{0}; // when goes to zero, automatically free
+    mutable std::atomic<int>    reference_count{0}; // when goes to zero, automatically free
 
 private:
     // explicit allocation is only allowed in internal implementation

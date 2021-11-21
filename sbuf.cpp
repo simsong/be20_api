@@ -135,14 +135,14 @@ void* sbuf_t::malloc_buf() const
 void sbuf_t::add_child(const sbuf_t& child) const
 {
     children   += 1;
-    references += 1;
+    reference_count += 1;
 }
 
 void sbuf_t::del_child(const sbuf_t& child) const
 {
     children   -= 1;
     assert(children >= 0);
-    references -= 1;
+    reference_count -= 1;
 }
 
 /****************************************************************
@@ -581,7 +581,7 @@ std::ostream& operator<<(std::ostream& os, const sbuf_t& t) {
        << " bufsize="       << t.bufsize
        << " pagesize="      << t.pagesize
        << " children="      << t.children
-       << " references="    << t.references
+       << " reference_count="    << t.reference_count
        << " fd="            << t.fd
        << " depth="         << t.depth()
        << "]";
