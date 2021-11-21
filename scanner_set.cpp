@@ -660,6 +660,64 @@ template <typename T> void update_maximum(std::atomic<T>& maximum_value, T const
     while (prev_value < value && !maximum_value.compare_exchange_weak(prev_value, value)) {}
 }
 
+/****************************************************************
+ ** sbuf management
+ *
+ * Schedule an sbuf to be processed.
+ * If there is no process pool or if it the sbuf is too small, process it in the current thread.
+ * Othewise put it on the work queue.
+ */
+void scanner_set::schedule_sbuf(sbuf_t *sbufp)
+{
+    assert (sbufp != nullptr );
+
+    /* Run in same thread:
+     - If there is no pool
+    - If the sbuf is too small
+    - If the sbuf has a parent (because if it does, the parent might get cleared while this sbuf is pending.)
+    - */
+    if (pool==nullptr
+        || (sbufp->depth() > 0 && sbufp->bufsize < SAME_THREAD_SBUF_SIZE)
+        || (sbufp->has_parent())) {
+        process_sbuf(sbufp);
+        return;
+    }
+
+    scheduled_sbufs.insert(sbufp);
+    update_queue_stats( sbufp, +1 );
+
+    /* Run in a different thread */
+#ifdef BARAKSH_THREADPOOL
+    pool->push_task( [this, sbufp]{ this->process_sbuf(sbufp); } );
+#else
+    pool->push_task(sbufp);
+#endif
+}
+
+
+void scanner_set::delete_sbuf(sbuf_t *sbufp)
+{
+    if (scheduled_sbufs.check_for_presence_and_erase(sbufp)) {
+        update_queue_stats( sbufp, -1 );
+    }
+    thread_set_status(sbufp->pos0.str() + " delete_sbuf");
+    if (sbufp->depth()==0 && writer) {
+        std::stringstream ss;
+        ss << "threadid='" << std::this_thread::get_id() << "'"
+           << " pos0='" << dfxml_writer::xmlescape(sbufp->pos0.str()) << "' ";
+
+        if (debug_flags.debug_benchmark_cpu) {
+            ss << " cpu_percent='" << get_cpu_percentage() << "' ";
+        }
+
+        ss << aftimer::now_str("t='","'");
+        writer->xmlout("debug:work_end", "", ss.str(), true);
+    }
+    delete sbufp;
+}
+
+
+
 /* Process an sbuf (typically in its own thread).
  * Deletes the buf after processing.
  */
@@ -886,53 +944,6 @@ void scanner_set::record_work_start(const std::string &pos0, size_t pagesize, si
         ss   << aftimer::now_str(" t='","'");
         writer->xmlout("debug:work_start","",ss.str(), true);
     }
-}
-
-/*
- * Schedule an sbuf to be processed.
- * If there is no process pool or if it the sbuf is too small, process it in the current thread.
- * Othewise put it on the work queue.
- */
-void scanner_set::schedule_sbuf(sbuf_t *sbufp)
-{
-    assert (sbufp != nullptr );
-    /* Run in same thread? */
-    if (pool==nullptr || (sbufp->depth() > 0 && sbufp->bufsize < SAME_THREAD_SBUF_SIZE)) {
-        process_sbuf(sbufp);
-        return;
-    }
-
-    sbufp->scheduled = true;
-    update_queue_stats( sbufp, +1 );
-
-    /* Run in a different thread */
-#ifdef BARAKSH_THREADPOOL
-    pool->push_task( [this, sbufp]{ this->process_sbuf(sbufp); } );
-#else
-    pool->push_task(sbufp);
-#endif
-}
-
-
-void scanner_set::delete_sbuf(sbuf_t *sbufp)
-{
-    if (sbufp->scheduled) {
-        update_queue_stats( sbufp, -1 );
-    }
-    thread_set_status(sbufp->pos0.str() + " delete_sbuf");
-    if (sbufp->depth()==0 && writer) {
-        std::stringstream ss;
-        ss << "threadid='" << std::this_thread::get_id() << "'"
-           << " pos0='" << dfxml_writer::xmlescape(sbufp->pos0.str()) << "' ";
-
-        if (debug_flags.debug_benchmark_cpu) {
-            ss << " cpu_percent='" << get_cpu_percentage() << "' ";
-        }
-
-        ss << aftimer::now_str("t='","'");
-        writer->xmlout("debug:work_end", "", ss.str(), true);
-    }
-    delete sbufp;
 }
 
 /****************************************************************

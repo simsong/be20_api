@@ -198,6 +198,7 @@ public:
     uint32_t get_max_depth_seen() const          { return max_depth_seen;} ; // max seen during scan
 
     // per-path stats
+    atomic_set<sbuf_t *> scheduled_sbufs {};            // sbufs that have been scheduled for work in the task queue
     atomic_map<std::string, struct stats> path_stats{}; // maps scanner name to performance stats
     void add_path_stat(std::string path, const struct stats &st);
 

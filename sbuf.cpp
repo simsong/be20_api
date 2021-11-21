@@ -53,7 +53,7 @@ sbuf_t::sbuf_t(const sbuf_t &src, size_t offset):
     pos0(src.pos0 + (offset < src.bufsize ? offset : src.bufsize)),
     bufsize( offset < src.bufsize ? src.bufsize - offset : 0),
     pagesize( offset < src.pagesize ? src.pagesize - offset : 0),
-    flags(src.flags), parent(&src), buf(src.buf+offset)
+    parent(&src), buf(src.buf+offset)
 {
     parent->add_child(*this);
     sbuf_total += 1;
@@ -65,7 +65,7 @@ sbuf_t::sbuf_t(const sbuf_t &src, size_t offset, size_t len):
     pos0(src.pos0 + (offset < src.bufsize ? offset : src.bufsize)),
     bufsize( offset + len < src.bufsize ? len : (offset > src.bufsize ? 0 : src.bufsize - offset)),
     pagesize( offset + len < src.pagesize ? len : (offset > src.pagesize ? 0 : src.pagesize - offset)),
-    flags(src.flags), parent(&src), buf(src.buf+offset)
+    parent(&src), buf(src.buf+offset)
 {
     parent->add_child(*this);
     sbuf_total += 1;
@@ -83,9 +83,9 @@ sbuf_t::sbuf_t(pos0_t pos0_, const uint8_t *buf_, size_t bufsize_):
 /* Flexible allocator used by _new static methods below*/
 sbuf_t::sbuf_t(pos0_t pos0_, const sbuf_t *parent_,
                const uint8_t* buf_, size_t bufsize_, size_t pagesize_,
-               int fd_, flags_t flags_):
+               int fd_):
     pos0(pos0_), bufsize(bufsize_), pagesize(pagesize_),
-    flags(flags_), fd(fd_), parent(parent_), buf(buf_)
+    fd(fd_), parent(parent_), buf(buf_)
 {
     if (parent) {
         parent->add_child(*this);
@@ -156,7 +156,7 @@ sbuf_t* sbuf_t::sbuf_new(pos0_t pos0_, const uint8_t* buf_, size_t bufsize_, siz
 {
     return new sbuf_t(pos0_, nullptr, // pos0, parent
                       buf_, bufsize_, std::min(bufsize_,pagesize_), // buf, bufsize, pagesize
-                      NO_FD, flags_t()); // fd, flags
+                      NO_FD); // fd
 }
 
 /* Allocate from a string, copying the string into an allocated buffer, and automatically calling free(buf_) when the sbuf is deleted.
@@ -190,7 +190,7 @@ sbuf_t *sbuf_t::realloc(size_t newsize)
     }
     sbuf_t *ret = new sbuf_t(pos0, nullptr,
                              static_cast<const uint8_t *>(malloced), newsize, newsize,
-                             0, flags);
+                             0);
     ret->malloced = malloced;           // ret will delete it
     malloced = nullptr;                 // prevent double deletion
     delete this;                        // this is a move
@@ -216,7 +216,7 @@ sbuf_t *sbuf_t::new_slice(pos0_t new_pos0, size_t off, size_t len) const
 
     return new sbuf_t(new_pos0, highest_parent(),
                       buf + off, len, new_pagesize,
-                      NO_FD, flags_t());
+                      NO_FD);
 }
 
 sbuf_t *sbuf_t::new_slice(size_t off, size_t len) const
@@ -252,7 +252,7 @@ sbuf_t sbuf_t::slice(size_t off, size_t len) const
 
     return sbuf_t(pos0 + off, highest_parent(),
                       buf + off, len, new_pagesize,
-                      NO_FD, flags_t());
+                      NO_FD);
 }
 
 sbuf_t *sbuf_t::new_slice(size_t off) const
@@ -275,7 +275,6 @@ sbuf_t sbuf_t::slice(size_t off) const
  */
 
 sbuf_t* sbuf_t::map_file(const std::filesystem::path fname) {
-    flags_t flags;
     int mfd = NO_FD;
     std::uintmax_t bytes = std::filesystem::file_size( fname );
 #ifdef HAVE_MMAP
@@ -307,7 +306,7 @@ sbuf_t* sbuf_t::map_file(const std::filesystem::path fname) {
 #endif
     return new sbuf_t(pos0_t(fname.string() + pos0_t::map_file_delimiter), nullptr,
                       mbuf, bytes, bytes,
-                      mfd, flags);
+                      mfd);
 }
 
 
@@ -322,7 +321,7 @@ sbuf_t* sbuf_t::sbuf_malloc(pos0_t pos0_, size_t bufsize_, size_t pagesize_)
     uint8_t *new_malloced = static_cast<uint8_t *>(malloc(bufsize_));
     sbuf_t *ret = new sbuf_t(pos0_, nullptr,
                              new_malloced, bufsize_, pagesize_,
-                             NO_FD, flags_t());
+                             NO_FD);
     ret->malloced = static_cast<void *>(new_malloced);
     ret->buf_writable = new_malloced;
     assert(ret->buf == ret->malloced);
