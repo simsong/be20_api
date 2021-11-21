@@ -64,7 +64,7 @@ public:
     void set_config(std::string name, std::string val) {
         namevals[name] = val;
     }
-    std::string help() const { return global_help_options;}
+    std::string get_help() const { return global_help_options;}
 
     template <typename T> void get_global_config(const std::string& name, T* val, const std::string& help) {
         std::stringstream s;

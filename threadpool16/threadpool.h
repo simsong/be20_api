@@ -70,13 +70,14 @@ public:
     std::condition_variable	        TO_MAIN {};
     std::condition_variable	        TO_WORKER {};
     std::atomic<int>                    freethreads {0};
+    std::atomic<int>                    shutdown_spin_lock_poll_ms {100};
 
     // bulk_extractor specialiations
     class scanner_set &ss;		// one for all the threads; fs and fr are threadsafe
     std::queue<class sbuf_t *> work_queue  {};	// work to be done - here it is just a list of sbufs.
     aftimer		       main_wait_timer {};	// time spend waiting
     int                        mode {0}; // 0=running; 1 = waiting for workers to finish; 2=workers should die
-    bool                       debug {true}; // display debug messages?
+    bool                       debug {false}; // display debug messages?
 
     thread_pool(size_t num_workers, scanner_set &ss_);
     ~thread_pool();

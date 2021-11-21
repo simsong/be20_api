@@ -880,7 +880,7 @@ TEST_CASE("scanner_config", "[scanner]") {
     uint64_t ival{0};
     sc.get_global_config("age", &ival, "age in years");
     REQUIRE(ival == 5);
-    REQUIRE(sc.help() == help_expected);
+    REQUIRE(sc.get_help() == help_expected);
 
     sc.push_scanner_command("scanner1", scanner_config::scanner_command::ENABLE);
     sc.push_scanner_command("scanner2", scanner_config::scanner_command::DISABLE);
@@ -949,9 +949,8 @@ TEST_CASE("scanner_set_mt", "[thread_pool]") {
         scanner_config sc;
         feature_recorder_set::flags_t f;
         scanner_set ss(sc, f, nullptr);
-        std::cerr << "i=" << i << std::endl;
         ss.launch_workers( i );
-        ss.debug_pool(std::cerr);
+        ss.set_spin_poll_time(1); // spin fast.
     }
     alarm(0);
 }

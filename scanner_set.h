@@ -190,6 +190,8 @@ public:
     void join();                                       // join the threads
     void add_scanner_stat(scanner_t *, const struct stats &st);
     void debug_pool(std::ostream &os) const { pool->debug_pool(os);}
+    void set_spin_poll_time(int ms) { pool->shutdown_spin_lock_poll_ms = ms;}
+
 
 
     uint64_t get_dup_bytes_encountered()  const  { return dup_bytes_encountered; }
@@ -205,6 +207,8 @@ public:
     size_t histogram_count() const        { return fs.histogram_count(); }; // passthrough, mostly for debugging
     size_t feature_recorder_count() const { return fs.feature_recorder_count(); };
     void   dump_name_count_stats() const    { if (writer) fs.dump_name_count_stats(*writer); }; // passthrough
+
+    std::string get_help() const { return sc.get_help(); }
 
     /* Run-time configuration for all of the scanners (per-scanner configuration is stored in sc)
      * Default values are hard-coded below.
