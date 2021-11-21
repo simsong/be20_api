@@ -259,7 +259,6 @@ std::map<std::string, std::string> scanner_set::get_realtime_stats() const
 /* Kill the threads and delete the threadpool */
 void scanner_set::join()
 {
-    //std::this_thread::sleep_for( std::chrono::milliseconds( 100 )); // hack
     if (pool != nullptr) {
         pool->join();
         delete pool;
@@ -670,12 +669,13 @@ template <typename T> void update_maximum(std::atomic<T>& maximum_value, T const
 void scanner_set::schedule_sbuf(sbuf_t *sbufp)
 {
     assert (sbufp != nullptr );
+    retain_sbuf(sbufp);
 
     /* Run in same thread:
      - If there is no pool
-    - If the sbuf is too small
-    - If the sbuf has a parent (because if it does, the parent might get cleared while this sbuf is pending.)
-    - */
+     - If the sbuf is too small
+     - If the sbuf has a parent (because if it does, the parent might get cleared while this sbuf is pending.)
+     - */
     if (pool==nullptr
         || (sbufp->depth() > 0 && sbufp->bufsize < SAME_THREAD_SBUF_SIZE)
         || (sbufp->has_parent())) {
@@ -695,12 +695,17 @@ void scanner_set::schedule_sbuf(sbuf_t *sbufp)
 }
 
 
-void scanner_set::delete_sbuf(sbuf_t *sbufp)
+void scanner_set::retain_sbuf(sbuf_t *sbufp)
+{
+    sbufp->reference_count += 1;
+}
+
+void scanner_set::release_sbuf(sbuf_t *sbufp)
 {
     if (scheduled_sbufs.check_for_presence_and_erase(sbufp)) {
         update_queue_stats( sbufp, -1 );
     }
-    thread_set_status(sbufp->pos0.str() + " delete_sbuf");
+    thread_set_status(sbufp->pos0.str() + " release_sbuf");
     if (sbufp->depth()==0 && writer) {
         std::stringstream ss;
         ss << "threadid='" << std::this_thread::get_id() << "'"
@@ -713,13 +718,16 @@ void scanner_set::delete_sbuf(sbuf_t *sbufp)
         ss << aftimer::now_str("t='","'");
         writer->xmlout("debug:work_end", "", ss.str(), true);
     }
-    delete sbufp;
+
+    if (--sbufp->reference_count == 0 ){
+        delete sbufp;
+    }
 }
 
 
 
 /* Process an sbuf (typically in its own thread).
- * Deletes the buf after processing.
+ * Calls release_sbuf() after processing.
  */
 void scanner_set::process_sbuf(class sbuf_t* sbufp) {
     /****************************************************************
@@ -737,7 +745,7 @@ void scanner_set::process_sbuf(class sbuf_t* sbufp) {
     assert(sbufp->children == 0);      // we are going to free it, so it better not have any children.
 
     if (sbufp->bufsize==0){
-        delete_sbuf(sbufp);
+        release_sbuf(sbufp);
         return;        // nothing to scan
     }
 
@@ -759,7 +767,7 @@ void scanner_set::process_sbuf(class sbuf_t* sbufp) {
         fs.get_alert_recorder().write(pos0,
                                       feature_recorder::MAX_DEPTH_REACHED_ERROR_FEATURE,
                                       feature_recorder::MAX_DEPTH_REACHED_ERROR_CONTEXT);
-        delete_sbuf(sbufp);
+        release_sbuf(sbufp);
         return;        // nothing to scan
     }
 
@@ -920,7 +928,7 @@ void scanner_set::process_sbuf(class sbuf_t* sbufp) {
         }
     }
     timer.stop();
-    delete_sbuf(sbufp);
+    release_sbuf(sbufp);
     thread_set_status("IDLE");
     return;
 }

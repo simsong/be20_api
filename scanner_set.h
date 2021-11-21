@@ -260,7 +260,8 @@ public:
     void process_sbuf(sbuf_t* sbuf); // process the sbuf, then delete it.
     void record_work_start(const std::string &pos0, size_t pagesize, size_t bufsize); // note std::string
     void schedule_sbuf(sbuf_t* sbuf);  // schedule the sbuf to be processed, after which it is deleted
-    void delete_sbuf(sbuf_t *sbuf);    // delete after processing
+    void retain_sbuf(sbuf_t *sbuf);    // note that sbuf is now in use
+    void release_sbuf(sbuf_t *sbuf);   // decrease reference count and delete if refcount is 0
 
     // Scanner Support
     // Management of previously seen data
