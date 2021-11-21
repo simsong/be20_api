@@ -138,6 +138,7 @@ void scanner_set::launch_workers(int count)
 #else
     pool = new thread_pool(count, *this);
 #endif
+    std::cerr << "created pool " << pool << std::endl;
 }
 
 void scanner_set::update_queue_stats(sbuf_t *sbufp, int dir)
@@ -266,6 +267,7 @@ void scanner_set::join()
     if (pool != nullptr) {
         pool->join();
         delete pool;
+        std::cerr << "deleted the pool " << pool << ". It's dead, Jim." << std::endl;
         pool = nullptr;
     }
 }
