@@ -110,12 +110,14 @@ void thread_pool::debug_pool(std::ostream &os) const
         << std::endl;
 }
 
-/* Launch the worker. It's kept on the per-thread stack.
+/* Launch the worker. It's kept on the per-thread stack. When it is done, delete it.
  */
 void * worker::start_worker(void *arg)
 {
     worker *w = static_cast<class worker *>(arg);
-    return w->run();
+    auto ret = w->run();
+    delete w;
+    return ret;
 }
 
 

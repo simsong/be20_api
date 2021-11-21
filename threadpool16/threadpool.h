@@ -67,7 +67,7 @@ class thread_pool {
 public:
     typedef std::set<class worker *> worker_set_t;
     worker_set_t                        workers {};
-    mutable std::mutex                  M;
+    mutable std::mutex                  M {};
     std::condition_variable	        TO_MAIN {};
     std::condition_variable	        TO_WORKER {};
     std::atomic<int>                    freethreads {0};
