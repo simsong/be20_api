@@ -82,18 +82,13 @@ scanner_set::scanner_set(scanner_config& sc_, const feature_recorder_set::flags_
 
 scanner_set::~scanner_set()
 {
-    std::cerr << "scanner_set::~scanner_set() " << std::endl;
     join();                             // kill the threads if they are still running
-    std::cerr << "scanner_set::~scanner_set() join " << std::endl;
-
     /* Delete all of the scanner info blocks */
     for (auto &it : scanner_info_db){
-        std::cerr << "scanner_set::~scanner_set() delete " << it.second << std::endl;
         delete it.second;
         it.second = nullptr;
     }
     scanner_info_db.clear();
-    std::cerr << "scanner_set::~scanner_set() clear " << std::endl;
 }
 
 void scanner_set::set_dfxml_writer(class dfxml_writer *writer_)

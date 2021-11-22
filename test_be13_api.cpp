@@ -948,7 +948,7 @@ TEST_CASE("scanner_set_mt", "[thread_pool]") {
     scanner_config sc;
     feature_recorder_set::flags_t f;
     scanner_set ss(sc, f, nullptr);
-    ss.launch_workers( 10 );
+    ss.launch_workers( 12 );
     ss.set_spin_poll_time(1); // spin fast.
     ss.join();
     alarm(0);

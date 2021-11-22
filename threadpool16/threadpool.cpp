@@ -9,7 +9,7 @@ thread_pool::thread_pool(size_t num_workers, scanner_set &ss_): ss(ss_)
         std::unique_lock<std::mutex> lock(M);
         class worker *w = new worker(*this,i);
         workers.insert(w);
-        new std::thread( &worker::start_worker, static_cast<void *>(w) );
+        threads.insert(new std::thread( &worker::start_worker, static_cast<void *>(w) ));
     }
 };
 
@@ -21,6 +21,10 @@ thread_pool::~thread_pool()
      * So we just leave them floating around now. Doesn't matter much, because
      * the main process will die soon enough.
      */
+    for (auto &it : threads ){
+        it->join();
+        delete it;
+    }
 }
 
 void thread_pool::wait_for_tasks()
