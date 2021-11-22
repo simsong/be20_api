@@ -950,6 +950,7 @@ TEST_CASE("scanner_set_mt", "[thread_pool]") {
     scanner_set ss(sc, f, nullptr);
     ss.launch_workers( 10 );
     ss.set_spin_poll_time(1); // spin fast.
+    ss.join();
     alarm(0);
 }
 #endif
