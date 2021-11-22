@@ -127,7 +127,6 @@ struct scanner_params {
         }
 
         // Derrived:
-
         // void              *packet_user {};        //   data for network callback
         // be13::packet_callback_t *packet_cb {};    //   callback for processing network packets, or NULL
 
@@ -140,8 +139,8 @@ struct scanner_params {
 
     };
 
-    const int SCANNER_PARAMS_VERSION{20210531};
-    int scanner_params_version{SCANNER_PARAMS_VERSION};
+    const int SCANNER_PARAMS_VERSION {20210531};
+    int scanner_params_version {SCANNER_PARAMS_VERSION};
     void check_version() { assert(this->scanner_params_version == SCANNER_PARAMS_VERSION); }
 
     // phase_t specifies when the scanner is being called.
@@ -183,13 +182,9 @@ struct scanner_params {
     const struct PrintOptions *pp_po {nullptr}; // if we are path printing, this is the print options.
 
     /* output variables */
-    std::unique_ptr<struct scanner_info> info {nullptr};  // filled in by callback in PHASE_INIT
-
+    struct scanner_info *info {nullptr};  // filled in by callback in PHASE_INIT
     virtual void recurse(sbuf_t* sbuf) const; // recursive call by scanner. Calls either scanner_set or path_printer.
     virtual bool check_previously_processed(const sbuf_t &sbuf) const;
-    //std::stringstream* sxml{};    //  on scanning and shutdown: CDATA added to XML stream if provided.; can't we get from scanner_set?
-    //const uint32_t depth{0};      //  how far down are we? / only valid in SCAN_PHASE; can be inferred from sbuf path?
-    // convenience functions
     std::filesystem::path const get_input_fname() const {return sc.input_fname;}; // not sure why this is needed?
 
     // These methods are implemented in the plugin system for the scanner to get config information.
@@ -203,15 +198,14 @@ struct scanner_params {
         s << "     -S " << name << "=" << *val << "    " << help << std::endl;
         info->help_options += s.str(); // add the help in
 
-        auto it = sc.namevals.find(name);
-        if (it != sc.namevals.end() && val) {
-            set_from_string(val, it->second);
+        if (val) {
+            std::string v = sc.get_nameval(name);
+            if (v.size()) {
+                set_from_string(val, v);
+            }
         }
     }
-
-    std::string help() { return info->help_options;}
-
-
+    std::string help() const { return info->help_options;}
 };
 
 inline std::ostream& operator<<(std::ostream& os, const scanner_params& sp) {

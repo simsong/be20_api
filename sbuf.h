@@ -24,7 +24,7 @@
  * 2020 - complete refactoring for improved performance.
  *
  * 2021 - removed copy constructor. For performance we should never copy, but we
- * can move. Added reference-count garbage collection
+ * can move. Added reference_count garbage collection
  */
 
 #include <atomic>
@@ -90,22 +90,25 @@
  */
 class sbuf_t {
 public:;
-    const pos0_t   pos0{};          /* the path of buf[0] */
-    // buf is now private. See below.
+    const pos0_t   pos0{};           // the path of buf[0]
     const size_t   bufsize{0};       // size of the buffer
     const size_t   pagesize{0};      // page data; the rest is the 'margin'. pagesize <= bufsize
-    struct flags_t {
-        bool debug_sbuf_getbuf{false}; // print when sbufgetbuf is called
-    } flags{};
-    bool scheduled {false};             // was this scheduled?
 
     const unsigned int depth() const { return pos0.depth(); }
-    const uint8_t* get_buf() const;       // returns the buffer UNSAFE but trackable. Enable DEBUG_SBUF_GETBUF to print on each
+    const uint8_t* get_buf() const;  // returns the buffer UNSAFE but trackable. Enable DEBUG_SBUF_GETBUF to print on each call
+
+    // abstraction violations:
+    // store information about each sbuf in the sbuf.
+    // ugly, but efficient.
+
+    mutable std::atomic<bool> seen_before {false};  // was this sbuf seen before?
+    mutable std::atomic<bool> possibly_has_memory {false};
+    mutable std::atomic<bool> possibly_has_filesystem {false};
+
     /****************************************************************
      *** Allocators that allocate from memory not already in an sbuf.
      ****************************************************************/
 
-    /* Allocators */
     /** Allocate a new buffer of a given size for filling.
      * This is the one case where buf is written into...
      * This should probably be a subclass mutable_sbuf_t() for clarity.
@@ -164,17 +167,6 @@ public:;
         parent->del_child(that);
         parent->add_child(*this);
     }
-
-    /**
-     * Make an sbuf from a parent but with a different path.
-     */
-#if 0
-    sbuf_t new_sbuf(const pos0_t& that_pos0, const sbuf_t& that_sbuf);
-    : pos0(that_pos0), parent(that_sbuf.highest_parent()), buf(that_sbuf.buf),
-          bufsize(that_sbuf.bufsize), pagesize(that_sbuf.pagesize) {
-        parent->add_child(*this);
-    }
-#endif
 
     /** Allocate a subset of an sbuf's memory to a child sbuf.  from
      * within an existing sbuf.  The allocated buf MUST be freed
@@ -526,31 +518,29 @@ public:;
         }
         return hp;
     }
+    bool has_parent() const { return parent!=nullptr; }
 
-    static std::atomic<int64_t> sbuf_total;   // how many were created in total
-    static std::atomic<int64_t> sbuf_count;   // how many are currently in use
-    mutable std::atomic<int> children{0}; // number of child sbufs; incremented when data in *buf is used by a child
+    static std::atomic<int64_t> sbuf_total;    // how many were created in total
+    static std::atomic<int64_t> sbuf_count;    // how many are currently in use
+    mutable std::atomic<int>    children{0};   // number of child sbufs; incremented when data in *buf is used by a child
+    mutable std::atomic<int>    reference_count{0}; // when goes to zero, automatically free
+
 private:
     // explicit allocation is only allowed in internal implementation
     explicit sbuf_t(pos0_t pos0_, const sbuf_t *parent_,
                     const uint8_t* buf_, size_t bufsize_, size_t pagesize_,
-                    int fd_, flags_t flags_);
-
+                    int fd_);
 
     /* The private structures keep track of memory management */
-    mutable std::atomic<int> references{0}; // when goes to zero, automatically free
     int fd{0};                     // if fd>0, unmap(buf) and close(fd) when sbuf is deleted.
-    const sbuf_t* parent{nullptr}; // parent sbuf references data in another.
-    mutable std::mutex Mhash{};    // mutext for hashing
+    const sbuf_t        *parent{nullptr}; // parent sbuf references data in another.
+    mutable std::mutex  Mhash{};    // mutext for hashing
     mutable std::string hash_{};   // the hash of the sbuf data, or "" if it
+    mutable ssize_t     ngram_size{-1};       // the cached ngrame size, or -1 if it hasn't been found yet
                                    // hasn't been hashed yet
-    /**
-     * \deprecated
-     * This field will be private in a future release of \b bulk_extractor.
-     */
-    const uint8_t* buf{nullptr};   // start of the buffer
-    void* malloced{nullptr};       // malloced==buf if this was malloced and needs to be freed when sbuf is deleted.
-    uint8_t* buf_writable{nullptr}; // if this is a writable buffer, buf_writable=buf
+    const uint8_t       *buf   {nullptr};   // start of the buffer
+    void                *malloced    {nullptr};       // malloced==buf if this was malloced and needs to be freed when sbuf is deleted.
+    uint8_t             *buf_writable{nullptr}; // if this is a writable buffer, buf_writable=buf
 
     sbuf_t(const sbuf_t& that) = delete;            // default copy is not implemented
     sbuf_t& operator=(const sbuf_t& that) = delete; // default assignment not implemented

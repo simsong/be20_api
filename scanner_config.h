@@ -28,16 +28,44 @@
 /* There is only one scanner-config object. It is called for all of the scanners
  */
 struct scanner_config {
+    /**
+     * Commands whether to enable or disable a scanner.
+     * Typically created from parsing command-line arguments
+     */
+    struct scanner_command {
+        static inline const std::string ALL_SCANNERS = "<ALL-SCANNERS>";
+        enum command_t { DISABLE, ENABLE };
+        scanner_command(const scanner_command& sc) : scannerName(sc.scannerName), command(sc.command){};
+        scanner_command(const std::string& scannerName_, scanner_command::command_t c)
+            : scannerName(scannerName_), command(c){};
+        std::string scannerName{};
+        command_t command{};
+        /* default copy construction and assignment */
+        scanner_command& operator=(const scanner_command& a) {
+            this->scannerName = a.scannerName;
+            this->command = a.command;
+            return *this;
+        }
+    };
 
+private:
     /* The global configuration */
     typedef std::map<std::string, std::string> config_t; // configuration for scanner passed in
     config_t namevals{};                                 //  (input) name=val map
+    std::string global_help_options {""};
+    // The commands for those scanners (enable, disable, options, etc.
+    typedef std::vector<struct scanner_config::scanner_command> scanner_commands_t;
+    scanner_commands_t scanner_commands {};
+
+public:
+    const scanner_commands_t get_scanner_commands() {
+        return static_cast<const scanner_commands_t>(scanner_commands);
+    }
     void set_config(std::string name, std::string val) {
         namevals[name] = val;
     }
+    std::string get_help() const { return global_help_options;}
 
-    std::string global_help_options {""};
-    std::string help(){return global_help_options;}
     template <typename T> void get_global_config(const std::string& name, T* val, const std::string& help) {
         std::stringstream s;
         s << "   -S " << name << "=" << *val << "    " << help << " (" << name << ")\n";
@@ -64,36 +92,24 @@ struct scanner_config {
     bool allow_recurse { true};         // can be turned off for testing
 
     inline static const std::string NO_INPUT = "<NO-INPUT>"; // 'filename' indicator that the FRS has no input file
-    inline static const std::string NO_OUTDIR =
-        "<NO-OUTDIR>"; // 'dirname' indicator that the FRS produces no file output
+    inline static const std::string NO_OUTDIR = "<NO-OUTDIR>"; // 'dirname' indicator that the FRS produces no file output
+    inline static const std::string CARVE_MODE_SUFFIX = "_carve_mode";
+
+    std::string get_nameval(std::string name) const {
+        auto it = namevals.find(name);
+        return it != namevals.end() ? it->second  : "";
+    }
+
+    int get_carve_mode(const std::string name) const {
+        std::string option_name = name + CARVE_MODE_SUFFIX;
+        config_t::const_iterator it = namevals.find(option_name);
+        if (it == namevals.end()) return -1;
+        return std::stoi( std::string(it->second));
+    }
 
     /* Set configuration; added to the static config */
     uint32_t max_depth {DEFAULT_MAX_DEPTH};
     uint32_t max_ngram {DEFAULT_MAX_NGRAM};                         // maximum ngram size to scan for
-
-    /**
-     * Commands whether to enable or disable a scanner.
-     * Typically created from parsing command-line arguments
-     */
-    struct scanner_command {
-        static inline const std::string ALL_SCANNERS = "<ALL-SCANNERS>";
-        enum command_t { DISABLE, ENABLE };
-        scanner_command(const scanner_command& sc) : scannerName(sc.scannerName), command(sc.command){};
-        scanner_command(const std::string& scannerName_, scanner_command::command_t c)
-            : scannerName(scannerName_), command(c){};
-        std::string scannerName{};
-        command_t command{};
-        /* default copy construction and assignment */
-        scanner_command& operator=(const scanner_command& a) {
-            this->scannerName = a.scannerName;
-            this->command = a.command;
-            return *this;
-        }
-    };
-
-    // The commands for those scanners (enable, disable, options, etc.
-    typedef std::vector<struct scanner_command> scanner_commands_t;
-    scanner_commands_t scanner_commands{};
 
     /* Control which scanners are enabled */
     // enable/disable a specific scanner

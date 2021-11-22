@@ -80,3 +80,7 @@ All errors in histogram production seem to be fixed!
 
 - [ ] FrequencyReportHistogram should use unique_ptr<> rather than
   actually the report elements on the vector.
+
+## 2021-11-16
+- [ ] Don't need get_scanner_by_name(). I just need a list of the
+  enabled scanners and a map of scanner names to scanner info

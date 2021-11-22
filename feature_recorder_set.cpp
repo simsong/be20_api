@@ -207,12 +207,11 @@ feature_recorder& feature_recorder_set::get_alert_recorder() const
 void feature_recorder_set::set_carve_defaults()
 {
     for (const auto &name : frm.keys()){
-        std::string option_name = name + "_carve_mode";
-        auto val = sc.namevals.find(option_name);
-        if (val != sc.namevals.end()) {
+        int carve_mode = sc.get_carve_mode(name);
+        if (carve_mode>0) {
             feature_recorder &fr = frm.get(name);
-            std::cerr << "setting carve mode " << val->second << " for feature recorder " << name << "\n";
-            fr.carve_mode = feature_recorder_def::carve_mode_t(std::stoi( val->second ));
+            std::cerr << "setting carve mode " << carve_mode << " for feature recorder " << name << "\n";
+            fr.carve_mode = feature_recorder_def::carve_mode_t( carve_mode );
         }
     }
 }

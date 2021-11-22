@@ -42,7 +42,7 @@ void scanner_params::recurse(sbuf_t* new_sbuf) const {
     }
 
     assert(ss!=nullptr);
-    if (ss->sc.allow_recurse) {
+    if (ss->allow_recurse()) {
         ss->schedule_sbuf(new_sbuf);    /* sbuf will be deleted after it is processed */
     }
 }

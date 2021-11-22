@@ -46,6 +46,11 @@ public:
         myset.insert(s);
     }
 
+    void erase(const TYPE s) {
+        const std::lock_guard<std::mutex> lock(M);
+        myset.erase(s);
+    }
+
     /* Returns true if s is in the set, false if it is not.
      * After return, s is in the set.
      */
@@ -55,6 +60,20 @@ public:
         myset.insert(s);                               // otherwise insert it
         return false;                                  // and return that it wasn't
     }
+
+    /* Returns true if s is in the set, false if it is not.
+     * After return, s is not the set.
+     */
+    bool check_for_presence_and_erase(const TYPE s) {
+        const std::lock_guard<std::mutex> lock(M);
+        bool in_set = (myset.find(s) != myset.end());
+        if (in_set){
+            myset.erase(s);
+        }
+        return in_set;                                  // and return that it wasn't
+    }
+
+
     /* returns the count, not the bytes */
     size_t size() const {
         const std::lock_guard<std::mutex> lock(M);

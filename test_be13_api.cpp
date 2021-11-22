@@ -29,6 +29,7 @@
 #include <iostream>
 #include <random>
 #include <string>
+#include <csignal>
 
 #include "atomic_unicode_histogram.h"
 #include "sbuf.h"
@@ -147,7 +148,9 @@ TEST_CASE("atomic_set", "[atomic]") {
     REQUIRE(as.size() == 3);
 }
 
-#include "thread-pool/thread_pool.hpp"
+#include "be_threadpool.h"
+
+#ifdef BARAKSH_THREADPOOL
 TEST_CASE("atomic_set_mt", "[atomic]") {
     thread_pool pool;
     atomic_set<std::string> as;
@@ -185,6 +188,7 @@ TEST_CASE("atomic_map_mt", "[atomic]") {
     am.clear();
     REQUIRE( am.keys().size() == 0 );
 }
+#endif
 
 #include "atomic_map.h"
 int *new_int()
@@ -876,11 +880,11 @@ TEST_CASE("scanner_config", "[scanner]") {
     uint64_t ival{0};
     sc.get_global_config("age", &ival, "age in years");
     REQUIRE(ival == 5);
-    REQUIRE(sc.help() == help_expected);
+    REQUIRE(sc.get_help() == help_expected);
 
     sc.push_scanner_command("scanner1", scanner_config::scanner_command::ENABLE);
     sc.push_scanner_command("scanner2", scanner_config::scanner_command::DISABLE);
-    REQUIRE(sc.scanner_commands.size() == 2);
+    REQUIRE(sc.get_scanner_commands().size() == 2);
 }
 
 /****************************************************************
@@ -929,6 +933,28 @@ TEST_CASE("previously_processed", "[scanner_set]") {
     REQUIRE(ss.previously_processed_count(slg) == 1);
     REQUIRE(ss.previously_processed_count(slg) == 2);
 }
+
+#ifndef BARAKSH_THREADPOOL
+[[noreturn]] void alarm_handler(int signal)
+{
+    std::cerr << "alarm\n";
+    throw std::runtime_error("scanner_set_mt timeout");
+}
+
+// This will give an error unless run with MallocNanoZone=0
+TEST_CASE("scanner_set_mt", "[thread_pool]") {
+    std::signal(SIGALRM, alarm_handler);
+    alarm(60);                          // in case it never finishes
+    scanner_config sc;
+    feature_recorder_set::flags_t f;
+    scanner_set ss(sc, f, nullptr);
+    ss.launch_workers( 12 );
+    ss.set_spin_poll_time(1); // spin fast.
+    ss.join();
+    alarm(0);
+}
+#endif
+
 
 #if 0
 TEST_CASE("mt_previously_processed", "[scanner_set]") {
