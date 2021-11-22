@@ -734,148 +734,63 @@ void scanner_set::release_sbuf(sbuf_t *sbufp)
 
 
 
-/* Process an sbuf (typically in its own thread).
+/* Process an sbuf with a particular scanner.
+ * sbuf must be retained prior to calling this.
  * Calls release_sbuf() after processing.
  */
-void scanner_set::process_sbuf(class sbuf_t* sbufp) {
-    /****************************************************************
-     ** validate runtime enviornment.
-     **/
+void scanner_set::process_sbuf(class sbuf_t* sbufp, scanner_t *scanner)
+{
+    scanner_params sp(sc, this, nullptr, scanner_params::PHASE_SCAN, sbufp);
+    const struct scanner_params::scanner_info *info = scanner_info_db[scanner];
 
-    if (current_phase != scanner_params::PHASE_SCAN) {
-        throw std::runtime_error("process_sbuf can only be run in scanner_params::PHASE_SCAN");
-    }
-
-    /****************************************************************
-     ** validate sbuf and then record that we are processing it.
-     */
-    assert(sbufp != nullptr);
-    assert(sbufp->children == 0);      // we are going to free it, so it better not have any children.
-
-    if (sbufp->bufsize==0){
-        release_sbuf(sbufp);
-        return;        // nothing to scan
-    }
-
-    /****************************************************************
-     ** note that we are now processing this.
-     **/
-    if (sbufp->depth()==0) {
-        record_work_start(sbufp->pos0.str(), sbufp->pagesize, sbufp->bufsize);
-    }
-    thread_set_status( sbufp->pos0.str() + " process_sbuf (" + std::to_string(sbufp->bufsize) + ")" );
-
-    const class sbuf_t& sbuf = *sbufp; // don't allow modification
-    aftimer timer;
-    timer.start();
-
-    const pos0_t& pos0 = sbuf.pos0;
-    /* If we are too deep, error out */
-    if (sbuf.depth() >= max_depth) {
-        fs.get_alert_recorder().write(pos0,
-                                      feature_recorder::MAX_DEPTH_REACHED_ERROR_FEATURE,
-                                      feature_recorder::MAX_DEPTH_REACHED_ERROR_CONTEXT);
-        release_sbuf(sbufp);
-        return;        // nothing to scan
-    }
-
-    update_maximum<unsigned int>(max_depth_seen, sbuf.depth());
-
-    /* Determine if we have seen this buffer before */
-    bool seen_before = previously_processed_count(sbuf) > 0;
-    if (seen_before) {
-        dup_bytes_encountered += sbuf.bufsize;
-    }
-
-    /* Determine if the sbuf consists of a repeating ngram. If so,
-     * it's only passed to the parsers that want ngrams. (By default,
-     * such sbufs are booring.)
-     */
-
-    thread_set_status( sbuf.pos0.str() + " finding ngram size (" + std::to_string(sbuf.bufsize) + ")" );
+    // Look for reasons not to run a scanner
+    // this is a lot of find operations - could we make a vector of the enabled scanner_info_dbs?
+    const class sbuf_t& sbuf = *sbufp;       // read-only reference
+    const auto &name  = info->name;           // scanner name
+    const auto &flags = info->scanner_flags; // scanner flags
     size_t ngram_size = sbuf.find_ngram_size(sc.max_ngram);
 
-    /****************************************************************
-     *** CALL EACH OF THE SCANNERS ON THE SBUF
-     ****************************************************************/
-
-    if (debug_flags.debug_dump_data) {
-        sbuf.hex_dump(std::cerr);
-    }
-
-    /* Make the scanner params once, rather than every time through */
-    scanner_params sp(sc, this, nullptr, scanner_params::PHASE_SCAN, sbufp);
-
-    /* Determine if this scanner is likely to have memory or a file system */
-    bool sbuf_possibly_has_memory     = (sbuf.pos0.depth() == 0);
-    bool sbuf_possibly_has_filesystem = (sbuf.pos0.depth() == 0);
-    std::string lastAddedPart = sbuf.pos0.lastAddedPart();
-    if (lastAddedPart.size()>0) {
-        for (size_t i=0;i<lastAddedPart.size();i++){
-            lastAddedPart[i] = tolower(lastAddedPart[i]);
-        }
-        /* Get the scanner and find it it makes those things. If we
-         * can't find it, the last added scanner is probably a
-         * filename or something.  Another way to handle this would be
-         * for pos0_t to actually have a vector that tracks all of the
-         * stacked scanners (as scanner_t *), but that would result in
-         * a *lot* of overhead that would be rarely used.
-         */
-        try {
-            scanner_t *parent_scanner = get_scanner_by_name(lastAddedPart);
-            sbuf_possibly_has_memory     = scanner_info_db[parent_scanner]->scanner_flags.scanner_produces_memory;
-            sbuf_possibly_has_filesystem = scanner_info_db[parent_scanner]->scanner_flags.scanner_produces_filesystems;
-        } catch (scanner_set::NoSuchScanner &e) {
-            // ignore the exception
-        }
-    }
-
-    for (const auto &it : scanner_info_db) {
-
-        // Look for reasons not to run a scanner
-        // this is a lot of find operations - could we make a vector of the enabled scanner_info_dbs?
-        const auto &name = it.second->name; // scanner name
-        const auto &flags = it.second->scanner_flags; // scanner flags
-        if (enabled_scanners.find(it.first) == enabled_scanners.end()) {
-            continue; //  not enabled
+    // loop just once --- allows use of 'break' to go to end, rather than using a 'goto'
+    for(int i=0;i<1;i++){
+        if (enabled_scanners.find(scanner) == enabled_scanners.end()) {
+            break; //  not enabled
         }
 
         if (ngram_size > 0 && flags.scan_ngram_buffer == false) {
-            continue;
+            break;
         }
 
         if (sbuf.depth() > 0 && flags.depth0_only) {
             // depth >0 and this scanner only run at depth 0
-            continue;
+            break;
         }
 
         // Don't rescan data that has been seen twice (if scanner doesn't want it.)
-        if (seen_before && flags.scan_seen_before == false) {
-            continue;
+        if (sbuf.seen_before && flags.scan_seen_before == false) {
+            break;
         }
 
         // If the scanner is a recurse_all, it always calls recurse. We can't it twice in the stack, or else
         // we get infinite regression.
-        if (flags.recurse_always && sbuf.pos0.contains( it.second->pathPrefix)) {
-            continue;
+        if (flags.recurse_always && sbuf.pos0.contains( info->pathPrefix)) {
+            break;
         }
 
         // is sbuf large enough?
-        if (sbuf.bufsize < it.second->min_sbuf_size) {
-            continue;
+        if (sbuf.bufsize < info->min_sbuf_size) {
+            break;
         }
 
         // Check to see if scanner wants memory or filesystems and if we possibly have them
-        if (it.second->scanner_flags.scanner_wants_memory && sbuf_possibly_has_memory==false){
-            continue;
+        if (info->scanner_flags.scanner_wants_memory && sbuf.possibly_has_memory==false){
+            break;
         }
 
-        if (it.second->scanner_flags.scanner_wants_filesystems && sbuf_possibly_has_filesystem==false){
-            continue;
+        if (info->scanner_flags.scanner_wants_filesystems && sbuf.possibly_has_filesystem==false){
+            break;
         }
 
         try {
-
             /* Compute the effective path for stats */
             std::string epath;
             if (record_call_stats) {
@@ -899,12 +814,12 @@ void scanner_set::process_sbuf(class sbuf_t* sbufp) {
             if (record_call_stats || debug_flags.debug_print_steps) {
                 t.start();
             }
-            (*it.first)(sp);
+            (*scanner)(sp);
 
             if (record_call_stats || debug_flags.debug_print_steps) {
                 t.stop();
                 struct stats st(t.elapsed_nanoseconds(), 1);
-                add_scanner_stat(*it.first, st);
+                add_scanner_stat(scanner, st);
                 add_path_stat(epath, st);
                 if (debug_flags.debug_print_steps) {
                     std::cerr << "sbuf.pos0=" << sbuf.pos0 << " scanner " << name << " t=" << t.elapsed_seconds() << "\n";
@@ -934,6 +849,118 @@ void scanner_set::process_sbuf(class sbuf_t* sbufp) {
                 fs.get_alert_recorder().write(sbuf.pos0, "scanner=" + name, "<unknown_exception></unknown_exception>");
             } catch (feature_recorder_set::NoSuchFeatureRecorder& e) {}
         }
+        release_sbuf(sbufp);
+    }
+}
+
+
+/* Process an sbuf (typically in its own thread).
+ * sbuf must be retained prior to calling this.
+ * Calls release_sbuf() after processing.
+ */
+void scanner_set::process_sbuf(class sbuf_t* sbufp)
+{
+    /****************************************************************
+     ** validate runtime enviornment.
+     **/
+
+    if (current_phase != scanner_params::PHASE_SCAN) {
+        throw std::runtime_error("process_sbuf can only be run in scanner_params::PHASE_SCAN");
+    }
+
+
+    /****************************************************************
+     ** validate sbuf and then record that we are processing it.
+     */
+    assert(sbufp != nullptr);
+    assert(sbufp->children == 0);       // we are going to free it, so it better not have any children.
+    assert(sbufp->reference_count > 0); // it better have been retained.
+
+    if (sbufp->bufsize==0){
+        release_sbuf(sbufp);
+        return;        // nothing to scan
+    }
+
+    /****************************************************************
+     ** Record that we are starting to work on the sbuf for statistics purposes.
+     **/
+    if (sbufp->depth()==0) {
+        record_work_start(sbufp->pos0.str(), sbufp->pagesize, sbufp->bufsize);
+    }
+    thread_set_status( sbufp->pos0.str() + " process_sbuf (" + std::to_string(sbufp->bufsize) + ")" );
+
+    const class sbuf_t& sbuf = *sbufp;  // read-only reference
+    aftimer timer;
+    timer.start();
+
+    const pos0_t& pos0 = sbuf.pos0;
+    /* If we are too deep, error out */
+    if (sbuf.depth() >= max_depth) {
+        fs.get_alert_recorder().write(pos0,
+                                      feature_recorder::MAX_DEPTH_REACHED_ERROR_FEATURE,
+                                      feature_recorder::MAX_DEPTH_REACHED_ERROR_CONTEXT);
+        release_sbuf(sbufp);
+        return;        // nothing to scan
+    }
+
+    update_maximum<unsigned int>(max_depth_seen, sbuf.depth());
+
+    /* Determine if we have seen this buffer before.
+     * Some scanners are okay with duplicate processing, but the default is that they are not.
+     * Nevertheless, we will add dupliate bytes to the hash of the disk image.
+     */
+    sbufp->seen_before = previously_processed_count(sbuf) > 0; // abstraction violation
+    if (sbufp->seen_before) {
+        dup_bytes_encountered += sbuf.bufsize;
+    }
+
+    /*
+     * abstraction violations:
+     * store information about the sbuf in the sbuf itself.
+     * Ugly, but efficient.
+     */
+
+    /* Determine if this scanner is likely to have memory or a file system.
+     */
+    sbufp->possibly_has_memory     = (sbuf.pos0.depth() == 0);
+    sbufp->possibly_has_filesystem = (sbuf.pos0.depth() == 0);
+    std::string lastAddedPart = sbuf.pos0.lastAddedPart();
+    if (lastAddedPart.size()>0) {
+        for (size_t i=0;i<lastAddedPart.size();i++){
+            lastAddedPart[i] = tolower(lastAddedPart[i]);
+        }
+        /* Get the scanner and find it it makes those things. If we
+         * can't find it, the last added scanner is probably a
+         * filename or something.  Another way to handle this would be
+         * for pos0_t to actually have a vector that tracks all of the
+         * stacked scanners (as scanner_t *), but that would result in
+         * a *lot* of overhead that would be rarely used.
+         */
+        try {
+            scanner_t *parent_scanner = get_scanner_by_name(lastAddedPart);
+            sbufp->possibly_has_memory     = scanner_info_db[parent_scanner]->scanner_flags.scanner_produces_memory;
+            sbufp->possibly_has_filesystem = scanner_info_db[parent_scanner]->scanner_flags.scanner_produces_filesystems;
+        } catch (scanner_set::NoSuchScanner &e) {
+            // ignore the exception
+        }
+    }
+
+    thread_set_status( sbuf.pos0.str() + " finding ngram size (" + std::to_string(sbuf.bufsize) + ")" );
+
+    /****************************************************************
+     *** CALL EACH OF THE SCANNERS ON THE SBUF
+     ****************************************************************/
+
+    if (debug_flags.debug_dump_data) {
+        sbuf.hex_dump(std::cerr);
+    }
+
+    /* Make the scanner params once, rather than every time through */
+
+    // loop for each scanner
+    for (const auto &it : scanner_info_db) {
+        retain_sbuf(sbufp);
+        process_sbuf(sbufp, it.first);
     }
     timer.stop();
     release_sbuf(sbufp);

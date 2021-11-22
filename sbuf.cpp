@@ -500,17 +500,20 @@ void sbuf_t::hex_dump(std::ostream& os) const { hex_dump(os, 0, bufsize); }
 
 /* Determine if the sbuf consists of a repeating ngram */
 size_t sbuf_t::find_ngram_size(const size_t max_ngram) const {
-    for (size_t ngram_size = 1; ngram_size < max_ngram; ngram_size++) {
-        bool ngram_match = true;
-        for (size_t i = ngram_size; i < pagesize ; i++) {
-            if ((buf[i % ngram_size]) != buf[i]) {
-                ngram_match = false;
-                break;
+    if (ngram_size!=-1) {
+        for (ngram_size = 1; ngram_size < max_ngram; ngram_size++) {
+            bool ngram_match = true;
+            for (size_t i = ngram_size; i < pagesize ; i++) {
+                if ((buf[i % ngram_size]) != buf[i]) {
+                    ngram_match = false;
+                    break;
+                }
             }
+            if (ngram_match) return ngram_size;
         }
-        if (ngram_match) return ngram_size;
     }
-    return 0; // no ngram size
+    ngram_size = 0;
+    return ngram_size; // no ngram size
 }
 
 bool sbuf_t::getline(size_t& pos, size_t& line_start, size_t& line_len) const

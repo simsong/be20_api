@@ -257,7 +257,8 @@ public:
 
     /* PHASE SCAN */
     void phase_scan();               // start the scan phase
-    void process_sbuf(sbuf_t* sbuf); // process the sbuf, then delete it.
+    void process_sbuf(sbuf_t* sbuf, scanner_t *scanner); // process the sbuf with a specific scanner, then release it.
+    void process_sbuf(sbuf_t* sbuf); // process the sbuf with all scanners, then release it.
     void record_work_start(const std::string &pos0, size_t pagesize, size_t bufsize); // note std::string
     void schedule_sbuf(sbuf_t* sbuf);  // schedule the sbuf to be processed, after which it is deleted
     void retain_sbuf(sbuf_t *sbuf);    // note that sbuf is now in use

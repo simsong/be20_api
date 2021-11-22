@@ -97,6 +97,14 @@ public:;
     const unsigned int depth() const { return pos0.depth(); }
     const uint8_t* get_buf() const;  // returns the buffer UNSAFE but trackable. Enable DEBUG_SBUF_GETBUF to print on each call
 
+    // abstraction violations:
+    // store information about each sbuf in the sbuf.
+    // ugly, but efficient.
+
+    mutable std::atomic<bool> seen_before {false};  // was this sbuf seen before?
+    mutable std::atomic<bool> possibly_has_memory {false};
+    mutable std::atomic<bool> possibly_has_filesystem {false};
+
     /****************************************************************
      *** Allocators that allocate from memory not already in an sbuf.
      ****************************************************************/
@@ -528,6 +536,7 @@ private:
     const sbuf_t        *parent{nullptr}; // parent sbuf references data in another.
     mutable std::mutex  Mhash{};    // mutext for hashing
     mutable std::string hash_{};   // the hash of the sbuf data, or "" if it
+    mutable ssize_t     ngram_size{-1};       // the cached ngrame size, or -1 if it hasn't been found yet
                                    // hasn't been hashed yet
     const uint8_t       *buf   {nullptr};   // start of the buffer
     void                *malloced    {nullptr};       // malloced==buf if this was malloced and needs to be freed when sbuf is deleted.
