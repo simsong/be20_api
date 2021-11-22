@@ -944,14 +944,12 @@ TEST_CASE("previously_processed", "[scanner_set]") {
 // This will give an error unless run with MallocNanoZone=0
 TEST_CASE("scanner_set_mt", "[thread_pool]") {
     std::signal(SIGALRM, alarm_handler);
-    alarm(60);
-    for(int i=1;i<50;i++){
-        scanner_config sc;
-        feature_recorder_set::flags_t f;
-        scanner_set ss(sc, f, nullptr);
-        ss.launch_workers( i );
-        ss.set_spin_poll_time(1); // spin fast.
-    }
+    alarm(60);                          // in case it never finishes
+    scanner_config sc;
+    feature_recorder_set::flags_t f;
+    scanner_set ss(sc, f, nullptr);
+    ss.launch_workers( 10 );
+    ss.set_spin_poll_time(1); // spin fast.
     alarm(0);
 }
 #endif
