@@ -16,25 +16,29 @@
  * threadsafe timer.
  */
 class aftimer {
+    aftimer(const aftimer & s) = delete;
+    aftimer & operator=(const aftimer &s) = delete;
     std::chrono::time_point<std::chrono::steady_clock> t0 {};
     std::atomic<bool>     running    {};
     std::atomic<uint64_t> elapsed_ns {}; //  for all times we have started and stopped
     std::atomic<uint64_t> last_ns    {}; // time from when we last did a "start"
 public:
     static std::string now_str(std::string prefix="",std::string suffix="");              // return a high-resolution string as now.
+    static std::string hms_str(long t);             // turn a number of seconds into h:m:s
+    static std::string hms_ns_str(uint64_t ns);     // turn a number of nanoseconds into h:m:s
+    static const uint64_t ns_per_s = 1000*1000*1000; // seconds per nanoseconds
     aftimer()  {}
 
     void start(); // start the timer
     void stop();  // stop the timer
     void lap();   // note the time for elapsed_seconds() below
 
-    uint64_t running_nanoseconds() const;               // for how long have we been running?
-    double elapsed_seconds() const;                   // how long timer has been running; timer can be running
-    uint64_t elapsed_nanoseconds() const;             // from the beginning
-    uint64_t lap_seconds() const;                          // how long the timer is running this time
+    uint64_t running_nanoseconds() const;             // for how long have we been running?
+    double elapsed_seconds() const;                   // how long timer has been running; timer can be running from the beginning
+    uint64_t elapsed_nanoseconds() const;
+    uint64_t lap_seconds() const;                     // how long the timer is running this time
     double eta(double fraction_done) const;           // calculate ETA in seconds, given fraction
-    std::string hms(long t) const;                    // turn a number of seconds into h:m:s
-    std::string elapsed_text() const;                 /* how long we have been running */
+    std::string elapsed_text() const;                 // how long we have been running
     std::string eta_text(double fraction_done) const; // h:m:s
     std::string eta_time(double fraction_done) const; // the actual time
     std::string eta_date(double fraction_done) const; // the actual date and time
@@ -56,6 +60,28 @@ inline std::string aftimer::now_str(std::string prefix,std::string suffix) {
     std::stringstream ss;
     ss << std::setprecision(4) << std::fixed << prefix << microseconds_since_epoch/1000 << suffix;
     return ss.str();
+}
+
+inline std::string aftimer::hms_str(long t)  {
+    char buf[64];
+    int days = t / (60 * 60 * 24);
+
+    t = t % (60 * 60 * 24); /* what's left */
+
+    int h = t / 3600;
+    int m = (t / 60) % 60;
+    int s = t % 60;
+    buf[0] = 0;
+    switch (days) {
+    case 0: snprintf(buf, sizeof(buf), "%2d:%02d:%02d", h, m, s); break;
+    case 1: snprintf(buf, sizeof(buf), "%d day, %2d:%02d:%02d", days, h, m, s); break;
+    default: snprintf(buf, sizeof(buf), "%d days %2d:%02d:%02d", days, h, m, s);
+    }
+    return std::string(buf);
+}
+
+inline std::string aftimer::hms_ns_str(uint64_t ns)  {
+    return hms_str(ns / ns_per_s);
 }
 
 inline void aftimer::start() {
@@ -90,29 +116,11 @@ inline uint64_t aftimer::elapsed_nanoseconds() const {
 }
 
 inline double aftimer::elapsed_seconds() const {
-    return elapsed_nanoseconds() / (1000.0 * 1000.0 * 1000.0);
-}
-
-inline std::string aftimer::hms(long t) const {
-    char buf[64];
-    int days = t / (60 * 60 * 24);
-
-    t = t % (60 * 60 * 24); /* what's left */
-
-    int h = t / 3600;
-    int m = (t / 60) % 60;
-    int s = t % 60;
-    buf[0] = 0;
-    switch (days) {
-    case 0: snprintf(buf, sizeof(buf), "%2d:%02d:%02d", h, m, s); break;
-    case 1: snprintf(buf, sizeof(buf), "%d day, %2d:%02d:%02d", days, h, m, s); break;
-    default: snprintf(buf, sizeof(buf), "%d days %2d:%02d:%02d", days, h, m, s);
-    }
-    return std::string(buf);
+    return elapsed_nanoseconds() / double(ns_per_s);
 }
 
 inline std::string aftimer::elapsed_text() const {
-    return hms((int)elapsed_seconds());
+    return hms_str((int)elapsed_seconds());
 }
 
 /**
@@ -131,7 +139,7 @@ inline double aftimer::eta(double fraction_done) const {
 inline std::string aftimer::eta_text(double fraction_done) const {
     double e = eta(fraction_done);
     if (e < 0) return std::string("n/a"); // can't figure it out
-    return hms((long)e);
+    return hms_str((long)e);
 }
 
 /**

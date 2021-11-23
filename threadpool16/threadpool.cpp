@@ -177,6 +177,7 @@ void *worker::run()
         std::unique_lock<std::mutex> lock(tp.M);
         tp.workers.erase(this);
     }
+    tp.total_worker_wait_ns += worker_wait_timer.running_nanoseconds();
 
     return nullptr;
 }

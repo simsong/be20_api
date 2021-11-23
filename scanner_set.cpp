@@ -82,7 +82,11 @@ scanner_set::scanner_set(scanner_config& sc_, const feature_recorder_set::flags_
 
 scanner_set::~scanner_set()
 {
-    join();                             // kill the threads if they are still running
+    if (pool) {
+        join();                             // kill the threads if they are still running
+        delete pool;
+        pool = nullptr;
+    }
     /* Delete all of the scanner info blocks */
     for (auto &it : scanner_info_db){
         delete it.second;
@@ -128,6 +132,7 @@ scanner_t* scanner_set::get_scanner_by_name(const std::string search_name) const
 void scanner_set::launch_workers(int count)
 {
     assert(pool == nullptr);
+    worker_count = count;
 #ifdef BARAKSH_THREADPOOL
     pool = new thread_pool(count);
 #else
@@ -260,8 +265,6 @@ void scanner_set::join()
 {
     if (pool != nullptr) {
         pool->join();
-        delete pool;
-        pool = nullptr;
     }
 }
 

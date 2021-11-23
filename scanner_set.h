@@ -113,6 +113,7 @@ class scanner_set {
     std::atomic<uint32_t> max_depth_seen{0};
     scanner_config sc;                             // scanner_set configuration; passed to feature_recorder_set
     scanner_params::phase_t current_phase{ scanner_params::PHASE_INIT };
+    size_t worker_count {0};                 // how many workers were used
 
 public:
     static const inline size_t SAME_THREAD_SBUF_SIZE = 8192; // sbufs smaller than this run in the same thread.
@@ -129,6 +130,12 @@ public:
     class dfxml_writer* writer {nullptr};          // if provided, a dfxml writer. Mutext locking done by dfxml_writer.h
     void set_dfxml_writer(class dfxml_writer *writer_);
     class dfxml_writer *get_dfxml_writer() const;
+
+    // timing info
+    aftimer & producer_timer()   { assert(pool!=nullptr); return pool->main_wait_timer; }
+    uint64_t  producer_wait_ns() { assert(pool!=nullptr); return pool->main_wait_timer.elapsed_nanoseconds();}
+    uint64_t  consumer_wait_ns() { assert(pool!=nullptr); return pool->total_worker_wait_ns;}
+    uint64_t  consumer_wait_ns_per_worker() { return pool->total_worker_wait_ns / worker_count;}
 
     /* They throw a ScannerNotFound exception if no scanner exists */
     class NoSuchScanner : public std::exception {

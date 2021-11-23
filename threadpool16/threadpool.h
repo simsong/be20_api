@@ -78,6 +78,7 @@ public:
     class scanner_set &ss;		// one for all the threads; fs and fr are threadsafe
     std::queue<class sbuf_t *> work_queue  {};	// work to be done - here it is just a list of sbufs.
     aftimer		       main_wait_timer {};	// time spend waiting
+    std::atomic<uint64_t>      total_worker_wait_ns {0};
     int                        mode {0}; // 0=running; 1 = waiting for workers to finish; 2=workers should die
     bool                       debug {false}; // display debug messages?
 
