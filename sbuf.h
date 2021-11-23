@@ -38,6 +38,7 @@
 #include <mutex>
 #include <string>
 #include <sstream>
+#include <limits>
 
 #ifdef HAVE_SYS_MMAN_H
 #include <sys/mman.h>
@@ -536,7 +537,8 @@ private:
     const sbuf_t        *parent{nullptr}; // parent sbuf references data in another.
     mutable std::mutex  Mhash{};    // mutext for hashing
     mutable std::string hash_{};   // the hash of the sbuf data, or "" if it
-    mutable ssize_t     ngram_size{-1};       // the cached ngrame size, or -1 if it hasn't been found yet
+    inline static ssize_t NO_NGRAM {std::numeric_limits<ssize_t>::max()};
+    mutable ssize_t     ngram_size{ NO_NGRAM };       // the cached ngrame size, or -1 if it hasn't been found yet
                                    // hasn't been hashed yet
     const uint8_t       *buf   {nullptr};   // start of the buffer
     void                *malloced    {nullptr};       // malloced==buf if this was malloced and needs to be freed when sbuf is deleted.

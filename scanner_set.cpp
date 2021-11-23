@@ -208,10 +208,15 @@ uint64_t scanner_set::get_available_memory()
 float scanner_set::get_cpu_percentage()
 {
     char buf[100];
-    sprintf(buf,"ps -O %%cpu %d",getpid());
+    sprintf(buf,"ps -O %ccpu %d",'%',getpid());
     FILE *f = popen(buf,"r");
+    if(f==nullptr){
+        perror("popen failed\n");
+        return(0);
+    }
     fgets(buf,sizeof(buf),f);           /* read the first line */
     fgets(buf,sizeof(buf),f);           /* read the second line */
+    pclose(f);
     buf[sizeof(buf)-1] = 0;             // in case it needs termination
     char *loc = index(buf,' ');         /* find the space */
     if (loc) {
@@ -715,11 +720,11 @@ void scanner_set::release_sbuf(sbuf_t *sbufp)
     thread_set_status(sbufp->pos0.str() + " release_sbuf");
     if (sbufp->depth()==0 && writer) {
         std::stringstream ss;
-        ss << "threadid='" << std::this_thread::get_id() << "'"
-           << " pos0='" << dfxml_writer::xmlescape(sbufp->pos0.str()) << "' ";
+        ss << "threadid='" << std::this_thread::get_id() << "' "
+           << "pos0='" << dfxml_writer::xmlescape(sbufp->pos0.str()) << "' ";
 
         if (debug_flags.debug_benchmark_cpu) {
-            ss << " cpu_percent='" << get_cpu_percentage() << "' ";
+            ss << "cpu_percent='" << get_cpu_percentage() << "' ";
         }
 
         ss << aftimer::now_str("t='","'");
