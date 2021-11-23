@@ -133,7 +133,6 @@ void scanner_set::launch_workers(int count)
 #else
     pool = new thread_pool(count, *this);
 #endif
-    std::cerr << "created pool " << pool << std::endl;
 }
 
 void scanner_set::update_queue_stats(sbuf_t *sbufp, int dir)
@@ -262,7 +261,6 @@ void scanner_set::join()
     if (pool != nullptr) {
         pool->join();
         delete pool;
-        std::cerr << "deleted the pool " << pool << ". It's dead, Jim." << std::endl;
         pool = nullptr;
     }
 }
@@ -334,7 +332,7 @@ void scanner_set::add_scanner(scanner_t scanner) {
         return;
     }
     if (debug_flags.debug_register) {
-        std::cerr << "add_scanner( " << sp.info->name << " )\n";
+        std::cerr << "DEBUG: add_scanner( " << sp.info->name << " )\n";
     }
     scanner_info_db[scanner]     = sp.info; // was std::move(); not needed anymore
     scanner_names[sp.info->name] = scanner;
@@ -354,8 +352,8 @@ void scanner_set::add_scanners(scanner_t* const* scanners)
 /* Add a scanner from a file (it's in the file as a shared library) */
 void scanner_set::add_scanner_file(std::string fn)
 {
-    if(time(0)>10) {
-        throw std::runtime_error("not implemented yet.");
+    if(time(0)>10) {                    // prevents compiler warning
+        throw std::runtime_error("scanner_set::add_scanner_file: not implemented yet.");
     }
 #if 0
     /* Figure out the function name */
@@ -411,6 +409,9 @@ void scanner_set::add_scanner_file(std::string fn)
 /* Add all of the scanners in a directory */
 void scanner_set::add_scanner_directory(const std::string &dirname)
 {
+    if(time(0)>10) {                    // prevents compiler warning
+        throw std::runtime_error("scanner_set::add_scanner_directory: not implemented yet.");
+    }
 #if 0
 TODO: Re-implement using C++17 directory reading.
 

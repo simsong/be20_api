@@ -3,6 +3,7 @@
 #include "scanner_set.h"
 
 #ifndef BARAKSH_THREADPOOL
+
 thread_pool::thread_pool(size_t num_workers, scanner_set &ss_): ss(ss_)
 {
     for (size_t i=0; i < num_workers; i++){
@@ -27,14 +28,15 @@ thread_pool::~thread_pool()
     }
 }
 
+bool d2=false;
 void thread_pool::wait_for_tasks()
 {
-    //std::cerr << "thread_pool::wait_for_tasks  tasks.size()=" << tasks.size() << std::endl;
+    if(d2) std::cerr << "thread_pool::wait_for_tasks  work_queue.size()=" << work_queue.size() << std::endl;
     std::unique_lock<std::mutex> lock(M);
-    //std::cerr << "thread_pool::wait_for_tasks  got lock tasks.size()=" << tasks.size() << std::endl;
+    if(d2) std::cerr << "thread_pool::wait_for_tasks  got lock work_queue.size()=" << work_queue.size() << std::endl;
     // wait until a thread is free (doesn't matter which)
     while (work_queue.size() > 0 ){
-        //std::cerr << "wait_for_tasks. tasks.size()==" << tasks.size() << "\n";
+        if(d2) std::cerr << "thread_pool::wait_for_tasks work_queue.size()==" << work_queue.size() << "\n";
         TO_WORKER.notify_one();         // wake up a worker in case one is sleeping
         TO_MAIN.wait( lock );
     }
@@ -53,8 +55,8 @@ void thread_pool::join()
     int count=0;
     while (get_thread_count()>0){
         std::this_thread::sleep_for( std::chrono::milliseconds( shutdown_spin_lock_poll_ms ));
-        if (debug) {
-            std::cerr << "sleeping " << ++count << std::endl;
+        if (debug || d2) {
+            std::cerr << "thread_pool::join sleeping " << ++count << std::endl;
             debug_pool(std::cerr);
         }
     }
