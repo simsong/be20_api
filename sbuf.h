@@ -225,6 +225,15 @@ public:;
     /* return true if the sbuf consists solely of ngrams */
     size_t find_ngram_size(size_t max_ngram) const;
 
+    /* Compute a histogram (if one hasn't been computed) and return a pointer to the histogram object. */
+    struct sbuf_histogram {
+        uint64_t count[256] {};            // the count of each character
+        size_t   unique_chars;             // total number of unique characters
+    };
+
+    sbuf_histogram *get_histogram() const; // returns the histogram itself
+    size_t get_distinct_character_count() const;    // returns the number of distinct characters in sbuf
+
     /* get the next line line from the sbuf.
      * @param pos  - on entry, current position. On exit, new position.
      *               pos[0] is the start of a line
@@ -536,10 +545,17 @@ private:
     int fd{0};                     // if fd>0, unmap(buf) and close(fd) when sbuf is deleted.
     const sbuf_t        *parent{nullptr}; // parent sbuf references data in another.
     mutable std::mutex  Mhash{};    // mutext for hashing
-    mutable std::string hash_{};   // the hash of the sbuf data, or "" if it
+    inline static std::string NO_HASH {""};
+    mutable std::string hash_{ NO_HASH };   // the hash of the sbuf data, or "" if it hasn't been hashed yet
+
     inline static ssize_t NO_NGRAM {std::numeric_limits<ssize_t>::max()};
-    mutable ssize_t     ngram_size{ NO_NGRAM };       // the cached ngrame size, or -1 if it hasn't been found yet
-                                   // hasn't been hashed yet
+    mutable std::mutex  Mngram_size {}; // mutex for ngram
+    mutable ssize_t     ngram_size{ NO_NGRAM };       // the cached ngrame size, or NO_NGRAM-1 if it hasn't been found yet
+
+    mutable std::mutex  Mhistogram {};  // mutex for histogram
+    mutable sbuf_histogram *histogram {nullptr}; // histogram if computed
+
+
     const uint8_t       *buf   {nullptr};   // start of the buffer
     void                *malloced    {nullptr};       // malloced==buf if this was malloced and needs to be freed when sbuf is deleted.
     uint8_t             *buf_writable{nullptr}; // if this is a writable buffer, buf_writable=buf

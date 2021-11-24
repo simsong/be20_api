@@ -118,6 +118,7 @@ struct scanner_params {
         std::string scanner_version{}; //   version for the scanner
         std::vector<feature_recorder_def> feature_defs{}; //   feature files that this scanner needs.
         size_t   min_sbuf_size {DEFAULT_MIN_SBUF_SIZE}; // minimum sbuf to scan
+        size_t   min_distinct_chars {1};                // number of distinct characters in sbuf required to use scanner
         uint64_t flags{};              //   flags
         std::vector<histogram_def> histogram_defs{};      //   histogram definitions that the scanner needs
 
