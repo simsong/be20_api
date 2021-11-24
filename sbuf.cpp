@@ -478,7 +478,7 @@ bool sbuf_t::is_constant(size_t off, size_t len, uint8_t ch) const // verify tha
 uint16_t sbuf_t::distinct_characters(size_t off, size_t len) const // verify that it's constant
 {
     if (off==0 && len==bufsize){
-        return distinct_character_count();
+        return get_distinct_character_count();
     }
     uint32_t counts[256];
     memset(counts,0,sizeof(counts));
@@ -541,7 +541,7 @@ sbuf_t::sbuf_histogram *sbuf_t::get_histogram() const
     return histogram;
 }
 
-size_t sbuf_t::distinct_character_count() const
+size_t sbuf_t::get_distinct_character_count() const
 {
     return get_histogram()->unique_chars;
 }
