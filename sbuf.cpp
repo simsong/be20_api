@@ -500,6 +500,7 @@ void sbuf_t::hex_dump(std::ostream& os) const { hex_dump(os, 0, bufsize); }
 
 /* Determine if the sbuf consists of a repeating ngram */
 size_t sbuf_t::find_ngram_size(const size_t max_ngram) const {
+    const std::lock_guard<std::mutex> lock(Mngram_size); // protect this function
     if (ngram_size != NO_NGRAM) {
         for (ngram_size = 1; ngram_size < max_ngram; ngram_size++) {
             bool ngram_match = true;
