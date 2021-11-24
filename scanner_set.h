@@ -118,6 +118,7 @@ class scanner_set {
 public:
     static const inline size_t SAME_THREAD_SBUF_SIZE = 8192; // sbufs smaller than this run in the same thread.
     static inline std::string DEBUG_BENCHMARK_CPU {"DEBUG_BENCHMARK_CPU"};
+    static inline std::string DEBUG_NO_SCANNER_BYPASS {"DEBUG_NO_SCANNER_BYPASS"}; // do not bypass scanners because of ngram count or distinct character count
 
     /* constructor and destructor */
     /* @param sc - the config variables

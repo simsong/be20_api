@@ -104,6 +104,11 @@ sbuf_t::~sbuf_t()
     if (children != 0) {
         std::runtime_error(Formatter() << "sbuf.cpp: error: sbuf children=" << children);
     }
+    const std::lock_guard<std::mutex> lock(Mhistogram); // protect this function
+    if (histogram){
+        delete histogram;
+        histogram = nullptr;
+    }
     if (parent) parent->del_child(*this);
     if (fd>0) {
 #ifdef HAVE_MMAP
@@ -472,6 +477,9 @@ bool sbuf_t::is_constant(size_t off, size_t len, uint8_t ch) const // verify tha
 
 uint16_t sbuf_t::distinct_characters(size_t off, size_t len) const // verify that it's constant
 {
+    if (off==0 && len==bufsize){
+        return distinct_character_count();
+    }
     uint32_t counts[256];
     memset(counts,0,sizeof(counts));
     uint16_t distinct_counts = 0;
@@ -515,6 +523,27 @@ size_t sbuf_t::find_ngram_size(const size_t max_ngram) const {
     }
     ngram_size = 0;
     return ngram_size; // no ngram size
+}
+
+/* allocate and return a histogram */
+sbuf_t::sbuf_histogram *sbuf_t::get_histogram() const
+{
+    const std::lock_guard<std::mutex> lock(Mhistogram); // protect this function
+    if (histogram==nullptr){
+        histogram = new sbuf_histogram();
+        for( size_t i=0;i<bufsize;i++){
+            histogram->count[ buf[ i ] ] ++;
+            if (histogram->count[buf[i]]==1) {
+                histogram->unique_chars += 1;
+            }
+        }
+    }
+    return histogram;
+}
+
+size_t sbuf_t::distinct_character_count() const
+{
+    return get_histogram()->unique_chars;
 }
 
 bool sbuf_t::getline(size_t& pos, size_t& line_start, size_t& line_len) const
