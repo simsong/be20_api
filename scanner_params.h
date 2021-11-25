@@ -118,7 +118,7 @@ struct scanner_params {
         std::string scanner_version{}; //   version for the scanner
         std::vector<feature_recorder_def> feature_defs{}; //   feature files that this scanner needs.
         size_t   min_sbuf_size {DEFAULT_MIN_SBUF_SIZE}; // minimum sbuf to scan
-        size_t   min_distinct_chars {1};                // number of distinct characters in sbuf required to use scanner
+        size_t   min_distinct_chars {4};                // number of distinct characters in sbuf required to use scanner. By default, require 4
         uint64_t flags{};              //   flags
         std::vector<histogram_def> histogram_defs{};      //   histogram definitions that the scanner needs
 
@@ -184,7 +184,7 @@ struct scanner_params {
 
     /* output variables */
     struct scanner_info *info {nullptr};  // filled in by callback in PHASE_INIT
-    virtual void recurse(sbuf_t* sbuf) const; // recursive call by scanner. Calls either scanner_set or path_printer.
+    virtual void recurse(const sbuf_t* sbuf) const; // recursive call by scanner. Calls either scanner_set or path_printer.
     virtual bool check_previously_processed(const sbuf_t &sbuf) const;
     std::filesystem::path const get_input_fname() const {return sc.input_fname;}; // not sure why this is needed?
 

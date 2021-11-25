@@ -17,7 +17,7 @@
 #include "scanner_config.h"
 #include "scanner_params.h"
 
-#include "be_threadpool.h"
+#include "threadpool.h"
 
 
 /**
@@ -193,7 +193,7 @@ public:
 
     // thread interface
     void launch_workers(int count);
-    void update_queue_stats(sbuf_t *sbufp, int dir);   // either +1 increment or -1 decrement
+    void update_queue_stats(const sbuf_t *sbufp, int dir);   // either +1 increment or -1 decrement
     void thread_set_status(const std::string &status); // designed to be overridden
     void join();                                       // join the threads
     void add_scanner_stat(scanner_t *, const struct stats &st);
@@ -206,7 +206,7 @@ public:
     uint32_t get_max_depth_seen() const          { return max_depth_seen;} ; // max seen during scan
 
     // per-path stats
-    atomic_set<sbuf_t *> scheduled_sbufs {};            // sbufs that have been scheduled for work in the task queue
+    atomic_set<const sbuf_t *> scheduled_sbufs {};            // sbufs that have been scheduled for work in the task queue
     atomic_map<std::string, struct stats> path_stats{}; // maps scanner name to performance stats
     void add_path_stat(std::string path, const struct stats &st);
 
@@ -265,12 +265,14 @@ public:
 
     /* PHASE SCAN */
     void phase_scan();               // start the scan phase
-    void process_sbuf(sbuf_t* sbuf, scanner_t *scanner); // process the sbuf with a specific scanner, then release it.
-    void process_sbuf(sbuf_t* sbuf); // process the sbuf with all scanners, then release it.
-    void record_work_start(const std::string &pos0, size_t pagesize, size_t bufsize); // note std::string
-    void schedule_sbuf(sbuf_t* sbuf);  // schedule the sbuf to be processed, after which it is deleted
-    void retain_sbuf(sbuf_t *sbuf);    // note that sbuf is now in use
-    void release_sbuf(sbuf_t *sbuf);   // decrease reference count and delete if refcount is 0
+    void process_sbuf(const sbuf_t* sbuf, scanner_t *scanner); // process the sbuf with a specific scanner, then release it.
+    void process_sbuf(const sbuf_t* sbuf); // process the sbuf with all scanners, then release it.
+    void record_work_start(const sbuf_t *sbuf);
+    void record_work_start_pos0str(const std::string pos0str);
+    void record_work_end(const sbuf_t *sbuf);
+    void schedule_sbuf(const sbuf_t* sbuf);  // schedule the sbuf to be processed, after which it is deleted
+    void retain_sbuf(const sbuf_t *sbuf);    // note that sbuf is now in use
+    void release_sbuf(const sbuf_t *sbuf);   // decrease reference count and delete if refcount is 0
 
     // Scanner Support
     // Management of previously seen data

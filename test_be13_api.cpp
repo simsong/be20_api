@@ -36,6 +36,8 @@
 #include "sbuf_stream.h"
 #include "utils.h"
 #include "dfxml_cpp/src/hash_t.h"
+#include "threadpool.h"
+
 
 /****************************************************************
  *** Support code
@@ -147,8 +149,6 @@ TEST_CASE("atomic_set", "[atomic]") {
     REQUIRE(as.contains("four") == false);
     REQUIRE(as.size() == 3);
 }
-
-#include "be_threadpool.h"
 
 #ifdef BARAKSH_THREADPOOL
 TEST_CASE("atomic_set_mt", "[atomic]") {
@@ -977,7 +977,7 @@ TEST_CASE("enable/disable", "[scanner_set]") {
     const std::string SHA1_TEST = "sha1_test";
 
     {
-        sc.push_scanner_command(scanner_config::scanner_command::ALL_SCANNERS, scanner_config::scanner_command::ENABLE);
+        sc.enable_all_scanners();
         scanner_set ss(sc, feature_recorder_set::flags_t(), nullptr);
         ss.add_scanner(scan_sha1_test);
         ss.apply_scanner_commands(); // applied after all scanners are added
@@ -1001,7 +1001,7 @@ TEST_CASE("enable/disable", "[scanner_set]") {
     }
     {
         /* Try it again, but this time turning on all of the commands */
-        sc.push_scanner_command(scanner_config::scanner_command::ALL_SCANNERS, scanner_config::scanner_command::ENABLE);
+        sc.enable_all_scanners();
         scanner_set ss(sc, feature_recorder_set::flags_t(), nullptr);
         ss.add_scanner(scan_sha1_test);
         ss.apply_scanner_commands(); // applied after all scanners are adde
@@ -1010,8 +1010,7 @@ TEST_CASE("enable/disable", "[scanner_set]") {
     {
         /* Try it again, but this time turning on the scanner, and then turning all off*/
         sc.push_scanner_command(SHA1_TEST, scanner_config::scanner_command::ENABLE);
-        sc.push_scanner_command(scanner_config::scanner_command::ALL_SCANNERS,
-                                scanner_config::scanner_command::DISABLE);
+        sc.disable_all_scanners();
         scanner_set ss(sc, feature_recorder_set::flags_t(), nullptr);
         ss.add_scanner(scan_sha1_test);
         ss.apply_scanner_commands(); // applied after all scanners are adde

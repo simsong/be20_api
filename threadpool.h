@@ -55,6 +55,7 @@
 #include <future>      // std::future, std::promise
 
 #include "aftimer.h"
+#include "scanner_params.h"
 
 // There is a single thread_pool object
 class worker;
@@ -65,6 +66,12 @@ class thread_pool {
     std::thread::id                     main_thread {std::this_thread::get_id()};
 
 public:
+    struct work_unit {
+        work_unit(const sbuf_t *sbuf_):sbuf(sbuf_) {}
+        const sbuf_t *sbuf {nullptr};       // sbuf to process
+        scanner_t *scanner {nullptr};        // if set, use only this scanner, otherwise use all.
+    };
+
     typedef std::set<class worker *> worker_set_t;
     worker_set_t                        workers {};
     std::set<std::thread *>             threads {};
@@ -76,7 +83,7 @@ public:
 
     // bulk_extractor specialiations
     class scanner_set &ss;		// one for all the threads; fs and fr are threadsafe
-    std::queue<class sbuf_t *> work_queue  {};	// work to be done - here it is just a list of sbufs.
+    std::queue<struct work_unit *> work_queue  {};	// work to be done - here it is just a list of sbufs.
     aftimer		       main_wait_timer {};	// time spend waiting
     std::atomic<uint64_t>      total_worker_wait_ns {0};
     int                        mode {0}; // 0=running; 1 = waiting for workers to finish; 2=workers should die
@@ -86,7 +93,7 @@ public:
     ~thread_pool();
     void wait_for_tasks();              // wait until there are no tasks in work queue
     void join();                        // wait_for_tasks() and kill the workers
-    void push_task(sbuf_t *sbuf);
+    void push_task(const sbuf_t *sbuf);
 
     // Status for callers
     size_t get_thread_count() const;

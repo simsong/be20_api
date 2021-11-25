@@ -22,7 +22,6 @@
 #include <linux/sysctl.h>
 #endif
 
-
 #ifdef HAVE_DLFCN_H
 #include <dlfcn.h>
 #endif
@@ -39,7 +38,7 @@
 #include <mach/host_info.h>
 #endif
 
-#include "be_threadpool.h"
+#include "threadpool.h"
 
 #include "aftimer.h"
 #include "dfxml_cpp/src/dfxml_writer.h"
@@ -133,14 +132,10 @@ void scanner_set::launch_workers(int count)
 {
     assert(pool == nullptr);
     worker_count = count;
-#ifdef BARAKSH_THREADPOOL
-    pool = new thread_pool(count);
-#else
     pool = new thread_pool(count, *this);
-#endif
 }
 
-void scanner_set::update_queue_stats(sbuf_t *sbufp, int dir)
+void scanner_set::update_queue_stats(const sbuf_t *sbufp, int dir)
 {
     assert (sbufp != nullptr );
     assert ( dir==1 || dir==-1);
@@ -218,12 +213,10 @@ float scanner_set::get_cpu_percentage()
     fgets(buf,sizeof(buf),f);           /* read the second line */
     pclose(f);
     buf[sizeof(buf)-1] = 0;             // in case it needs termination
-    char *loc = index(buf,' ');         /* find the space */
-    if (loc) {
-        return atof(loc);
-    } else {
-        return 0.0;
-    }
+    int pid=0;
+    float ff = 0;
+    int count = sscanf(buf,"%d %f",&pid,&ff);
+    return (count==2) ? ff : 0.0;
 }
 
 /*
@@ -537,7 +530,8 @@ void scanner_set::apply_scanner_commands() {
                 }
                 if (cmd.command == scanner_config::scanner_command::ENABLE) {
                     enabled_scanners.insert(it.first);
-                } else {
+                }
+                if (cmd.command == scanner_config::scanner_command::DISABLE) {
                     enabled_scanners.erase(it.first);
                 }
             }
@@ -557,19 +551,18 @@ void scanner_set::apply_scanner_commands() {
      */
     fs.create_alert_recorder();
     for (const auto &sit : scanner_info_db) {
-        if (!is_scanner_enabled(sit.second->name )){
-            continue;
-        }
-        for (const auto &it : sit.second->feature_defs) {
-            fs.create_feature_recorder(it);
-        }
+        if (is_scanner_enabled(sit.second->name )){
+            for (const auto &it : sit.second->feature_defs) {
+                fs.create_feature_recorder(it);
+            }
 
-        /* Create all of the requested histograms
-         * Multiple scanners may request the same histograms without generating an error.
-         */
-        for (const auto &it : sit.second->histogram_defs) {
-            // Make sure that a feature recorder exists for the feature specified in the histogram
-            fs.named_feature_recorder(it.feature).histogram_add(it);
+            /* Create all of the requested histograms
+             * Multiple scanners may request the same histograms without generating an error.
+             */
+            for (const auto &it : sit.second->histogram_defs) {
+                // Make sure that a feature recorder exists for the feature specified in the histogram
+                fs.named_feature_recorder(it.feature).histogram_add(it);
+            }
         }
     }
 
@@ -650,8 +643,6 @@ const std::filesystem::path scanner_set::get_input_fname() const
     return sc.input_fname;
 }
 
-
-
 /****************************************************************
  *** PHASE_SCAN methods.
  ****************************************************************/
@@ -678,7 +669,7 @@ template <typename T> void update_maximum(std::atomic<T>& maximum_value, T const
  * If there is no process pool or if it the sbuf is too small, process it in the current thread.
  * Othewise put it on the work queue.
  */
-void scanner_set::schedule_sbuf(sbuf_t *sbufp)
+void scanner_set::schedule_sbuf(const sbuf_t *sbufp)
 {
     assert (sbufp != nullptr );
     retain_sbuf(sbufp);
@@ -699,38 +690,22 @@ void scanner_set::schedule_sbuf(sbuf_t *sbufp)
     update_queue_stats( sbufp, +1 );
 
     /* Run in a different thread */
-#ifdef BARAKSH_THREADPOOL
-    pool->push_task( [this, sbufp]{ this->process_sbuf(sbufp); } );
-#else
     pool->push_task(sbufp);
-#endif
 }
 
 
-void scanner_set::retain_sbuf(sbuf_t *sbufp)
+void scanner_set::retain_sbuf(const sbuf_t *sbufp)
 {
     sbufp->reference_count += 1;
 }
 
-void scanner_set::release_sbuf(sbuf_t *sbufp)
+void scanner_set::release_sbuf(const sbuf_t *sbufp)
 {
     if (scheduled_sbufs.check_for_presence_and_erase(sbufp)) {
         update_queue_stats( sbufp, -1 );
     }
     thread_set_status(sbufp->pos0.str() + " release_sbuf");
-    if (sbufp->depth()==0 && writer) {
-        std::stringstream ss;
-        ss << "threadid='" << std::this_thread::get_id() << "' "
-           << "pos0='" << dfxml_writer::xmlescape(sbufp->pos0.str()) << "' ";
-
-        if (debug_flags.debug_benchmark_cpu) {
-            ss << "cpu_percent='" << get_cpu_percentage() << "' ";
-        }
-
-        ss << aftimer::now_str("t='","'");
-        writer->xmlout("debug:work_end", "", ss.str(), true);
-    }
-
+    record_work_end( sbufp );
     if (--sbufp->reference_count == 0 ){
         delete sbufp;
     }
@@ -742,7 +717,7 @@ void scanner_set::release_sbuf(sbuf_t *sbufp)
  * sbuf must be retained prior to calling this.
  * Calls release_sbuf() after processing.
  */
-void scanner_set::process_sbuf(class sbuf_t* sbufp, scanner_t *scanner)
+void scanner_set::process_sbuf(const sbuf_t* sbufp, scanner_t *scanner)
 {
     scanner_params sp(sc, this, nullptr, scanner_params::PHASE_SCAN, sbufp);
     const struct scanner_params::scanner_info *info = scanner_info_db[scanner];
@@ -752,7 +727,6 @@ void scanner_set::process_sbuf(class sbuf_t* sbufp, scanner_t *scanner)
     const class sbuf_t& sbuf = *sbufp;       // read-only reference
     const auto &name  = info->name;           // scanner name
     const auto &flags = info->scanner_flags; // scanner flags
-    size_t ngram_size = sbuf.find_ngram_size(sc.max_ngram);
 
     // loop just once --- allows use of 'break' to go to end, rather than using a 'goto'
     for(int i=0;i<1;i++){
@@ -760,28 +734,43 @@ void scanner_set::process_sbuf(class sbuf_t* sbufp, scanner_t *scanner)
             break; //  not enabled
         }
 
-        if (ngram_size > 0 && flags.scan_ngram_buffer == false) {
-            break;
-        }
-
         if (sbuf.depth() > 0 && flags.depth0_only) {
             // depth >0 and this scanner only run at depth 0
             break;
         }
 
+        // is sbuf large enough?
+        if (sbuf.bufsize < info->min_sbuf_size) {
+            break;
+        }
+
         // Don't rescan data that has been seen twice (if scanner doesn't want it.)
         if (sbuf.seen_before && flags.scan_seen_before == false) {
+            std::stringstream ss;
+            ss << "sbuf='" << sbuf.pos0.str() << "' reason='seen_before'";
+            writer->xmlout("debug:bypass", "", ss.str(), true);
+            break;
+        }
+
+        size_t ngram_size = sbuf.find_ngram_size(sc.max_ngram);
+        if (ngram_size > 0 && flags.scan_ngram_buffer == false) {
+            std::stringstream ss;
+            ss << "sbuf='" << sbuf.pos0.str() << "' ngram_size='" << ngram_size << "'";
+            writer->xmlout("debug:bypass", "", ss.str(), true);
+            break;
+        }
+
+        size_t distinct_chars = sbuf.get_distinct_character_count();
+        if (info->min_distinct_chars > distinct_chars) {
+            std::stringstream ss;
+            ss << "sbuf='" << sbuf.pos0.str() << "' min_distinct_chars='" << distinct_chars << "'";
+            writer->xmlout("debug:bypass", "", ss.str(), true);
             break;
         }
 
         // If the scanner is a recurse_all, it always calls recurse. We can't it twice in the stack, or else
         // we get infinite regression.
         if (flags.recurse_always && sbuf.pos0.contains( info->pathPrefix)) {
-            break;
-        }
-
-        // is sbuf large enough?
-        if (sbuf.bufsize < info->min_sbuf_size) {
             break;
         }
 
@@ -857,12 +846,54 @@ void scanner_set::process_sbuf(class sbuf_t* sbufp, scanner_t *scanner)
     }
 }
 
+/**
+ * Records when each sbuf starts. Used for restarting and graphing CPU utilization during run.
+ */
+void scanner_set::record_work_start(const sbuf_t *sbufp)
+{
+    if (sbufp->depth()==0 && writer) {
+        std::stringstream ss;
+        ss << "threadid='"  << std::this_thread::get_id() << "'" << " pos0='"     << dfxml_writer::xmlescape(sbufp->pos0.str()) << "'";
+        ss << " pagesize='" << sbufp->pagesize << "'";
+        ss << " bufsize='"  << sbufp->bufsize << "'";
+        if (debug_flags.debug_benchmark_cpu) {
+            ss << " cpu_percent='" << get_cpu_percentage() << "' ";
+        }
+        ss << aftimer::now_str(" t='","'");
+        writer->xmlout("debug:work_start","",ss.str(), true);
+    }
+}
+
+void scanner_set::record_work_start_pos0str(const std::string pos0str)
+{
+    std::stringstream ss;
+    ss << "pos0='" << dfxml_writer::xmlescape(pos0str) << "'";
+    writer->xmlout("debug:work_start","",ss.str(), true);
+}
+
+
+void scanner_set::record_work_end(const sbuf_t *sbufp)
+{
+    if (sbufp->depth()==0 && writer) {
+        std::stringstream ss;
+        ss << "threadid='" << std::this_thread::get_id() << "' " << "pos0='" << dfxml_writer::xmlescape(sbufp->pos0.str()) << "'";
+
+        if (debug_flags.debug_benchmark_cpu) {
+            ss << " cpu_percent='" << get_cpu_percentage() << "' ";
+        }
+
+        ss << aftimer::now_str("t='","'");
+        writer->xmlout("debug:work_end", "", ss.str(), true);
+    }
+}
+
+
 
 /* Process an sbuf (typically in its own thread).
  * sbuf must be retained prior to calling this.
  * Calls release_sbuf() after processing.
  */
-void scanner_set::process_sbuf(class sbuf_t* sbufp)
+void scanner_set::process_sbuf(const sbuf_t* sbufp)
 {
     /****************************************************************
      ** validate runtime enviornment.
@@ -888,9 +919,7 @@ void scanner_set::process_sbuf(class sbuf_t* sbufp)
     /****************************************************************
      ** Record that we are starting to work on the sbuf for statistics purposes.
      **/
-    if (sbufp->depth()==0) {
-        record_work_start(sbufp->pos0.str(), sbufp->pagesize, sbufp->bufsize);
-    }
+    record_work_start( sbufp );
     thread_set_status( sbufp->pos0.str() + " process_sbuf (" + std::to_string(sbufp->bufsize) + ")" );
 
     const class sbuf_t& sbuf = *sbufp;  // read-only reference
@@ -970,27 +999,6 @@ void scanner_set::process_sbuf(class sbuf_t* sbufp)
     release_sbuf(sbufp);
     thread_set_status("IDLE");
     return;
-}
-
-/**
- * Records when each sbuf starts. Used for restarting and graphing CPU utilization during run.
- */
-void scanner_set::record_work_start(const std::string &pos0, size_t pagesize, size_t bufsize)
-{
-    if (writer) {
-        std::stringstream ss;
-        ss << "threadid='"  << std::this_thread::get_id() << "'"
-           << " pos0='"     << dfxml_writer::xmlescape(pos0) << "'";
-
-        if (pagesize){
-            ss << " pagesize='" << pagesize << "'";
-        }
-        if (bufsize){
-            ss << " bufsize='"  << bufsize << "'";
-        }
-        ss   << aftimer::now_str(" t='","'");
-        writer->xmlout("debug:work_start","",ss.str(), true);
-    }
 }
 
 /****************************************************************

@@ -116,6 +116,12 @@ public:
     void push_scanner_command(const std::string& scannerName, scanner_command::command_t c) {
         scanner_commands.push_back(scanner_command(scannerName, c));
     }
+    void enable_all_scanners() {
+        push_scanner_command(scanner_command::ALL_SCANNERS, scanner_command::ENABLE);
+    }
+    void disable_all_scanners() {
+        push_scanner_command(scanner_command::ALL_SCANNERS, scanner_command::DISABLE);
+    }
 };
 
 #endif

@@ -2,8 +2,6 @@
 #include "threadpool.h"
 #include "scanner_set.h"
 
-#ifndef BARAKSH_THREADPOOL
-
 thread_pool::thread_pool(size_t num_workers, scanner_set &ss_): ss(ss_)
 {
     for (size_t i=0; i < num_workers; i++){
@@ -67,7 +65,7 @@ void thread_pool::join()
  * Right now it only works if called by main thread.
  */
 
-void thread_pool::push_task(sbuf_t *sbuf)
+void thread_pool::push_task(const sbuf_t *sbuf)
 {
     std::unique_lock<std::mutex> lock(M);
     if (main_thread == std::this_thread::get_id()) {
@@ -81,7 +79,7 @@ void thread_pool::push_task(sbuf_t *sbuf)
     }
 
     /* Add to the count */
-    work_queue.push( sbuf );
+    work_queue.push( new work_unit(sbuf) );
     // this doens't make sense if we can push from any thread:
     //freethreads--;
     TO_WORKER.notify_one();
@@ -138,7 +136,7 @@ void *worker::run()
 	/* Get the lock, then wait for the queue to be empty.
 	 * If it is not empty, wait for the lock again.
 	 */
-        sbuf_t *sbuf  = nullptr;
+        const sbuf_t *sbuf  = nullptr;
         {
             std::unique_lock<std::mutex> lock( tp.M );
             if (tp.debug) std::cerr << "worker " << std::this_thread::get_id() << " has lock " << std::endl;
@@ -155,8 +153,10 @@ void *worker::run()
             worker_wait_timer.stop();   // no longer waiting
 
             /* Worker still has the lock */
-            sbuf = tp.work_queue.front();    // get the task
+            thread_pool::work_unit *wu = tp.work_queue.front();    // get the task
+            sbuf = wu->sbuf;
             tp.work_queue.pop();           // remove it
+            delete wu;
             tp.freethreads--;           // no longer free
             /* release the lock */
         }
@@ -181,4 +181,3 @@ void *worker::run()
 
     return nullptr;
 }
-#endif
