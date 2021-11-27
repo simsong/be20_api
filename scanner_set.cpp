@@ -244,13 +244,11 @@ std::map<std::string, std::string> scanner_set::get_realtime_stats() const
     }
     int counter = 0;
     for (const auto &it : thread_status.values()) {
-        std::stringstream ss;
-        ss << "thread-" << ++counter;
+        counter++;
         std::string status = std::string(*it);
         if (status.size() > 0 && isdigit(status[0])) {
-
             uint64_t status_offset = static_cast<uint64_t>(strtoll(status.c_str(), nullptr, 10));
-            ret[ ss.str() ] = status;
+            ret[ Formatter() << "thread-" << counter ] = status;
             if (status_offset > max_offset) {
                 max_offset = status_offset;
             }
@@ -288,9 +286,11 @@ void scanner_set::launch_cpu_benchmark_thread(void *arg)
           ss->get_worker_count() > 0 ) {
         ss->writer->xmlout("debug:cpu_benchmark","",
                        Formatter()
-                       << "worker_count='" << ss->get_worker_count() << "' "
-                       << "cpu_percent='" << get_cpu_percentage() << "' "
-                       << aftimer::now_str(" t='","'"), true);
+                           << "worker_count='" << ss->get_worker_count() << "' "
+                           << "tasks_queued='" << ss->get_tasks_queued() << "' "
+                           << "depth0_sbufs_in_queue='" << ss->depth0_sbufs_in_queue << "' "
+                           << "cpu_percent='" << get_cpu_percentage() << "' "
+                           << aftimer::now_str(" t='","'"), true);
         std::this_thread::sleep_for( std::chrono::seconds( 1 ));
     }
 }
@@ -763,122 +763,122 @@ void scanner_set::process_sbuf(const sbuf_t* sbufp, scanner_t *scanner)
     const auto &name  = info->name;           // scanner name
     const auto &flags = info->scanner_flags; // scanner flags
 
-    // loop just once --- allows use of 'break' to go to end, rather than using a 'goto'
-    for(int i=0;i<1;i++){
-        if (enabled_scanners.find(scanner) == enabled_scanners.end()) {
-            break; //  not enabled
-        }
-
-        if (sbuf.depth() > 0 && flags.depth0_only) {
-            // depth >0 and this scanner only run at depth 0
-            break;
-        }
-
-        // is sbuf large enough?
-        if (sbuf.bufsize < info->min_sbuf_size) {
-            break;
-        }
-
-        // Don't rescan data that has been seen twice (if scanner doesn't want it.)
-        if (sbuf.seen_before && flags.scan_seen_before == false) {
-            std::stringstream ss;
-            ss << "sbuf='" << sbuf.pos0.str() << "' reason='seen_before'";
-            writer->xmlout("debug:bypass", "", ss.str(), true);
-            break;
-        }
-
-        size_t ngram_size = sbuf.find_ngram_size(sc.max_ngram);
-        if (ngram_size > 0 && flags.scan_ngram_buffer == false) {
-            std::stringstream ss;
-            ss << "sbuf='" << sbuf.pos0.str() << "' ngram_size='" << ngram_size << "'";
-            writer->xmlout("debug:bypass", "", ss.str(), true);
-            break;
-        }
-
-        size_t distinct_chars = sbuf.get_distinct_character_count();
-        if (info->min_distinct_chars > distinct_chars) {
-            std::stringstream ss;
-            ss << "sbuf='" << sbuf.pos0.str() << "' min_distinct_chars='" << distinct_chars << "'";
-            writer->xmlout("debug:bypass", "", ss.str(), true);
-            break;
-        }
-
-        // If the scanner is a recurse_all, it always calls recurse. We can't it twice in the stack, or else
-        // we get infinite regression.
-        if (flags.recurse_always && sbuf.pos0.contains( info->pathPrefix)) {
-            break;
-        }
-
-        // Check to see if scanner wants memory or filesystems and if we possibly have them
-        if (info->scanner_flags.scanner_wants_memory && sbuf.possibly_has_memory==false){
-            break;
-        }
-
-        if (info->scanner_flags.scanner_wants_filesystems && sbuf.possibly_has_filesystem==false){
-            break;
-        }
-
-        try {
-            /* Compute the effective path for stats */
-            std::string epath;
-            if (record_call_stats) {
-                bool inname = false;
-                for (auto cc : sbuf.pos0.path) {
-                    if (isupper(cc)) inname = true;
-                    if (inname) epath.push_back(toupper(cc));
-                    if (cc == '-') inname = false;
-                }
-                if (epath.size() > 0) epath.push_back('-');
-                for (auto cc : name) { epath.push_back(toupper(cc)); }
-            }
-
-            /* Call the scanner.*/
-            aftimer t;
-            thread_set_status( sbuf.pos0.str() + ": " + name + " (" + std::to_string(sbuf.bufsize) + " bytes)" );
-
-            if (debug_flags.debug_print_steps) {
-                std::cerr << "sbuf.pos0=" << sbuf.pos0 << " calling scanner " << name << "\n";
-            }
-            if (record_call_stats || debug_flags.debug_print_steps) {
-                t.start();
-            }
-            (*scanner)(sp);
-
-            if (record_call_stats || debug_flags.debug_print_steps) {
-                t.stop();
-                struct stats st(t.elapsed_nanoseconds(), 1);
-                add_scanner_stat(scanner, st);
-                add_path_stat(epath, st);
-                if (debug_flags.debug_print_steps) {
-                    std::cerr << "sbuf.pos0=" << sbuf.pos0 << " scanner " << name << " t=" << t.elapsed_seconds() << "\n";
-                }
-            }
-        }
-        catch (const feature_recorder::DiskWriteError &e) {
-            sp.ss->disk_write_errors ++;
-            try {
-                fs.get_alert_recorder().write(sbuf.pos0, "scanner=" + name,
-                                              Formatter() << "<exception>" << e.what() << "</exception>");
-            }
-            catch (feature_recorder_set::NoSuchFeatureRecorder& e2) {
-            }
-        }
-
-        catch (const std::exception& e) {
-            try {
-                fs.get_alert_recorder().write(sbuf.pos0, "scanner=" + name,
-                                              Formatter() << "<exception>" << e.what() << "</exception>");
-            }
-            catch (feature_recorder_set::NoSuchFeatureRecorder& e2) {
-            }
-        }
-        catch (...) {
-            try {
-                fs.get_alert_recorder().write(sbuf.pos0, "scanner=" + name, "<unknown_exception></unknown_exception>");
-            } catch (feature_recorder_set::NoSuchFeatureRecorder& e) {}
-        }
-        release_sbuf(sbufp);
+    if (enabled_scanners.find(scanner) == enabled_scanners.end()) {
+        return; //  not enabled
     }
+
+    if (sbuf.depth() > 0 && flags.depth0_only) {
+        // depth >0 and this scanner only run at depth 0
+        return;
+    }
+
+    // is sbuf large enough?
+    if (sbuf.bufsize < info->min_sbuf_size) {
+        return;
+    }
+
+    // Don't rescan data that has been seen twice --- and if scanner doesn't doesn't want dups.
+    if (sbuf.seen_before && flags.scan_seen_before == false) {
+        writer->xmlout("debug:bypass", "",
+                       Formatter()
+                       << "sbuf='" << sbuf.pos0.str() << "' "
+                       << "bufsize='" << sbuf.bufsize << "' "
+                       << "scanner='" << get_scanner_name(scanner) << "' "
+                       << "reason='seen_before'", true);
+        return;
+    }
+
+    size_t ngram_size = sbuf.find_ngram_size(sc.max_ngram);
+    if (ngram_size > 0 && flags.scan_ngram_buffer == false) {
+        writer->xmlout("debug:bypass", "",
+                       Formatter() << "sbuf='" << sbuf.pos0.str() << "' ngram_size='" << ngram_size << "'", true);
+        return;
+    }
+
+    size_t distinct_chars = sbuf.get_distinct_character_count();
+    if (info->min_distinct_chars > distinct_chars) {
+        writer->xmlout("debug:bypass", "",
+                       Formatter()
+                       << "sbuf='" << sbuf.pos0.str() << "' min_distinct_chars='" << distinct_chars << "'",
+                       true);
+        return;
+    }
+
+    // If the scanner is a recurse_all, it always calls recurse. We can't it twice in the stack, or else
+    // we get infinite regression.
+    if (flags.recurse_always && sbuf.pos0.contains( info->pathPrefix)) {
+        return;
+    }
+
+    // Check to see if scanner wants memory or filesystems and if we possibly have them
+    if (info->scanner_flags.scanner_wants_memory && sbuf.possibly_has_memory==false){
+        return;
+    }
+
+    if (info->scanner_flags.scanner_wants_filesystems && sbuf.possibly_has_filesystem==false){
+        return;
+    }
+
+    try {
+        /* Compute the effective path for stats */
+        std::string epath;
+        if (record_call_stats) {
+            bool inname = false;
+            for (auto cc : sbuf.pos0.path) {
+                if (isupper(cc)) inname = true;
+                if (inname) epath.push_back(toupper(cc));
+                if (cc == '-') inname = false;
+            }
+            if (epath.size() > 0) epath.push_back('-');
+            for (auto cc : name) { epath.push_back(toupper(cc)); }
+        }
+
+        /* Call the scanner.*/
+        aftimer t;
+        thread_set_status( sbuf.pos0.str() + ": " + name + " (" + std::to_string(sbuf.bufsize) + " bytes)" );
+
+        if (debug_flags.debug_print_steps) {
+            std::cerr << "sbuf.pos0=" << sbuf.pos0 << " calling scanner " << name << "\n";
+        }
+        if (record_call_stats || debug_flags.debug_print_steps) {
+            t.start();
+        }
+        (*scanner)(sp);
+
+        if (record_call_stats || debug_flags.debug_print_steps) {
+            t.stop();
+            struct stats st(t.elapsed_nanoseconds(), 1);
+            add_scanner_stat(scanner, st);
+            add_path_stat(epath, st);
+            if (debug_flags.debug_print_steps) {
+                std::cerr << "sbuf.pos0=" << sbuf.pos0 << " scanner " << name << " t=" << t.elapsed_seconds() << "\n";
+            }
+        }
+    }
+    catch (const feature_recorder::DiskWriteError &e) {
+        sp.ss->disk_write_errors ++;
+        try {
+            fs.get_alert_recorder().write(sbuf.pos0, "scanner=" + name,
+                                          Formatter() << "<exception>" << e.what() << "</exception>");
+        }
+        catch (feature_recorder_set::NoSuchFeatureRecorder& e2) {
+        }
+    }
+
+    catch (const std::exception& e) {
+        try {
+            fs.get_alert_recorder().write(sbuf.pos0, "scanner=" + name,
+                                          Formatter() << "<exception>" << e.what() << "</exception>");
+        }
+        catch (feature_recorder_set::NoSuchFeatureRecorder& e2) {
+        }
+    }
+    catch (...) {
+        try {
+            fs.get_alert_recorder().write(sbuf.pos0, "scanner=" + name, "<unknown_exception></unknown_exception>");
+        } catch (feature_recorder_set::NoSuchFeatureRecorder& e) {}
+    }
+    release_sbuf(sbufp);
 }
 
 /**
@@ -887,33 +887,31 @@ void scanner_set::process_sbuf(const sbuf_t* sbufp, scanner_t *scanner)
 void scanner_set::record_work_start(const sbuf_t *sbufp)
 {
     if (sbufp->depth()==0 && writer) {
-        std::stringstream ss;
-        ss << "threadid='"  << std::this_thread::get_id() << "'"
-           << " pos0='"     << dfxml_writer::xmlescape(sbufp->pos0.str()) << "'";
-        ss << " pagesize='" << sbufp->pagesize << "'";
-        ss << " bufsize='"  << sbufp->bufsize << "'";
-        ss << aftimer::now_str(" t='","'");
-        writer->xmlout("debug:work_start","",ss.str(), true);
+        writer->xmlout("debug:work_start","",
+                       Formatter()
+                       << "threadid='"  << std::this_thread::get_id() << "'"
+                       << " pos0='"     << dfxml_writer::xmlescape(sbufp->pos0.str()) << "'"
+                       << " pagesize='" << sbufp->pagesize << "'"
+                       << " bufsize='"  << sbufp->bufsize << "'"
+                       << aftimer::now_str(" t='","'"), true);
     }
 }
 
 void scanner_set::record_work_start_pos0str(const std::string pos0str)
 {
-    std::stringstream ss;
-    ss << "pos0='" << dfxml_writer::xmlescape(pos0str) << "'";
-    writer->xmlout("debug:work_start","",ss.str(), true);
+    writer->xmlout("debug:work_start","",
+                   Formatter() << "pos0='" << dfxml_writer::xmlescape(pos0str) << "'", true);
 }
 
 
 void scanner_set::record_work_end(const sbuf_t *sbufp)
 {
     if (sbufp->depth()==0 && writer) {
-        std::stringstream ss;
-        ss << "threadid='" << std::this_thread::get_id() << "' "
-           << "pos0='" << dfxml_writer::xmlescape(sbufp->pos0.str()) << "'";
-
-        ss << aftimer::now_str("t='","'");
-        writer->xmlout("debug:work_end", "", ss.str(), true);
+        writer->xmlout("debug:work_end", "",
+                       Formatter()
+                       << "threadid='" << std::this_thread::get_id() << "' "
+                       << "pos0='" << dfxml_writer::xmlescape(sbufp->pos0.str()) << "'"
+                       << aftimer::now_str(" t='","'"), true);
     }
 }
 
@@ -1053,13 +1051,11 @@ void scanner_set::log(const std::string message)
 void scanner_set::log(const sbuf_t &sbuf, const std::string message) // writes sbuf if not too deep.
 {
     if (sbuf.depth() <= log_depth) {
-        std::stringstream m2;
-        m2 << sbuf.pos0 << " buflen=" << sbuf.bufsize;
-        if (sbuf.has_hash()) {
-            m2 << " " << sbuf.hash();
-        }
-        m2 << ": " << message;
-        log(m2.str());
+        log( Formatter()
+             << "pos0=" << sbuf.pos0
+             << " buflen=" << sbuf.bufsize
+             << (sbuf.has_hash() ? sbuf.hash() : "")
+             << ": " << message );
     }
 }
 

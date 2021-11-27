@@ -164,7 +164,7 @@ public:
     } debug_flags{};
 
     // Scanner database
-    const std::string get_scanner_name(scanner_t scanner) const; // returns the name of the scanner
+    const std::string get_scanner_name(scanner_t scanner) const; // returns the name of the scanner; threadsafe
     virtual scanner_t* get_scanner_by_name(const std::string name) const;
 
     // Stats support
@@ -184,6 +184,7 @@ public:
     static const inline std::string MAX_OFFSET {"max_offset"};
 
     int get_worker_count() { return (pool!=nullptr) ? pool->get_worker_count() : 1; };
+    int get_tasks_queued() { return (pool!=nullptr) ? pool->get_tasks_queued() : 0; };
     std::atomic<int>      depth0_sbufs_in_queue {0};
     std::atomic<uint64_t> depth0_bytes_in_queue {0};
     std::atomic<int>      sbufs_in_queue {0};

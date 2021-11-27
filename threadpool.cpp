@@ -136,7 +136,7 @@ void *worker::run()
 	/* Get the lock, then wait for the queue to be empty.
 	 * If it is not empty, wait for the lock again.
 	 */
-        const sbuf_t *sbuf  = nullptr;
+        thread_pool::work_unit wu;
         {
             std::unique_lock<std::mutex> lock( tp.M );
             if (tp.debug) std::cerr << "worker " << std::this_thread::get_id() << " has lock " << std::endl;
@@ -153,19 +153,19 @@ void *worker::run()
             worker_wait_timer.stop();   // no longer waiting
 
             /* Worker still has the lock */
-            thread_pool::work_unit *wu = tp.work_queue.front();    // get the task
-            sbuf = wu->sbuf;
+            thread_pool::work_unit *wup = tp.work_queue.front();    // get the task
             tp.work_queue.pop();           // remove it
-            delete wu;
+            wu = *wup;
+            delete wup;
             tp.freethreads--;           // no longer free
             /* release the lock */
         }
         //std::cerr << std::this_thread::get_id() << " task=" << task << std::endl;
-	if (sbuf==nullptr) {                  // special code to exit thread
+	if (wu.sbuf==nullptr) {                  // special code to exit thread
             //tp.TO_MAIN.notify_one();          // tell the master that one is gone
             break;
         }
-        tp.ss.process_sbuf( sbuf );     // deletes the sbuf
+        tp.ss.process_sbuf( wu.sbuf );     // deletes the sbuf
         {
             std::unique_lock<std::mutex> lock( tp.M );
             tp.freethreads++;        // and now the thread is free!

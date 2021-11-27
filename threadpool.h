@@ -67,7 +67,9 @@ class thread_pool {
 
 public:
     struct work_unit {
+        work_unit(){}
         work_unit(const sbuf_t *sbuf_):sbuf(sbuf_) {}
+        work_unit(const sbuf_t *sbuf_, scanner_t *scanner_):sbuf(sbuf_),scanner(scanner_) {}
         const sbuf_t *sbuf {nullptr};       // sbuf to process
         scanner_t *scanner {nullptr};        // if set, use only this scanner, otherwise use all.
     };
