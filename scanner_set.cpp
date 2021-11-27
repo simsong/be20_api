@@ -86,6 +86,9 @@ scanner_set::~scanner_set()
         delete pool;
         pool = nullptr;
     }
+    if (benchmark_cpu_thread) {
+
+    }
     /* Delete all of the scanner info blocks */
     for (auto &it : scanner_info_db){
         delete it.second;
@@ -150,7 +153,9 @@ void scanner_set::update_queue_stats(const sbuf_t *sbufp, int dir)
 
     assert(sbufs_in_queue >= 0);
     if (sbufs_in_queue < depth0_sbufs_in_queue){
-        throw std::runtime_error(Formatter() << "sbufs_in_queue=" << sbufs_in_queue << " depth0_sbufs_in_queue=" << depth0_sbufs_in_queue);
+        throw std::runtime_error(Formatter()
+                                 << "sbufs_in_queue=" << sbufs_in_queue
+                                 << " depth0_sbufs_in_queue=" << depth0_sbufs_in_queue);
     }
     assert(bytes_in_queue >= depth0_bytes_in_queue);
 }
@@ -160,6 +165,10 @@ void scanner_set::thread_set_status(const std::string &status)
 {
     thread_status[std::this_thread::get_id()] = status;
 }
+
+/****************************************************************
+ ** System Info
+ ****************************************************************/
 
 uint64_t scanner_set::get_available_memory()
 {
@@ -226,7 +235,7 @@ std::map<std::string, std::string> scanner_set::get_realtime_stats() const
 {
     std::map<std::string, std::string> ret;
     if (pool!=nullptr){
-        ret[THREAD_COUNT_STR]        = std::to_string(pool->get_thread_count());
+        ret[THREAD_COUNT_STR]        = std::to_string(pool->get_worker_count());
         ret[TASKS_QUEUED_STR]        = std::to_string(pool->get_tasks_queued());
         ret[DEPTH0_SBUFS_QUEUED_STR] = std::to_string(depth0_sbufs_in_queue);
         ret[DEPTH0_BYTES_QUEUED_STR] = std::to_string(depth0_bytes_in_queue);
@@ -265,6 +274,28 @@ void scanner_set::join()
         pool->join();
     }
 }
+
+/****************************************************************
+ *** cpu benchmark thread
+ ****************************************************************/
+
+
+void scanner_set::launch_cpu_benchmark_thread(void *arg)
+{
+    scanner_set *ss = static_cast<scanner_set *>(arg);
+    assert(ss->writer != nullptr);
+    while(ss->current_phase == scanner_params::PHASE_SCAN &&
+          ss->get_worker_count() > 0 ) {
+        ss->writer->xmlout("debug:cpu_benchmark","",
+                       Formatter()
+                       << "worker_count='" << ss->get_worker_count() << "' "
+                       << "cpu_percent='" << get_cpu_percentage() << "' "
+                       << aftimer::now_str(" t='","'"), true);
+        std::this_thread::sleep_for( std::chrono::seconds( 1 ));
+    }
+}
+
+
 
 /****************************************************************
  *** scanner stats
@@ -654,6 +685,10 @@ void scanner_set::phase_scan() {
     }
     fs.frm_freeze();
     current_phase = scanner_params::PHASE_SCAN;
+    if (debug_flags.debug_benchmark_cpu && writer!=nullptr) {
+        void *arg = static_cast<void *>(this);
+        benchmark_cpu_thread = new std::thread( scanner_set::launch_cpu_benchmark_thread, arg);
+    }
 }
 
 // https://stackoverflow.com/questions/16190078/how-to-atomically-update-a-maximum-value
@@ -853,12 +888,10 @@ void scanner_set::record_work_start(const sbuf_t *sbufp)
 {
     if (sbufp->depth()==0 && writer) {
         std::stringstream ss;
-        ss << "threadid='"  << std::this_thread::get_id() << "'" << " pos0='"     << dfxml_writer::xmlescape(sbufp->pos0.str()) << "'";
+        ss << "threadid='"  << std::this_thread::get_id() << "'"
+           << " pos0='"     << dfxml_writer::xmlescape(sbufp->pos0.str()) << "'";
         ss << " pagesize='" << sbufp->pagesize << "'";
         ss << " bufsize='"  << sbufp->bufsize << "'";
-        if (debug_flags.debug_benchmark_cpu) {
-            ss << " cpu_percent='" << get_cpu_percentage() << "' ";
-        }
         ss << aftimer::now_str(" t='","'");
         writer->xmlout("debug:work_start","",ss.str(), true);
     }
@@ -876,11 +909,8 @@ void scanner_set::record_work_end(const sbuf_t *sbufp)
 {
     if (sbufp->depth()==0 && writer) {
         std::stringstream ss;
-        ss << "threadid='" << std::this_thread::get_id() << "' " << "pos0='" << dfxml_writer::xmlescape(sbufp->pos0.str()) << "'";
-
-        if (debug_flags.debug_benchmark_cpu) {
-            ss << " cpu_percent='" << get_cpu_percentage() << "' ";
-        }
+        ss << "threadid='" << std::this_thread::get_id() << "' "
+           << "pos0='" << dfxml_writer::xmlescape(sbufp->pos0.str()) << "'";
 
         ss << aftimer::now_str("t='","'");
         writer->xmlout("debug:work_end", "", ss.str(), true);
@@ -888,6 +918,9 @@ void scanner_set::record_work_end(const sbuf_t *sbufp)
 }
 
 
+/****************************************************************
+ ** sbuf processing
+ ****************************************************************/
 
 /* Process an sbuf (typically in its own thread).
  * sbuf must be retained prior to calling this.
@@ -1075,7 +1108,7 @@ uint64_t scanner_set::previously_processed_count(const sbuf_t& sbuf) {
 
 
 /****************************************************************
- *** Feature Recorder
+ *** packet handling
  ****************************************************************/
 
 
@@ -1092,9 +1125,6 @@ void scanner_set::process_packet(const be13::packet_info &pi)
 }
 #endif
 
-/****************************************************************
- *** packet handling
- ****************************************************************/
 
 #if 0
 /* Vector of callbacks */

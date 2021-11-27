@@ -98,7 +98,10 @@ class scanner_set {
     std::map<std::string, scanner_t *> scanner_names {}; // scanner name to scanner
     std::set<scanner_t*> enabled_scanners {};            //
 
-    class  thread_pool *pool {nullptr}; // nullptr means we are not threading
+    class thread_pool *pool {nullptr}; // nullptr means we are not threading
+    std::thread *benchmark_cpu_thread {nullptr};
+    void *cpu_benchmark();
+    static void launch_cpu_benchmark_thread(void *arg);
     class feature_recorder_set fs;      // the feature recorders
     atomic_map<std::string, std::atomic<uint64_t>> previously_processed_counter {};
     atomic_map<std::thread::id, std::string> thread_status {}; // the status of each thread::id
@@ -112,7 +115,7 @@ class scanner_set {
     unsigned int log_depth{1};   // log to dfxml all sbufs at this depth or less
     std::atomic<uint32_t> max_depth_seen{0};
     scanner_config sc;                             // scanner_set configuration; passed to feature_recorder_set
-    scanner_params::phase_t current_phase{ scanner_params::PHASE_INIT };
+    std::atomic<scanner_params::phase_t> current_phase{ scanner_params::PHASE_INIT };
     size_t worker_count {0};                 // how many workers were used
 
 public:
@@ -180,7 +183,7 @@ public:
     static const inline std::string SBUFS_REMAINING_STR {"sbufs_remaining"};
     static const inline std::string MAX_OFFSET {"max_offset"};
 
-    int get_thread_count() { return (pool!=nullptr) ? pool->get_thread_count() : 1; };
+    int get_worker_count() { return (pool!=nullptr) ? pool->get_worker_count() : 1; };
     std::atomic<int>      depth0_sbufs_in_queue {0};
     std::atomic<uint64_t> depth0_bytes_in_queue {0};
     std::atomic<int>      sbufs_in_queue {0};

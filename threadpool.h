@@ -96,7 +96,7 @@ public:
     void push_task(const sbuf_t *sbuf);
 
     // Status for callers
-    size_t get_thread_count() const;
+    size_t get_worker_count() const;
     int get_free_count() const;
     size_t get_tasks_queued() const;
     void debug_pool(std::ostream &os) const;

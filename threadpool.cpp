@@ -44,14 +44,14 @@ void thread_pool::wait_for_tasks()
 void thread_pool::join()
 {
     /* First send a kill message to each active thread. */
-    size_t num_threads = get_thread_count(); // get the count with lock
+    size_t num_threads = get_worker_count(); // get the count with lock
     for(size_t i=0;i < num_threads;i++){
         push_task(nullptr);             // tell a thread to die
     }
 
     // This is a spin lock until there are no more workers. Gross, but it works.
     int count=0;
-    while (get_thread_count()>0){
+    while (get_worker_count()>0){
         std::this_thread::sleep_for( std::chrono::milliseconds( shutdown_spin_lock_poll_ms ));
         if (debug || d2) {
             std::cerr << "thread_pool::join sleeping " << ++count << std::endl;
@@ -92,7 +92,7 @@ int thread_pool::get_free_count() const
     return freethreads;
 };
 
-size_t thread_pool::get_thread_count() const
+size_t thread_pool::get_worker_count() const
 {
     std::lock_guard<std::mutex> lock(M);
     return workers.size();
@@ -108,7 +108,7 @@ size_t thread_pool::get_tasks_queued() const
 void thread_pool::debug_pool(std::ostream &os) const
 {
     os
-        << " thread_count: " << get_thread_count()
+        << " worker_count: " << get_worker_count()
         << " free_count: "   << get_free_count()
         << " tasks_queued: " << get_tasks_queued()
         << std::endl;
