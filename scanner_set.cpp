@@ -87,7 +87,9 @@ scanner_set::~scanner_set()
         pool = nullptr;
     }
     if (benchmark_cpu_thread) {
-
+        benchmark_cpu_thread->join();
+        delete benchmark_cpu_thread;
+        benchmark_cpu_thread = nullptr;
     }
     /* Delete all of the scanner info blocks */
     for (auto &it : scanner_info_db){
