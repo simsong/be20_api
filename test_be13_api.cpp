@@ -537,26 +537,52 @@ TEST_CASE("sbuf_stream", "[sbuf]") {
     REQUIRE( sbs.get8u() == 2);
     REQUIRE( sbs.get8u() == 3);
     REQUIRE( sbs.get8u() == 4);
-    REQUIRE( sbs.tell() == 4 );
+    REQUIRE( sbs.tell()  == 4 );
 
     REQUIRE( sbs.get16u() == 0x0605);   // ah, LE
     REQUIRE( sbs.get16u() == 0x0807);
+    REQUIRE( sbs.tell() == 8 );
 
     sbs.seek(4);
     REQUIRE( sbs.get32u() == 0x08070605 );
+    REQUIRE( sbs.tell() == 8 );
+
+    sbs.seek(4);
+    REQUIRE( sbs.get8uBE() == 0x05);
+    REQUIRE( sbs.tell() == 5 );
+
+    sbs.seek(4);
+    REQUIRE( sbs.get16uBE() == 0x0506);
+    REQUIRE( sbs.tell() == 6 );
+
+    sbs.seek(4);
+    REQUIRE( sbs.get32uBE() == 0x05060708);
+    REQUIRE( sbs.tell() == 8 );
+
 
     sbs.seek(0);
     REQUIRE( sbs.get64u() == 0x0807060504030201L );
+    REQUIRE( sbs.tell() == 8 );
+
+    sbs.seek(0);
+    REQUIRE( sbs.get64uBE() == 0x0102030405060708L );
+    REQUIRE( sbs.tell() == 8 );
 
     sbs.seek(4);
     REQUIRE( sbs.get16iBE() == 0x0506);
+    REQUIRE( sbs.tell() == 6 );
+
     REQUIRE( sbs.get16iBE() == 0x0708);
+    REQUIRE( sbs.tell() == 8 );
+
 
     sbs.seek(4);
     REQUIRE( sbs.get32iBE() == 0x05060708 );
+    REQUIRE( sbs.tell() == 8 );
 
     sbs.seek(0);
     REQUIRE( sbs.get64iBE() == 0x0102030405060708L );
+    REQUIRE( sbs.tell() == 8 );
 
 }
 
@@ -1021,13 +1047,13 @@ TEST_CASE("enable/disable", "[scanner_set]") {
 /* This test runs a scan on the hello_sbuf() with the sha1 scanner. */
 TEST_CASE("run", "[scanner]") {
     scanner_config sc;
-
     sc.outdir = get_tempdir();
     sc.push_scanner_command(std::string("sha1_test"), scanner_config::scanner_command::ENABLE); /* Turn it onn */
 
     scanner_set ss(sc, feature_recorder_set::flags_t(), nullptr);
     ss.add_scanner(scan_sha1_test);
     ss.apply_scanner_commands();
+    REQUIRE(ss.get_scanner_name(scan_sha1_test) == "sha1_test");
 
     /* Make sure scanner is enabled */
     std::stringstream s2;
@@ -1084,6 +1110,42 @@ TEST_CASE("run", "[scanner]") {
     std::string fname_hist = get_tempdir() + "/sha1_bufs_first5.txt";
     lines = getLines(fname_hist);
     REQUIRE(lines.size() == 6);         // includes header!
+}
+
+/****************************************************************
+ * test the path printer with a scanner set...
+ */
+#include "test_image_reader.h"
+TEST_CASE("test_image_reader", "[path_printer]"){
+    test_image_reader p;
+    REQUIRE(p.image_size() == 256);
+    char buf[1024];
+    REQUIRE(p.pread(buf, sizeof(buf), 0) == 256);
+    REQUIRE(p.pread(buf, sizeof(buf), 250) == 6);
+    REQUIRE(p.pread(buf, sizeof(buf), 256) == 0);
+    REQUIRE(p.pread(buf, sizeof(buf), 1000) == 0);
+
+    REQUIRE(p.pread(buf, 10, 0) == 10);
+    REQUIRE(p.pread(buf, 10, 250) == 6);
+    REQUIRE(p.pread(buf, 10, 256) == 0);
+    REQUIRE(p.pread(buf, 10, 1000) == 0);
+}
+
+TEST_CASE("printer","[path_printer]"){
+    scanner_config sc;
+    sc.outdir = get_tempdir();
+    scanner_set ss(sc, feature_recorder_set::flags_t(), nullptr);
+    ss.apply_scanner_commands();
+    std::stringstream mem_stream;
+
+    // Make sure that the path_printer stops at the end of the image
+
+    test_image_reader *p = new test_image_reader();
+    path_printer pp( &ss, p, mem_stream);
+    pp.process_path( "0-PRINT/r" );
+
+    REQUIRE( mem_stream.str().size() == std::string("256\r\n").size() + p->image_size());
+    delete p;
 }
 
 /****************************************************************
@@ -1164,7 +1226,9 @@ TEST_CASE("unicode_detection2", "[unicode]") {
 
 #if 0
     for (size_t i = 0; i + 1 < str.size(); i += 2) {
-        std::cerr << "str[" << i << "]= " << (int)str[i] << " " << str[i] << "   str[" << i+1 << "]=" << (int)str[i+1] << " " << str[i+1] << "\n";
+        std::cerr << "str[" << i << "]= " << (int)str[i]
+                  << " " << str[i] << "   str[" << i+1 << "]="
+                  << (int)str[i+1] << " " << str[i+1] << "\n";
         /* TODO: Should we look for FFFE or FEFF and act accordingly ? */
     }
 #endif

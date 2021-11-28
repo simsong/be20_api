@@ -14,6 +14,8 @@ scanners are implemented using the API. Scanners can either be compiled into the
 There is no differnece in functionality between scanners that are
 compiled into the program (e.g. bulk_extractor or tcpflow) and those that are loaded at runtime.
 
+## Normal Usage
+
 The API defines functions for:
 
 1. Creating a `scanner_set`.  This creates the scanner_set's `feature_recorder_set`.
@@ -36,6 +38,17 @@ The API defines functions for:
    parallelized in the future!)
 
 6. Finally, the `scanner_set` shuts down and everything is de-allocated.
+
+## Path Printing
+
+The API also defines functions for "path printing," which uses the scanners to decode and print a forensic path.
+
+|Path|Action|
+|----|------|
+|0-PRINT|Prints the contents of location 0|
+|0-PRINT/r|Raw dumps the length of the buffer in decimal, a \r\n, and then the contents of location 0|
+|0-PRINT/h|Hext dump the contents of location 0|
+
 
 ## Working with this repo.
 This repo can used in three ways:
