@@ -165,7 +165,16 @@ void *worker::run()
             //tp.TO_MAIN.notify_one();          // tell the master that one is gone
             break;
         }
-        tp.ss.process_sbuf( wu.sbuf );     // deletes the sbuf
+        /* dispatch the work unit.
+         * if wu.scanner is not set, process_sbuf will run all scanners in sequence, or schedule each.
+         * if wu.scanner is set, process_sbuf will just run that one scanner.
+         */
+        if (wu.scanner) {
+            tp.ss.process_sbuf( wu.sbuf, wu.scanner);
+        }
+        else {
+            tp.ss.process_sbuf( wu.sbuf);
+        }
         {
             std::unique_lock<std::mutex> lock( tp.M );
             tp.freethreads++;        // and now the thread is free!

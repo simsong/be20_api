@@ -96,7 +96,7 @@ public:;
     const size_t   pagesize{0};      // page data; the rest is the 'margin'. pagesize <= bufsize
 
     const unsigned int depth() const { return pos0.depth(); }
-    const uint8_t* get_buf() const;  // returns the buffer UNSAFE but trackable. Enable DEBUG_SBUF_GETBUF to print on each call
+    const uint8_t* get_buf() const;  // returns the buffer UNSAFE but trackable.
 
     // abstraction violations:
     // store information about each sbuf in the sbuf.

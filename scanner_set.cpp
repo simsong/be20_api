@@ -66,15 +66,11 @@
 scanner_set::scanner_set(scanner_config& sc_, const feature_recorder_set::flags_t& f, class dfxml_writer* writer_)
     : fs(f, sc_), sc(sc_), writer(writer_)
 {
+    if (std::getenv("DEBUG_NO_SCANNER_BYPASS")) debug_flags.debug_no_scanner_bypass = true;
     if (std::getenv("DEBUG_SCANNER_SET_PRINT_STEPS")) debug_flags.debug_print_steps = true;
-    if (std::getenv("DEBUG_SCANNER_SET_NO_SCANNERS")) debug_flags.debug_no_scanners = true;
     if (std::getenv("DEBUG_SCANNER_SET_SCANNER")) debug_flags.debug_scanner = true;
     if (std::getenv("DEBUG_SCANNER_SET_DUMP_DATA")) debug_flags.debug_dump_data = true;
-    if (std::getenv("DEBUG_SCANNER_SET_DECODING")) debug_flags.debug_decoding = true;
-    if (std::getenv("DEBUG_SCANNER_SET_INFO")) debug_flags.debug_info = true;
-    if (std::getenv("DEBUG_SCANNER_SET_EXIT_EARLY")) debug_flags.debug_exit_early = true;
-    if (std::getenv("DEBUG_SCANNER_SET_REGISTER")) debug_flags.debug_register = true;
-    if (std::getenv(DEBUG_BENCHMARK_CPU.c_str())) debug_flags.debug_benchmark_cpu = true;
+    if (std::getenv("DEBUG_BENCHMARK_CPU")) debug_flags.debug_benchmark_cpu = true;
     const char *dsi = std::getenv("DEBUG_SCANNERS_IGNORE");
     if (dsi!=nullptr) debug_flags.debug_scanners_ignore=dsi;
 }
@@ -347,7 +343,7 @@ void scanner_set::add_scanner(scanner_t scanner) {
      * Use an empty sbuf and an empty feature recorder to create an empty scanner params that is in PHASE_STARTUP.
      * We then ask the scanner to initialize.
      */
-    PrintOptions po;
+    //PrintOptions po;
     scanner_params sp(sc, this, nullptr, scanner_params::PHASE_INIT, nullptr);
 
     // Send the scanner the PHASE_INIT message, which will cause it to fill in the sp.info field.
@@ -364,9 +360,6 @@ void scanner_set::add_scanner(scanner_t scanner) {
     if (debug_flags.debug_scanners_ignore.find(sp.info->name) != std::string::npos){
         std::cerr << "DEBUG: ignore add_scanner " << sp.info->name << "\n";
         return;
-    }
-    if (debug_flags.debug_register) {
-        std::cerr << "DEBUG: add_scanner( " << sp.info->name << " )\n";
     }
     scanner_info_db[scanner]     = sp.info; // was std::move(); not needed anymore
     scanner_names[sp.info->name] = scanner;

@@ -80,7 +80,7 @@ void AtomicUnicodeHistogram::add0(const std::string& u8key, const std::string &c
         displayString = validateOrEscapeUTF8(displayString, true, true, false);
 
         /* For debugging low-memory handling logic,
-         * specify DEBUG_MALLOC_FAIL to make malloc occasionally fail
+         * specify DEBUG_MALLOC_FAIL to make malloc occasionally fail (not yet implemented)
          */
         if (debug_histogram_malloc_fail_frequency) {
             if ((h.size() % debug_histogram_malloc_fail_frequency) == (debug_histogram_malloc_fail_frequency - 1)) {

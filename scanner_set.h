@@ -120,8 +120,6 @@ class scanner_set {
 
 public:
     static const inline size_t SAME_THREAD_SBUF_SIZE = 8192; // sbufs smaller than this run in the same thread.
-    static inline std::string DEBUG_BENCHMARK_CPU {"DEBUG_BENCHMARK_CPU"};
-    static inline std::string DEBUG_NO_SCANNER_BYPASS {"DEBUG_NO_SCANNER_BYPASS"}; // do not bypass scanners because of ngram count or distinct character count
 
     /* constructor and destructor */
     /* @param sc - the config variables
@@ -150,15 +148,10 @@ public:
     };
 
     struct debug_flags_t {
+        bool debug_no_scanner_bypass{false}; // do not use scanner bypass logic
         bool debug_print_steps{false};     // prints as each scanner is started
         bool debug_scanner{false};         // dump all feature writes to stderr
-        bool debug_no_scanners{false};     // run with no scanners
         bool debug_dump_data{false};       // scanners should dump data as they see them
-        bool debug_decoding{false};        // scanners should dump information on decoding as they see them
-        bool debug_info{false};            // print extra info
-        bool debug_exit_early{false};      // just print the size of the volume and exit
-        bool debug_allocate_512MiB{false}; // allocate 512MiB but don't set any flags
-        bool debug_register{false};        // print when scanners register
         bool debug_benchmark_cpu {false};  // capture CPU usage
         std::string debug_scanners_ignore{}; // ignore these scanners, separated by :
     } debug_flags{};
