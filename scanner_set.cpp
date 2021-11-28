@@ -22,7 +22,6 @@
 #include <linux/sysctl.h>
 #endif
 
-
 #ifdef HAVE_DLFCN_H
 #include <dlfcn.h>
 #endif
@@ -39,7 +38,7 @@
 #include <mach/host_info.h>
 #endif
 
-#include "be_threadpool.h"
+#include "threadpool.h"
 
 #include "aftimer.h"
 #include "dfxml_cpp/src/dfxml_writer.h"
@@ -67,15 +66,11 @@
 scanner_set::scanner_set(scanner_config& sc_, const feature_recorder_set::flags_t& f, class dfxml_writer* writer_)
     : fs(f, sc_), sc(sc_), writer(writer_)
 {
+    if (std::getenv("DEBUG_NO_SCANNER_BYPASS")) debug_flags.debug_no_scanner_bypass = true;
     if (std::getenv("DEBUG_SCANNER_SET_PRINT_STEPS")) debug_flags.debug_print_steps = true;
-    if (std::getenv("DEBUG_SCANNER_SET_NO_SCANNERS")) debug_flags.debug_no_scanners = true;
     if (std::getenv("DEBUG_SCANNER_SET_SCANNER")) debug_flags.debug_scanner = true;
     if (std::getenv("DEBUG_SCANNER_SET_DUMP_DATA")) debug_flags.debug_dump_data = true;
-    if (std::getenv("DEBUG_SCANNER_SET_DECODING")) debug_flags.debug_decoding = true;
-    if (std::getenv("DEBUG_SCANNER_SET_INFO")) debug_flags.debug_info = true;
-    if (std::getenv("DEBUG_SCANNER_SET_EXIT_EARLY")) debug_flags.debug_exit_early = true;
-    if (std::getenv("DEBUG_SCANNER_SET_REGISTER")) debug_flags.debug_register = true;
-    if (std::getenv(DEBUG_BENCHMARK_CPU.c_str())) debug_flags.debug_benchmark_cpu = true;
+    if (std::getenv("DEBUG_BENCHMARK_CPU")) debug_flags.debug_benchmark_cpu = true;
     const char *dsi = std::getenv("DEBUG_SCANNERS_IGNORE");
     if (dsi!=nullptr) debug_flags.debug_scanners_ignore=dsi;
 }
@@ -86,6 +81,11 @@ scanner_set::~scanner_set()
         join();                             // kill the threads if they are still running
         delete pool;
         pool = nullptr;
+    }
+    if (benchmark_cpu_thread) {
+        benchmark_cpu_thread->join();
+        delete benchmark_cpu_thread;
+        benchmark_cpu_thread = nullptr;
     }
     /* Delete all of the scanner info blocks */
     for (auto &it : scanner_info_db){
@@ -133,14 +133,10 @@ void scanner_set::launch_workers(int count)
 {
     assert(pool == nullptr);
     worker_count = count;
-#ifdef BARAKSH_THREADPOOL
-    pool = new thread_pool(count);
-#else
     pool = new thread_pool(count, *this);
-#endif
 }
 
-void scanner_set::update_queue_stats(sbuf_t *sbufp, int dir)
+void scanner_set::update_queue_stats(const sbuf_t *sbufp, int dir)
 {
     assert (sbufp != nullptr );
     assert ( dir==1 || dir==-1);
@@ -155,7 +151,9 @@ void scanner_set::update_queue_stats(sbuf_t *sbufp, int dir)
 
     assert(sbufs_in_queue >= 0);
     if (sbufs_in_queue < depth0_sbufs_in_queue){
-        throw std::runtime_error(Formatter() << "sbufs_in_queue=" << sbufs_in_queue << " depth0_sbufs_in_queue=" << depth0_sbufs_in_queue);
+        throw std::runtime_error(Formatter()
+                                 << "sbufs_in_queue=" << sbufs_in_queue
+                                 << " depth0_sbufs_in_queue=" << depth0_sbufs_in_queue);
     }
     assert(bytes_in_queue >= depth0_bytes_in_queue);
 }
@@ -165,6 +163,10 @@ void scanner_set::thread_set_status(const std::string &status)
 {
     thread_status[std::this_thread::get_id()] = status;
 }
+
+/****************************************************************
+ ** System Info
+ ****************************************************************/
 
 uint64_t scanner_set::get_available_memory()
 {
@@ -218,12 +220,10 @@ float scanner_set::get_cpu_percentage()
     fgets(buf,sizeof(buf),f);           /* read the second line */
     pclose(f);
     buf[sizeof(buf)-1] = 0;             // in case it needs termination
-    char *loc = index(buf,' ');         /* find the space */
-    if (loc) {
-        return atof(loc);
-    } else {
-        return 0.0;
-    }
+    int pid=0;
+    float ff = 0;
+    int count = sscanf(buf,"%d %f",&pid,&ff);
+    return (count==2) ? ff : 0.0;
 }
 
 /*
@@ -233,7 +233,7 @@ std::map<std::string, std::string> scanner_set::get_realtime_stats() const
 {
     std::map<std::string, std::string> ret;
     if (pool!=nullptr){
-        ret[THREAD_COUNT_STR]        = std::to_string(pool->get_thread_count());
+        ret[THREAD_COUNT_STR]        = std::to_string(pool->get_worker_count());
         ret[TASKS_QUEUED_STR]        = std::to_string(pool->get_tasks_queued());
         ret[DEPTH0_SBUFS_QUEUED_STR] = std::to_string(depth0_sbufs_in_queue);
         ret[DEPTH0_BYTES_QUEUED_STR] = std::to_string(depth0_bytes_in_queue);
@@ -242,13 +242,11 @@ std::map<std::string, std::string> scanner_set::get_realtime_stats() const
     }
     int counter = 0;
     for (const auto &it : thread_status.values()) {
-        std::stringstream ss;
-        ss << "thread-" << ++counter;
+        counter++;
         std::string status = std::string(*it);
         if (status.size() > 0 && isdigit(status[0])) {
-
             uint64_t status_offset = static_cast<uint64_t>(strtoll(status.c_str(), nullptr, 10));
-            ret[ ss.str() ] = status;
+            ret[ Formatter() << "thread-" << counter ] = status;
             if (status_offset > max_offset) {
                 max_offset = status_offset;
             }
@@ -272,6 +270,30 @@ void scanner_set::join()
         pool->join();
     }
 }
+
+/****************************************************************
+ *** cpu benchmark thread
+ ****************************************************************/
+
+
+void scanner_set::launch_cpu_benchmark_thread(void *arg)
+{
+    scanner_set *ss = static_cast<scanner_set *>(arg);
+    assert(ss->writer != nullptr);
+    while(ss->current_phase == scanner_params::PHASE_SCAN &&
+          ss->get_worker_count() > 0 ) {
+        ss->writer->xmlout("debug:cpu_benchmark","",
+                       Formatter()
+                           << "worker_count='" << ss->get_worker_count() << "' "
+                           << "tasks_queued='" << ss->get_tasks_queued() << "' "
+                           << "depth0_sbufs_in_queue='" << ss->depth0_sbufs_in_queue << "' "
+                           << "cpu_percent='" << get_cpu_percentage() << "' "
+                           << aftimer::now_str(" t='","'"), true);
+        std::this_thread::sleep_for( std::chrono::seconds( 1 ));
+    }
+}
+
+
 
 /****************************************************************
  *** scanner stats
@@ -321,7 +343,7 @@ void scanner_set::add_scanner(scanner_t scanner) {
      * Use an empty sbuf and an empty feature recorder to create an empty scanner params that is in PHASE_STARTUP.
      * We then ask the scanner to initialize.
      */
-    PrintOptions po;
+    //PrintOptions po;
     scanner_params sp(sc, this, nullptr, scanner_params::PHASE_INIT, nullptr);
 
     // Send the scanner the PHASE_INIT message, which will cause it to fill in the sp.info field.
@@ -338,9 +360,6 @@ void scanner_set::add_scanner(scanner_t scanner) {
     if (debug_flags.debug_scanners_ignore.find(sp.info->name) != std::string::npos){
         std::cerr << "DEBUG: ignore add_scanner " << sp.info->name << "\n";
         return;
-    }
-    if (debug_flags.debug_register) {
-        std::cerr << "DEBUG: add_scanner( " << sp.info->name << " )\n";
     }
     scanner_info_db[scanner]     = sp.info; // was std::move(); not needed anymore
     scanner_names[sp.info->name] = scanner;
@@ -537,7 +556,8 @@ void scanner_set::apply_scanner_commands() {
                 }
                 if (cmd.command == scanner_config::scanner_command::ENABLE) {
                     enabled_scanners.insert(it.first);
-                } else {
+                }
+                if (cmd.command == scanner_config::scanner_command::DISABLE) {
                     enabled_scanners.erase(it.first);
                 }
             }
@@ -557,19 +577,18 @@ void scanner_set::apply_scanner_commands() {
      */
     fs.create_alert_recorder();
     for (const auto &sit : scanner_info_db) {
-        if (!is_scanner_enabled(sit.second->name )){
-            continue;
-        }
-        for (const auto &it : sit.second->feature_defs) {
-            fs.create_feature_recorder(it);
-        }
+        if (is_scanner_enabled(sit.second->name )){
+            for (const auto &it : sit.second->feature_defs) {
+                fs.create_feature_recorder(it);
+            }
 
-        /* Create all of the requested histograms
-         * Multiple scanners may request the same histograms without generating an error.
-         */
-        for (const auto &it : sit.second->histogram_defs) {
-            // Make sure that a feature recorder exists for the feature specified in the histogram
-            fs.named_feature_recorder(it.feature).histogram_add(it);
+            /* Create all of the requested histograms
+             * Multiple scanners may request the same histograms without generating an error.
+             */
+            for (const auto &it : sit.second->histogram_defs) {
+                // Make sure that a feature recorder exists for the feature specified in the histogram
+                fs.named_feature_recorder(it.feature).histogram_add(it);
+            }
         }
     }
 
@@ -650,8 +669,6 @@ const std::filesystem::path scanner_set::get_input_fname() const
     return sc.input_fname;
 }
 
-
-
 /****************************************************************
  *** PHASE_SCAN methods.
  ****************************************************************/
@@ -663,6 +680,10 @@ void scanner_set::phase_scan() {
     }
     fs.frm_freeze();
     current_phase = scanner_params::PHASE_SCAN;
+    if (debug_flags.debug_benchmark_cpu && writer!=nullptr) {
+        void *arg = static_cast<void *>(this);
+        benchmark_cpu_thread = new std::thread( scanner_set::launch_cpu_benchmark_thread, arg);
+    }
 }
 
 // https://stackoverflow.com/questions/16190078/how-to-atomically-update-a-maximum-value
@@ -678,7 +699,7 @@ template <typename T> void update_maximum(std::atomic<T>& maximum_value, T const
  * If there is no process pool or if it the sbuf is too small, process it in the current thread.
  * Othewise put it on the work queue.
  */
-void scanner_set::schedule_sbuf(sbuf_t *sbufp)
+void scanner_set::schedule_sbuf(const sbuf_t *sbufp)
 {
     assert (sbufp != nullptr );
     retain_sbuf(sbufp);
@@ -699,38 +720,22 @@ void scanner_set::schedule_sbuf(sbuf_t *sbufp)
     update_queue_stats( sbufp, +1 );
 
     /* Run in a different thread */
-#ifdef BARAKSH_THREADPOOL
-    pool->push_task( [this, sbufp]{ this->process_sbuf(sbufp); } );
-#else
     pool->push_task(sbufp);
-#endif
 }
 
 
-void scanner_set::retain_sbuf(sbuf_t *sbufp)
+void scanner_set::retain_sbuf(const sbuf_t *sbufp)
 {
     sbufp->reference_count += 1;
 }
 
-void scanner_set::release_sbuf(sbuf_t *sbufp)
+void scanner_set::release_sbuf(const sbuf_t *sbufp)
 {
     if (scheduled_sbufs.check_for_presence_and_erase(sbufp)) {
         update_queue_stats( sbufp, -1 );
     }
     thread_set_status(sbufp->pos0.str() + " release_sbuf");
-    if (sbufp->depth()==0 && writer) {
-        std::stringstream ss;
-        ss << "threadid='" << std::this_thread::get_id() << "' "
-           << "pos0='" << dfxml_writer::xmlescape(sbufp->pos0.str()) << "' ";
-
-        if (debug_flags.debug_benchmark_cpu) {
-            ss << "cpu_percent='" << get_cpu_percentage() << "' ";
-        }
-
-        ss << aftimer::now_str("t='","'");
-        writer->xmlout("debug:work_end", "", ss.str(), true);
-    }
-
+    record_work_end( sbufp );
     if (--sbufp->reference_count == 0 ){
         delete sbufp;
     }
@@ -742,7 +747,7 @@ void scanner_set::release_sbuf(sbuf_t *sbufp)
  * sbuf must be retained prior to calling this.
  * Calls release_sbuf() after processing.
  */
-void scanner_set::process_sbuf(class sbuf_t* sbufp, scanner_t *scanner)
+void scanner_set::process_sbuf(const sbuf_t* sbufp, scanner_t *scanner)
 {
     scanner_params sp(sc, this, nullptr, scanner_params::PHASE_SCAN, sbufp);
     const struct scanner_params::scanner_info *info = scanner_info_db[scanner];
@@ -752,117 +757,169 @@ void scanner_set::process_sbuf(class sbuf_t* sbufp, scanner_t *scanner)
     const class sbuf_t& sbuf = *sbufp;       // read-only reference
     const auto &name  = info->name;           // scanner name
     const auto &flags = info->scanner_flags; // scanner flags
+
+    if (enabled_scanners.find(scanner) == enabled_scanners.end()) {
+        return; //  not enabled
+    }
+
+    if (sbuf.depth() > 0 && flags.depth0_only) {
+        // depth >0 and this scanner only run at depth 0
+        return;
+    }
+
+    // is sbuf large enough?
+    if (sbuf.bufsize < info->min_sbuf_size) {
+        return;
+    }
+
+    // Don't rescan data that has been seen twice --- and if scanner doesn't doesn't want dups.
+    if (sbuf.seen_before && flags.scan_seen_before == false) {
+        writer->xmlout("debug:bypass", "",
+                       Formatter()
+                       << "sbuf='" << sbuf.pos0.str() << "' "
+                       << "bufsize='" << sbuf.bufsize << "' "
+                       << "scanner='" << get_scanner_name(scanner) << "' "
+                       << "reason='seen_before'", true);
+        return;
+    }
+
     size_t ngram_size = sbuf.find_ngram_size(sc.max_ngram);
+    if (ngram_size > 0 && flags.scan_ngram_buffer == false) {
+        writer->xmlout("debug:bypass", "",
+                       Formatter() << "sbuf='" << sbuf.pos0.str() << "' ngram_size='" << ngram_size << "'", true);
+        return;
+    }
 
-    // loop just once --- allows use of 'break' to go to end, rather than using a 'goto'
-    for(int i=0;i<1;i++){
-        if (enabled_scanners.find(scanner) == enabled_scanners.end()) {
-            break; //  not enabled
-        }
+    size_t distinct_chars = sbuf.get_distinct_character_count();
+    if (info->min_distinct_chars > distinct_chars) {
+        writer->xmlout("debug:bypass", "",
+                       Formatter()
+                       << "sbuf='" << sbuf.pos0.str() << "' min_distinct_chars='" << distinct_chars << "'",
+                       true);
+        return;
+    }
 
-        if (ngram_size > 0 && flags.scan_ngram_buffer == false) {
-            break;
-        }
+    // If the scanner is a recurse_all, it always calls recurse. We can't it twice in the stack, or else
+    // we get infinite regression.
+    if (flags.recurse_always && sbuf.pos0.contains( info->pathPrefix)) {
+        return;
+    }
 
-        if (sbuf.depth() > 0 && flags.depth0_only) {
-            // depth >0 and this scanner only run at depth 0
-            break;
-        }
+    // Check to see if scanner wants memory or filesystems and if we possibly have them
+    if (info->scanner_flags.scanner_wants_memory && sbuf.possibly_has_memory==false){
+        return;
+    }
 
-        // Don't rescan data that has been seen twice (if scanner doesn't want it.)
-        if (sbuf.seen_before && flags.scan_seen_before == false) {
-            break;
-        }
+    if (info->scanner_flags.scanner_wants_filesystems && sbuf.possibly_has_filesystem==false){
+        return;
+    }
 
-        // If the scanner is a recurse_all, it always calls recurse. We can't it twice in the stack, or else
-        // we get infinite regression.
-        if (flags.recurse_always && sbuf.pos0.contains( info->pathPrefix)) {
-            break;
-        }
-
-        // is sbuf large enough?
-        if (sbuf.bufsize < info->min_sbuf_size) {
-            break;
-        }
-
-        // Check to see if scanner wants memory or filesystems and if we possibly have them
-        if (info->scanner_flags.scanner_wants_memory && sbuf.possibly_has_memory==false){
-            break;
-        }
-
-        if (info->scanner_flags.scanner_wants_filesystems && sbuf.possibly_has_filesystem==false){
-            break;
-        }
-
-        try {
-            /* Compute the effective path for stats */
-            std::string epath;
-            if (record_call_stats) {
-                bool inname = false;
-                for (auto cc : sbuf.pos0.path) {
-                    if (isupper(cc)) inname = true;
-                    if (inname) epath.push_back(toupper(cc));
-                    if (cc == '-') inname = false;
-                }
-                if (epath.size() > 0) epath.push_back('-');
-                for (auto cc : name) { epath.push_back(toupper(cc)); }
+    try {
+        /* Compute the effective path for stats */
+        std::string epath;
+        if (record_call_stats) {
+            bool inname = false;
+            for (auto cc : sbuf.pos0.path) {
+                if (isupper(cc)) inname = true;
+                if (inname) epath.push_back(toupper(cc));
+                if (cc == '-') inname = false;
             }
+            if (epath.size() > 0) epath.push_back('-');
+            for (auto cc : name) { epath.push_back(toupper(cc)); }
+        }
 
-            /* Call the scanner.*/
-            aftimer t;
-            thread_set_status( sbuf.pos0.str() + ": " + name + " (" + std::to_string(sbuf.bufsize) + " bytes)" );
+        /* Call the scanner.*/
+        aftimer t;
+        thread_set_status( sbuf.pos0.str() + ": " + name + " (" + std::to_string(sbuf.bufsize) + " bytes)" );
 
+        if (debug_flags.debug_print_steps) {
+            std::cerr << "sbuf.pos0=" << sbuf.pos0 << " calling scanner " << name << "\n";
+        }
+        if (record_call_stats || debug_flags.debug_print_steps) {
+            t.start();
+        }
+        (*scanner)(sp);
+
+        if (record_call_stats || debug_flags.debug_print_steps) {
+            t.stop();
+            struct stats st(t.elapsed_nanoseconds(), 1);
+            add_scanner_stat(scanner, st);
+            add_path_stat(epath, st);
             if (debug_flags.debug_print_steps) {
-                std::cerr << "sbuf.pos0=" << sbuf.pos0 << " calling scanner " << name << "\n";
+                std::cerr << "sbuf.pos0=" << sbuf.pos0 << " scanner " << name << " t=" << t.elapsed_seconds() << "\n";
             }
-            if (record_call_stats || debug_flags.debug_print_steps) {
-                t.start();
-            }
-            (*scanner)(sp);
+        }
+    }
+    catch (const feature_recorder::DiskWriteError &e) {
+        sp.ss->disk_write_errors ++;
+        try {
+            fs.get_alert_recorder().write(sbuf.pos0, "scanner=" + name,
+                                          Formatter() << "<exception>" << e.what() << "</exception>");
+        }
+        catch (feature_recorder_set::NoSuchFeatureRecorder& e2) {
+        }
+    }
 
-            if (record_call_stats || debug_flags.debug_print_steps) {
-                t.stop();
-                struct stats st(t.elapsed_nanoseconds(), 1);
-                add_scanner_stat(scanner, st);
-                add_path_stat(epath, st);
-                if (debug_flags.debug_print_steps) {
-                    std::cerr << "sbuf.pos0=" << sbuf.pos0 << " scanner " << name << " t=" << t.elapsed_seconds() << "\n";
-                }
-            }
+    catch (const std::exception& e) {
+        try {
+            fs.get_alert_recorder().write(sbuf.pos0, "scanner=" + name,
+                                          Formatter() << "<exception>" << e.what() << "</exception>");
         }
-        catch (const feature_recorder::DiskWriteError &e) {
-            sp.ss->disk_write_errors ++;
-            try {
-                fs.get_alert_recorder().write(sbuf.pos0, "scanner=" + name,
-                                              Formatter() << "<exception>" << e.what() << "</exception>");
-            }
-            catch (feature_recorder_set::NoSuchFeatureRecorder& e2) {
-            }
+        catch (feature_recorder_set::NoSuchFeatureRecorder& e2) {
         }
+    }
+    catch (...) {
+        try {
+            fs.get_alert_recorder().write(sbuf.pos0, "scanner=" + name, "<unknown_exception></unknown_exception>");
+        } catch (feature_recorder_set::NoSuchFeatureRecorder& e) {}
+    }
+    release_sbuf(sbufp);
+}
 
-        catch (const std::exception& e) {
-            try {
-                fs.get_alert_recorder().write(sbuf.pos0, "scanner=" + name,
-                                              Formatter() << "<exception>" << e.what() << "</exception>");
-            }
-            catch (feature_recorder_set::NoSuchFeatureRecorder& e2) {
-            }
-        }
-        catch (...) {
-            try {
-                fs.get_alert_recorder().write(sbuf.pos0, "scanner=" + name, "<unknown_exception></unknown_exception>");
-            } catch (feature_recorder_set::NoSuchFeatureRecorder& e) {}
-        }
-        release_sbuf(sbufp);
+/**
+ * Records when each sbuf starts. Used for restarting and graphing CPU utilization during run.
+ */
+void scanner_set::record_work_start(const sbuf_t *sbufp)
+{
+    if (sbufp->depth()==0 && writer) {
+        writer->xmlout("debug:work_start","",
+                       Formatter()
+                       << "threadid='"  << std::this_thread::get_id() << "'"
+                       << " pos0='"     << dfxml_writer::xmlescape(sbufp->pos0.str()) << "'"
+                       << " pagesize='" << sbufp->pagesize << "'"
+                       << " bufsize='"  << sbufp->bufsize << "'"
+                       << aftimer::now_str(" t='","'"), true);
     }
 }
 
+void scanner_set::record_work_start_pos0str(const std::string pos0str)
+{
+    writer->xmlout("debug:work_start","",
+                   Formatter() << "pos0='" << dfxml_writer::xmlescape(pos0str) << "'", true);
+}
+
+
+void scanner_set::record_work_end(const sbuf_t *sbufp)
+{
+    if (sbufp->depth()==0 && writer) {
+        writer->xmlout("debug:work_end", "",
+                       Formatter()
+                       << "threadid='" << std::this_thread::get_id() << "' "
+                       << "pos0='" << dfxml_writer::xmlescape(sbufp->pos0.str()) << "'"
+                       << aftimer::now_str(" t='","'"), true);
+    }
+}
+
+
+/****************************************************************
+ ** sbuf processing
+ ****************************************************************/
 
 /* Process an sbuf (typically in its own thread).
  * sbuf must be retained prior to calling this.
  * Calls release_sbuf() after processing.
  */
-void scanner_set::process_sbuf(class sbuf_t* sbufp)
+void scanner_set::process_sbuf(const sbuf_t* sbufp)
 {
     /****************************************************************
      ** validate runtime enviornment.
@@ -888,9 +945,7 @@ void scanner_set::process_sbuf(class sbuf_t* sbufp)
     /****************************************************************
      ** Record that we are starting to work on the sbuf for statistics purposes.
      **/
-    if (sbufp->depth()==0) {
-        record_work_start(sbufp->pos0.str(), sbufp->pagesize, sbufp->bufsize);
-    }
+    record_work_start( sbufp );
     thread_set_status( sbufp->pos0.str() + " process_sbuf (" + std::to_string(sbufp->bufsize) + ")" );
 
     const class sbuf_t& sbuf = *sbufp;  // read-only reference
@@ -972,27 +1027,6 @@ void scanner_set::process_sbuf(class sbuf_t* sbufp)
     return;
 }
 
-/**
- * Records when each sbuf starts. Used for restarting and graphing CPU utilization during run.
- */
-void scanner_set::record_work_start(const std::string &pos0, size_t pagesize, size_t bufsize)
-{
-    if (writer) {
-        std::stringstream ss;
-        ss << "threadid='"  << std::this_thread::get_id() << "'"
-           << " pos0='"     << dfxml_writer::xmlescape(pos0) << "'";
-
-        if (pagesize){
-            ss << " pagesize='" << pagesize << "'";
-        }
-        if (bufsize){
-            ss << " bufsize='"  << bufsize << "'";
-        }
-        ss   << aftimer::now_str(" t='","'");
-        writer->xmlout("debug:work_start","",ss.str(), true);
-    }
-}
-
 /****************************************************************
  *** PHASE_SHUTDOWN methods.
  ****************************************************************/
@@ -1012,13 +1046,11 @@ void scanner_set::log(const std::string message)
 void scanner_set::log(const sbuf_t &sbuf, const std::string message) // writes sbuf if not too deep.
 {
     if (sbuf.depth() <= log_depth) {
-        std::stringstream m2;
-        m2 << sbuf.pos0 << " buflen=" << sbuf.bufsize;
-        if (sbuf.has_hash()) {
-            m2 << " " << sbuf.hash();
-        }
-        m2 << ": " << message;
-        log(m2.str());
+        log( Formatter()
+             << "pos0=" << sbuf.pos0
+             << " buflen=" << sbuf.bufsize
+             << (sbuf.has_hash() ? sbuf.hash() : "")
+             << ": " << message );
     }
 }
 
@@ -1067,7 +1099,7 @@ uint64_t scanner_set::previously_processed_count(const sbuf_t& sbuf) {
 
 
 /****************************************************************
- *** Feature Recorder
+ *** packet handling
  ****************************************************************/
 
 
@@ -1084,9 +1116,6 @@ void scanner_set::process_packet(const be13::packet_info &pi)
 }
 #endif
 
-/****************************************************************
- *** packet handling
- ****************************************************************/
 
 #if 0
 /* Vector of callbacks */

@@ -17,7 +17,7 @@
 #include "scanner_config.h"
 #include "scanner_params.h"
 
-#include "be_threadpool.h"
+#include "threadpool.h"
 
 
 /**
@@ -98,7 +98,10 @@ class scanner_set {
     std::map<std::string, scanner_t *> scanner_names {}; // scanner name to scanner
     std::set<scanner_t*> enabled_scanners {};            //
 
-    class  thread_pool *pool {nullptr}; // nullptr means we are not threading
+    class thread_pool *pool {nullptr}; // nullptr means we are not threading
+    std::thread *benchmark_cpu_thread {nullptr};
+    void *cpu_benchmark();
+    static void launch_cpu_benchmark_thread(void *arg);
     class feature_recorder_set fs;      // the feature recorders
     atomic_map<std::string, std::atomic<uint64_t>> previously_processed_counter {};
     atomic_map<std::thread::id, std::string> thread_status {}; // the status of each thread::id
@@ -112,13 +115,11 @@ class scanner_set {
     unsigned int log_depth{1};   // log to dfxml all sbufs at this depth or less
     std::atomic<uint32_t> max_depth_seen{0};
     scanner_config sc;                             // scanner_set configuration; passed to feature_recorder_set
-    scanner_params::phase_t current_phase{ scanner_params::PHASE_INIT };
+    std::atomic<scanner_params::phase_t> current_phase{ scanner_params::PHASE_INIT };
     size_t worker_count {0};                 // how many workers were used
 
 public:
     static const inline size_t SAME_THREAD_SBUF_SIZE = 8192; // sbufs smaller than this run in the same thread.
-    static inline std::string DEBUG_BENCHMARK_CPU {"DEBUG_BENCHMARK_CPU"};
-    static inline std::string DEBUG_NO_SCANNER_BYPASS {"DEBUG_NO_SCANNER_BYPASS"}; // do not bypass scanners because of ngram count or distinct character count
 
     /* constructor and destructor */
     /* @param sc - the config variables
@@ -147,21 +148,16 @@ public:
     };
 
     struct debug_flags_t {
+        bool debug_no_scanner_bypass{false}; // do not use scanner bypass logic
         bool debug_print_steps{false};     // prints as each scanner is started
         bool debug_scanner{false};         // dump all feature writes to stderr
-        bool debug_no_scanners{false};     // run with no scanners
         bool debug_dump_data{false};       // scanners should dump data as they see them
-        bool debug_decoding{false};        // scanners should dump information on decoding as they see them
-        bool debug_info{false};            // print extra info
-        bool debug_exit_early{false};      // just print the size of the volume and exit
-        bool debug_allocate_512MiB{false}; // allocate 512MiB but don't set any flags
-        bool debug_register{false};        // print when scanners register
         bool debug_benchmark_cpu {false};  // capture CPU usage
         std::string debug_scanners_ignore{}; // ignore these scanners, separated by :
     } debug_flags{};
 
     // Scanner database
-    const std::string get_scanner_name(scanner_t scanner) const; // returns the name of the scanner
+    const std::string get_scanner_name(scanner_t scanner) const; // returns the name of the scanner; threadsafe
     virtual scanner_t* get_scanner_by_name(const std::string name) const;
 
     // Stats support
@@ -180,7 +176,8 @@ public:
     static const inline std::string SBUFS_REMAINING_STR {"sbufs_remaining"};
     static const inline std::string MAX_OFFSET {"max_offset"};
 
-    int get_thread_count() { return (pool!=nullptr) ? pool->get_thread_count() : 1; };
+    int get_worker_count() { return (pool!=nullptr) ? pool->get_worker_count() : 1; };
+    int get_tasks_queued() { return (pool!=nullptr) ? pool->get_tasks_queued() : 0; };
     std::atomic<int>      depth0_sbufs_in_queue {0};
     std::atomic<uint64_t> depth0_bytes_in_queue {0};
     std::atomic<int>      sbufs_in_queue {0};
@@ -193,7 +190,7 @@ public:
 
     // thread interface
     void launch_workers(int count);
-    void update_queue_stats(sbuf_t *sbufp, int dir);   // either +1 increment or -1 decrement
+    void update_queue_stats(const sbuf_t *sbufp, int dir);   // either +1 increment or -1 decrement
     void thread_set_status(const std::string &status); // designed to be overridden
     void join();                                       // join the threads
     void add_scanner_stat(scanner_t *, const struct stats &st);
@@ -206,7 +203,7 @@ public:
     uint32_t get_max_depth_seen() const          { return max_depth_seen;} ; // max seen during scan
 
     // per-path stats
-    atomic_set<sbuf_t *> scheduled_sbufs {};            // sbufs that have been scheduled for work in the task queue
+    atomic_set<const sbuf_t *> scheduled_sbufs {};            // sbufs that have been scheduled for work in the task queue
     atomic_map<std::string, struct stats> path_stats{}; // maps scanner name to performance stats
     void add_path_stat(std::string path, const struct stats &st);
 
@@ -265,12 +262,14 @@ public:
 
     /* PHASE SCAN */
     void phase_scan();               // start the scan phase
-    void process_sbuf(sbuf_t* sbuf, scanner_t *scanner); // process the sbuf with a specific scanner, then release it.
-    void process_sbuf(sbuf_t* sbuf); // process the sbuf with all scanners, then release it.
-    void record_work_start(const std::string &pos0, size_t pagesize, size_t bufsize); // note std::string
-    void schedule_sbuf(sbuf_t* sbuf);  // schedule the sbuf to be processed, after which it is deleted
-    void retain_sbuf(sbuf_t *sbuf);    // note that sbuf is now in use
-    void release_sbuf(sbuf_t *sbuf);   // decrease reference count and delete if refcount is 0
+    void process_sbuf(const sbuf_t* sbuf, scanner_t *scanner); // process the sbuf with a specific scanner, then release it.
+    void process_sbuf(const sbuf_t* sbuf); // process the sbuf with all scanners, then release it.
+    void record_work_start(const sbuf_t *sbuf);
+    void record_work_start_pos0str(const std::string pos0str);
+    void record_work_end(const sbuf_t *sbuf);
+    void schedule_sbuf(const sbuf_t* sbuf);  // schedule the sbuf to be processed, after which it is deleted
+    void retain_sbuf(const sbuf_t *sbuf);    // note that sbuf is now in use
+    void release_sbuf(const sbuf_t *sbuf);   // decrease reference count and delete if refcount is 0
 
     // Scanner Support
     // Management of previously seen data

@@ -2,8 +2,6 @@
 #include "threadpool.h"
 #include "scanner_set.h"
 
-#ifndef BARAKSH_THREADPOOL
-
 thread_pool::thread_pool(size_t num_workers, scanner_set &ss_): ss(ss_)
 {
     for (size_t i=0; i < num_workers; i++){
@@ -46,14 +44,14 @@ void thread_pool::wait_for_tasks()
 void thread_pool::join()
 {
     /* First send a kill message to each active thread. */
-    size_t num_threads = get_thread_count(); // get the count with lock
+    size_t num_threads = get_worker_count(); // get the count with lock
     for(size_t i=0;i < num_threads;i++){
         push_task(nullptr);             // tell a thread to die
     }
 
     // This is a spin lock until there are no more workers. Gross, but it works.
     int count=0;
-    while (get_thread_count()>0){
+    while (get_worker_count()>0){
         std::this_thread::sleep_for( std::chrono::milliseconds( shutdown_spin_lock_poll_ms ));
         if (debug || d2) {
             std::cerr << "thread_pool::join sleeping " << ++count << std::endl;
@@ -67,7 +65,7 @@ void thread_pool::join()
  * Right now it only works if called by main thread.
  */
 
-void thread_pool::push_task(sbuf_t *sbuf)
+void thread_pool::push_task(const sbuf_t *sbuf)
 {
     std::unique_lock<std::mutex> lock(M);
     if (main_thread == std::this_thread::get_id()) {
@@ -81,7 +79,7 @@ void thread_pool::push_task(sbuf_t *sbuf)
     }
 
     /* Add to the count */
-    work_queue.push( sbuf );
+    work_queue.push( new work_unit(sbuf) );
     // this doens't make sense if we can push from any thread:
     //freethreads--;
     TO_WORKER.notify_one();
@@ -94,7 +92,7 @@ int thread_pool::get_free_count() const
     return freethreads;
 };
 
-size_t thread_pool::get_thread_count() const
+size_t thread_pool::get_worker_count() const
 {
     std::lock_guard<std::mutex> lock(M);
     return workers.size();
@@ -110,7 +108,7 @@ size_t thread_pool::get_tasks_queued() const
 void thread_pool::debug_pool(std::ostream &os) const
 {
     os
-        << " thread_count: " << get_thread_count()
+        << " worker_count: " << get_worker_count()
         << " free_count: "   << get_free_count()
         << " tasks_queued: " << get_tasks_queued()
         << std::endl;
@@ -138,7 +136,7 @@ void *worker::run()
 	/* Get the lock, then wait for the queue to be empty.
 	 * If it is not empty, wait for the lock again.
 	 */
-        sbuf_t *sbuf  = nullptr;
+        thread_pool::work_unit wu;
         {
             std::unique_lock<std::mutex> lock( tp.M );
             if (tp.debug) std::cerr << "worker " << std::this_thread::get_id() << " has lock " << std::endl;
@@ -155,17 +153,28 @@ void *worker::run()
             worker_wait_timer.stop();   // no longer waiting
 
             /* Worker still has the lock */
-            sbuf = tp.work_queue.front();    // get the task
+            thread_pool::work_unit *wup = tp.work_queue.front();    // get the task
             tp.work_queue.pop();           // remove it
+            wu = *wup;
+            delete wup;
             tp.freethreads--;           // no longer free
             /* release the lock */
         }
         //std::cerr << std::this_thread::get_id() << " task=" << task << std::endl;
-	if (sbuf==nullptr) {                  // special code to exit thread
+	if (wu.sbuf==nullptr) {                  // special code to exit thread
             //tp.TO_MAIN.notify_one();          // tell the master that one is gone
             break;
         }
-        tp.ss.process_sbuf( sbuf );     // deletes the sbuf
+        /* dispatch the work unit.
+         * if wu.scanner is not set, process_sbuf will run all scanners in sequence, or schedule each.
+         * if wu.scanner is set, process_sbuf will just run that one scanner.
+         */
+        if (wu.scanner) {
+            tp.ss.process_sbuf( wu.sbuf, wu.scanner);
+        }
+        else {
+            tp.ss.process_sbuf( wu.sbuf);
+        }
         {
             std::unique_lock<std::mutex> lock( tp.M );
             tp.freethreads++;        // and now the thread is free!
@@ -181,4 +190,3 @@ void *worker::run()
 
     return nullptr;
 }
-#endif
