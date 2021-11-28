@@ -68,8 +68,6 @@ std::string path_printer::get_and_remove_token(std::string &path)
     return prefix;
 }
 
-
-
 path_printer::path_printer(scanner_set *ss_, abstract_image_reader *reader_, std::ostream &os_):
     ss(ss_),
     reader(reader_),
@@ -206,6 +204,7 @@ void path_printer::display_path(std::string path, const PrintOptions &po) const
         delete sbufp;
 	return;
     }
+    sbufp = sbufp->realloc(count);       // resize to what was read
 
     /* make up a feature recorder set and with a disabled feature recorder.
      * Then we call the path printer, which throws an exception after the printing

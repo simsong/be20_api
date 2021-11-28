@@ -137,6 +137,7 @@ public:;
      * the following must be used like this:
      * sbuf = sbuf->realloc(newsize);
      * this is the only way to modify the const bufsize and pagesize.
+     * Note that newsize should be smaller than the original size.
      */
     sbuf_t *realloc(size_t newsize);
 
