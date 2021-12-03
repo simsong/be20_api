@@ -2,15 +2,20 @@
 #include "threadpool.h"
 #include "scanner_set.h"
 
-thread_pool::thread_pool(size_t num_workers, scanner_set &ss_): ss(ss_)
+thread_pool::thread_pool(scanner_set &ss_): ss(ss_)
 {
+}
+
+void thread_pool::launch_workers(size_t num_workers)
+{
+    std::cerr << "Launch thread_pool. num_workers=" << num_workers << std::endl;
     for (size_t i=0; i < num_workers; i++){
         std::unique_lock<std::mutex> lock(M);
         class worker *w = new worker(*this,i);
         workers.insert(w);
         threads.insert(new std::thread( &worker::start_worker, static_cast<void *>(w) ));
     }
-};
+}
 
 
 thread_pool::~thread_pool()
@@ -43,6 +48,7 @@ void thread_pool::wait_for_tasks()
 
 void thread_pool::join()
 {
+    std::cerr << "thread_pool::join this=" << this << std::endl;
     /* First send a kill message to each active thread. */
     size_t num_threads = get_worker_count(); // get the count with lock
     for(size_t i=0;i < num_threads;i++){

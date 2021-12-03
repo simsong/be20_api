@@ -91,8 +91,9 @@ public:
     int                        mode {0}; // 0=running; 1 = waiting for workers to finish; 2=workers should die
     bool                       debug {false}; // display debug messages?
 
-    thread_pool(size_t num_workers, scanner_set &ss_);
+    thread_pool(scanner_set &ss_);
     ~thread_pool();
+    void launch_workers(size_t num_workers);
     void wait_for_tasks();              // wait until there are no tasks in work queue
     void join();                        // wait_for_tasks() and kill the workers
     void push_task(const sbuf_t *sbuf);

@@ -98,7 +98,8 @@ class scanner_set {
     std::map<std::string, scanner_t *> scanner_names {}; // scanner name to scanner
     std::set<scanner_t*> enabled_scanners {};            //
 
-    class thread_pool *pool {nullptr}; // nullptr means we are not threading
+    class thread_pool pool;
+    std::atomic<bool> threading {false};       // are we threading?
     std::thread *benchmark_cpu_thread {nullptr};
     void *cpu_benchmark();
     static void launch_cpu_benchmark_thread(void *arg);
@@ -134,10 +135,10 @@ public:
     class dfxml_writer *get_dfxml_writer() const;
 
     // timing info
-    aftimer & producer_timer()   { assert(pool!=nullptr); return pool->main_wait_timer; }
-    uint64_t  producer_wait_ns() { assert(pool!=nullptr); return pool->main_wait_timer.elapsed_nanoseconds();}
-    uint64_t  consumer_wait_ns() { assert(pool!=nullptr); return pool->total_worker_wait_ns;}
-    uint64_t  consumer_wait_ns_per_worker() { return pool->total_worker_wait_ns / worker_count;}
+    aftimer & producer_timer()   { return pool.main_wait_timer; }
+    uint64_t  producer_wait_ns() { return pool.main_wait_timer.elapsed_nanoseconds();}
+    uint64_t  consumer_wait_ns() { return pool.total_worker_wait_ns;}
+    uint64_t  consumer_wait_ns_per_worker() { return worker_count > 0 ? pool.total_worker_wait_ns / worker_count : 0;}
 
     /* They throw a ScannerNotFound exception if no scanner exists */
     class NoSuchScanner : public std::exception {
@@ -176,8 +177,8 @@ public:
     static const inline std::string SBUFS_REMAINING_STR {"sbufs_remaining"};
     static const inline std::string MAX_OFFSET {"max_offset"};
 
-    int get_worker_count() { return (pool!=nullptr) ? pool->get_worker_count() : 1; };
-    int get_tasks_queued() { return (pool!=nullptr) ? pool->get_tasks_queued() : 0; };
+    int get_worker_count() const { return threading ? pool.get_worker_count()  : 1; };
+    int get_tasks_queued() const { return threading ? pool.get_tasks_queued()  : 0; };
     std::atomic<int>      depth0_sbufs_in_queue {0};
     std::atomic<uint64_t> depth0_bytes_in_queue {0};
     std::atomic<int>      sbufs_in_queue {0};
@@ -194,8 +195,8 @@ public:
     void thread_set_status(const std::string &status); // designed to be overridden
     void join();                                       // join the threads
     void add_scanner_stat(scanner_t *, const struct stats &st);
-    void debug_pool(std::ostream &os) const { pool->debug_pool(os);}
-    void set_spin_poll_time(int ms) { pool->shutdown_spin_lock_poll_ms = ms;}
+    void debug_pool(std::ostream &os) const { pool.debug_pool(os);}
+    void set_spin_poll_time(int ms) { pool.shutdown_spin_lock_poll_ms = ms;}
 
 
 

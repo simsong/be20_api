@@ -64,7 +64,7 @@
 
 /* constructor and destructors */
 scanner_set::scanner_set(scanner_config& sc_, const feature_recorder_set::flags_t& f, class dfxml_writer* writer_)
-    : fs(f, sc_), sc(sc_), writer(writer_)
+    : pool(*this), fs(f, sc_), sc(sc_), writer(writer_)
 {
     if (std::getenv("DEBUG_NO_SCANNER_BYPASS")) debug_flags.debug_no_scanner_bypass = true;
     if (std::getenv("DEBUG_SCANNER_SET_PRINT_STEPS")) debug_flags.debug_print_steps = true;
@@ -77,10 +77,9 @@ scanner_set::scanner_set(scanner_config& sc_, const feature_recorder_set::flags_
 
 scanner_set::~scanner_set()
 {
-    if (pool) {
+    if (threading) {
         join();                             // kill the threads if they are still running
-        delete pool;
-        pool = nullptr;
+        threading = false;
     }
     if (benchmark_cpu_thread) {
         benchmark_cpu_thread->join();
@@ -131,9 +130,8 @@ scanner_t* scanner_set::get_scanner_by_name(const std::string search_name) const
 
 void scanner_set::launch_workers(int count)
 {
-    assert(pool == nullptr);
-    worker_count = count;
-    pool = new thread_pool(count, *this);
+    pool.launch_workers(count);
+    threading = true;
 }
 
 void scanner_set::update_queue_stats(const sbuf_t *sbufp, int dir)
@@ -232,13 +230,15 @@ float scanner_set::get_cpu_percentage()
 std::map<std::string, std::string> scanner_set::get_realtime_stats() const
 {
     std::map<std::string, std::string> ret;
-    if (pool!=nullptr){
-        ret[THREAD_COUNT_STR]        = std::to_string(pool->get_worker_count());
-        ret[TASKS_QUEUED_STR]        = std::to_string(pool->get_tasks_queued());
-        ret[DEPTH0_SBUFS_QUEUED_STR] = std::to_string(depth0_sbufs_in_queue);
-        ret[DEPTH0_BYTES_QUEUED_STR] = std::to_string(depth0_bytes_in_queue);
-        ret[SBUFS_QUEUED_STR]        = std::to_string(sbufs_in_queue);
-        ret[BYTES_QUEUED_STR]        = std::to_string(bytes_in_queue);
+    {
+        if (threading) {
+            ret[THREAD_COUNT_STR]        = std::to_string(pool.get_worker_count());
+            ret[TASKS_QUEUED_STR]        = std::to_string(pool.get_tasks_queued());
+            ret[DEPTH0_SBUFS_QUEUED_STR] = std::to_string(depth0_sbufs_in_queue);
+            ret[DEPTH0_BYTES_QUEUED_STR] = std::to_string(depth0_bytes_in_queue);
+            ret[SBUFS_QUEUED_STR]        = std::to_string(sbufs_in_queue);
+            ret[BYTES_QUEUED_STR]        = std::to_string(bytes_in_queue);
+        }
     }
     int counter = 0;
     for (const auto &it : thread_status.values()) {
@@ -266,8 +266,8 @@ std::map<std::string, std::string> scanner_set::get_realtime_stats() const
 /* Kill the threads and delete the threadpool */
 void scanner_set::join()
 {
-    if (pool != nullptr) {
-        pool->join();
+    if (threading) {
+        pool.join();
     }
 }
 
@@ -709,9 +709,9 @@ void scanner_set::schedule_sbuf(const sbuf_t *sbufp)
      - If the sbuf is too small
      - If the sbuf has a parent (because if it does, the parent might get cleared while this sbuf is pending.)
      - */
-    if (pool==nullptr
-        || (sbufp->depth() > 0 && sbufp->bufsize < SAME_THREAD_SBUF_SIZE)
-        || (sbufp->has_parent())) {
+    if ( !threading
+         || (sbufp->depth() > 0 && sbufp->bufsize < SAME_THREAD_SBUF_SIZE)
+         || (sbufp->has_parent())) {
         process_sbuf(sbufp);
         return;
     }
@@ -720,7 +720,7 @@ void scanner_set::schedule_sbuf(const sbuf_t *sbufp)
     update_queue_stats( sbufp, +1 );
 
     /* Run in a different thread */
-    pool->push_task(sbufp);
+    pool.push_task(sbufp);
 }
 
 
