@@ -464,7 +464,7 @@ TODO: Re-implement using C++17 directory reading.
  * We need to load them to do this, so they are loaded with empty config
  * Note that scanners can only be loaded once, so this exits.
  */
-void scanner_set::info_scanners(std::ostream& out, bool detailed_info, bool detailed_settings,
+void scanner_set::info_scanners(std::ostream &out, bool detailed_info, bool detailed_settings,
                                 const char enable_opt,
                                 const char disable_opt) {
     /* Get a list of scanner names */

@@ -11,6 +11,7 @@
 #include <memory>
 #include <mutex>
 
+//#include "astream.h"
 #include "utils.h"
 #include "atomic_map.h"
 #include "sbuf.h"
@@ -61,6 +62,8 @@
  */
 
 //#include "packet_info.h"
+#include <atomic>
+
 #include "feature_recorder_set.h"
 #include "scanner_params.h" // needed for scanner_t
 
@@ -77,8 +80,14 @@
 class scanner_set {
     struct stats {
         explicit stats(){};
-        explicit stats(uint64_t a, uint64_t b):ns(a),calls(b){};
-        explicit stats(const stats &s):ns(s.ns),calls(s.calls){};
+        explicit stats(uint64_t a, uint64_t b){
+            ns    = a;
+            calls = b;
+        }
+        explicit stats(const stats &s){
+            ns    = (uint64_t)(s.ns);
+            calls = (uint64_t)(s.calls);
+        }
         stats operator+(const stats &s) {
             return stats(this->ns + s.ns, this->calls + s.calls);
         }
@@ -87,8 +96,8 @@ class scanner_set {
             this->calls += s.calls;
             return *this;
         }
-        uint64_t ns{0};    // nanoseconds
-        uint64_t calls{0}; // calls
+        std::atomic<uint64_t> ns{0};    // nanoseconds
+        std::atomic<uint64_t> calls{0}; // calls
     };
 
     scanner_set(const scanner_set& s) = delete;
@@ -235,7 +244,7 @@ public:
     void add_scanners(scanner_t* const* scanners_builtin);  // load a nullptr array of scanners.
     void add_scanner_file(std::string fn);                  // load a scanner from a shared library file
     void add_scanner_directory(const std::string& dirname); // load all scanners in the directory
-    void info_scanners(std::ostream& out, bool detailed_info, bool detailed_settings,
+    void info_scanners(std::ostream &out, bool detailed_info, bool detailed_settings,
                        const char enable_opt, const char disable_opt);
     void apply_scanner_commands(); // applies all of the enable/disable commands and create the feature recorders
     bool is_scanner_enabled(const std::string& name);      // report if it is enabled or not

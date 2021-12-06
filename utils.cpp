@@ -4,12 +4,7 @@
  */
 
 // Just for this module
-#define _FILE_OFFSET_BITS 64
-
-/* required per C++ standard */
-//#ifndef __STDC_FORMAT_MACROS
-//#define __STDC_FORMAT_MACROS
-//#endif
+//#define _FILE_OFFSET_BITS 64
 
 #include "config.h"
 #include "utils.h"
@@ -21,10 +16,6 @@
 
 #include <mutex>
 #include <sstream>
-
-//#ifdef HAVE_UNISTD_H
-//#include <unistd.h>
-//#endif
 
 /** Extract a buffer...
  * @param buf - the buffer to extract;

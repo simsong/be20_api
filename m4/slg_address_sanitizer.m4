@@ -20,3 +20,12 @@ AC_ARG_ENABLE([thread-sanitizer],
               CXXFLAGS="$CXXFLAGS -fsanitize=thread "
               ],
               [])
+
+AC_ARG_ENABLE([undefined-sanitizer],
+              [AS_HELP_STRING([--enable-undefined-sanitizer],
+                              [enabled UndefinedSanitizer support for detecting a wide variety of undefined])],
+              [AC_DEFINE(HAVE_UNDEFINED_SANITIZER, 1, [enable UndefinedSanitizer])
+              undefined_sanitizer="yes"
+              CXXFLAGS="$CXXFLAGS -fsanitize=undefined "
+              ],
+              [])
