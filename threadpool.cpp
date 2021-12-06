@@ -8,7 +8,6 @@ thread_pool::thread_pool(scanner_set &ss_): ss(ss_)
 
 void thread_pool::launch_workers(size_t num_workers)
 {
-    std::cerr << "Launch thread_pool. num_workers=" << num_workers << std::endl;
     for (size_t i=0; i < num_workers; i++){
         std::unique_lock<std::mutex> lock(M);
         class worker *w = new worker(*this,i);
@@ -48,7 +47,6 @@ void thread_pool::wait_for_tasks()
 
 void thread_pool::join()
 {
-    std::cerr << "thread_pool::join this=" << this << std::endl;
     /* First send a kill message to each active thread. */
     size_t num_threads = get_worker_count(); // get the count with lock
     for(size_t i=0;i < num_threads;i++){
@@ -56,11 +54,9 @@ void thread_pool::join()
     }
 
     // This is a spin lock until there are no more workers. Gross, but it works.
-    int count=0;
     while (get_worker_count()>0){
         std::this_thread::sleep_for( std::chrono::milliseconds( shutdown_spin_lock_poll_ms ));
         if (debug || d2) {
-            std::cerr << "thread_pool::join sleeping " << ++count << std::endl;
             debug_pool(std::cerr);
         }
     }

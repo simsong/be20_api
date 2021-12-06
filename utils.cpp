@@ -17,8 +17,6 @@
 #include <mutex>
 #include <sstream>
 
-std::mutex acout::mtx_cout {};
-
 /** Extract a buffer...
  * @param buf - the buffer to extract;
  * @param buflen - the size of the page to extract

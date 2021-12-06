@@ -11,6 +11,7 @@
 #include <memory>
 #include <mutex>
 
+//#include "astream.h"
 #include "utils.h"
 #include "atomic_map.h"
 #include "sbuf.h"
@@ -243,7 +244,7 @@ public:
     void add_scanners(scanner_t* const* scanners_builtin);  // load a nullptr array of scanners.
     void add_scanner_file(std::string fn);                  // load a scanner from a shared library file
     void add_scanner_directory(const std::string& dirname); // load all scanners in the directory
-    void info_scanners(acout &out, bool detailed_info, bool detailed_settings,
+    void info_scanners(std::ostream &out, bool detailed_info, bool detailed_settings,
                        const char enable_opt, const char disable_opt);
     void apply_scanner_commands(); // applies all of the enable/disable commands and create the feature recorders
     bool is_scanner_enabled(const std::string& name);      // report if it is enabled or not

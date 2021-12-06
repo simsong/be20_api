@@ -31,6 +31,7 @@
 #include <string>
 #include <csignal>
 
+//#include "astream.h"
 #include "atomic_unicode_histogram.h"
 #include "sbuf.h"
 #include "sbuf_stream.h"
@@ -1057,8 +1058,7 @@ TEST_CASE("run", "[scanner]") {
 
     /* Make sure scanner is enabled */
     std::stringstream s2;
-    acout s3(s2);
-    ss.info_scanners(s3, true, true, 'e', 'x');
+    ss.info_scanners(s2, true, true, 'e', 'x');
     auto s2str = s2.str();
     REQUIRE(s2str.find("disable scanner sha1") > 0);
     REQUIRE(s2str.find("enable scanner sha1") == std::string::npos);

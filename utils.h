@@ -233,28 +233,6 @@ inline char* strptime(const char* s, const char* f, struct tm* tm) {
 }
 #endif
 
-// Asynchronous output
-class acout
-{
-    static std::mutex mtx_cout;
-    std::ostream &out;
-public:
-    acout( std::ostream &os ):out(os){};
-    template<typename T>
-    acout& operator<<(const T& _t) {
-        std::unique_lock<std::mutex> lock(mtx_cout);
-        out << _t;
-        return *this;
-    }
-
-    acout& operator<<(std::ostream& (*fp)(std::ostream&)) {
-        std::unique_lock<std::mutex> lock(mtx_cout);
-        out << fp;
-        return *this;
-    }
-};
-
-
 
 
 #endif
