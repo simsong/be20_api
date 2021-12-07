@@ -62,15 +62,26 @@
  *        All of the global variables go away.
  */
 
+static bool valid_env(const char *name)
+{
+    const char *e = std::getenv(name);
+    if (e==nullptr) return false;
+    if (e[0]=='1' || e[0]=='t' || e[0]=='T' || e[0]=='y' || e[0]=='Y') return true;
+    return false;
+}
+
 /* constructor and destructors */
 scanner_set::scanner_set(scanner_config& sc_, const feature_recorder_set::flags_t& f, class dfxml_writer* writer_)
     : pool(*this), fs(f, sc_), sc(sc_), writer(writer_)
 {
-    if (std::getenv("DEBUG_NO_SCANNER_BYPASS")) debug_flags.debug_no_scanner_bypass = true;
-    if (std::getenv("DEBUG_SCANNER_SET_PRINT_STEPS")) debug_flags.debug_print_steps = true;
-    if (std::getenv("DEBUG_SCANNER_SET_SCANNER")) debug_flags.debug_scanner = true;
-    if (std::getenv("DEBUG_SCANNER_SET_DUMP_DATA")) debug_flags.debug_dump_data = true;
-    if (std::getenv("DEBUG_BENCHMARK_CPU")) debug_flags.debug_benchmark_cpu = true;
+    debug_flags.debug_no_scanner_bypass    = valid_env("DEBUG_NO_SCANNER_BYPASS");
+    debug_flags.debug_print_steps          = valid_env("DEBUG_SCANNER_SET_PRINT_STEPS");
+    debug_flags.debug_scanner              = valid_env("DEBUG_SCANNER_SET_SCANNER");
+    debug_flags.debug_dump_data            = valid_env("DEBUG_SCANNER_SET_DUMP_DATA");
+    debug_flags.debug_benchmark_cpu        = valid_env("DEBUG_BENCHMARK_CPU");
+    debug_flags.debug_scanners_same_thread = valid_env("DEBUG_SCANNERS_SAME_THREAD");
+    pool.debug                             = valid_env("DEBUG_THREAD_POOL");
+
     const char *dsi = std::getenv("DEBUG_SCANNERS_IGNORE");
     if (dsi!=nullptr) debug_flags.debug_scanners_ignore=dsi;
 }
@@ -833,7 +844,7 @@ void scanner_set::process_sbuf(const sbuf_t* sbufp, scanner_t *scanner)
         thread_set_status( sbuf.pos0.str() + ": " + name + " (" + std::to_string(sbuf.bufsize) + " bytes)" );
 
         if (debug_flags.debug_print_steps) {
-            std::cerr << "sbuf.pos0=" << sbuf.pos0 << " calling scanner " << name << "\n";
+            std::cerr << "sbuf.pos0=" << sbuf.pos0 << " calling scanner " << name << " threadid=" << std::this_thread::get_id() << std::endl;
         }
         if (record_call_stats || debug_flags.debug_print_steps) {
             t.start();
@@ -846,7 +857,7 @@ void scanner_set::process_sbuf(const sbuf_t* sbufp, scanner_t *scanner)
             add_scanner_stat(scanner, st);
             add_path_stat(epath, st);
             if (debug_flags.debug_print_steps) {
-                std::cerr << "sbuf.pos0=" << sbuf.pos0 << " scanner " << name << " t=" << t.elapsed_seconds() << "\n";
+                std::cerr << "sbuf.pos0=" << sbuf.pos0 << " scanner " << name << " t=" << t.elapsed_seconds() << " threadid=" << std::this_thread::get_id() << std::endl;
             }
         }
     }
@@ -929,7 +940,6 @@ void scanner_set::process_sbuf(const sbuf_t* sbufp)
         throw std::runtime_error("process_sbuf can only be run in scanner_params::PHASE_SCAN");
     }
 
-
     /****************************************************************
      ** validate sbuf and then record that we are processing it.
      */
@@ -949,8 +959,6 @@ void scanner_set::process_sbuf(const sbuf_t* sbufp)
     thread_set_status( sbufp->pos0.str() + " process_sbuf (" + std::to_string(sbufp->bufsize) + ")" );
 
     const class sbuf_t& sbuf = *sbufp;  // read-only reference
-    aftimer timer;
-    timer.start();
 
     const pos0_t& pos0 = sbuf.pos0;
     /* If we are too deep, error out */
@@ -1016,12 +1024,16 @@ void scanner_set::process_sbuf(const sbuf_t* sbufp)
 
     /* Make the scanner params once, rather than every time through */
 
-    // loop for each scanner
+    // loop for each scanner.
     for (const auto &it : scanner_info_db) {
         retain_sbuf(sbufp);
-        process_sbuf(sbufp, it.first);
+        // Process if not threading or if we are supposed to process all in the same thread
+        if (!threading || debug_flags.debug_scanners_same_thread) {
+            process_sbuf(sbufp, it.first);
+        } else {
+            pool.push_task(sbufp, it.first);
+        }
     }
-    timer.stop();
     release_sbuf(sbufp);
     thread_set_status("IDLE");
     return;

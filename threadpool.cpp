@@ -30,33 +30,39 @@ thread_pool::~thread_pool()
     }
 }
 
-bool d2=false;
+/*
+ * Wait until there are no tasks and none of the threads are running
+ */
 void thread_pool::wait_for_tasks()
 {
-    if(d2) std::cerr << "thread_pool::wait_for_tasks  work_queue.size()=" << work_queue.size() << std::endl;
+    if(debug) std::cerr << "thread_pool::wait_for_tasks  work_queue.size()=" << work_queue.size() << std::endl;
     std::unique_lock<std::mutex> lock(M);
-    if(d2) std::cerr << "thread_pool::wait_for_tasks  got lock work_queue.size()=" << work_queue.size() << std::endl;
+    if(debug) std::cerr << "thread_pool::wait_for_tasks  got lock work_queue.size()=" << work_queue.size() << " working_workers=" << working_workers << std::endl;
     // wait until a thread is free (doesn't matter which)
-    while (work_queue.size() > 0 ){
-        if(d2) std::cerr << "thread_pool::wait_for_tasks work_queue.size()==" << work_queue.size() << "\n";
+    while (work_queue.size() > 0 || working_workers>0){
+        if(debug) std::cerr << "thread_pool::wait_for_tasks work_queue.size()==" << work_queue.size() << "  working_workers=" << working_workers << std::endl;
         TO_WORKER.notify_one();         // wake up a worker in case one is sleeping
-        TO_MAIN.wait( lock );
+        TO_MAIN.wait( lock );           // wait for a message from a worker
     }
+    if(debug) std::cerr << "thread_pool::wait_for_tasks  done. work_queue.size()=" << work_queue.size() <<  " working_workers=" << working_workers << std::endl;
 };
 
 
 void thread_pool::join()
 {
-    /* First send a kill message to each active thread. */
+    wait_for_tasks();    /* Wait until there are no messages in the work queue */
+
+    /* Next, send a kill message to each active thread. */
     size_t num_threads = get_worker_count(); // get the count with lock
     for(size_t i=0;i < num_threads;i++){
+        if (debug) std::cerr << "thread_pool::join: pushing null task #" << i << std::endl;
         push_task(nullptr);             // tell a thread to die
     }
 
     // This is a spin lock until there are no more workers. Gross, but it works.
     while (get_worker_count()>0){
         std::this_thread::sleep_for( std::chrono::milliseconds( shutdown_spin_lock_poll_ms ));
-        if (debug || d2) {
+        if (debug) {
             debug_pool(std::cerr);
         }
     }
@@ -67,11 +73,20 @@ void thread_pool::join()
  * Right now it only works if called by main thread.
  */
 
-void thread_pool::push_task(const sbuf_t *sbuf)
+void thread_pool::push_task(const sbuf_t *sbuf, scanner_t *scanner)
 {
+    if (debug) {
+        std::cerr << "thread_pool::push_task( ";
+        if (sbuf) {
+            std::cerr << *sbuf;
+        } else {
+            std::cerr << "nullptr";
+        }
+        std::cerr << " , scanner=" << scanner << ") ";
+    }
     std::unique_lock<std::mutex> lock(M);
     if (main_thread == std::this_thread::get_id()) {
-        /* In the main thread, make sure there is a free worker before continiuing */
+        /* In the main thread, make sure there is a free worker before continuing */
         while (freethreads==0){               // if there are no free threads, wait.
             main_wait_timer.start();
             //TO_WORKER.notify_one();         // if a worker is sleeping, wake it up
@@ -81,11 +96,16 @@ void thread_pool::push_task(const sbuf_t *sbuf)
     }
 
     /* Add to the count */
-    work_queue.push( new work_unit(sbuf) );
-    // this doens't make sense if we can push from any thread:
-    //freethreads--;
+    work_queue.push( new work_unit(sbuf, scanner) );
+    if (debug) std::cerr << "added work unit to queue. size=" << work_queue.size() << std::endl;
     TO_WORKER.notify_one();
 };
+
+
+void thread_pool::push_task(const sbuf_t *sbuf)
+{
+    push_task(sbuf, nullptr);
+}
 
 
 int thread_pool::get_free_count() const
@@ -109,11 +129,10 @@ size_t thread_pool::get_tasks_queued() const
 
 void thread_pool::debug_pool(std::ostream &os) const
 {
-    os
-        << " worker_count: " << get_worker_count()
-        << " free_count: "   << get_free_count()
-        << " tasks_queued: " << get_tasks_queued()
-        << std::endl;
+    os << " worker_count: " << get_worker_count()
+       << " free_count: "   << get_free_count()
+       << " tasks_queued: " << get_tasks_queued()
+       << std::endl;
 }
 
 /* Launch the worker. It's kept on the per-thread stack. When it is done, delete it.
@@ -134,6 +153,7 @@ void * worker::start_worker(void *arg)
 void *worker::run()
 {
     if (tp.debug) std::cerr << "worker " << std::this_thread::get_id() << " starting " << std::endl;
+    tp.freethreads++;           // this thread is free
     while(true){
 	/* Get the lock, then wait for the queue to be empty.
 	 * If it is not empty, wait for the lock again.
@@ -143,7 +163,6 @@ void *worker::run()
             std::unique_lock<std::mutex> lock( tp.M );
             if (tp.debug) std::cerr << "worker " << std::this_thread::get_id() << " has lock " << std::endl;
             worker_wait_timer.start();  // waiting for work
-            tp.freethreads++;           // this thread is free
             while ( tp.work_queue.size()==0 ){   // wait until something is in the task queue
                 if (tp.debug) std::cerr << "worker " << std::this_thread::get_id() << " waiting " << std::endl;
                 /* I didn't get any work; go to sleep */
@@ -160,11 +179,13 @@ void *worker::run()
             wu = *wup;
             delete wup;
             tp.freethreads--;           // no longer free
+            tp.working_workers++;       // a worker is working
             /* release the lock */
         }
         //std::cerr << std::this_thread::get_id() << " task=" << task << std::endl;
 	if (wu.sbuf==nullptr) {                  // special code to exit thread
             //tp.TO_MAIN.notify_one();          // tell the master that one is gone
+            if (tp.debug) std::cerr << std::this_thread::get_id() << "got wu.sbuf=nullptr" << std::endl;
             break;
         }
         /* dispatch the work unit.
@@ -177,9 +198,10 @@ void *worker::run()
         else {
             tp.ss.process_sbuf( wu.sbuf);
         }
+        tp.working_workers--;
         {
             std::unique_lock<std::mutex> lock( tp.M );
-            tp.freethreads++;        // and now the thread is free!
+            tp.freethreads++;        // and now the thread is free again!
             tp.TO_MAIN.notify_one(); // tell the master that we are free!
         }
     }
@@ -187,6 +209,7 @@ void *worker::run()
     {
         std::unique_lock<std::mutex> lock(tp.M);
         tp.workers.erase(this);
+        tp.working_workers--;       // a worker is working
     }
     tp.total_worker_wait_ns += worker_wait_timer.running_nanoseconds();
 

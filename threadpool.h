@@ -80,6 +80,7 @@ public:
     mutable std::mutex                  M {};
     std::condition_variable	        TO_MAIN {};
     std::condition_variable	        TO_WORKER {};
+    std::atomic<int>                    working_workers {0};
     std::atomic<int>                    freethreads {0};
     std::atomic<int>                    shutdown_spin_lock_poll_ms {100};
 
@@ -89,13 +90,14 @@ public:
     aftimer		       main_wait_timer {};	// time spend waiting
     std::atomic<uint64_t>      total_worker_wait_ns {0};
     int                        mode {0}; // 0=running; 1 = waiting for workers to finish; 2=workers should die
-    bool                       debug {false}; // display debug messages?
+    std::atomic<bool>          debug {false}; // display debug messages?
 
     thread_pool(scanner_set &ss_);
     ~thread_pool();
     void launch_workers(size_t num_workers);
     void wait_for_tasks();              // wait until there are no tasks in work queue
     void join();                        // wait_for_tasks() and kill the workers
+    void push_task(const sbuf_t *sbuf, scanner_t *scanner);
     void push_task(const sbuf_t *sbuf);
 
     // Status for callers

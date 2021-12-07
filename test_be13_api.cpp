@@ -1089,9 +1089,9 @@ TEST_CASE("run", "[scanner]") {
     std::string hashed = fr.hash(*hello);
 
     /* Perform a simulated scan */
-    ss.phase_scan();        // start the scanner phase
+    ss.phase_scan();         // start the scanner phase
     ss.schedule_sbuf(hello); // process a single sbuf, and delete it
-    ss.shutdown();          // shutdown; this will write out the in-memory histogram.
+    ss.shutdown();           // shutdown; this will write out the in-memory histogram.
 
     /* Make sure that the feature recorder output was created */
     std::vector<std::string> lines;

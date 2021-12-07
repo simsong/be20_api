@@ -163,6 +163,7 @@ public:
         bool debug_scanner{false};         // dump all feature writes to stderr
         bool debug_dump_data{false};       // scanners should dump data as they see them
         bool debug_benchmark_cpu {false};  // capture CPU usage
+        bool debug_scanners_same_thread {false}; // run all the scanners in the same thread
         std::string debug_scanners_ignore{}; // ignore these scanners, separated by :
     } debug_flags{};
 
