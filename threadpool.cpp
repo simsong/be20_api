@@ -51,7 +51,6 @@ void thread_pool::wait_for_tasks()
 void thread_pool::join()
 {
     wait_for_tasks();    /* Wait until there are no messages in the work queue */
-
     /* Next, send a kill message to each active thread. */
     size_t num_threads = get_worker_count(); // get the count with lock
     for(size_t i=0;i < num_threads;i++){
