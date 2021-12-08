@@ -170,6 +170,7 @@ void scanner_set::update_queue_stats(const sbuf_t *sbufp, int dir)
 
 void scanner_set::thread_set_status(const std::string &status)
 {
+    const std::lock_guard<std::mutex> lock(Mthread_status);
     thread_status[std::this_thread::get_id()] = status;
 }
 
@@ -252,14 +253,17 @@ std::map<std::string, std::string> scanner_set::get_realtime_stats() const
         }
     }
     int counter = 0;
-    for (const auto &it : thread_status.values()) {
-        counter++;
-        std::string status = std::string(*it);
-        if (status.size() > 0 && isdigit(status[0])) {
-            uint64_t status_offset = static_cast<uint64_t>(strtoll(status.c_str(), nullptr, 10));
-            ret[ Formatter() << "thread-" << counter ] = status;
-            if (status_offset > max_offset) {
-                max_offset = status_offset;
+    {
+        const std::lock_guard<std::mutex> lock(Mthread_status);
+        for (const auto &it : thread_status) {
+            counter++;
+            std::string status = std::string(it.second);
+            if (status.size() > 0 && isdigit(status[0])) {
+                uint64_t status_offset = static_cast<uint64_t>(strtoll(status.c_str(), nullptr, 10));
+                ret[ Formatter() << "thread-" << counter ] = status;
+                if (status_offset > max_offset) {
+                    max_offset = status_offset;
+                }
             }
         }
     }
@@ -316,6 +320,7 @@ void scanner_set::add_scanner_stat(scanner_t *scanner, const struct scanner_set:
 }
 
 
+#if 0
 /****************************************************************
  *** per-path stats
  ****************************************************************/
@@ -324,7 +329,7 @@ void scanner_set::add_path_stat(std::string path, const struct scanner_set::stat
 {
     path_stats[path] += n;
 }
-
+#endif
 
 
 /****************************************************************
@@ -855,7 +860,9 @@ void scanner_set::process_sbuf(const sbuf_t* sbufp, scanner_t *scanner)
             t.stop();
             struct stats st(t.elapsed_nanoseconds(), 1);
             add_scanner_stat(scanner, st);
+#if 0
             add_path_stat(epath, st);
+#endif
             if (debug_flags.debug_print_steps) {
                 std::cerr << "sbuf.pos0=" << sbuf.pos0 << " scanner " << name << " t=" << t.elapsed_seconds() << " threadid=" << std::this_thread::get_id() << std::endl;
             }

@@ -510,15 +510,18 @@ void sbuf_t::hex_dump(std::ostream& os) const { hex_dump(os, 0, bufsize); }
 size_t sbuf_t::find_ngram_size(const size_t max_ngram) const {
     const std::lock_guard<std::mutex> lock(Mngram_size); // protect this function
     if (ngram_size != NO_NGRAM) {
-        for (ngram_size = 1; ngram_size < max_ngram; ngram_size++) {
+        for (size_t ns = 1; ns < max_ngram; ns++) {
             bool ngram_match = true;
-            for (size_t i = ngram_size; i < pagesize ; i++) {
-                if ((buf[i % ngram_size]) != buf[i]) {
+            for (size_t i = ns; i < pagesize ; i++) {
+                if ((buf[i % ns]) != buf[i]) {
                     ngram_match = false;
                     break;
                 }
             }
-            if (ngram_match) return ngram_size;
+            if (ngram_match){
+                ngram_size = ns;
+                return ngram_size;
+            }
         }
     }
     ngram_size = 0;

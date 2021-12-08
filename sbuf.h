@@ -228,8 +228,8 @@ public:;
 
     /* Compute a histogram (if one hasn't been computed) and return a pointer to the histogram object. */
     struct sbuf_histogram {
-        uint64_t count[256] {};            // the count of each character
-        size_t   unique_chars;             // total number of unique characters
+        uint64_t count[256] {};                // the count of each character
+        size_t   unique_chars {0};             // total number of unique characters
     };
 
     sbuf_histogram *get_histogram() const; // returns the histogram itself

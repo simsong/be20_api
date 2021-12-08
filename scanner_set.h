@@ -114,7 +114,8 @@ class scanner_set {
     static void launch_cpu_benchmark_thread(void *arg);
     class feature_recorder_set fs;      // the feature recorders
     atomic_map<std::string, std::atomic<uint64_t>> previously_processed_counter {};
-    atomic_map<std::thread::id, std::string> thread_status {}; // the status of each thread::id
+    std::map<std::thread::id, std::string> thread_status {}; // the status of each thread::id
+    mutable std::mutex Mthread_status {};                       // mutex for thread_status
 
     // scanner stats are kept here, but must be read through the public interface
     bool record_call_stats {true};     // by default, record the call stats
@@ -197,7 +198,8 @@ public:
     mutable std::atomic<uint64_t> max_offset {0}; // largest offset read by any of the threads.
 
     // to get a copy of thread_status, use get_stats, which also returns information about the queue
-    std::map<std::string,std::string> get_realtime_stats() const;   // thread-safe return of a copy of threadpool stats; for notification APIs.
+    // thread-safe return of a copy of threadpool stats; for notification APIs.
+    std::map<std::string,std::string> get_realtime_stats() const;
 
     // thread interface
     void launch_workers(int count);
@@ -215,8 +217,10 @@ public:
 
     // per-path stats
     atomic_set<const sbuf_t *> scheduled_sbufs {};            // sbufs that have been scheduled for work in the task queue
+#if 0
     atomic_map<std::string, struct stats> path_stats{}; // maps scanner name to performance stats
     void add_path_stat(std::string path, const struct stats &st);
+#endif
 
     // Feature recorders. Functions below are virtual so they can be called by loaded scanners.
     virtual feature_recorder& named_feature_recorder(const std::string name) const; // returns the feature recorder
