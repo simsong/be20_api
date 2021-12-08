@@ -142,7 +142,8 @@ public:
         return ret;
     }
 
-    /* Like python .values() */
+    /* This is only threadsafe if the it.second is an object, and not a pointer*/
+    /* Like python .values(). It should actually return objects. */
     typename std::vector<T2 *> values() const {
         const std::lock_guard<std::mutex> lock(M);
         std::vector<T2 *>ret;
