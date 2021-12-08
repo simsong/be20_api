@@ -166,11 +166,13 @@ void *worker::run()
                 if (tp.debug) std::cerr << "worker " << std::this_thread::get_id() << " waiting " << std::endl;
                 /* I didn't get any work; go to sleep */
                 //std::cerr << std::this_thread::get_id() << " #1 tp.tasks.size()=" << tp.tasks.size() << std::endl;
+                tp.ss.thread_set_status("waiting");
                 tp.TO_MAIN.notify_one(); // if main is sleeping, wake it up
                 tp.TO_WORKER.wait( lock );
                 //std::cerr << std::this_thread::get_id() << " #2 tp.tasks.size()=" << tp.tasks.size() << std::endl;
             }
             worker_wait_timer.stop();   // no longer waiting
+            tp.ss.thread_set_status("working");
 
             /* Worker still has the lock */
             thread_pool::work_unit *wup = tp.work_queue.front();    // get the task
@@ -179,9 +181,7 @@ void *worker::run()
             delete wup;
             tp.freethreads--;           // no longer free
             tp.working_workers++;       // a worker is working
-            /* release the lock */
         }
-        //std::cerr << std::this_thread::get_id() << " task=" << task << std::endl;
 	if (wu.sbuf==nullptr) {                  // special code to exit thread
             //tp.TO_MAIN.notify_one();          // tell the master that one is gone
             if (tp.debug) std::cerr << std::this_thread::get_id() << "got wu.sbuf=nullptr" << std::endl;
@@ -204,6 +204,7 @@ void *worker::run()
             tp.TO_MAIN.notify_one(); // tell the master that we are free!
         }
     }
+    tp.ss.thread_set_status("exiting");
     if (tp.debug) std::cerr << std::this_thread::get_id() << " exiting "<< std::endl;
     {
         std::unique_lock<std::mutex> lock(tp.M);
@@ -211,6 +212,6 @@ void *worker::run()
         tp.working_workers--;       // a worker is working
     }
     tp.total_worker_wait_ns += worker_wait_timer.running_nanoseconds();
-
+    tp.ss.thread_set_status("exited");
     return nullptr;
 }

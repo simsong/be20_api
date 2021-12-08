@@ -528,6 +528,18 @@ TEST_CASE("functions", "[path_printer]") {
 
 /** test the sbuf_stream interface.
  */
+TEST_CASE("find_ngram_size", "[sbuf]") {
+    auto sbuf1 = sbuf_t("Hello World!\n");
+    REQUIRE( sbuf1.find_ngram_size(100) == 0);
+
+    auto sbuf2 = sbuf_t("abcabcabcabc");
+    REQUIRE( sbuf2.find_ngram_size(10) == 3);
+
+    auto sbuf3 = sbuf_t("abcabcabcabc");
+    REQUIRE( sbuf3.find_ngram_size(2) == 0); // if we don't search with a large enough probe, we won't find it.
+}
+
+
 TEST_CASE("sbuf_stream", "[sbuf]") {
     auto sbuf1 = sbuf_t("\001\002\003\004\005\006\007\010");
     REQUIRE( sbuf1.bufsize == 8);
