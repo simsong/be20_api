@@ -494,22 +494,17 @@ uint16_t sbuf_t::distinct_characters(size_t off, size_t len) const // verify tha
     return distinct_counts;
 }
 
-void sbuf_t::hex_dump(std::ostream& os) const { hex_dump(os, 0, bufsize); }
+void sbuf_t::hex_dump(std::ostream& os) const
+{
+    hex_dump(os, 0, bufsize);
+}
 
-/**
- * Convert a binary blob to a hex representation
+/* Determine if the sbuf consists of a repeating ngram.
+ * results are computed lazily and cached for all threads.
  */
-
-#ifndef NSRL_HEXBUF_UPPERCASE
-#define NSRL_HEXBUF_UPPERCASE 0x01
-#define NSRL_HEXBUF_SPACE2 0x02
-#define NSRL_HEXBUF_SPACE4 0x04
-#endif
-
-/* Determine if the sbuf consists of a repeating ngram */
 size_t sbuf_t::find_ngram_size(const size_t max_ngram) const {
     const std::lock_guard<std::mutex> lock(Mngram_size); // protect this function
-    if (ngram_size != NO_NGRAM) {
+    if (ngram_size == NO_NGRAM) {
         for (size_t ns = 1; ns < max_ngram; ns++) {
             bool ngram_match = true;
             for (size_t i = ns; i < pagesize ; i++) {
@@ -518,13 +513,15 @@ size_t sbuf_t::find_ngram_size(const size_t max_ngram) const {
                     break;
                 }
             }
-            if (ngram_match){
+            if (ngram_match && ns*2 < pagesize) { // it had to repeat at least once
                 ngram_size = ns;
+                assert (ngram_size != NO_NGRAM); // better be set now
                 return ngram_size;
             }
         }
+        ngram_size = 0;                 // no ngram was found
     }
-    ngram_size = 0;
+    assert (ngram_size != NO_NGRAM);    // it should be set now
     return ngram_size; // no ngram size
 }
 
