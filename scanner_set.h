@@ -122,7 +122,7 @@ class scanner_set {
     std::atomic<uint64_t> sbuf_seen {0}; // number of seen sbufs.
     std::atomic<uint64_t> dup_bytes_encountered{0}; // amount of dup data encountered
     std::map<scanner_t* , struct stats> scanner_stats{}; // maps scanner name to performance stats
-    std::mutex Mscanner_stats {};                        // mutex for scanner_stats
+    mutable std::mutex Mscanner_stats {};                        // mutex for scanner_stats
 
     unsigned int max_depth{7};   // maximum depth for recursive scans
     unsigned int log_depth{1};   // log to dfxml all sbufs at this depth or less

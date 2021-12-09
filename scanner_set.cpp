@@ -671,7 +671,7 @@ void scanner_set::dump_scanner_stats() const
         writer->push("scanner");
         writer->xmlout("name", get_scanner_name( it.first ));
         writer->xmlout("seconds", static_cast<double>(it.second->ns) / 1E9);
-        writer->xmlout("calls", it.value->calls);
+        writer->xmlout("calls", it.second->calls);
         writer->pop();
         writer->set_oneline(false);
     }
