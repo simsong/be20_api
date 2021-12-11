@@ -110,7 +110,7 @@ public:
 // there is a worker object for each thread
 class worker {
     thread_pool         &tp;		       // my thread pool
-    void                *run();                               // run the worker
+    void                *run();                // run the worker
     aftimer		worker_wait_timer {};  // time the worker spent
 public:
     const uint32_t id;

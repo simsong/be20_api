@@ -77,6 +77,23 @@ public:
         }
     }
 
+    /* Find options */
+    struct {
+        std::vector<std::filesystem::path> files {};     // accumulates pattern files
+        std::vector<std::string> patterns {};            // accumulates cmdline patterns
+    } FindOpts;
+
+    bool find_opts_empty() const {
+        return FindOpts.files.empty() && FindOpts.patterns.empty();
+    }
+
+    // Find interface
+    const std::vector<std::string> &find_patterns() const        { return FindOpts.patterns; }
+    const std::vector<std::filesystem::path> &find_files() const { return FindOpts.files; }
+    void add_find_pattern(std::string pattern)                   { FindOpts.patterns.push_back(pattern);}
+    void add_find_path(std::filesystem::path path)               { FindOpts.files.push_back(path);}
+
+
     size_t context_window_default{16}; // global option
     uint64_t offset_add{0}; // add this number to the first offset in every feature file (used for parallelism)
     std::filesystem::path banner_file{}; // add the contents of this file to the top of every feature file

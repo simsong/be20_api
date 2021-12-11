@@ -121,7 +121,9 @@ class scanner_set {
     bool record_call_stats {true};     // by default, record the call stats
     std::atomic<uint64_t> sbuf_seen {0}; // number of seen sbufs.
     std::atomic<uint64_t> dup_bytes_encountered{0}; // amount of dup data encountered
-    atomic_map<scanner_t* , struct stats> scanner_stats{}; // maps scanner name to performance stats
+    std::map<scanner_t* , struct stats> scanner_stats{}; // maps scanner name to performance stats
+    mutable std::mutex Mscanner_stats {};                        // mutex for scanner_stats
+
     unsigned int max_depth{7};   // maximum depth for recursive scans
     unsigned int log_depth{1};   // log to dfxml all sbufs at this depth or less
     std::atomic<uint32_t> max_depth_seen{0};
@@ -210,26 +212,20 @@ public:
     void debug_pool(std::ostream &os) const { pool.debug_pool(os);}
     void set_spin_poll_time(int ms) { pool.shutdown_spin_lock_poll_ms = ms;}
 
-
-
     uint64_t get_dup_bytes_encountered()  const  { return dup_bytes_encountered; }
     uint32_t get_max_depth_seen() const          { return max_depth_seen;} ; // max seen during scan
 
     // per-path stats
     atomic_set<const sbuf_t *> scheduled_sbufs {};            // sbufs that have been scheduled for work in the task queue
-#if 0
-    atomic_map<std::string, struct stats> path_stats{}; // maps scanner name to performance stats
-    void add_path_stat(std::string path, const struct stats &st);
-#endif
 
     // Feature recorders. Functions below are virtual so they can be called by loaded scanners.
     virtual feature_recorder& named_feature_recorder(const std::string name) const; // returns the feature recorder
     virtual std::vector<std::string> feature_file_list() const;                     // returns the list of feature files
     size_t histogram_count() const        { return fs.histogram_count(); }; // passthrough, mostly for debugging
     size_t feature_recorder_count() const { return fs.feature_recorder_count(); };
-    void   dump_name_count_stats() const    { if (writer) fs.dump_name_count_stats(*writer); }; // passthrough
+    void   dump_name_count_stats() const  { if (writer) fs.dump_name_count_stats(*writer); }; // passthrough
 
-    std::string get_help() const { return sc.get_help(); }
+    std::string get_help() const          { return sc.get_help(); }
 
     /* Run-time configuration for all of the scanners (per-scanner configuration is stored in sc)
      * Default values are hard-coded below.
@@ -239,6 +235,13 @@ public:
     }
 
     const std::filesystem::path get_input_fname() const;
+
+    // Find interface
+    const std::vector<std::string> &find_patterns() const           { return sc.find_patterns(); }
+    const std::vector<std::filesystem::path> &find_files()    const { return sc.find_files(); }
+    //void add_find_pattern(std::string pattern)                      { sc.add_find_pattern(pattern);}
+    //void add_find_path(std::filesystem::path path)                  { sc.add_find_file(path);}
+    //bool find_opts_empty() const                                    { return sc.find_opts_empty(); }
 
     // Scanning
     scanner_params::phase_t get_current_phase() const { return current_phase; };

@@ -316,6 +316,7 @@ void scanner_set::launch_cpu_benchmark_thread(void *arg)
 
 void scanner_set::add_scanner_stat(scanner_t *scanner, const struct scanner_set::stats &n)
 {
+    const std::lock_guard<std::mutex> lock(Mscanner_stats);
     scanner_stats[scanner] += n;
 }
 
@@ -664,12 +665,13 @@ void scanner_set::dump_scanner_stats() const
 {
     if (writer==nullptr) return;
     writer->push("scanner_stats");
-    for (const auto &it: scanner_stats.items()) {
+    const std::lock_guard<std::mutex> lock(Mscanner_stats);
+    for (const auto &it: scanner_stats) {
         writer->set_oneline(true);
         writer->push("scanner");
-        writer->xmlout("name", get_scanner_name( it.key ));
-        writer->xmlout("seconds", static_cast<double>(it.value->ns) / 1E9);
-        writer->xmlout("calls", it.value->calls);
+        writer->xmlout("name", get_scanner_name( it.first ));
+        writer->xmlout("seconds", static_cast<double>(it.second.ns) / 1E9);
+        writer->xmlout("calls", it.second.calls);
         writer->pop();
         writer->set_oneline(false);
     }
