@@ -31,6 +31,7 @@
 #include <cassert>
 #include <cstring>
 #include <cstdio>
+#include <set>
 #include <exception>
 #include <filesystem>
 #include <fstream>
@@ -253,7 +254,7 @@ public:;
      * sbuf_t raises an sbuf_range_exception when an attempt is made to read
      * past the end of buf.
      */
-    static bool debug_range_exception;  // print range exceptions to stdout
+    static std::atomic<bool> debug_range_exception;  // print range exceptions to stdout
     class range_exception_t : public std::exception {
         size_t off {0};
         size_t len {0};
@@ -531,6 +532,11 @@ public:;
     }
     bool has_parent() const { return parent!=nullptr; }
 
+    // tracking allocations and frees
+
+    static std::atomic<bool>    debug_alloc;   // track every alloc sbuf
+    static std::set<sbuf_t *>   sbuf_alloced;  // all allocated sbufs (for tracking leaks)
+    static std::mutex           sbuf_allocedM; // mutex for sbuf_alloced
     static std::atomic<int64_t> sbuf_total;    // how many were created in total
     static std::atomic<int64_t> sbuf_count;    // how many are currently in use
     mutable std::atomic<int>    children{0};   // number of child sbufs; incremented when data in *buf is used by a child

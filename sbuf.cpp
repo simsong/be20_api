@@ -31,9 +31,10 @@
 #define O_BINARY 0
 #endif
 
-bool sbuf_t::debug_range_exception = false; // alert exceptions
-
-/* Keep track of how many sbufs we have */
+std::atomic<bool>    sbuf_t::debug_range_exception = false; // alert exceptions
+std::atomic<bool>    sbuf_t::debug_alloc = false; // debug sbuf leaks
+std::set<sbuf_t *>   sbuf_t::sbuf_alloced;        // allocated sbufs, but only if debug_alloc is true
+std::mutex           sbuf_t::sbuf_allocedM;
 std::atomic<int64_t> sbuf_t::sbuf_total = 0;
 std::atomic<int64_t> sbuf_t::sbuf_count = 0;
 
