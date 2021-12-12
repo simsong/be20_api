@@ -197,6 +197,7 @@ void *worker::run()
         else {
             tp.ss.process_sbuf( wu.sbuf);
         }
+        tp.ss.release_sbuf(wu.sbuf);
         tp.working_workers--;
         {
             std::unique_lock<std::mutex> lock( tp.M );

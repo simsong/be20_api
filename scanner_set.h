@@ -215,9 +215,6 @@ public:
     uint64_t get_dup_bytes_encountered()  const  { return dup_bytes_encountered; }
     uint32_t get_max_depth_seen() const          { return max_depth_seen;} ; // max seen during scan
 
-    // per-path stats
-    atomic_set<const sbuf_t *> scheduled_sbufs {};            // sbufs that have been scheduled for work in the task queue
-
     // Feature recorders. Functions below are virtual so they can be called by loaded scanners.
     virtual feature_recorder& named_feature_recorder(const std::string name) const; // returns the feature recorder
     virtual std::vector<std::string> feature_file_list() const;                     // returns the list of feature files
@@ -279,13 +276,18 @@ public:
 
 
     /* PHASE SCAN */
+public:;
     void phase_scan();               // start the scan phase
-    void process_sbuf(const sbuf_t* sbuf, scanner_t *scanner); // process the sbuf with a specific scanner, then release it.
-    void process_sbuf(const sbuf_t* sbuf); // process the sbuf with all scanners, then release it.
+    void process_sbuf(const sbuf_t* sbuf, scanner_t *scanner); // process sbuf with a specific scanner
+    void process_sbuf(const sbuf_t* sbuf);                     // process sbuf with all scanners (or schedule, if threading)
+    void schedule_sbuf(const sbuf_t* sbuf);                    // process sbuf if not threading, otherwise retain and put it on the queue.
+
     void record_work_start(const sbuf_t *sbuf);
     void record_work_start_pos0str(const std::string pos0str);
     void record_work_end(const sbuf_t *sbuf);
-    void schedule_sbuf(const sbuf_t* sbuf);  // schedule the sbuf to be processed, after which it is deleted
+
+
+    // These are for garbage collection:
     void retain_sbuf(const sbuf_t *sbuf);    // note that sbuf is now in use
     void release_sbuf(const sbuf_t *sbuf);   // decrease reference count and delete if refcount is 0
 

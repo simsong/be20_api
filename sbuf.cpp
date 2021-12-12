@@ -285,7 +285,7 @@ sbuf_t *sbuf_t::realloc(size_t newsize)
     }
     buf_writable = static_cast<uint8_t *>(malloced);
 
-    /* These are all const, and we're going to nuke them */
+    /* These are all const, and we're going to nuke them. Have pitty on my const sole.  */
     *(const_cast<uint8_t **>(&buf))        = buf_writable;
     *(const_cast<size_t *>(&bufsize))      = newsize;
     *(const_cast<size_t *>(&pagesize))     = newsize;
