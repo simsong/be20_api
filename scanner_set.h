@@ -161,13 +161,15 @@ public:
     };
 
     struct debug_flags_t {
-        bool debug_no_scanner_bypass{false}; // do not use scanner bypass logic
-        bool debug_print_steps{false};     // prints as each scanner is started
-        bool debug_scanner{false};         // dump all feature writes to stderr
-        bool debug_dump_data{false};       // scanners should dump data as they see them
+        bool debug_no_scanner_bypass {false}; // do not use scanner bypass logic
+        bool debug_print_steps {false};     // prints as each scanner is started
+        bool debug_scanner {false};         // dump all feature writes to stderr
+        bool debug_dump_data {false};       // scanners should dump data as they see them
         bool debug_benchmark_cpu {false};  // capture CPU usage
         bool debug_scanners_same_thread {false}; // run all the scanners in the same thread
-        std::string debug_scanners_ignore{}; // ignore these scanners, separated by :
+        bool debug_sbuf_gc {false};            // debug sbuf garbage collection system
+        bool debug_sbuf_gc0 {false};          // debug sbuf garbage collection system for depth0
+        std::string debug_scanners_ignore {}; // ignore these scanners, separated by :
     } debug_flags{};
 
     // Scanner database

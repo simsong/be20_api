@@ -73,6 +73,8 @@ scanner_set::scanner_set(scanner_config& sc_, const feature_recorder_set::flags_
     debug_flags.debug_dump_data            = getenv_debug("DEBUG_SCANNER_SET_DUMP_DATA");
     debug_flags.debug_benchmark_cpu        = getenv_debug("DEBUG_BENCHMARK_CPU");
     debug_flags.debug_scanners_same_thread = getenv_debug("DEBUG_SCANNERS_SAME_THREAD");
+    debug_flags.debug_sbuf_gc              = getenv_debug("DEBUG_SBUF_GC");
+    debug_flags.debug_sbuf_gc              = getenv_debug("DEBUG_SBUF_GC0");
     pool.debug                             = getenv_debug("DEBUG_THREAD_POOL");
 
     const char *dsi = std::getenv("DEBUG_SCANNERS_IGNORE");
@@ -156,9 +158,6 @@ void scanner_set::update_queue_stats(const sbuf_t *sbufp, int dir)
     }
     sbufs_in_queue += dir;
     bytes_in_queue += sbufp->bufsize * dir;
-
-    assert( sbufs_in_queue >= depth0_sbufs_in_queue);
-    assert( bytes_in_queue >= depth0_bytes_in_queue);
 }
 
 
@@ -734,14 +733,25 @@ void scanner_set::schedule_sbuf(const sbuf_t *sbufp)
 }
 
 
+std::mutex cerrM;
 void scanner_set::retain_sbuf(const sbuf_t *sbufp)
 {
+    if (debug_flags.debug_sbuf_gc ||
+        ( debug_flags.debug_sbuf_gc0 && sbufp->depth()==0)){
+        const std::lock_guard<std::mutex> lock(cerrM);
+        std::cerr << "retain_sbuf " << sbufp->pos0 << std::endl;
+    }
     sbufp->reference_count += 1;
     update_queue_stats( sbufp, +1 );
 }
 
 void scanner_set::release_sbuf(const sbuf_t *sbufp)
 {
+    if (debug_flags.debug_sbuf_gc ||
+        ( debug_flags.debug_sbuf_gc0 && sbufp->depth()==0)){
+        const std::lock_guard<std::mutex> lock(cerrM);
+        std::cerr << "release_sbuf " << sbufp->pos0 << std::endl;
+    }
     update_queue_stats( sbufp, -1 );
     thread_set_status(sbufp->pos0.str() + " release_sbuf");
     record_work_end( sbufp );
