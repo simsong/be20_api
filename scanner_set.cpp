@@ -16,6 +16,7 @@
 #include <thread>
 #include <vector>
 
+#include "utils.h"
 #include "formatter.h"
 
 #ifdef HAVE_LINUX_SYSCTL_H
@@ -62,25 +63,17 @@
  *        All of the global variables go away.
  */
 
-static bool valid_env(const char *name)
-{
-    const char *e = std::getenv(name);
-    if (e==nullptr) return false;
-    if (e[0]=='1' || e[0]=='t' || e[0]=='T' || e[0]=='y' || e[0]=='Y') return true;
-    return false;
-}
-
 /* constructor and destructors */
 scanner_set::scanner_set(scanner_config& sc_, const feature_recorder_set::flags_t& f, class dfxml_writer* writer_)
     : pool(*this), fs(f, sc_), sc(sc_), writer(writer_)
 {
-    debug_flags.debug_no_scanner_bypass    = valid_env("DEBUG_NO_SCANNER_BYPASS");
-    debug_flags.debug_print_steps          = valid_env("DEBUG_SCANNER_SET_PRINT_STEPS");
-    debug_flags.debug_scanner              = valid_env("DEBUG_SCANNER_SET_SCANNER");
-    debug_flags.debug_dump_data            = valid_env("DEBUG_SCANNER_SET_DUMP_DATA");
-    debug_flags.debug_benchmark_cpu        = valid_env("DEBUG_BENCHMARK_CPU");
-    debug_flags.debug_scanners_same_thread = valid_env("DEBUG_SCANNERS_SAME_THREAD");
-    pool.debug                             = valid_env("DEBUG_THREAD_POOL");
+    debug_flags.debug_no_scanner_bypass    = getenv_debug("DEBUG_NO_SCANNER_BYPASS");
+    debug_flags.debug_print_steps          = getenv_debug("DEBUG_SCANNER_SET_PRINT_STEPS");
+    debug_flags.debug_scanner              = getenv_debug("DEBUG_SCANNER_SET_SCANNER");
+    debug_flags.debug_dump_data            = getenv_debug("DEBUG_SCANNER_SET_DUMP_DATA");
+    debug_flags.debug_benchmark_cpu        = getenv_debug("DEBUG_BENCHMARK_CPU");
+    debug_flags.debug_scanners_same_thread = getenv_debug("DEBUG_SCANNERS_SAME_THREAD");
+    pool.debug                             = getenv_debug("DEBUG_THREAD_POOL");
 
     const char *dsi = std::getenv("DEBUG_SCANNERS_IGNORE");
     if (dsi!=nullptr) debug_flags.debug_scanners_ignore=dsi;

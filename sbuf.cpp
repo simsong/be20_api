@@ -33,6 +33,7 @@
 
 std::atomic<bool>    sbuf_t::debug_range_exception = false; // alert exceptions
 std::atomic<bool>    sbuf_t::debug_alloc = false; // debug sbuf leaks
+std::atomic<bool>    sbuf_t::debug_leak  = false; // debug sbuf leaks
 std::set<sbuf_t *>   sbuf_t::sbuf_alloced;        // allocated sbufs, but only if debug_alloc is true
 std::mutex           sbuf_t::sbuf_allocedM;
 std::atomic<int64_t> sbuf_t::sbuf_total = 0;
@@ -47,6 +48,14 @@ sbuf_t::sbuf_t()
 {
     sbuf_total += 1;
     sbuf_count += 1;
+    if (debug_leak) {
+        const std::lock_guard<std::mutex> lock(sbuf_allocedM); // protect this function
+        sbuf_alloced.insert( this );
+    }
+    if (debug_alloc) {
+        const std::lock_guard<std::mutex> lock(sbuf_allocedM); // protect this function
+        std::cerr << "sbuf_t::sbuf() " << *this << std::endl;
+    }
 }
 
 /* from an offset */
@@ -59,6 +68,14 @@ sbuf_t::sbuf_t(const sbuf_t &src, size_t offset):
     parent->add_child(*this);
     sbuf_total += 1;
     sbuf_count += 1;
+    if (debug_leak) {
+        const std::lock_guard<std::mutex> lock(sbuf_allocedM); // protect this function
+        sbuf_alloced.insert( this );
+    }
+    if (debug_alloc) {
+        const std::lock_guard<std::mutex> lock(sbuf_allocedM); // protect this function
+        std::cerr << "sbuf_t::sbuf(src,offset) " << *this << std::endl;
+    }
 }
 
 // start at offset for a given len
@@ -71,6 +88,14 @@ sbuf_t::sbuf_t(const sbuf_t &src, size_t offset, size_t len):
     parent->add_child(*this);
     sbuf_total += 1;
     sbuf_count += 1;
+    if (debug_leak) {
+        const std::lock_guard<std::mutex> lock(sbuf_allocedM); // protect this function
+        sbuf_alloced.insert( this );
+    }
+    if (debug_alloc) {
+        const std::lock_guard<std::mutex> lock(sbuf_allocedM); // protect this function
+        std::cerr << "sbuf_t::sbuf(src,offset,len) " << *this << std::endl;
+    }
 }
 
 /* Create an sbuf from a block of memory that does not need to be freed when the sbuf is deleted. */
@@ -79,6 +104,15 @@ sbuf_t::sbuf_t(pos0_t pos0_, const uint8_t *buf_, size_t bufsize_):
     parent(), buf(buf_), malloced(nullptr) {
     sbuf_total += 1;
     sbuf_count += 1;
+
+    if (debug_leak) {
+        const std::lock_guard<std::mutex> lock(sbuf_allocedM); // protect this function
+        sbuf_alloced.erase( this );
+    }
+    if (debug_alloc) {
+        const std::lock_guard<std::mutex> lock(sbuf_allocedM); // protect this function
+        std::cerr << "sbuf_t::sbuf(pos0,buf,bufsize) " << *this << std::endl;
+    }
 }
 
 /* Flexible allocator used by _new static methods below*/
@@ -93,6 +127,14 @@ sbuf_t::sbuf_t(pos0_t pos0_, const sbuf_t *parent_,
     }
     sbuf_total += 1;
     sbuf_count += 1;
+    if (debug_leak) {
+        const std::lock_guard<std::mutex> lock(sbuf_allocedM); // protect this function
+        sbuf_alloced.insert( this );
+    }
+    if (debug_alloc) {
+        const std::lock_guard<std::mutex> lock(sbuf_allocedM); // protect this function
+        std::cerr << "sbuf_t::sbuf(pos0,parent,buf,bufsize,pagesize,fd) " << *this << std::endl;
+    }
 }
 
 
@@ -102,13 +144,19 @@ sbuf_t::sbuf_t(pos0_t pos0_, const sbuf_t *parent_,
 
 sbuf_t::~sbuf_t()
 {
+    if (debug_alloc) {
+        const std::lock_guard<std::mutex> lock(sbuf_allocedM); // protect this function
+        std::cerr << "sbuf_t::~sbuf_t() " << *this << std::endl;
+    }
     if (children != 0) {
         std::runtime_error(Formatter() << "sbuf.cpp: error: sbuf children=" << children);
     }
-    const std::lock_guard<std::mutex> lock(Mhistogram); // protect this function
-    if (histogram){
-        delete histogram;
-        histogram = nullptr;
+    {
+        const std::lock_guard<std::mutex> lock(Mhistogram); // protect this function
+        if (histogram){
+            delete histogram;
+            histogram = nullptr;
+        }
     }
     if (parent) parent->del_child(*this);
     if (fd>0) {
@@ -123,7 +171,15 @@ sbuf_t::~sbuf_t()
         free( malloced );
     }
     sbuf_count -= 1;
+    if (debug_leak) {
+        const std::lock_guard<std::mutex> lk(sbuf_allocedM); // protect this function
+        sbuf_alloced.erase( this );
+    }
 }
+
+/****************************************************************
+ *** accessors
+ ****************************************************************/
 
 const uint8_t* sbuf_t::get_buf() const
 {
@@ -177,19 +233,37 @@ sbuf_t* sbuf_t::sbuf_malloc(pos0_t pos0, const std::string &str)
 
 
 /*
- * Similar to a move operator, but reallocates.
+ * Deletes this sbuf and allocates a new one.
  */
 sbuf_t *sbuf_t::realloc(size_t newsize)
 {
     if (parent!=nullptr) {
         throw std::runtime_error("sbuf_t::realloc called on sbuf that has a parent.");
     }
+    if (children!=0) {
+        throw std::runtime_error("sbuf_t::realloc called on sbuf that has children.");
+    }
+    if (reference_count>0) {
+        throw std::runtime_error("sbuf_t::realloc called on sbuf that has a reference_count>0");
+    }
     if (malloced==nullptr) {
         throw std::runtime_error("sbuf_t::realloc called on buffer that was not malloced");
     }
-    if (newsize >bufsize) {
+    if (buf_writable==nullptr) {
+        throw std::runtime_error("sbuf_t::realloc called on buffer that is not writable");
+    }
+    if (malloced != buf_writable) {
+        throw std::runtime_error("sbuf_t::realloc called on buffer where malloced!=writable");
+    }
+    if (newsize > bufsize) {
         throw std::runtime_error("sbuf_t::realloc attempt to make sbuf bigger");
     }
+    const std::lock_guard<std::mutex> lock(Mhistogram); // protect this function
+    if (histogram){
+        throw std::runtime_error("sbuf_t::realloc attempt on an sbuf that has a histogram");
+    }
+
+#ifdef OLD_CODE
     malloced = ::realloc(malloced, newsize);
     if (malloced==nullptr) {
         throw std::bad_alloc();
@@ -198,9 +272,25 @@ sbuf_t *sbuf_t::realloc(size_t newsize)
                              static_cast<const uint8_t *>(malloced), newsize, newsize,
                              0);
     ret->malloced = malloced;           // ret will delete it
-    malloced = nullptr;                 // prevent double deletion
+    ret->buf_writable = static_cast<uint8_t *>(malloced);
+    buf          = nullptr;             // don't print it.
+    malloced     = nullptr;             // prevent double deletion
+    buf_writable = nullptr;             // no longer writable
     delete this;                        // this is a move
     return ret;
+#else
+    malloced = ::realloc(malloced, newsize);
+    if (malloced==nullptr) {
+        throw std::bad_alloc();
+    }
+    buf_writable = static_cast<uint8_t *>(malloced);
+
+    /* These are all const, and we're going to nuke them */
+    *(const_cast<uint8_t **>(&buf))        = buf_writable;
+    *(const_cast<size_t *>(&bufsize))      = newsize;
+    *(const_cast<size_t *>(&pagesize))     = newsize;
+    return this;
+#endif
 }
 
 /** Allocate a subset of an sbuf's memory to a child sbuf.
@@ -597,27 +687,29 @@ ssize_t sbuf_t::findbin(const uint8_t* b2, size_t buflen, size_t start ) const
 }
 
 std::ostream& operator<<(std::ostream& os, const sbuf_t& t) {
-    os << "sbuf[pos0=" << t.pos0 << " " << "buf[0..8]=";
+    os << "sbuf[pos0=" << t.pos0 << " " ;
 
-    for (size_t i=0; i < 8 && i < t.bufsize; i++){
-        os << hexch(t[i]) << ' ';
-    }
-    os << " (" ;
-    for (size_t i=0; i < 8 && i < t.bufsize; i++){
-        if (isprint(t[i])) {
-            os << t[i];
+    if (t.buf) {
+        os << "buf[0..8]=";
+        for (size_t i=0; i < 8 && i < t.bufsize; i++){
+            os << hexch(t[i]) << ' ';
         }
+        os << " (" ;
+        for (size_t i=0; i < 8 && i < t.bufsize; i++){
+            if (isprint(t[i])) {
+                os << t[i];
+            }
+        }
+        os << " )" ;
     }
-    os << " )" ;
-    os << " buf= "          << static_cast<const void *>(t.buf)
-       << " malloced= "     << static_cast<const void *>(t.malloced)
-       << " buf_writable= " << static_cast<const void *>(t.buf_writable)
-       << " bufsize="       << t.bufsize
-       << " pagesize="      << t.pagesize
-       << " children="      << t.children
-       << " reference_count="    << t.reference_count
-       << " fd="            << t.fd
-       << " depth="         << t.depth()
+    os << " buf= "            << static_cast<const void *>(t.buf)
+       << " malloced= "       << static_cast<const void *>(t.malloced)
+       << " write= "          << static_cast<const void *>(t.buf_writable)
+       << " size=(" << t.bufsize << "/" << t.pagesize << ")"
+       << " children="        << t.children
+       << " refct="           << t.reference_count
+       << " fd="              << t.fd
+       << " depth="           << t.depth()
        << "]";
     return os;
 }
