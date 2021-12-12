@@ -31,6 +31,7 @@
 #include <cassert>
 #include <cstring>
 #include <cstdio>
+#include <set>
 #include <exception>
 #include <filesystem>
 #include <fstream>
@@ -193,7 +194,8 @@ public:;
     sbuf_t slice(size_t off) const;
     sbuf_t *new_slice(size_t off) const; // allocates; must be deleted
     virtual ~sbuf_t();
-    // It turns out that slice is not free, so don't do it casually with an addition:
+
+    // Slice is not free, so don't do it casually with an addition:
     sbuf_t operator+(size_t off) const = delete;
 
     /* Allocate an sbuf from a null-terminated string. Used exclusively for debugging and unit-tests.
@@ -253,7 +255,7 @@ public:;
      * sbuf_t raises an sbuf_range_exception when an attempt is made to read
      * past the end of buf.
      */
-    static bool debug_range_exception;  // print range exceptions to stdout
+    static std::atomic<bool> debug_range_exception;  // print range exceptions to stdout
     class range_exception_t : public std::exception {
         size_t off {0};
         size_t len {0};
@@ -531,10 +533,16 @@ public:;
     }
     bool has_parent() const { return parent!=nullptr; }
 
+    // tracking allocations and frees
+
+    static std::atomic<bool>    debug_alloc;   // track every alloc sbuf and free
+    static std::atomic<bool>    debug_leak;    // check for leaks at the end
+    static std::set<sbuf_t *>   sbuf_alloced;  // all allocated sbufs (for tracking leaks)
+    static std::mutex           sbuf_allocedM; // mutex for sbuf_alloced
     static std::atomic<int64_t> sbuf_total;    // how many were created in total
     static std::atomic<int64_t> sbuf_count;    // how many are currently in use
-    mutable std::atomic<int>    children{0};   // number of child sbufs; incremented when data in *buf is used by a child
-    mutable std::atomic<int>    reference_count{0}; // when goes to zero, automatically free
+    mutable std::atomic<uint64_t>    children {0};   // number of child sbufs; incremented when data in *buf is used by a child
+    mutable std::atomic<uint64_t>    reference_count {0}; // when goes to zero, automatically free
 
 private:
     // explicit allocation is only allowed in internal implementation
@@ -544,7 +552,7 @@ private:
 
     /* The private structures keep track of memory management */
     int fd{0};                     // if fd>0, unmap(buf) and close(fd) when sbuf is deleted.
-    const sbuf_t        *parent{nullptr}; // parent sbuf references data in another.
+    const sbuf_t        *parent {nullptr}; // parent sbuf references data in another.
     mutable std::mutex  Mhash{};    // mutext for hashing
     inline static std::string NO_HASH {""};
     mutable std::string hash_{ NO_HASH };   // the hash of the sbuf data, or "" if it hasn't been hashed yet
@@ -557,9 +565,9 @@ private:
     mutable sbuf_histogram *histogram {nullptr}; // histogram if computed
 
 
-    const uint8_t       *buf   {nullptr};   // start of the buffer
-    void                *malloced    {nullptr};       // malloced==buf if this was malloced and needs to be freed when sbuf is deleted.
-    uint8_t             *buf_writable{nullptr}; // if this is a writable buffer, buf_writable=buf
+    const uint8_t       *buf         {nullptr};      // start of the buffer
+    void                *malloced    {nullptr};      // malloced==buf if this was malloced and needs to be freed when sbuf is deleted.
+    uint8_t             *buf_writable{nullptr};      // if this is a writable buffer, buf_writable=buf
 
     sbuf_t(const sbuf_t& that) = delete;            // default copy is not implemented
     sbuf_t& operator=(const sbuf_t& that) = delete; // default assignment not implemented

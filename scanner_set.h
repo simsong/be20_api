@@ -161,13 +161,15 @@ public:
     };
 
     struct debug_flags_t {
-        bool debug_no_scanner_bypass{false}; // do not use scanner bypass logic
-        bool debug_print_steps{false};     // prints as each scanner is started
-        bool debug_scanner{false};         // dump all feature writes to stderr
-        bool debug_dump_data{false};       // scanners should dump data as they see them
+        bool debug_no_scanner_bypass {false}; // do not use scanner bypass logic
+        bool debug_print_steps {false};     // prints as each scanner is started
+        bool debug_scanner {false};         // dump all feature writes to stderr
+        bool debug_dump_data {false};       // scanners should dump data as they see them
         bool debug_benchmark_cpu {false};  // capture CPU usage
         bool debug_scanners_same_thread {false}; // run all the scanners in the same thread
-        std::string debug_scanners_ignore{}; // ignore these scanners, separated by :
+        bool debug_sbuf_gc {false};            // debug sbuf garbage collection system
+        bool debug_sbuf_gc0 {false};          // debug sbuf garbage collection system for depth0
+        std::string debug_scanners_ignore {}; // ignore these scanners, separated by :
     } debug_flags{};
 
     // Scanner database
@@ -212,26 +214,17 @@ public:
     void debug_pool(std::ostream &os) const { pool.debug_pool(os);}
     void set_spin_poll_time(int ms) { pool.shutdown_spin_lock_poll_ms = ms;}
 
-
-
     uint64_t get_dup_bytes_encountered()  const  { return dup_bytes_encountered; }
     uint32_t get_max_depth_seen() const          { return max_depth_seen;} ; // max seen during scan
-
-    // per-path stats
-    atomic_set<const sbuf_t *> scheduled_sbufs {};            // sbufs that have been scheduled for work in the task queue
-#if 0
-    atomic_map<std::string, struct stats> path_stats{}; // maps scanner name to performance stats
-    void add_path_stat(std::string path, const struct stats &st);
-#endif
 
     // Feature recorders. Functions below are virtual so they can be called by loaded scanners.
     virtual feature_recorder& named_feature_recorder(const std::string name) const; // returns the feature recorder
     virtual std::vector<std::string> feature_file_list() const;                     // returns the list of feature files
     size_t histogram_count() const        { return fs.histogram_count(); }; // passthrough, mostly for debugging
     size_t feature_recorder_count() const { return fs.feature_recorder_count(); };
-    void   dump_name_count_stats() const    { if (writer) fs.dump_name_count_stats(*writer); }; // passthrough
+    void   dump_name_count_stats() const  { if (writer) fs.dump_name_count_stats(*writer); }; // passthrough
 
-    std::string get_help() const { return sc.get_help(); }
+    std::string get_help() const          { return sc.get_help(); }
 
     /* Run-time configuration for all of the scanners (per-scanner configuration is stored in sc)
      * Default values are hard-coded below.
@@ -241,6 +234,13 @@ public:
     }
 
     const std::filesystem::path get_input_fname() const;
+
+    // Find interface
+    const std::vector<std::string> &find_patterns() const           { return sc.find_patterns(); }
+    const std::vector<std::filesystem::path> &find_files()    const { return sc.find_files(); }
+    //void add_find_pattern(std::string pattern)                      { sc.add_find_pattern(pattern);}
+    //void add_find_path(std::filesystem::path path)                  { sc.add_find_file(path);}
+    //bool find_opts_empty() const                                    { return sc.find_opts_empty(); }
 
     // Scanning
     scanner_params::phase_t get_current_phase() const { return current_phase; };
@@ -278,13 +278,18 @@ public:
 
 
     /* PHASE SCAN */
+public:;
     void phase_scan();               // start the scan phase
-    void process_sbuf(const sbuf_t* sbuf, scanner_t *scanner); // process the sbuf with a specific scanner, then release it.
-    void process_sbuf(const sbuf_t* sbuf); // process the sbuf with all scanners, then release it.
+    void process_sbuf(const sbuf_t* sbuf, scanner_t *scanner); // process sbuf with a specific scanner
+    void process_sbuf(const sbuf_t* sbuf);                     // process sbuf with all scanners (or schedule, if threading)
+    void schedule_sbuf(const sbuf_t* sbuf);                    // process sbuf if not threading, otherwise retain and put it on the queue.
+
     void record_work_start(const sbuf_t *sbuf);
     void record_work_start_pos0str(const std::string pos0str);
     void record_work_end(const sbuf_t *sbuf);
-    void schedule_sbuf(const sbuf_t* sbuf);  // schedule the sbuf to be processed, after which it is deleted
+
+
+    // These are for garbage collection:
     void retain_sbuf(const sbuf_t *sbuf);    // note that sbuf is now in use
     void release_sbuf(const sbuf_t *sbuf);   // decrease reference count and delete if refcount is 0
 
