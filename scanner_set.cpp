@@ -94,6 +94,8 @@ scanner_set::~scanner_set()
         benchmark_cpu_thread = nullptr;
     }
     /* Delete all of the scanner info blocks */
+
+    const std::lock_guard<std::mutex> lock(Mscanner_info_db);
     for (auto &it : scanner_info_db){
         delete it.second;
         it.second = nullptr;
@@ -120,6 +122,7 @@ class dfxml_writer *scanner_set::get_dfxml_writer() const
  ****************************************************************/
 
 const std::string scanner_set::get_scanner_name(scanner_t scanner) const {
+    const std::lock_guard<std::mutex> lock(Mscanner_info_db);
     auto it = scanner_info_db.find(scanner);
     if (it == scanner_info_db.end()) throw NoSuchScanner("get_scanner_name: scanner point not in sanner_info_db.");
     return it->second->name;
@@ -348,7 +351,10 @@ std::vector<std::string> scanner_set::feature_file_list() const
 
 void scanner_set::add_scanner(scanner_t scanner) {
     /* If scanner is already loaded, that's an error */
-    if (scanner_info_db.find(scanner) != scanner_info_db.end()) { throw std::runtime_error("scanner already added"); }
+    {
+        const std::lock_guard<std::mutex> lock(Mscanner_info_db);
+        if (scanner_info_db.find(scanner) != scanner_info_db.end()) { throw std::runtime_error("scanner already added"); }
+    }
 
     /* Initialize the scanner.
      * Use an empty sbuf and an empty feature recorder to create an empty scanner params that is in PHASE_STARTUP.
@@ -372,12 +378,15 @@ void scanner_set::add_scanner(scanner_t scanner) {
         std::cerr << "DEBUG: ignore add_scanner " << sp.info->name << "\n";
         return;
     }
-    scanner_info_db[scanner]     = sp.info; // was std::move(); not needed anymore
-    scanner_names[sp.info->name] = scanner;
+    {
+        const std::lock_guard<std::mutex> lock(Mscanner_info_db);
+        scanner_info_db[scanner]     = sp.info; // was std::move(); not needed anymore
+        scanner_names[sp.info->name] = scanner;
 
-    // Enable the scanner if it is not disabled by default.
-    if (scanner_info_db[scanner]->scanner_flags.default_enabled) {
-        enabled_scanners.insert(scanner);
+        // Enable the scanner if it is not disabled by default.
+        if (scanner_info_db[scanner]->scanner_flags.default_enabled) {
+            enabled_scanners.insert(scanner);
+        }
     }
 }
 
@@ -479,6 +488,7 @@ void scanner_set::info_scanners(std::ostream &out, bool detailed_info, bool deta
                                 const char enable_opt,
                                 const char disable_opt) {
     /* Get a list of scanner names */
+    const std::lock_guard<std::mutex> lock(Mscanner_info_db);
     std::vector<std::string> all_scanner_names,enabled_scanner_names, disabled_scanner_names;
 
     for (auto &it : scanner_info_db) {
@@ -549,6 +559,7 @@ void scanner_set::info_scanners(std::ostream &out, bool detailed_info, bool deta
  */
 
 void scanner_set::apply_scanner_commands() {
+    const std::lock_guard<std::mutex> lock(Mscanner_info_db);
     if (current_phase != scanner_params::PHASE_INIT) {
         throw std::runtime_error(
                                  Formatter()
@@ -626,6 +637,7 @@ std::vector<std::string> scanner_set::get_enabled_scanners() const
 {
     std::vector<std::string> ret;
     for (const auto &it : enabled_scanners) {
+        const std::lock_guard<std::mutex> lock(Mscanner_info_db);
         auto f = scanner_info_db.find(it);
         ret.push_back(f->second->name);
     }
@@ -636,6 +648,7 @@ std::vector<std::string> scanner_set::get_enabled_scanners() const
 bool scanner_set::is_find_scanner_enabled()
 {
     for (const auto &it : enabled_scanners) {
+        const std::lock_guard<std::mutex> lock(Mscanner_info_db);
         if (scanner_info_db[it]->scanner_flags.find_scanner) { return true; }
     }
     return false;
@@ -816,7 +829,11 @@ void scanner_set::record_work_end(const sbuf_t *sbufp)
 void scanner_set::process_sbuf(const sbuf_t* sbufp, scanner_t *scanner)
 {
     scanner_params sp(sc, this, nullptr, scanner_params::PHASE_SCAN, sbufp);
-    const struct scanner_params::scanner_info *info = scanner_info_db[scanner];
+    const struct scanner_params::scanner_info *info = nullptr;
+    {
+        const std::lock_guard<std::mutex> lock(Mscanner_info_db);
+        info = scanner_info_db[scanner];
+    }
 
     // Look for reasons not to run a scanner
     // this is a lot of find operations - could we make a vector of the enabled scanner_info_dbs?
@@ -1023,9 +1040,12 @@ void scanner_set::process_sbuf(const sbuf_t* sbufp)
          * a *lot* of overhead that would be rarely used.
          */
         try {
-            scanner_t *parent_scanner = get_scanner_by_name(lastAddedPart);
-            sbufp->possibly_has_memory     = scanner_info_db[parent_scanner]->scanner_flags.scanner_produces_memory;
-            sbufp->possibly_has_filesystem = scanner_info_db[parent_scanner]->scanner_flags.scanner_produces_filesystems;
+            scanner_t *parent_scanner      = get_scanner_by_name(lastAddedPart);
+            {
+                const std::lock_guard<std::mutex> lock(Mscanner_info_db);
+                sbufp->possibly_has_memory     = scanner_info_db[parent_scanner]->scanner_flags.scanner_produces_memory;
+                sbufp->possibly_has_filesystem = scanner_info_db[parent_scanner]->scanner_flags.scanner_produces_filesystems;
+            }
         } catch (scanner_set::NoSuchScanner &e) {
             // ignore the exception
         }
@@ -1043,14 +1063,14 @@ void scanner_set::process_sbuf(const sbuf_t* sbufp)
 
     /* Make the scanner params once, rather than every time through */
     // loop for each scanner.
-    for (const auto &it : scanner_info_db) {
+    for (const auto &it : enabled_scanners) {
         // Process if not threading or if we are supposed to process all in the same thread
         retain_sbuf(sbufp);
         if (!threading || debug_flags.debug_scanners_same_thread) {
-            process_sbuf(sbufp, it.first);
+            process_sbuf(sbufp, it);
             release_sbuf(sbufp);
         } else {
-            pool.push_task(sbufp, it.first);
+            pool.push_task(sbufp, it);
         }
     }
     thread_set_status("IDLE");
@@ -1128,6 +1148,7 @@ void scanner_set::cleanup()
         current_phase = scanner_params::PHASE_CLEANUP;
         /* Tell the scanners we are cleaning up down */
         scanner_params sp(sc, this, nullptr, scanner_params::PHASE_CLEANUP, nullptr);
+        const std::lock_guard<std::mutex> lock(Mscanner_info_db);
         for (const auto &it : scanner_info_db) { (*it.first)(sp); }
         current_phase = scanner_params::PHASE_CLEANED;
     }

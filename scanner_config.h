@@ -33,7 +33,7 @@ struct scanner_config {
      * Typically created from parsing command-line arguments
      */
     struct scanner_command {
-        static inline const std::string ALL_SCANNERS = "<ALL-SCANNERS>";
+        static inline const std::string ALL_SCANNERS = "all";
         enum command_t { DISABLE, ENABLE };
         scanner_command(const scanner_command& sc) : scannerName(sc.scannerName), command(sc.command){};
         scanner_command(const std::string& scannerName_, scanner_command::command_t c)

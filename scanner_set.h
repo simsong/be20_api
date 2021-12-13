@@ -103,6 +103,7 @@ class scanner_set {
     scanner_set(const scanner_set& s) = delete;
     scanner_set& operator=(const scanner_set& s) = delete;
 
+    mutable std::mutex Mscanner_info_db {};
     std::map<scanner_t*, struct scanner_params::scanner_info *> scanner_info_db {}; // scanner to info db; master list of scanners
     std::map<std::string, scanner_t *> scanner_names {}; // scanner name to scanner
     std::set<scanner_t*> enabled_scanners {};            //
