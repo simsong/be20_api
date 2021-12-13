@@ -192,6 +192,7 @@ public:
     static const inline std::string SBUFS_REMAINING_STR {"sbufs_remaining"};
     static const inline std::string MAX_OFFSET {"max_offset"};
 
+    bool get_threading() const   { return threading;};
     int get_worker_count() const { return threading ? pool.get_worker_count()  : 1; };
     int get_tasks_queued() const { return threading ? pool.get_tasks_queued()  : 0; };
     std::atomic<int>      depth0_sbufs_in_queue {0};
@@ -304,8 +305,11 @@ public:;
 
     /* PHASE_SHUTDOWN */
     // explicit shutdown, called automatically on delete if it hasn't be called
-    // flushes all remaining histograms
+    // flushes all remaining histograms and calls cleanup.
     void shutdown();
+
+    // Cleanup: tells scanners to deallocates all memory.
+    void cleanup();
 };
 
 #endif

@@ -32,7 +32,7 @@
 #endif
 
 std::atomic<bool>    sbuf_t::debug_range_exception = false; // alert exceptions
-std::atomic<bool>    sbuf_t::debug_alloc = false; // debug sbuf leaks
+std::atomic<bool>    sbuf_t::debug_alloc = false; // debug sbuf leaks; set by bulk_extractor when DEBUG_SBUF_ALLOC is set
 std::atomic<bool>    sbuf_t::debug_leak  = false; // debug sbuf leaks
 std::set<sbuf_t *>   sbuf_t::sbuf_alloced;        // allocated sbufs, but only if debug_alloc is true
 std::mutex           sbuf_t::sbuf_allocedM;
@@ -54,7 +54,7 @@ sbuf_t::sbuf_t()
     }
     if (debug_alloc) {
         const std::lock_guard<std::mutex> lock(sbuf_allocedM); // protect this function
-        std::cerr << "sbuf_t::sbuf() " << *this << std::endl;
+        std::cerr << "sbuf_t::sbuf() " << this << " " << *this << std::endl;
     }
 }
 
@@ -74,7 +74,7 @@ sbuf_t::sbuf_t(const sbuf_t &src, size_t offset):
     }
     if (debug_alloc) {
         const std::lock_guard<std::mutex> lock(sbuf_allocedM); // protect this function
-        std::cerr << "sbuf_t::sbuf(src,offset) " << *this << std::endl;
+        std::cerr << "sbuf_t::sbuf(src,offset) " << this << " " << *this << std::endl;
     }
 }
 
@@ -94,7 +94,7 @@ sbuf_t::sbuf_t(const sbuf_t &src, size_t offset, size_t len):
     }
     if (debug_alloc) {
         const std::lock_guard<std::mutex> lock(sbuf_allocedM); // protect this function
-        std::cerr << "sbuf_t::sbuf(src,offset,len) " << *this << std::endl;
+        std::cerr << "sbuf_t::sbuf(src,offset,len) " << this << " " << *this << std::endl;
     }
 }
 
@@ -111,7 +111,7 @@ sbuf_t::sbuf_t(pos0_t pos0_, const uint8_t *buf_, size_t bufsize_):
     }
     if (debug_alloc) {
         const std::lock_guard<std::mutex> lock(sbuf_allocedM); // protect this function
-        std::cerr << "sbuf_t::sbuf(pos0,buf,bufsize) " << *this << std::endl;
+        std::cerr << "sbuf_t::sbuf(pos0,buf,bufsize) " << this << " " << *this << std::endl;
     }
 }
 
@@ -133,7 +133,7 @@ sbuf_t::sbuf_t(pos0_t pos0_, const sbuf_t *parent_,
     }
     if (debug_alloc) {
         const std::lock_guard<std::mutex> lock(sbuf_allocedM); // protect this function
-        std::cerr << "sbuf_t::sbuf(pos0,parent,buf,bufsize,pagesize,fd) " << *this << std::endl;
+        std::cerr << "sbuf_t::sbuf(pos0,parent,buf,bufsize,pagesize,fd) " << this << " " << *this << std::endl;
     }
 }
 
@@ -146,7 +146,7 @@ sbuf_t::~sbuf_t()
 {
     if (debug_alloc) {
         const std::lock_guard<std::mutex> lock(sbuf_allocedM); // protect this function
-        std::cerr << "sbuf_t::~sbuf_t() " << *this << std::endl;
+        std::cerr << "sbuf_t::~sbuf_t() " << this << " " << *this << std::endl;
     }
     if (children != 0) {
         std::runtime_error(Formatter() << "sbuf.cpp: error: sbuf children=" << children);
@@ -422,6 +422,9 @@ sbuf_t* sbuf_t::sbuf_malloc(pos0_t pos0_, size_t bufsize_, size_t pagesize_)
     ret->buf_writable = new_malloced;
     assert(ret->buf == ret->malloced);
     assert(ret->buf == ret->buf_writable);
+    if (debug_alloc) {
+        std::cerr << "sbuf_t::sbuf_malloc(" << pos0_ << "," << bufsize_ << "," << pagesize_ << ") = " << ret << std::endl;
+    }
     return ret;
 }
 

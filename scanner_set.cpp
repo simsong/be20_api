@@ -68,9 +68,9 @@ scanner_set::scanner_set(scanner_config& sc_, const feature_recorder_set::flags_
     : pool(*this), fs(f, sc_), sc(sc_), writer(writer_)
 {
     debug_flags.debug_no_scanner_bypass    = getenv_debug("DEBUG_NO_SCANNER_BYPASS");
-    debug_flags.debug_print_steps          = getenv_debug("DEBUG_SCANNER_SET_PRINT_STEPS");
-    debug_flags.debug_scanner              = getenv_debug("DEBUG_SCANNER_SET_SCANNER");
-    debug_flags.debug_dump_data            = getenv_debug("DEBUG_SCANNER_SET_DUMP_DATA");
+    debug_flags.debug_print_steps          = getenv_debug("DEBUG_PRINT_STEPS");
+    debug_flags.debug_scanner              = getenv_debug("DEBUG_SCANNER");
+    debug_flags.debug_dump_data            = getenv_debug("DEBUG_SCANNER_DUMP_DATA");
     debug_flags.debug_benchmark_cpu        = getenv_debug("DEBUG_BENCHMARK_CPU");
     debug_flags.debug_scanners_same_thread = getenv_debug("DEBUG_SCANNERS_SAME_THREAD");
     debug_flags.debug_sbuf_gc              = getenv_debug("DEBUG_SBUF_GC");
@@ -83,6 +83,7 @@ scanner_set::scanner_set(scanner_config& sc_, const feature_recorder_set::flags_
 
 scanner_set::~scanner_set()
 {
+    cleanup();
     if (threading) {
         join();                             // kill the threads if they are still running
         threading = false;
@@ -714,19 +715,27 @@ void scanner_set::schedule_sbuf(const sbuf_t *sbufp)
 {
     assert (sbufp != nullptr );
 
+    if (debug_flags.debug_print_steps) {
+        std::cerr << "schedule_sbuf " << *sbufp << std::endl;
+    }
+
     /* Run in same thread:
      - If there is no pool
      - If the sbuf is too small
      - If the sbuf has a parent (because if it does, the parent might get cleared while this sbuf is pending.)
      - */
     retain_sbuf(sbufp);
-    if ( !threading
-         || debug_flags.debug_scanners_same_thread
+    if ( threading==false
+         || debug_flags.debug_scanners_same_thread==true
          || (sbufp->depth() > 0 && sbufp->bufsize < SAME_THREAD_SBUF_SIZE)
          || (sbufp->has_parent())) {
         process_sbuf(sbufp);
         release_sbuf(sbufp);            // will delete if no one else has a copy
         return;
+    }
+
+    if (debug_flags.debug_print_steps) {
+        std::cerr << "schedule_sbuf - push_task " << *sbufp << std::endl;
     }
 
     pool.push_task(sbufp);              // will get released in threadpool
@@ -890,7 +899,8 @@ void scanner_set::process_sbuf(const sbuf_t* sbufp, scanner_t *scanner)
         thread_set_status( sbuf.pos0.str() + ": " + name + " (" + std::to_string(sbuf.bufsize) + " bytes)" );
 
         if (debug_flags.debug_print_steps) {
-            std::cerr << "sbuf.pos0=" << sbuf.pos0 << " calling scanner " << name << " threadid=" << std::this_thread::get_id() << std::endl;
+            std::cerr << "sbuf.pos0=" << sbuf.pos0
+                      << " calling scanner " << name << " threadid=" << std::this_thread::get_id() << std::endl;
         }
         if (record_call_stats || debug_flags.debug_print_steps) {
             t.start();
@@ -902,7 +912,8 @@ void scanner_set::process_sbuf(const sbuf_t* sbufp, scanner_t *scanner)
             struct stats st(t.elapsed_nanoseconds(), 1);
             add_scanner_stat(scanner, st);
             if (debug_flags.debug_print_steps) {
-                std::cerr << "sbuf.pos0=" << sbuf.pos0 << " scanner " << name << " t=" << t.elapsed_seconds() << " threadid=" << std::this_thread::get_id() << std::endl;
+                std::cerr << "sbuf.pos0=" << sbuf.pos0 << "   return scanner " << name
+                          << " t=" << t.elapsed_seconds() << " threadid=" << std::this_thread::get_id() << std::endl;
             }
         }
     }
@@ -939,6 +950,10 @@ void scanner_set::process_sbuf(const sbuf_t* sbufp)
     /****************************************************************
      ** validate runtime enviornment.
      **/
+
+    if (debug_flags.debug_print_steps) {
+        std::cerr << "process_sbuf " << *sbufp << std::endl;
+    }
 
     if (current_phase != scanner_params::PHASE_SCAN) {
         throw std::runtime_error("process_sbuf can only be run in scanner_params::PHASE_SCAN");
@@ -1079,14 +1094,18 @@ void scanner_set::log(const sbuf_t &sbuf, const std::string message) // writes s
  * 3 - write out the in-memory histograms.
  * 4 - terminate the XML file.
  */
-void scanner_set::shutdown() {
+void scanner_set::shutdown()
+{
+    if (debug_flags.debug_print_steps) {
+        std::cerr << "scanner_set::shutdown" << std::endl;
+    }
+
     if (current_phase != scanner_params::PHASE_SCAN) {
         throw std::runtime_error("shutdown can only be called in scanner_params::PHASE_SCAN");
     }
     current_phase = scanner_params::PHASE_SHUTDOWN;
 
     /* Tell the scanners we are shutting down */
-    PrintOptions po; // empty po
     scanner_params sp(sc, this, nullptr, scanner_params::PHASE_SHUTDOWN, nullptr);
     for (const auto &it : enabled_scanners) { (*it)(sp); }
 
@@ -1095,7 +1114,23 @@ void scanner_set::shutdown() {
     /* Tell every feature recorder to flush all of its histograms if they haven't been generated.
      */
     fs.histograms_generate();
+    cleanup();
+}
 
+/* Tells scanners to free their memory */
+void scanner_set::cleanup()
+{
+    if (debug_flags.debug_print_steps) {
+        std::cerr << "scanner_set::cleanup" << std::endl;
+    }
+
+    if (current_phase != scanner_params::PHASE_CLEANED) {
+        current_phase = scanner_params::PHASE_CLEANUP;
+        /* Tell the scanners we are cleaning up down */
+        scanner_params sp(sc, this, nullptr, scanner_params::PHASE_CLEANUP, nullptr);
+        for (const auto &it : scanner_info_db) { (*it.first)(sp); }
+        current_phase = scanner_params::PHASE_CLEANED;
+    }
 }
 
 /*

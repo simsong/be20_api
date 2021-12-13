@@ -38,11 +38,16 @@ void scanner_params::recurse(const sbuf_t* new_sbuf) const {
     if (pp!=nullptr) {                  // we have a path printer; call that instead
         scanner_params sp_new(*this, new_sbuf, this->pp_path);
         pp->process_sp( sp_new );           // where do we keep the path being processed? In scanner_params...
+        delete new_sbuf;                    // and now we are done with it.
         return;
     }
 
     assert(ss!=nullptr);
+    // In normal operations we recurse. However, in unit testing recursion is sometimes intentionally disabled.
+    // In such a situation, the sbuf is just deleted.
     if (ss->allow_recurse()) {
         ss->schedule_sbuf(new_sbuf);    /* sbuf will be deleted after it is processed */
+    } else {
+        delete new_sbuf;                // just delete it
     }
 }
