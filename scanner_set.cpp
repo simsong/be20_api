@@ -1071,7 +1071,7 @@ void scanner_set::process_sbuf(const sbuf_t* sbufp)
             process_sbuf(sbufp, it.first);
             release_sbuf(sbufp);
         } else {
-            pool.push_task(sbufp, it);
+            pool.push_task(sbufp, it.first);
         }
     }
     thread_set_status("IDLE");
