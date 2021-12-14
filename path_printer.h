@@ -25,10 +25,14 @@ struct PrintOptions : public std::map<std::string, std::string> {
 
 
 class path_printer {
-    class scanner_set *ss {nullptr};
+    class scanner_set &ss;
     abstract_image_reader *reader {nullptr};
     mutable std::stringstream os {};    // for temp creation
     std::ostream &out;                  // for output
+    path_printer(const path_printer &) = delete;
+    path_printer &operator=(const path_printer &) = delete;
+
+public:;
     class path_printer_finished: public std::exception {
     public:
         virtual const char *what() const throw() {
@@ -36,11 +40,9 @@ class path_printer {
         }
     };
 
-    path_printer(const path_printer &) = delete;
-    path_printer &operator=(const path_printer &) = delete;
 
-public:;
-    path_printer(scanner_set *ss_, abstract_image_reader *reader_, std::ostream &out);
+
+    path_printer(scanner_set &ss_, abstract_image_reader *reader_, std::ostream &out);
     static inline const std::string PRINT {"PRINT"};
     static inline const std::string CONTENT_LENGTH {"Content-Length"};
     static inline const std::string DEFAULT_CONTENT_LENGTH {"4096"};

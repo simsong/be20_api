@@ -103,6 +103,7 @@ class scanner_set {
     scanner_set(const scanner_set& s) = delete;
     scanner_set& operator=(const scanner_set& s) = delete;
 
+    mutable std::mutex Mscanner_info_db {};
     std::map<scanner_t*, struct scanner_params::scanner_info *> scanner_info_db {}; // scanner to info db; master list of scanners
     std::map<std::string, scanner_t *> scanner_names {}; // scanner name to scanner
     std::set<scanner_t*> enabled_scanners {};            //
@@ -192,6 +193,7 @@ public:
     static const inline std::string SBUFS_REMAINING_STR {"sbufs_remaining"};
     static const inline std::string MAX_OFFSET {"max_offset"};
 
+    bool get_threading() const   { return threading;};
     int get_worker_count() const { return threading ? pool.get_worker_count()  : 1; };
     int get_tasks_queued() const { return threading ? pool.get_tasks_queued()  : 0; };
     std::atomic<int>      depth0_sbufs_in_queue {0};
@@ -304,8 +306,11 @@ public:;
 
     /* PHASE_SHUTDOWN */
     // explicit shutdown, called automatically on delete if it hasn't be called
-    // flushes all remaining histograms
+    // flushes all remaining histograms and calls cleanup.
     void shutdown();
+
+    // Cleanup: tells scanners to deallocates all memory.
+    void cleanup();
 };
 
 #endif

@@ -140,7 +140,7 @@ struct scanner_params {
 
     };
 
-    const int SCANNER_PARAMS_VERSION {20210531};
+    const int SCANNER_PARAMS_VERSION {20211201}; // allow loadable scanners to validate version number
     int scanner_params_version {SCANNER_PARAMS_VERSION};
     void check_version() { assert(this->scanner_params_version == SCANNER_PARAMS_VERSION); }
 
@@ -151,8 +151,9 @@ struct scanner_params {
         PHASE_INIT2=2,    // called in main thread to get the feature recorders and so forth.
         PHASE_ENABLED=3, // enable/disable commands called
         PHASE_SCAN=4,    // called in worker thread for every ENABLED scanner to scan an sbuf
-        PHASE_SHUTDOWN=5 // called in main thread for every ENABLED scanner when scanner is shutting down. Allows XML
-                       // closing.
+        PHASE_SHUTDOWN=5, // called in main thread for every ENABLED scanner when scanner is shutting down. Allows XML closing.
+        PHASE_CLEANUP=6,   // tells scanners to deallocate anything they have allocated. Goes to all loaded scanners
+        PHASE_CLEANED=7    // after CLEANUP. Nothing else can happen
     };
 
     /*
