@@ -37,7 +37,9 @@ std::ostream& operator<<(std::ostream& os, const AtomicUnicodeHistogram::auh_t::
  * @param topN - if >0, return only this many.
  * Return only the topN.
  */
-std::vector<AtomicUnicodeHistogram::auh_t::item> AtomicUnicodeHistogram::makeReport(size_t topN) {
+std::vector<AtomicUnicodeHistogram::auh_t::item> AtomicUnicodeHistogram::makeReport(size_t topN)
+{
+    const std::lock_guard<std::mutex> lock(M);
     std::vector<AtomicUnicodeHistogram::auh_t::item> ret = h.items();
 
     std::sort(ret.begin(), ret.end(), AtomicUnicodeHistogram::histogram_compare); // reverse sort
@@ -65,7 +67,11 @@ std::vector<AtomicUnicodeHistogram::auh_t::item> AtomicUnicodeHistogram::makeRep
 
 // debug_histogram_malloc_fail_frequency allows us to simulate low-memory situations for testing the code.
 uint32_t AtomicUnicodeHistogram::debug_histogram_malloc_fail_frequency = 0;
-void AtomicUnicodeHistogram::clear() { h.clear(); }
+void AtomicUnicodeHistogram::clear()
+{
+    const std::lock_guard<std::mutex> lock(M);
+    h.clear();
+}
 
 // low-level add after key has been converted to UTF8
 void AtomicUnicodeHistogram::add0(const std::string& u8key, const std::string &context, bool found_utf16)
@@ -83,12 +89,14 @@ void AtomicUnicodeHistogram::add0(const std::string& u8key, const std::string &c
          * specify DEBUG_MALLOC_FAIL to make malloc occasionally fail (not yet implemented)
          */
         if (debug_histogram_malloc_fail_frequency) {
+            const std::lock_guard<std::mutex> lock(M);
             if ((h.size() % debug_histogram_malloc_fail_frequency) == (debug_histogram_malloc_fail_frequency - 1)) {
                 throw std::bad_alloc();
             }
         }
 
         /* Add the key to the histogram. Note that this is threadsafe */
+        const std::lock_guard<std::mutex> lock(M);
         h[displayString].count++;
         if (found_utf16) {
             h[displayString].count16++; // track how many UTF16s were converted
@@ -138,10 +146,12 @@ void AtomicUnicodeHistogram::add_feature_context(const std::string& key_unknown_
 
 size_t AtomicUnicodeHistogram::size() const // returns the total number of bytes of the histogram,.
 {
+    const std::lock_guard<std::mutex> lock(M);
     return h.size();
 }
 
 size_t AtomicUnicodeHistogram::bytes() const // returns the total number of bytes of the histogram,.
 {
+    const std::lock_guard<std::mutex> lock(M);
     return sizeof(*this) + h.bytes();
 }
