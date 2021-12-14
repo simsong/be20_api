@@ -1063,11 +1063,12 @@ void scanner_set::process_sbuf(const sbuf_t* sbufp)
 
     /* Make the scanner params once, rather than every time through */
     // loop for each scanner.
-    for (const auto &it : enabled_scanners) {
+
+    for (const auto &it : scanner_info_db) {
         // Process if not threading or if we are supposed to process all in the same thread
         retain_sbuf(sbufp);
         if (!threading || debug_flags.debug_scanners_same_thread) {
-            process_sbuf(sbufp, it);
+            process_sbuf(sbufp, it.first);
             release_sbuf(sbufp);
         } else {
             pool.push_task(sbufp, it);
