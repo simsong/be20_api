@@ -941,9 +941,10 @@ TEST_CASE("scanner", "[scanner]") { /* check that scanner params made from an ex
  */
 #include "scan_sha1_test.h"
 #include "scanner_set.h"
+#include "machine_stats.h"
 
 TEST_CASE("get_available_memory", "[scanner]") {
-    REQUIRE(scanner_set::get_available_memory() != 0);
+    REQUIRE(machine_stats::get_available_memory() != 0);
 }
 
 

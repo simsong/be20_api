@@ -7,6 +7,9 @@
 /* needed loading shared libraries and getting free memory*/
 #include "config.h"
 
+#include <sys/types.h>
+
+
 #include <cstdio>
 #include <algorithm>
 #include <cassert>
@@ -16,6 +19,7 @@
 #include <thread>
 #include <vector>
 
+#include "machine_stats.h"
 #include "utils.h"
 #include "formatter.h"
 
@@ -27,18 +31,6 @@
 #include <dlfcn.h>
 #endif
 
-#include <sys/types.h>
-
-#ifdef HAVE_SYS_VMMETER_H
-#include <sys/vmmeter.h>
-#endif
-
-#ifdef HAVE_MACH_MACH_H
-#include <mach/mach.h>
-#include <mach/mach_host.h>
-#include <mach/host_info.h>
-#endif
-
 #include "threadpool.h"
 
 #include "aftimer.h"
@@ -48,8 +40,6 @@
 #include "scanner_config.h"
 #include "scanner_set.h"
 #include "path_printer.h"
-
-
 
 /****************************************************************
  *** SCANNER SET IMPLEMENTATION (previously the PLUG-IN SYSTEM)
@@ -175,64 +165,6 @@ void scanner_set::thread_set_status(const std::string &status)
  ** System Info
  ****************************************************************/
 
-uint64_t scanner_set::get_available_memory()
-{
-    // If there is a /proc/meminfo, use it
-    std::ifstream meminfo("/proc/meminfo");
-    if (meminfo.is_open()) {
-        std::string line;
-        while (std::getline(meminfo, line)) {
-            if (line.substr(0,13)=="MemAvailable:") {
-                return std::stoll(line.substr(14))*1024;
-            }
-        }
-    }
-
-#ifdef HAVE_HOST_STATISTICS64
-    // on macs, use this
-    // https://opensource.apple.com/source/system_cmds/system_cmds-496/vm_stat.tproj/vm_stat.c.auto.html
-
-    vm_statistics64_data_t	vm_stat;
-    vm_size_t pageSize = 4096; 	/* Default */
-    mach_port_t myHost = mach_host_self();
-    if (host_page_size(myHost, &pageSize) != KERN_SUCCESS) {
-        pageSize = 4096;                // put the default back
-    }
-    vm_statistics64_t stat = &vm_stat;
-
-    unsigned int count = HOST_VM_INFO64_COUNT;
-    if (host_statistics64(myHost, HOST_VM_INFO64, (host_info64_t)stat, &count) != KERN_SUCCESS) {
-        return 0;
-    }
-    return stat->free_count * pageSize;
-#else
-    return 0;                           // can't figure it out
-#endif
-}
-
-/**
- * return the CPU percentage (0-100) used by the current process. Use 'ps -O %cpu <pid> if system call not available.
- * The popen implementation is not meant to be efficient.
- */
-float scanner_set::get_cpu_percentage()
-{
-    char buf[100];
-    sprintf(buf,"ps -O %ccpu %d",'%',getpid());
-    FILE *f = popen(buf,"r");
-    if(f==nullptr){
-        perror("popen failed\n");
-        return(0);
-    }
-    fgets(buf,sizeof(buf),f);           /* read the first line */
-    fgets(buf,sizeof(buf),f);           /* read the second line */
-    pclose(f);
-    buf[sizeof(buf)-1] = 0;             // in case it needs termination
-    int pid=0;
-    float ff = 0;
-    int count = sscanf(buf,"%d %f",&pid,&ff);
-    return (count==2) ? ff : 0.0;
-}
-
 /*
  * Print the status of each thread in the threadpool.
  */
@@ -266,7 +198,7 @@ std::map<std::string, std::string> scanner_set::get_realtime_stats() const
     }
     ret[MAX_OFFSET] = std::to_string(max_offset);
 
-    uint64_t available_memory = get_available_memory();
+    uint64_t available_memory = machine_stats::get_available_memory();
     if (available_memory!=0){
         ret[AVAILABLE_MEMORY_STR] = std::to_string(available_memory);
     }
@@ -292,14 +224,18 @@ void scanner_set::launch_cpu_benchmark_thread(void *arg)
 {
     scanner_set *ss = static_cast<scanner_set *>(arg);
     assert(ss->writer != nullptr);
-    while(ss->current_phase == scanner_params::PHASE_SCAN &&
-          ss->get_worker_count() > 0 ) {
+    while(ss->current_phase == scanner_params::PHASE_SCAN && ss->get_worker_count() > 0 ) {
+        uint64_t virtual_size = 0;
+        uint64_t resident_size = 0;
+        machine_stats::get_memory(&virtual_size, &resident_size);
         ss->writer->xmlout("debug:cpu_benchmark","",
-                       Formatter()
+                           Formatter()
                            << "worker_count='" << ss->get_worker_count() << "' "
                            << "tasks_queued='" << ss->get_tasks_queued() << "' "
                            << "depth0_sbufs_in_queue='" << ss->depth0_sbufs_in_queue << "' "
-                           << "cpu_percent='" << get_cpu_percentage() << "' "
+                           << "cpu_percent='" << machine_stats::get_cpu_percentage() << "' "
+                           << "vss='" << virtual_size << "' "
+                           << "rss='" << resident_size << "' "
                            << aftimer::now_str(" t='","'"), true);
         std::this_thread::sleep_for( std::chrono::seconds( 1 ));
     }
