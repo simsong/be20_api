@@ -33,7 +33,7 @@ struct scanner_config {
      * Typically created from parsing command-line arguments
      */
     struct scanner_command {
-        static inline const std::string ALL_SCANNERS = "<ALL-SCANNERS>";
+        static inline const std::string ALL_SCANNERS = "all";
         enum command_t { DISABLE, ENABLE };
         scanner_command(const scanner_command& sc) : scannerName(sc.scannerName), command(sc.command){};
         scanner_command(const std::string& scannerName_, scanner_command::command_t c)
@@ -77,6 +77,23 @@ public:
         }
     }
 
+    /* Find options */
+    struct {
+        std::vector<std::filesystem::path> files {};     // accumulates pattern files
+        std::vector<std::string> patterns {};            // accumulates cmdline patterns
+    } FindOpts {};
+
+    bool find_opts_empty() const {
+        return FindOpts.files.empty() && FindOpts.patterns.empty();
+    }
+
+    // Find interface
+    const std::vector<std::string> &find_patterns() const        { return FindOpts.patterns; }
+    const std::vector<std::filesystem::path> &find_files() const { return FindOpts.files; }
+    void add_find_pattern(std::string pattern)                   { FindOpts.patterns.push_back(pattern);}
+    void add_find_path(std::filesystem::path path)               { FindOpts.files.push_back(path);}
+
+
     size_t context_window_default{16}; // global option
     uint64_t offset_add{0}; // add this number to the first offset in every feature file (used for parallelism)
     std::filesystem::path banner_file{}; // add the contents of this file to the top of every feature file
@@ -89,7 +106,7 @@ public:
     std::filesystem::path outdir {NO_OUTDIR};     // where output goes
     std::string hash_algorithm {"sha1"};          // which hash algorithm are using; default to SHA1
 
-    bool allow_recurse { true};         // can be turned off for testing
+    bool allow_recurse { true };         // can be turned off for testing
 
     inline static const std::string NO_INPUT = "<NO-INPUT>"; // 'filename' indicator that the FRS has no input file
     inline static const std::string NO_OUTDIR = "<NO-OUTDIR>"; // 'dirname' indicator that the FRS produces no file output

@@ -67,7 +67,11 @@ struct AtomicUnicodeHistogram {
     AtomicUnicodeHistogram(const struct histogram_def& def_) : def(def_) {}
     virtual ~AtomicUnicodeHistogram(){};
 
-    bool empty() { return h.size()==0;}   // is it empty?
+    // is it empty?
+    bool empty() {
+        const std::lock_guard<std::mutex> lock(M);
+        return h.size()==0;
+    }
     void clear();                       // empties the histogram
     // low-level add, directly to what we display, if the match function checks out.
     void add0(const std::string& u8key, const std::string &context, bool found_utf16);
@@ -82,10 +86,11 @@ struct AtomicUnicodeHistogram {
      */
     std::vector<auh_t::item> makeReport(size_t topN=0);          // returns items of <count,key>
     const struct histogram_def def;            // the definition we are making
-    bool debug {false};                        // set to enable debugging
+    bool  debug {false};                        // set to enable debugging
 
 private:
-    auh_t h {}; // the histogram
+    mutable std::mutex M {};                    // mutex for the histogram, used to lock individual elements.
+    auh_t h {};                         // the histogram
 };
 
 std::ostream& operator<<(std::ostream& os, const AtomicUnicodeHistogram::FrequencyReportVector& rep);

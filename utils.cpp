@@ -48,6 +48,14 @@ void gmtime_r(time_t* t, struct tm* tm) {
 }
 #endif
 
+bool getenv_debug(const char *name)
+{
+    const char *e = std::getenv(name);
+    if (e==nullptr) return false;
+    if (e[0]=='1' || e[0]=='t' || e[0]=='T' || e[0]=='y' || e[0]=='Y') return true;
+    return false;
+}
+
 bool starts_with(const std::string& buf, const std::string& with) {
     size_t buflen = buf.size();
     size_t withlen = with.size();

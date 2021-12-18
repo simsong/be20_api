@@ -68,12 +68,12 @@ std::string path_printer::get_and_remove_token(std::string &path)
     return prefix;
 }
 
-path_printer::path_printer(scanner_set *ss_, abstract_image_reader *reader_, std::ostream &os_):
+path_printer::path_printer(scanner_set &ss_, abstract_image_reader *reader_, std::ostream &os_):
     ss(ss_),
     reader(reader_),
     out(os_)
 {
-    ss->phase_scan();                   // advance to phase scan
+    ss.phase_scan();                   // advance to phase scan
 }
 
 
@@ -169,6 +169,8 @@ void path_printer::process_sp(const scanner_params &sp) const
     // we use the slice method because .. well, it works!
     sbuf_t *child = sp.sbuf->new_slice(pos0_t(), 0, sp.sbuf->bufsize);
     try {
+        // when the scanner calls sp.recurse(), it will cause
+        // additional decoding or the printing to take place.
         scanner_params sp2(sp, child, new_path);
         (*s)(sp2);
     } catch (path_printer_finished &e) {
@@ -221,7 +223,7 @@ void path_printer::display_path(std::string path, const PrintOptions &po) const
     /* When we recurse, we store the path we are decoding and the print options in the scanner_params */
 
     feature_recorder_set fs(flags, sc);
-    scanner_params sp(sc, ss, this, scanner_params::phase_t::PHASE_SCAN, sbufp);
+    scanner_params sp(sc, &ss, this, scanner_params::phase_t::PHASE_SCAN, sbufp);
     sp.pp_po   = &po;
     sp.pp_path = path+"-PRINT";
     try {

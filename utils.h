@@ -29,6 +29,7 @@
 
 #include "utf8.h"
 
+bool getenv_debug(const char *name);    // look for an environment variable and return TRUE if it is set and not 0 or FALSE
 bool starts_with(const std::string& buf, const std::string& with);
 bool ends_with(const std::string& buf, const std::string& with);
 bool ends_with(const std::wstring& buf, const std::wstring& with);

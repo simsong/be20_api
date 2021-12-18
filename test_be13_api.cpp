@@ -1164,7 +1164,7 @@ TEST_CASE("printer","[path_printer]"){
     // Make sure that the path_printer stops at the end of the image
 
     test_image_reader *p = new test_image_reader();
-    path_printer pp( &ss, p, mem_stream);
+    path_printer pp( ss, p, mem_stream);
     pp.process_path( "0-PRINT/r" );
 
     REQUIRE( mem_stream.str().size() == std::string("256\r\n").size() + p->image_size());

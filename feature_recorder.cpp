@@ -30,8 +30,8 @@
 feature_recorder::feature_recorder(class feature_recorder_set& fs_, const struct feature_recorder_def def_)
     : fs(fs_), name(def_.name), def(def_)
 {
-    debug_histograms = (std::getenv(DEBUG_HISTOGRAMS_ENV) != nullptr);
-    disable_incremental_histograms = (std::getenv(DEBUG_HISTOGRAMS_NO_INCREMENTAL_ENV) != nullptr);
+    debug_histograms               = getenv_debug(DEBUG_HISTOGRAMS_ENV);
+    disable_incremental_histograms = getenv_debug(DEBUG_HISTOGRAMS_NO_INCREMENTAL_ENV);
 }
 
 /* This is here for the vtable */
