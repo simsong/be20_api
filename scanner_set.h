@@ -179,9 +179,6 @@ public:
 
     // Stats support
 
-    static uint64_t get_available_memory(); // in bytes
-    static float    get_cpu_percentage();   // 0..100
-
     static const inline std::string THREAD_COUNT_STR {"thread_count"};
     static const inline std::string TASKS_QUEUED_STR {"tasks_queued"};
     static const inline std::string DEPTH0_SBUFS_QUEUED_STR {"depth0_sbufs_queued"};
