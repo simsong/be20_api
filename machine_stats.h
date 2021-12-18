@@ -68,9 +68,8 @@ struct machine_stats {
             return 0;
         }
         return stat->free_count * pageSize;
-#else
-        return 0;                           // can't figure it out
 #endif
+	return 0;
     };
 
     static void get_memory(uint64_t *virtual_size, uint64_t *resident_size) {
@@ -88,6 +87,17 @@ struct machine_stats {
             return;
         }
 #endif
+	const char* statm_path = "/proc/self/statm";
+
+	FILE *f = fopen(statm_path,"r");
+	if(f){
+	    unsigned long size, resident, share, text, lib, data, dt;
+	    if(fscanf(f,"%ld %ld %ld %ld %ld %ld %ld", &size,&resident,&share,&text,&lib,&data,&dt) == 7){
+		*virtual_size  = size * 4096;
+		*resident_size = resident * 4096;
+		return ;
+	    }
+	}
         *virtual_size = 0;
         *resident_size = 0;
     };
