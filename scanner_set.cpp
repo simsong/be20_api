@@ -745,7 +745,7 @@ void scanner_set::record_work_start_pos0str(const std::string pos0str)
 
 void scanner_set::record_work_end(const sbuf_t *sbufp)
 {
-    if (ss.debug_benchmark && sbufp->depth()==0 && writer) {
+    if (debug_flags.debug_benchmark && sbufp->depth()==0 && writer) {
         writer->xmlout("debug:work_end", "",
                        Formatter()
                        << "threadid='" << std::this_thread::get_id() << "' "
@@ -792,7 +792,7 @@ void scanner_set::process_sbuf(const sbuf_t* sbufp, scanner_t *scanner)
     }
 
     // Don't rescan data that has been seen twice --- and if scanner doesn't doesn't want dups.
-    if (ss.debug_benchmark && sbuf.seen_before && flags.scan_seen_before == false) {
+    if (debug_flags.debug_benchmark && sbuf.seen_before && flags.scan_seen_before == false) {
         writer->xmlout("debug:bypass", "",
                        Formatter()
                        << "sbuf='" << sbuf.pos0.str() << "' "
@@ -803,14 +803,14 @@ void scanner_set::process_sbuf(const sbuf_t* sbufp, scanner_t *scanner)
     }
 
     size_t ngram_size = sbuf.find_ngram_size(sc.max_ngram);
-    if (ss.debug_benchmark && ngram_size > 0 && flags.scan_ngram_buffer == false) {
+    if (debug_flags.debug_benchmark && ngram_size > 0 && flags.scan_ngram_buffer == false) {
         writer->xmlout("debug:bypass", "",
                        Formatter() << "sbuf='" << sbuf.pos0.str() << "' ngram_size='" << ngram_size << "'", true);
         return;
     }
 
     size_t distinct_chars = sbuf.get_distinct_character_count();
-    if (ss.debug_benchmark && info->min_distinct_chars > distinct_chars) {
+    if (debug_flags.debug_benchmark && info->min_distinct_chars > distinct_chars) {
         writer->xmlout("debug:bypass", "",
                        Formatter()
                        << "sbuf='" << sbuf.pos0.str() << "' min_distinct_chars='" << distinct_chars << "'",
