@@ -61,10 +61,10 @@ scanner_set::scanner_set(scanner_config& sc_, const feature_recorder_set::flags_
     debug_flags.debug_print_steps          = getenv_debug("DEBUG_PRINT_STEPS");
     debug_flags.debug_scanner              = getenv_debug("DEBUG_SCANNER");
     debug_flags.debug_dump_data            = getenv_debug("DEBUG_SCANNER_DUMP_DATA");
-    debug_flags.debug_benchmark_cpu        = getenv_debug("DEBUG_BENCHMARK_CPU");
+    debug_flags.debug_benchmark            = getenv_debug("DEBUG_BENCHMARK");
     debug_flags.debug_scanners_same_thread = getenv_debug("DEBUG_SCANNERS_SAME_THREAD");
     debug_flags.debug_sbuf_gc              = getenv_debug("DEBUG_SBUF_GC");
-    debug_flags.debug_sbuf_gc              = getenv_debug("DEBUG_SBUF_GC0");
+    debug_flags.debug_sbuf_gc0             = getenv_debug("DEBUG_SBUF_GC0");
     pool.debug                             = getenv_debug("DEBUG_THREAD_POOL");
 
     const char *dsi = std::getenv("DEBUG_SCANNERS_IGNORE");
@@ -641,7 +641,7 @@ void scanner_set::phase_scan() {
     }
     fs.frm_freeze();
     current_phase = scanner_params::PHASE_SCAN;
-    if (debug_flags.debug_benchmark_cpu && writer!=nullptr) {
+    if (debug_flags.debug_benchmark && writer!=nullptr) {
         void *arg = static_cast<void *>(this);
         benchmark_cpu_thread = new std::thread( scanner_set::launch_cpu_benchmark_thread, arg);
     }
@@ -745,7 +745,7 @@ void scanner_set::record_work_start_pos0str(const std::string pos0str)
 
 void scanner_set::record_work_end(const sbuf_t *sbufp)
 {
-    if (sbufp->depth()==0 && writer) {
+    if (ss.debug_benchmark && sbufp->depth()==0 && writer) {
         writer->xmlout("debug:work_end", "",
                        Formatter()
                        << "threadid='" << std::this_thread::get_id() << "' "
@@ -792,7 +792,7 @@ void scanner_set::process_sbuf(const sbuf_t* sbufp, scanner_t *scanner)
     }
 
     // Don't rescan data that has been seen twice --- and if scanner doesn't doesn't want dups.
-    if (sbuf.seen_before && flags.scan_seen_before == false) {
+    if (ss.debug_benchmark && sbuf.seen_before && flags.scan_seen_before == false) {
         writer->xmlout("debug:bypass", "",
                        Formatter()
                        << "sbuf='" << sbuf.pos0.str() << "' "
@@ -803,14 +803,14 @@ void scanner_set::process_sbuf(const sbuf_t* sbufp, scanner_t *scanner)
     }
 
     size_t ngram_size = sbuf.find_ngram_size(sc.max_ngram);
-    if (ngram_size > 0 && flags.scan_ngram_buffer == false) {
+    if (ss.debug_benchmark && ngram_size > 0 && flags.scan_ngram_buffer == false) {
         writer->xmlout("debug:bypass", "",
                        Formatter() << "sbuf='" << sbuf.pos0.str() << "' ngram_size='" << ngram_size << "'", true);
         return;
     }
 
     size_t distinct_chars = sbuf.get_distinct_character_count();
-    if (info->min_distinct_chars > distinct_chars) {
+    if (ss.debug_benchmark && info->min_distinct_chars > distinct_chars) {
         writer->xmlout("debug:bypass", "",
                        Formatter()
                        << "sbuf='" << sbuf.pos0.str() << "' min_distinct_chars='" << distinct_chars << "'",
