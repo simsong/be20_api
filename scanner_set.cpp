@@ -873,8 +873,9 @@ void scanner_set::process_sbuf(const sbuf_t* sbufp, scanner_t *scanner)
     catch (const feature_recorder::DiskWriteError &e) {
         sp.ss->disk_write_errors ++;
         try {
-            fs.get_alert_recorder().write(sbuf.pos0, "scanner=" + name,
-                                          Formatter() << "<exception>" << e.what() << "</exception>");
+            feature_recorder &ar = fs.get_alert_recorder();
+            ar.write(sbuf.pos0, "scanner=" + name, Formatter() << "<exception>" << e.what() << "</exception>");
+            ar.flush();
         }
         catch (feature_recorder_set::NoSuchFeatureRecorder& e2) {
         }
@@ -882,15 +883,18 @@ void scanner_set::process_sbuf(const sbuf_t* sbufp, scanner_t *scanner)
 
     catch (const std::exception& e) {
         try {
-            fs.get_alert_recorder().write(sbuf.pos0, "scanner=" + name,
-                                          Formatter() << "<exception>" << e.what() << "</exception>");
+            feature_recorder &ar = fs.get_alert_recorder();
+            ar.write(sbuf.pos0, "scanner=" + name, Formatter() << "<exception>" << e.what() << "</exception>");
+            ar.flush();
         }
         catch (feature_recorder_set::NoSuchFeatureRecorder& e2) {
         }
     }
     catch (...) {
         try {
-            fs.get_alert_recorder().write(sbuf.pos0, "scanner=" + name, "<unknown_exception></unknown_exception>");
+            feature_recorder &ar = fs.get_alert_recorder();
+            ar.write(sbuf.pos0, "scanner=" + name, "<unknown_exception></unknown_exception>");
+            ar.flush();
         } catch (feature_recorder_set::NoSuchFeatureRecorder& e) {}
     }
 }
