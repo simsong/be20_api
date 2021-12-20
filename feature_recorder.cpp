@@ -160,21 +160,6 @@ void feature_recorder::write(const pos0_t& pos0, const std::string &original_fea
         }
         return;
     }
-    if (fs.flags.pedantic) {
-        /* Check for tabs or newlines in feature and and context */
-        for (size_t i = 0; i < feature_utf8.size(); i++) {
-            if (feature_utf8[i] == '\000') throw std::runtime_error("feature_utf8 contains NULL");
-            if (feature_utf8[i] == '\t') throw std::runtime_error("feature_utf8 contains TAB");
-            if (feature_utf8[i] == '\n') throw std::runtime_error("feature_utf8 contains NL");
-            if (feature_utf8[i] == '\r') throw std::runtime_error("feature_utf8 contains CR");
-        }
-        for (size_t i = 0; i < context.size(); i++) {
-            if (context[i] == '\000') throw std::runtime_error("context contains NULL");
-            if (context[i] == '\t') throw std::runtime_error("context contains TAB");
-            if (context[i] == '\n') throw std::runtime_error("context contains NL");
-            if (context[i] == '\r') throw std::runtime_error("context contains CR");
-        }
-    }
 
     /* First check to see if the feature is on the stop list.
      * Only do this if we have a stop_list_recorder (the stop list recorder itself

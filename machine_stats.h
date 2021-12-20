@@ -1,6 +1,10 @@
 #ifndef MACHINE_STATS_H
 #define MACHINE_STATS_H
 
+#ifndef PACKAGE
+#error config.h must be included before machine_stats.h
+#endif
+
 #ifdef HAVE_MACH_MACH_H
 #include <mach/mach.h>
 #include <mach/mach_host.h>

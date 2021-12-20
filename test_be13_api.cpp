@@ -37,6 +37,7 @@
 #include "sbuf_stream.h"
 #include "utils.h"
 #include "dfxml_cpp/src/hash_t.h"
+#include "dfxml_cpp/src/dfxml_writer.h"
 #include "threadpool.h"
 
 
@@ -426,9 +427,10 @@ TEST_CASE("quote_if_necessary", "[feature_recorder]") {
     REQUIRE(c2_quoted == c2);
 }
 
-TEST_CASE("fname", "[feature_recorder]") {
+TEST_CASE("feature_recorder_tests", "[feature_recorder]") {
     feature_recorder_set::flags_t flags;
     flags.no_alert = true;
+    flags.pedantic = true;
     scanner_config sc;
     sc.outdir = NamedTemporaryDirectory();
     feature_recorder_set frs(flags, sc);
@@ -445,6 +447,16 @@ TEST_CASE("fname", "[feature_recorder]") {
     REQUIRE(p2.filename() == "test_bar_1.txt");
 
     fr.carve_mode = feature_recorder_def::CARVE_ALL;
+
+    /* Check basic writing */
+    auto sbuf0 = sbuf_t("0123456789");
+    fr.write_buf(sbuf0, 2, 5);
+    fr.flush();
+
+    /* Now read the feature file and see if it is there */
+    auto lines = getLines(sc.outdir / "test.txt");
+    auto lastLine = getLast(lines);
+    REQUIRE(lastLine == "2\t23456\t0123456789");
 
     /* check carving */
     auto sbuf1 = sbuf_t("Hello World!\n");
@@ -467,6 +479,7 @@ TEST_CASE("fname", "[feature_recorder]") {
         delete sbuf1c;
     }
     REQUIRE( sbuf1.children == 0 );
+
 }
 
 /** feature_recorder_file functions */
@@ -943,8 +956,15 @@ TEST_CASE("scanner", "[scanner]") { /* check that scanner params made from an ex
 #include "scanner_set.h"
 #include "machine_stats.h"
 
-TEST_CASE("get_available_memory", "[scanner]") {
+TEST_CASE("machine_stats", "[machine_stats]") {
     REQUIRE(machine_stats::get_available_memory() != 0);
+    REQUIRE(machine_stats::get_cpu_percentage() > 0);
+    uint64_t virtual_size = 0;
+    uint64_t resident_size = 0;
+    machine_stats::get_memory(&virtual_size, &resident_size);
+    std::cerr << "virtual_size: " << virtual_size << " resident_size: " << resident_size << std::endl;
+    REQUIRE(virtual_size>0);
+    REQUIRE(resident_size>0);
 }
 
 
@@ -958,7 +978,6 @@ TEST_CASE("scanner_stats", "[scanner_set]") {
 
     feature_recorder_set fs(flags, sc);
     std::map<scanner_t*, const struct scanner_params::scanner_info*> scanner_info_db{};
-    std::set<scanner_t*> enabled_scanners{}; // the scanners that are enabled
     atomic_set<std::string> seen_set {}; // hex hash values of sbuf pages that have been seen
     auto ss = new scanner_set(sc, feature_recorder_set::flags_t(), nullptr);
     delete ss;
@@ -1101,10 +1120,18 @@ TEST_CASE("run", "[scanner]") {
     sbuf_t* hello = new sbuf_t(hello8);
     std::string hashed = fr.hash(*hello);
 
+    /* Set up a DFXML output */
+    dfxml_writer w("/dev/null",false);
+    ss.set_dfxml_writer( &w );
+    REQUIRE( ss.get_dfxml_writer() == &w);
+
     /* Perform a simulated scan */
     ss.phase_scan();         // start the scanner phase
     ss.schedule_sbuf(hello); // process a single sbuf, and delete it
     ss.shutdown();           // shutdown; this will write out the in-memory histogram.
+
+    auto enabled_scanners = ss.get_enabled_scanners();
+    REQUIRE( enabled_scanners.size() == 1 );
 
     /* Make sure that the feature recorder output was created */
     std::vector<std::string> lines;
@@ -1124,6 +1151,7 @@ TEST_CASE("run", "[scanner]") {
     std::string fname_hist = get_tempdir() + "/sha1_bufs_first5.txt";
     lines = getLines(fname_hist);
     REQUIRE(lines.size() == 6);         // includes header!
+
 }
 
 /****************************************************************
