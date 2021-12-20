@@ -958,13 +958,13 @@ TEST_CASE("scanner", "[scanner]") { /* check that scanner params made from an ex
 
 TEST_CASE("machine_stats", "[machine_stats]") {
     REQUIRE(machine_stats::get_available_memory() != 0);
-    REQUIRE(machine_stats::get_cpu_percentage() > 0);
+    REQUIRE(machine_stats::get_cpu_percentage() >= 0);
     uint64_t virtual_size = 0;
     uint64_t resident_size = 0;
     machine_stats::get_memory(&virtual_size, &resident_size);
     std::cerr << "virtual_size: " << virtual_size << " resident_size: " << resident_size << std::endl;
-    REQUIRE(virtual_size>0);
-    REQUIRE(resident_size>0);
+    REQUIRE(virtual_size > 0);
+    REQUIRE(resident_size > 0);
 }
 
 

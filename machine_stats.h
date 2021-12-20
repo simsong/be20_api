@@ -18,6 +18,7 @@
 #include <sys/vmmeter.h>
 #endif
 
+#include <cmath>
 #include <unistd.h>
 
 /**
@@ -40,7 +41,7 @@ struct machine_stats {
         int pid=0;
         float ff = 0;
         int count = sscanf(buf,"%d %f",&pid,&ff);
-        return (count==2) ? ff : 0.0;
+        return (count==2) ? ff : nan("get_cpu_percentage");
     };
 
     static uint64_t get_available_memory() {
