@@ -65,6 +65,7 @@ scanner_set::scanner_set(scanner_config& sc_, const feature_recorder_set::flags_
     debug_flags.debug_scanners_same_thread = getenv_debug("DEBUG_SCANNERS_SAME_THREAD");
     debug_flags.debug_sbuf_gc              = getenv_debug("DEBUG_SBUF_GC");
     debug_flags.debug_sbuf_gc0             = getenv_debug("DEBUG_SBUF_GC0");
+    fs.flags.pedantic                      = getenv_debug("DEBUG_FS_PEDANTIC");
     pool.debug                             = getenv_debug("DEBUG_THREAD_POOL");
 
     const char *dsi = std::getenv("DEBUG_SCANNERS_IGNORE");

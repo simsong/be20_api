@@ -1,6 +1,10 @@
 #ifndef MACHINE_STATS_H
 #define MACHINE_STATS_H
 
+#ifndef PACKAGE
+#error config.h must be included before machine_stats.h
+#endif
+
 #ifdef HAVE_MACH_MACH_H
 #include <mach/mach.h>
 #include <mach/mach_host.h>
@@ -14,6 +18,7 @@
 #include <sys/vmmeter.h>
 #endif
 
+#include <cmath>
 #include <unistd.h>
 
 /**
@@ -36,7 +41,7 @@ struct machine_stats {
         int pid=0;
         float ff = 0;
         int count = sscanf(buf,"%d %f",&pid,&ff);
-        return (count==2) ? ff : 0.0;
+        return (count==2) ? ff : nan("get_cpu_percentage");
     };
 
     static uint64_t get_available_memory() {

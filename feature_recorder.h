@@ -1,6 +1,11 @@
 #ifndef FEATURE_RECORDER_H
 #define FEATURE_RECORDER_H
 
+#ifndef BE13_CONFIGURE_APPLIED
+#error you must include a config.h that has had be13_configure.m4 applied
+#endif
+
+
 #include <cassert>
 #include <cinttypes>
 
