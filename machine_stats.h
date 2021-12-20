@@ -68,8 +68,9 @@ struct machine_stats {
             return 0;
         }
         return stat->free_count * pageSize;
-#endif
+#else
 	return 0;
+#endif
     };
 
     static void get_memory(uint64_t *virtual_size, uint64_t *resident_size) {
@@ -95,6 +96,7 @@ struct machine_stats {
 	    if(fscanf(f,"%ld %ld %ld %ld %ld %ld %ld", &size,&resident,&share,&text,&lib,&data,&dt) == 7){
 		*virtual_size  = size * 4096;
 		*resident_size = resident * 4096;
+                fclose(f);
 		return ;
 	    }
 	}
