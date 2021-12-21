@@ -1188,9 +1188,6 @@ TEST_CASE("run", "[scanner]") {
     auto enabled_scanners = ss.get_enabled_scanners();
     REQUIRE( enabled_scanners.size() == 1 );
 
-    auto enabled_scanners = ss.get_enabled_scanners();
-    REQUIRE( enabled_scanners.size() == 1 );
-
     /* Make sure that the feature recorder output was created */
     std::vector<std::string> lines;
     std::filesystem::path fname_fr = get_tempdir() / "sha1_bufs.txt";
