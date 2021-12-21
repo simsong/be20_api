@@ -1129,8 +1129,8 @@ TEST_CASE("enable/disable", "[scanner_set]") {
 
 /* This test runs a scan on the hello_sbuf() with the sha1 scanner. */
 TEST_CASE("run", "[scanner]") {
-    //sbuf_t::debug_leak = true;
-    //sbuf_t::debug_alloc = true;
+    sbuf_t::debug_leak = true;
+    sbuf_t::debug_alloc = true;
     scanner_config sc;
     sc.outdir = get_tempdir();
     auto dfxml_file = sc.outdir / "report.xml";
@@ -1184,6 +1184,9 @@ TEST_CASE("run", "[scanner]") {
     ss.schedule_sbuf(hello); // process a single sbuf, and delete it
     ss.shutdown();           // shutdown; this will write out the in-memory histogram.
     ss.dump_scanner_stats();
+
+    auto enabled_scanners = ss.get_enabled_scanners();
+    REQUIRE( enabled_scanners.size() == 1 );
 
     auto enabled_scanners = ss.get_enabled_scanners();
     REQUIRE( enabled_scanners.size() == 1 );
