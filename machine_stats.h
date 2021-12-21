@@ -79,6 +79,9 @@ struct machine_stats {
     };
 
     static void get_memory(uint64_t *virtual_size, uint64_t *resident_size) {
+        *virtual_size = 0;
+        *resident_size = 0;
+
 #ifdef HAVE_TASK_INFO
         kern_return_t error;
         mach_msg_type_number_t outCount;
@@ -101,12 +104,10 @@ struct machine_stats {
 	    if(fscanf(f,"%ld %ld %ld %ld %ld %ld %ld", &size,&resident,&share,&text,&lib,&data,&dt) == 7){
 		*virtual_size  = size * 4096;
 		*resident_size = resident * 4096;
-                fclose(f);
-		return ;
 	    }
 	}
-        *virtual_size = 0;
-        *resident_size = 0;
+	fclose(f);
+	return ;
     };
 };
 
