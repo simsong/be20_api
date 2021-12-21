@@ -1135,6 +1135,7 @@ TEST_CASE("run", "[scanner]") {
     sbuf_t::debug_alloc = true;
     scanner_config sc;
     sc.outdir = get_tempdir();
+    auto dfxml_file = sc.outdir / "report.xml";
     sc.push_scanner_command(std::string("sha1_test"), scanner_config::scanner_command::ENABLE); /* Turn it onn */
 
     scanner_set ss(sc, feature_recorder_set::flags_t(), nullptr);
@@ -1175,7 +1176,7 @@ TEST_CASE("run", "[scanner]") {
     std::string hashed = fr.hash(*hello);
 
     /* Set up a DFXML output */
-    dfxml_writer w("/dev/null",false);
+    dfxml_writer w( dfxml_file, false);
     ss.set_dfxml_writer( &w );
     REQUIRE( ss.get_dfxml_writer() == &w);
     ss.dump_enabled_scanner_config();
