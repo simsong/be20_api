@@ -1131,8 +1131,8 @@ TEST_CASE("enable/disable", "[scanner_set]") {
 
 /* This test runs a scan on the hello_sbuf() with the sha1 scanner. */
 TEST_CASE("run", "[scanner]") {
-    sbuf_t::debug_leak = true;
-    sbuf_t::debug_alloc = true;
+    //sbuf_t::debug_leak = true;
+    //sbuf_t::debug_alloc = true;
     scanner_config sc;
     sc.outdir = get_tempdir();
     auto dfxml_file = sc.outdir / "report.xml";
