@@ -596,10 +596,8 @@ TEST_CASE("sbuf_write", "[sbuf]") {
     std::filesystem::remove(fname);
 
     REQUIRE(sbuf1.write(fname) == 10);
-    fclose(f);
     validate_file(fname, "0123456789");
     std::filesystem::remove(fname);
-
 
 }
 
