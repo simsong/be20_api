@@ -584,9 +584,23 @@ TEST_CASE("sbuf_write", "[sbuf]") {
     std::filesystem::path td = get_tempdir();
     std::filesystem::path fname = td / "file.txt";
     int fd = open(fname.c_str(), O_RDWR | O_CREAT | O_BINARY, 0777);
-    sbuf1.write(fd, 1, 4);
+    REQUIRE(sbuf1.write(fd, 1, 4) == 4);
     close(fd);
     validate_file(fname, "1234");
+    std::filesystem::remove(fname);
+
+    FILE *f = fopen(fname.c_str(), "wb");
+    REQUIRE(sbuf1.write(f, 2, 4) == 4);
+    fclose(f);
+    validate_file(fname, "2345");
+    std::filesystem::remove(fname);
+
+    REQUIRE(sbuf1.write(fname) == 10);
+    fclose(f);
+    validate_file(fname, "0123456789");
+    std::filesystem::remove(fname);
+
+
 }
 
 TEST_CASE("sbuf_stream", "[sbuf]") {
@@ -1117,6 +1131,8 @@ TEST_CASE("enable/disable", "[scanner_set]") {
 
 /* This test runs a scan on the hello_sbuf() with the sha1 scanner. */
 TEST_CASE("run", "[scanner]") {
+    sbuf_t::debug_leak = true;
+    sbuf_t::debug_alloc = true;
     scanner_config sc;
     sc.outdir = get_tempdir();
     sc.push_scanner_command(std::string("sha1_test"), scanner_config::scanner_command::ENABLE); /* Turn it onn */
@@ -1162,11 +1178,13 @@ TEST_CASE("run", "[scanner]") {
     dfxml_writer w("/dev/null",false);
     ss.set_dfxml_writer( &w );
     REQUIRE( ss.get_dfxml_writer() == &w);
+    ss.dump_enabled_scanner_config();
 
     /* Perform a simulated scan */
     ss.phase_scan();         // start the scanner phase
     ss.schedule_sbuf(hello); // process a single sbuf, and delete it
     ss.shutdown();           // shutdown; this will write out the in-memory histogram.
+    ss.dump_scanner_stats();
 
     auto enabled_scanners = ss.get_enabled_scanners();
     REQUIRE( enabled_scanners.size() == 1 );
@@ -1189,6 +1207,8 @@ TEST_CASE("run", "[scanner]") {
     std::filesystem::path fname_hist = get_tempdir() / "sha1_bufs_first5.txt";
     lines = getLines(fname_hist);
     REQUIRE(lines.size() == 6);         // includes header!
+    sbuf_t::debug_leak  = false;
+    sbuf_t::debug_alloc = false;
 
 }
 
