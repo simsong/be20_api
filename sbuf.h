@@ -443,8 +443,8 @@ public:;
      * These get functions safely read string.
      * TODO: rework them so that they return the utf8_string, rather than modifying what's called.
      */
-    std::string getUTF8(size_t i, size_t num_octets_requested) const;
-    std::string getUTF8(size_t i) const; // till end?
+    std::string getUTF8(size_t loc, size_t num_octets_requested) const;
+    std::string getUTF8(size_t loc) const; // till end?
     /** @} */
 
     /**
