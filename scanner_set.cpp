@@ -19,10 +19,6 @@
 #include <thread>
 #include <vector>
 
-#include "machine_stats.h"
-#include "utils.h"
-#include "formatter.h"
-
 #ifdef HAVE_LINUX_SYSCTL_H
 #include <linux/sysctl.h>
 #endif
@@ -30,6 +26,10 @@
 #ifdef HAVE_DLFCN_H
 #include <dlfcn.h>
 #endif
+
+#include "machine_stats.h"
+#include "utils.h"
+#include "formatter.h"
 
 #include "threadpool.h"
 

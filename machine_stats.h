@@ -1,8 +1,8 @@
 #ifndef MACHINE_STATS_H
 #define MACHINE_STATS_H
 
-#ifndef PACKAGE
-#error config.h must be included before machine_stats.h
+#ifndef BE13_CONFIGURE_APPLIED
+#error you must include a config.h that has had be13_configure.m4 applied
 #endif
 
 #ifdef HAVE_MACH_MACH_H
