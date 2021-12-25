@@ -19,10 +19,6 @@
 #include <thread>
 #include <vector>
 
-#include "machine_stats.h"
-#include "utils.h"
-#include "formatter.h"
-
 #ifdef HAVE_LINUX_SYSCTL_H
 #include <linux/sysctl.h>
 #endif
@@ -30,6 +26,10 @@
 #ifdef HAVE_DLFCN_H
 #include <dlfcn.h>
 #endif
+
+#include "machine_stats.h"
+#include "utils.h"
+#include "formatter.h"
 
 #include "threadpool.h"
 
@@ -1013,15 +1013,14 @@ void scanner_set::process_sbuf(const sbuf_t* sbufp)
 
     /* Make the scanner params once, rather than every time through */
     // loop for each scanner.
-
-    for (const auto &it : scanner_info_db) {
+    for (const auto &it : enabled_scanners) {
         // Process if not threading or if we are supposed to process all in the same thread
         retain_sbuf(sbufp);
         if (!threading || debug_flags.debug_scanners_same_thread) {
-            process_sbuf(sbufp, it.first);
+            process_sbuf(sbufp, it);
             release_sbuf(sbufp);
         } else {
-            pool.push_task(sbufp, it.first);
+            pool.push_task(sbufp, it);
         }
     }
     thread_set_status("IDLE");
