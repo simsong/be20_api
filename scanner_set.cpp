@@ -800,16 +800,6 @@ void scanner_set::process_sbuf(const sbuf_t* sbufp, scanner_t *scanner)
     }
 
     // Don't rescan data that has been seen twice --- and if scanner doesn't doesn't want dups.
-<<<<<<< HEAD
-    if (sbuf.seen_before && flags.scan_seen_before == false) {
-        writer->xmlout("debug:bypass", "",
-                       Formatter()
-                       << "sbuf='" << sbuf.pos0.str() << "' "
-                       << "bufsize='" << sbuf.bufsize << "' "
-                       << "scanner='" << get_scanner_name(scanner) << "' "
-                       << "hash='" << sbuf.hash() << "' "
-                       << "reason='seen_before'", true);
-=======
     if (debug_flags.debug_benchmark && sbuf.seen_before && flags.scan_seen_before == false) {
         if (writer) {
             writer->xmlout("debug:bypass", "",
@@ -819,7 +809,6 @@ void scanner_set::process_sbuf(const sbuf_t* sbufp, scanner_t *scanner)
                            << "scanner='" << get_scanner_name(scanner) << "' "
                            << "reason='seen_before'", true);
         }
->>>>>>> bcf7e5c2ec0f2f0a802d15c4942b45b98ae5d2e1
         return;
     }
 
