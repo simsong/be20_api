@@ -755,6 +755,7 @@ void scanner_set::record_work_end(const sbuf_t *sbufp)
                        Formatter()
                        << "threadid='" << std::this_thread::get_id() << "' "
                        << "pos0='" << dfxml_writer::xmlescape(sbufp->pos0.str()) << "'"
+                       << "rc='" << dfxml_writer::xmlescape(sbufp->reference_count) << "'"
                        << aftimer::now_str(" t='","'"), true);
     }
 }
@@ -766,6 +767,8 @@ void scanner_set::record_work_end(const sbuf_t *sbufp)
 
 /* Process an sbuf with a particular scanner.
  * sbuf must be retained prior to calling this.
+ *
+ * TODO: Move the fast processing of scan/do not scan into the main thread.
  */
 void scanner_set::process_sbuf(const sbuf_t* sbufp, scanner_t *scanner)
 {
