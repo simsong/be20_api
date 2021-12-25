@@ -741,25 +741,16 @@ void scanner_set::record_work_start(const sbuf_t *sbufp)
 
 void scanner_set::record_work_start_pos0str(const std::string pos0str)
 {
-<<<<<<< HEAD
-    writer->xmlout("debug:work_start","",
-                   Formatter() << "pos0='" << dfxml_writer::xmlescape(pos0str) << "'", true);
-=======
     if (writer) {
         writer->xmlout("debug:work_start","",
                        Formatter() << "pos0='" << dfxml_writer::xmlescape(pos0str) << "'", true);
     }
->>>>>>> 84ba97290c5303fe43826a0c54c4cec6a9531745
 }
 
 
 void scanner_set::record_work_end(const sbuf_t *sbufp)
 {
-<<<<<<< HEAD
-    if (sbufp->depth()==0 && writer) {
-=======
     if (debug_flags.debug_benchmark && sbufp->depth()==0 && writer) {
->>>>>>> 84ba97290c5303fe43826a0c54c4cec6a9531745
         writer->xmlout("debug:work_end", "",
                        Formatter()
                        << "threadid='" << std::this_thread::get_id() << "' "
@@ -1022,20 +1013,11 @@ void scanner_set::process_sbuf(const sbuf_t* sbufp)
 
     /* Make the scanner params once, rather than every time through */
     // loop for each scanner.
-<<<<<<< HEAD
     for (const auto &it : enabled_scanners) {
         // Process if not threading or if we are supposed to process all in the same thread
         retain_sbuf(sbufp);
         if (!threading || debug_flags.debug_scanners_same_thread) {
             process_sbuf(sbufp, it);
-=======
-
-    for (const auto &it : scanner_info_db) {
-        // Process if not threading or if we are supposed to process all in the same thread
-        retain_sbuf(sbufp);
-        if (!threading || debug_flags.debug_scanners_same_thread) {
-            process_sbuf(sbufp, it.first);
->>>>>>> 84ba97290c5303fe43826a0c54c4cec6a9531745
             release_sbuf(sbufp);
         } else {
             pool.push_task(sbufp, it);
