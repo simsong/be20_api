@@ -11,7 +11,10 @@
 #include <memory>
 #include <mutex>
 
-//#include "astream.h"
+#ifndef BE13_CONFIGURE_APPLIED
+#error you must include a config.h that has had be13_configure.m4 applied
+#endif
+
 #include "utils.h"
 #include "atomic_map.h"
 #include "sbuf.h"
@@ -166,7 +169,7 @@ public:
         bool debug_print_steps {false};     // prints as each scanner is started
         bool debug_scanner {false};         // dump all feature writes to stderr
         bool debug_dump_data {false};       // scanners should dump data as they see them
-        bool debug_benchmark_cpu {false};  // capture CPU usage
+        bool debug_benchmark {false};       // capture CPU usage
         bool debug_scanners_same_thread {false}; // run all the scanners in the same thread
         bool debug_sbuf_gc {false};            // debug sbuf garbage collection system
         bool debug_sbuf_gc0 {false};          // debug sbuf garbage collection system for depth0
@@ -178,9 +181,6 @@ public:
     virtual scanner_t* get_scanner_by_name(const std::string name) const;
 
     // Stats support
-
-    static uint64_t get_available_memory(); // in bytes
-    static float    get_cpu_percentage();   // 0..100
 
     static const inline std::string THREAD_COUNT_STR {"thread_count"};
     static const inline std::string TASKS_QUEUED_STR {"tasks_queued"};

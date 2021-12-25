@@ -38,6 +38,7 @@ std::vector<std::string> split(const std::string& s, char delim);
 
 /* Read all of the lines of a file and return them as a vector */
 std::vector<std::string> getLines(const std::filesystem::path path);
+std::string getLast(const std::vector<std::string> &v); // returns the last line if v has more than one line, otherwise ''
 
 inline void truncate_at(std::string& line, char ch) {
     size_t pos = line.find(ch);

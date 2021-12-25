@@ -83,15 +83,6 @@ feature_recorder_set::feature_recorder_set(const flags_t& flags_, const scanner_
     }
 
 #if 0
-    /* Create a disabled feature recorder if necessary */
-    if ( flags.disabled ){
-        named_feature_recorder(DISABLED_RECORDER_NAME).flags.disabled=true;
-    }
-#endif
-
-    // message_enabled_scanners(scanner_params::PHASE_INIT); // tell all enabled scanners to init
-
-#if 0
 #if defined(HAVE_SQLITE3_H)
     if (flag_set(ENABLE_SQLITE3_RECORDERS)) {
         db_create();
@@ -99,12 +90,6 @@ feature_recorder_set::feature_recorder_set(const flags_t& flags_, const scanner_
 #endif
 #endif
 
-#if 0
-    /* Create the requested feature files */
-    for( const auto &it:feature_files){
-        create_name(it, flags & CREATE_STOP_LIST_RECORDERS);
-    }
-#endif
 }
 
 /*
