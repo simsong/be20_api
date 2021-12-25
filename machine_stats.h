@@ -1,8 +1,8 @@
 #ifndef MACHINE_STATS_H
 #define MACHINE_STATS_H
 
-#ifndef PACKAGE
-#error config.h must be included before machine_stats.h
+#ifndef BE13_CONFIGURE_APPLIED 1
+#error config.h with be13_api additions must be included before machine_stats.h
 #endif
 
 #ifdef HAVE_MACH_MACH_H
@@ -79,6 +79,9 @@ struct machine_stats {
     };
 
     static void get_memory(uint64_t *virtual_size, uint64_t *resident_size) {
+        *virtual_size = 0;
+        *resident_size = 0;
+
 #ifdef HAVE_TASK_INFO
         kern_return_t error;
         mach_msg_type_number_t outCount;
@@ -101,12 +104,10 @@ struct machine_stats {
 	    if(fscanf(f,"%ld %ld %ld %ld %ld %ld %ld", &size,&resident,&share,&text,&lib,&data,&dt) == 7){
 		*virtual_size  = size * 4096;
 		*resident_size = resident * 4096;
-                fclose(f);
-		return ;
 	    }
 	}
-        *virtual_size = 0;
-        *resident_size = 0;
+	fclose(f);
+	return ;
     };
 };
 
