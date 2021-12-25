@@ -3,7 +3,7 @@
 #
 
 AC_MSG_NOTICE([Including be13_configure.m4 from be13_api])
-
+AC_DEFINE(BE13_CONFIGURE_APPLIED, 1, [be13_configure.m4 was included by autoconf.ac])
 
 ################################################################
 ## compile with pthread if its available
@@ -26,7 +26,7 @@ AC_C_BIGENDIAN([AC_DEFINE(BE13_API_BIGENDIAN, 1, [Big Endian aarchitecutre - lik
 ## Headers
 AC_CHECK_HEADERS([ dlfcn.h fcntl.h limits.h limits/limits.h linux/if_ether.h net/ethernet.h netinet/if_ether.h netinet/in.h pcap.h pcap/pcap.h sqlite3.h sys/cdefs.h sys/mman.h sys/stat.h sys/time.h sys/types.h sys/vmmeter.h unistd.h windows.h windows.h windowsx.h winsock2.h wpcap/pcap.h mach/mach.h mach-o/dyld.h])
 
-AC_CHECK_FUNCS([gmtime_r ishexnumber isxdigit localtime_r unistd.h mmap err errx warn warnx pread64 pread strptime _lseeki64 utimes host_statistics64])
+AC_CHECK_FUNCS([gmtime_r ishexnumber isxdigit localtime_r unistd.h mmap err errx warn warnx pread64 pread strptime _lseeki64 task_info utimes host_statistics64])
 
 AC_CHECK_LIB([sqlite3],[sqlite3_libversion])
 AC_CHECK_FUNCS([sqlite3_create_function_v2 sysctlbyname])

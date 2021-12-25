@@ -24,6 +24,7 @@
 #include <thread>
 #include <cstdlib>
 #include <cstring>
+#include <fcntl.h>
 #include <filesystem>
 #include <functional>
 #include <iostream>
@@ -37,8 +38,12 @@
 #include "sbuf_stream.h"
 #include "utils.h"
 #include "dfxml_cpp/src/hash_t.h"
+#include "dfxml_cpp/src/dfxml_writer.h"
 #include "threadpool.h"
 
+#ifndef O_BINARY
+#define O_BINARY 0
+#endif
 
 /****************************************************************
  *** Support code
@@ -60,15 +65,13 @@ std::string random_string(std::size_t length) {
 }
 
 // A single tempdir for all of our testing
-std::string get_tempdir() {
-    static std::string tempdir;
+std::filesystem::path get_tempdir() {
+    static std::filesystem::path tempdir("/");
 
-    if (tempdir == "") {
-        tempdir = std::filesystem::temp_directory_path().string();
-        if (tempdir.back() != '/') { tempdir += '/'; }
-        tempdir += random_string(8);
+    if (tempdir == std::filesystem::path("/")) {
+        tempdir = std::filesystem::temp_directory_path() / random_string(8);
         std::filesystem::create_directory(tempdir);
-        std::cerr << "Test results in: " << tempdir << "\n";
+        std::cerr << "Test results in: " << tempdir << std::endl;
     }
     return tempdir;
 }
@@ -426,9 +429,10 @@ TEST_CASE("quote_if_necessary", "[feature_recorder]") {
     REQUIRE(c2_quoted == c2);
 }
 
-TEST_CASE("fname", "[feature_recorder]") {
+TEST_CASE("feature_recorder_tests", "[feature_recorder]") {
     feature_recorder_set::flags_t flags;
     flags.no_alert = true;
+    flags.pedantic = true;
     scanner_config sc;
     sc.outdir = NamedTemporaryDirectory();
     feature_recorder_set frs(flags, sc);
@@ -445,6 +449,16 @@ TEST_CASE("fname", "[feature_recorder]") {
     REQUIRE(p2.filename() == "test_bar_1.txt");
 
     fr.carve_mode = feature_recorder_def::CARVE_ALL;
+
+    /* Check basic writing */
+    auto sbuf0 = sbuf_t("0123456789");
+    fr.write_buf(sbuf0, 2, 5);
+    fr.flush();
+
+    /* Now read the feature file and see if it is there */
+    auto lines = getLines(sc.outdir / "test.txt");
+    auto lastLine = getLast(lines);
+    REQUIRE(lastLine == "2\t23456\t0123456789");
 
     /* check carving */
     auto sbuf1 = sbuf_t("Hello World!\n");
@@ -467,6 +481,7 @@ TEST_CASE("fname", "[feature_recorder]") {
         delete sbuf1c;
     }
     REQUIRE( sbuf1.children == 0 );
+
 }
 
 /** feature_recorder_file functions */
@@ -539,6 +554,52 @@ TEST_CASE("find_ngram_size", "[sbuf]") {
     REQUIRE( sbuf3.find_ngram_size(2) == 0); // if we don't search with a large enough probe, we won't find it.
 }
 
+TEST_CASE("distinct_characters", "[sbuf]") {
+    auto sbuf1 = sbuf_t("Hello World!\n");
+    REQUIRE( sbuf1.get_distinct_character_count() == 10 );
+    REQUIRE( sbuf1.distinct_characters(0,13) == 10 );
+    REQUIRE( sbuf1.distinct_characters(1,12) == 9 );
+    REQUIRE( sbuf1.distinct_characters(0,12) == 9 );
+
+    REQUIRE(sbuf1.getUTF8(4) == "o World!\n");
+
+}
+
+void validate_file(std::filesystem::path path, std::string contents)
+{
+    std::ifstream in(path, std::ios::binary | std::ios::ate);
+    REQUIRE (in.is_open());
+    auto size = in.tellg();
+    auto memblock = new char [size];
+    in.seekg (0, std::ios::beg);
+    in.read (memblock, size);
+    in.close();
+    std::string str(memblock,size);
+    REQUIRE(str == contents);
+    delete[] memblock;
+}
+
+TEST_CASE("sbuf_write", "[sbuf]") {
+    auto sbuf1 = sbuf_t("0123456789");
+    std::filesystem::path td = get_tempdir();
+    std::filesystem::path fname = td / "file.txt";
+    int fd = open(fname.c_str(), O_RDWR | O_CREAT | O_BINARY, 0777);
+    REQUIRE(sbuf1.write(fd, 1, 4) == 4);
+    close(fd);
+    validate_file(fname, "1234");
+    std::filesystem::remove(fname);
+
+    FILE *f = fopen(fname.c_str(), "wb");
+    REQUIRE(sbuf1.write(f, 2, 4) == 4);
+    fclose(f);
+    validate_file(fname, "2345");
+    std::filesystem::remove(fname);
+
+    REQUIRE(sbuf1.write(fname) == 10);
+    validate_file(fname, "0123456789");
+    std::filesystem::remove(fname);
+
+}
 
 TEST_CASE("sbuf_stream", "[sbuf]") {
     auto sbuf1 = sbuf_t("\001\002\003\004\005\006\007\010");
@@ -622,7 +683,7 @@ TEST_CASE("feature_recorder_def", "[feature_recorder_set]") {
 TEST_CASE("write_features", "[feature_recorder_set]") {
 
     // Create a random directory for the output of the feature recorder
-    std::string tempdir = get_tempdir();
+    std::filesystem::path tempdir = get_tempdir();
     {
         feature_recorder_set::flags_t flags;
         flags.no_alert = true;
@@ -656,7 +717,7 @@ TEST_CASE("write_features", "[feature_recorder_set]") {
         REQUIRE(sb16->size()-1 == strlen(hello8) * 2); // -1 to remove the \000
         delete sb16;
     }
-    std::vector<std::string> lines = getLines(tempdir+"/histogram1.txt");
+    std::vector<std::string> lines = getLines(tempdir / "histogram1.txt");
     REQUIRE( lines[0] == "n=4\t300\t(utf16=1)");
     REQUIRE( lines[1] == "n=2\t200");
     REQUIRE( lines[2] == "n=1\t100");
@@ -754,8 +815,10 @@ TEST_CASE("hello_sbuf", "[sbuf]") {
     REQUIRE(sb1.find('o', 0) == 4);
     REQUIRE(sb1.find("world") == 6);
 
+    REQUIRE(sb1.has_hash()==false);
     REQUIRE(sb1.hash() != "");
     REQUIRE(sb1.hash() == sbuf_t(hello8).hash());
+    REQUIRE(sb1.has_hash()==true);
 
     std::string s = sb1.getUTF8(6, 5);
     REQUIRE(s == "world");
@@ -873,9 +936,9 @@ TEST_CASE("sbuf_malloc2", "[sbuf]") {
 }
 
 TEST_CASE("map_file", "[sbuf]") {
-    std::string tempdir = get_tempdir();
+    std::filesystem::path tempdir = get_tempdir();
     std::ofstream os;
-    std::filesystem::path fname = tempdir + "/hello.txt";
+    std::filesystem::path fname = tempdir / "hello.txt";
 
     os.open(fname);
     REQUIRE(os.is_open());
@@ -941,9 +1004,17 @@ TEST_CASE("scanner", "[scanner]") { /* check that scanner params made from an ex
  */
 #include "scan_sha1_test.h"
 #include "scanner_set.h"
+#include "machine_stats.h"
 
-TEST_CASE("get_available_memory", "[scanner]") {
-    REQUIRE(scanner_set::get_available_memory() != 0);
+TEST_CASE("machine_stats", "[machine_stats]") {
+    REQUIRE(machine_stats::get_available_memory() != 0);
+    REQUIRE(machine_stats::get_cpu_percentage() >= 0);
+    uint64_t virtual_size = 0;
+    uint64_t resident_size = 0;
+    machine_stats::get_memory(&virtual_size, &resident_size);
+    std::cerr << "virtual_size: " << virtual_size << " resident_size: " << resident_size << std::endl;
+    REQUIRE(virtual_size > 0);
+    REQUIRE(resident_size > 0);
 }
 
 
@@ -957,7 +1028,6 @@ TEST_CASE("scanner_stats", "[scanner_set]") {
 
     feature_recorder_set fs(flags, sc);
     std::map<scanner_t*, const struct scanner_params::scanner_info*> scanner_info_db{};
-    std::set<scanner_t*> enabled_scanners{}; // the scanners that are enabled
     atomic_set<std::string> seen_set {}; // hex hash values of sbuf pages that have been seen
     auto ss = new scanner_set(sc, feature_recorder_set::flags_t(), nullptr);
     delete ss;
@@ -1059,8 +1129,11 @@ TEST_CASE("enable/disable", "[scanner_set]") {
 
 /* This test runs a scan on the hello_sbuf() with the sha1 scanner. */
 TEST_CASE("run", "[scanner]") {
+    sbuf_t::debug_leak = true;
+    sbuf_t::debug_alloc = true;
     scanner_config sc;
     sc.outdir = get_tempdir();
+    auto dfxml_file = sc.outdir / "report.xml";
     sc.push_scanner_command(std::string("sha1_test"), scanner_config::scanner_command::ENABLE); /* Turn it onn */
 
     scanner_set ss(sc, feature_recorder_set::flags_t(), nullptr);
@@ -1100,14 +1173,24 @@ TEST_CASE("run", "[scanner]") {
     sbuf_t* hello = new sbuf_t(hello8);
     std::string hashed = fr.hash(*hello);
 
+    /* Set up a DFXML output */
+    dfxml_writer w( dfxml_file, false);
+    ss.set_dfxml_writer( &w );
+    REQUIRE( ss.get_dfxml_writer() == &w);
+    ss.dump_enabled_scanner_config();
+
     /* Perform a simulated scan */
     ss.phase_scan();         // start the scanner phase
     ss.schedule_sbuf(hello); // process a single sbuf, and delete it
     ss.shutdown();           // shutdown; this will write out the in-memory histogram.
+    ss.dump_scanner_stats();
+
+    auto enabled_scanners = ss.get_enabled_scanners();
+    REQUIRE( enabled_scanners.size() == 1 );
 
     /* Make sure that the feature recorder output was created */
     std::vector<std::string> lines;
-    std::string fname_fr = get_tempdir() + "/sha1_bufs.txt";
+    std::filesystem::path fname_fr = get_tempdir() / "sha1_bufs.txt";
 
     lines = getLines(fname_fr);
     REQUIRE(lines[0] == "# BANNER FILE NOT PROVIDED (-b option)");
@@ -1120,9 +1203,12 @@ TEST_CASE("run", "[scanner]") {
 
     /* The sha1 scanner makes a single histogram. Make sure we got it. */
     REQUIRE(ss.histogram_count() == 1);
-    std::string fname_hist = get_tempdir() + "/sha1_bufs_first5.txt";
+    std::filesystem::path fname_hist = get_tempdir() / "sha1_bufs_first5.txt";
     lines = getLines(fname_hist);
     REQUIRE(lines.size() == 6);         // includes header!
+    sbuf_t::debug_leak  = false;
+    sbuf_t::debug_alloc = false;
+
 }
 
 /****************************************************************
@@ -1295,7 +1381,7 @@ TEST_CASE("directory_support", "[utilities]") {
 }
 
 TEST_CASE("Show_output", "[end]") {
-    std::string cmd = "ls -l " + get_tempdir();
+    std::string cmd = "ls -l " + get_tempdir().u8string();
     std::cout << cmd << "\n";
     int ret = system(cmd.c_str());
     if (ret != 0) { throw std::runtime_error("could not list tempdir???"); }

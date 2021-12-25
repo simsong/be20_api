@@ -112,6 +112,14 @@ std::vector<std::string> getLines(const std::filesystem::path path)
     return lines;
 }
 
+// returns the last line if v has more than one line, otherwise ''
+std::string getLast(const std::vector<std::string> &v)
+{
+    if (v.size() > 0) return v[v.size()-1];
+    return std::string();
+}
+
+
 uint64_t scaled_stoi64(const std::string &str)
 {
     std::stringstream ss(str);

@@ -23,23 +23,8 @@ void feature_recorder::write(const pos0_t& pos0, const std::string& feature_, co
 
     quote_if_necessary(feature, context);
 
-    if (feature.size() == 0) {
-        std::cerr << name << ": zero length feature at " << pos0 << "\n";
-        if (fs.flags.pedantic) assert(0);
-        return;
-    }
-    if (fs.flags.pedantic) {
-        /* Check for tabs or newlines in feature and and context */
-        for (size_t i = 0; i < feature.size(); i++) {
-            if (feature[i] == '\t') assert(0);
-            if (feature[i] == '\n') assert(0);
-            if (feature[i] == '\r') assert(0);
-        }
-        for (size_t i = 0; i < context.size(); i++) {
-            if (context[i] == '\t') assert(0);
-            if (context[i] == '\n') assert(0);
-            if (context[i] == '\r') assert(0);
-        }
+    if (feature.size() == 0 && fs.flags.pedantic) {
+        throw std::runtime_error(Formatter()  name << ": zero length feature at " << pos0);
     }
 
     /* First check to see if the feature is on the stop list.
