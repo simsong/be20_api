@@ -11,7 +11,10 @@
 #include <memory>
 #include <mutex>
 
-//#include "astream.h"
+#ifndef BE13_CONFIGURE_APPLIED
+#error you must include a config.h that has had be13_configure.m4 applied
+#endif
+
 #include "utils.h"
 #include "atomic_map.h"
 #include "sbuf.h"

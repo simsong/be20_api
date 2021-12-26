@@ -19,10 +19,6 @@
 #include <thread>
 #include <vector>
 
-#include "machine_stats.h"
-#include "utils.h"
-#include "formatter.h"
-
 #ifdef HAVE_LINUX_SYSCTL_H
 #include <linux/sysctl.h>
 #endif
@@ -30,6 +26,10 @@
 #ifdef HAVE_DLFCN_H
 #include <dlfcn.h>
 #endif
+
+#include "machine_stats.h"
+#include "utils.h"
+#include "formatter.h"
 
 #include "threadpool.h"
 
@@ -65,6 +65,7 @@ scanner_set::scanner_set(scanner_config& sc_, const feature_recorder_set::flags_
     debug_flags.debug_scanners_same_thread = getenv_debug("DEBUG_SCANNERS_SAME_THREAD");
     debug_flags.debug_sbuf_gc              = getenv_debug("DEBUG_SBUF_GC");
     debug_flags.debug_sbuf_gc0             = getenv_debug("DEBUG_SBUF_GC0");
+    fs.flags.pedantic                      = getenv_debug("DEBUG_FS_PEDANTIC");
     pool.debug                             = getenv_debug("DEBUG_THREAD_POOL");
 
     const char *dsi = std::getenv("DEBUG_SCANNERS_IGNORE");
@@ -754,6 +755,7 @@ void scanner_set::record_work_end(const sbuf_t *sbufp)
                        Formatter()
                        << "threadid='" << std::this_thread::get_id() << "' "
                        << "pos0='" << dfxml_writer::xmlescape(sbufp->pos0.str()) << "'"
+                       << "rc='" << sbufp->reference_count << "'"
                        << aftimer::now_str(" t='","'"), true);
     }
 }
@@ -765,6 +767,8 @@ void scanner_set::record_work_end(const sbuf_t *sbufp)
 
 /* Process an sbuf with a particular scanner.
  * sbuf must be retained prior to calling this.
+ *
+ * TODO: Move the fast processing of scan/do not scan into the main thread.
  */
 void scanner_set::process_sbuf(const sbuf_t* sbufp, scanner_t *scanner)
 {
@@ -1012,15 +1016,14 @@ void scanner_set::process_sbuf(const sbuf_t* sbufp)
 
     /* Make the scanner params once, rather than every time through */
     // loop for each scanner.
-
-    for (const auto &it : scanner_info_db) {
+    for (const auto &it : enabled_scanners) {
         // Process if not threading or if we are supposed to process all in the same thread
         retain_sbuf(sbufp);
         if (!threading || debug_flags.debug_scanners_same_thread) {
-            process_sbuf(sbufp, it.first);
+            process_sbuf(sbufp, it);
             release_sbuf(sbufp);
         } else {
-            pool.push_task(sbufp, it.first);
+            pool.push_task(sbufp, it);
         }
     }
     thread_set_status("IDLE");

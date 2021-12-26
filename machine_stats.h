@@ -1,6 +1,10 @@
 #ifndef MACHINE_STATS_H
 #define MACHINE_STATS_H
 
+#ifndef BE13_CONFIGURE_APPLIED
+#error config.h with be13_api additions must be included before machine_stats.h
+#endif
+
 #ifdef HAVE_MACH_MACH_H
 #include <mach/mach.h>
 #include <mach/mach_host.h>
@@ -14,6 +18,7 @@
 #include <sys/vmmeter.h>
 #endif
 
+#include <cmath>
 #include <unistd.h>
 
 /**
@@ -36,7 +41,7 @@ struct machine_stats {
         int pid=0;
         float ff = 0;
         int count = sscanf(buf,"%d %f",&pid,&ff);
-        return (count==2) ? ff : 0.0;
+        return (count==2) ? ff : nan("get_cpu_percentage");
     };
 
     static uint64_t get_available_memory() {
@@ -74,6 +79,9 @@ struct machine_stats {
     };
 
     static void get_memory(uint64_t *virtual_size, uint64_t *resident_size) {
+        *virtual_size = 0;
+        *resident_size = 0;
+
 #ifdef HAVE_TASK_INFO
         kern_return_t error;
         mach_msg_type_number_t outCount;
@@ -100,8 +108,8 @@ struct machine_stats {
 		return ;
 	    }
 	}
-        *virtual_size = 0;
-        *resident_size = 0;
+	fclose(f);
+	return ;
     };
 };
 
