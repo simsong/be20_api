@@ -755,7 +755,7 @@ void scanner_set::record_work_end(const sbuf_t *sbufp)
                        Formatter()
                        << "threadid='" << std::this_thread::get_id() << "' "
                        << "pos0='" << dfxml_writer::xmlescape(sbufp->pos0.str()) << "'"
-                       << "rc='" << dfxml_writer::xmlescape(sbufp->reference_count) << "'"
+                       << "rc='" << sbufp->reference_count << "'"
                        << aftimer::now_str(" t='","'"), true);
     }
 }

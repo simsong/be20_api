@@ -1,7 +1,7 @@
 #ifndef MACHINE_STATS_H
 #define MACHINE_STATS_H
 
-#ifndef BE13_CONFIGURE_APPLIED 1
+#ifndef BE13_CONFIGURE_APPLIED
 #error config.h with be13_api additions must be included before machine_stats.h
 #endif
 
@@ -104,6 +104,8 @@ struct machine_stats {
 	    if(fscanf(f,"%ld %ld %ld %ld %ld %ld %ld", &size,&resident,&share,&text,&lib,&data,&dt) == 7){
 		*virtual_size  = size * 4096;
 		*resident_size = resident * 4096;
+                fclose(f);
+		return ;
 	    }
 	}
 	fclose(f);
