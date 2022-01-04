@@ -496,8 +496,8 @@ TEST_CASE("functions", "[path_printer]") {
 
     part = po.get("Content-Color","red");
     REQUIRE(part=="red");
-
 }
+
 
 
 /** test the sbuf_stream interface.
@@ -529,6 +529,9 @@ TEST_CASE("range_exception", "[sbuf]") {
 
     REQUIRE( sbuf1[100] == 0 );         // [] is safe
     REQUIRE_THROWS_AS( sbuf1.get8i(100), sbuf_t::range_exception_t); // get is not
+    REQUIRE_THROWS_AS( sbuf1.get8uBE(100), sbuf_t::range_exception_t); // get is not
+    REQUIRE_THROWS_AS( sbuf1.get16uBE(100), sbuf_t::range_exception_t); // get is not
+    REQUIRE_THROWS_AS( sbuf1.get32uBE(100), sbuf_t::range_exception_t); // get is not
     try {
         std::cerr << sbuf1.get8i(100);
     }
@@ -605,7 +608,6 @@ TEST_CASE("sbuf_stream", "[sbuf]") {
     REQUIRE( sbs.get32uBE() == 0x05060708);
     REQUIRE( sbs.tell() == 8 );
 
-
     sbs.seek(0);
     REQUIRE( sbs.get64u() == 0x0807060504030201L );
     REQUIRE( sbs.tell() == 8 );
@@ -620,7 +622,6 @@ TEST_CASE("sbuf_stream", "[sbuf]") {
 
     REQUIRE( sbs.get16iBE() == 0x0708);
     REQUIRE( sbs.tell() == 8 );
-
 
     sbs.seek(4);
     REQUIRE( sbs.get32iBE() == 0x05060708 );
@@ -824,6 +825,10 @@ TEST_CASE("hello_sbuf", "[sbuf]") {
 
     sbuf_t* sb3 = sb1.new_slice(6, 5);
     REQUIRE(sb3->asString() == "world");
+    REQUIRE(sb1.has_parent() == false);
+    REQUIRE(sb3->has_parent() == true);
+    REQUIRE(sb3->highest_parent() == &sb1);
+
     delete sb3;
 
     auto sb4 = sbuf_t(sb1,6);
