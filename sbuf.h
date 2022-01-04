@@ -54,6 +54,7 @@
 #endif
 
 #include "pos0.h"
+#include "formatter.h"
 
 /*
  * NOTE: The crash identified in November 2019 was because access to
@@ -264,9 +265,7 @@ public:;
         size_t off {0};
         size_t len {0};
         std::string message() const {
-            std::stringstream ss;
-            ss << "<< sbuf_t::range_exception_t: Read past end of sbuf off=" << off << " len=" << len << " >>";
-            return ss.str();
+            return Formatter() << "[sbuf_t::range_exception_t: Read past end of sbuf off=" << off << " len=" << len << "]";
         }
     public:
         range_exception_t(size_t off_, size_t len_):off(off_), len(len_){
@@ -277,9 +276,9 @@ public:;
             }
         };
         virtual const char* what() const throw() {
-            static char buf[64];        // big enough to hold a single error
+            static char buf[80];        // big enough to hold a single error
             std::string str = message();
-            strncpy(buf,str.c_str(),sizeof(buf)-1);
+            strncpy(buf, str.c_str(), sizeof(buf)-1);
             buf[sizeof(buf)-1] = '\000'; // safety
             return buf;
         }

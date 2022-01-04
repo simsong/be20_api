@@ -104,6 +104,8 @@ struct machine_stats {
 	    if(fscanf(f,"%ld %ld %ld %ld %ld %ld %ld", &size,&resident,&share,&text,&lib,&data,&dt) == 7){
 		*virtual_size  = size * 4096;
 		*resident_size = resident * 4096;
+                fclose(f);
+		return ;
 	    }
 	}
 	fclose(f);
