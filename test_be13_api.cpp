@@ -1,5 +1,5 @@
 /*
- * all be13_api test cases are in this file.
+ * Most be13_api test cases are in this file.
  * The goal is to have complete test coverage of the v2 API
  *
  * Todo list:
@@ -39,7 +39,6 @@
 #include "utils.h"
 #include "dfxml_cpp/src/hash_t.h"
 #include "dfxml_cpp/src/dfxml_writer.h"
-#include "threadpool.h"
 
 #ifndef O_BINARY
 #define O_BINARY 0
@@ -153,46 +152,6 @@ TEST_CASE("atomic_set", "[atomic]") {
     REQUIRE(as.contains("four") == false);
     REQUIRE(as.size() == 3);
 }
-
-#ifdef BARAKSH_THREADPOOL
-TEST_CASE("atomic_set_mt", "[atomic]") {
-    thread_pool pool;
-    atomic_set<std::string> as;
-    for (size_t i=0;i<100;i++){
-        pool.push_task( [&as, i] {
-            for (int j=0;j<100;j++){
-                std::stringstream ss;
-                ss << "this is string " << j << " " << i << " " << std::this_thread::get_id();
-                as.insert( ss.str() );
-            }
-        });
-    }
-    pool.wait_for_tasks();
-    REQUIRE( as.keys().size() == 10000 );
-    as.clear();
-    REQUIRE( as.keys().size() == 0 );
-}
-
-TEST_CASE("atomic_map_mt", "[atomic]") {
-    thread_pool pool;
-    atomic_map<std::string, std::string> am;
-    for (size_t i=0;i<100;i++){
-        pool.push_task( [&am, i] {
-            for (int j=0;j<100;j++){
-                std::stringstream s1;
-                s1 << "thread " << i;
-                std::stringstream s2;
-                s2 << "string " << j << " " << i << " " << std::this_thread::get_id();
-                am[s1.str()] = s2.str();
-            }
-        });
-    }
-    pool.wait_for_tasks();
-    REQUIRE( am.keys().size() == 100 );
-    am.clear();
-    REQUIRE( am.keys().size() == 0 );
-}
-#endif
 
 #include "atomic_map.h"
 int *new_int()
@@ -537,8 +496,8 @@ TEST_CASE("functions", "[path_printer]") {
 
     part = po.get("Content-Color","red");
     REQUIRE(part=="red");
-
 }
+
 
 
 /** test the sbuf_stream interface.
@@ -563,6 +522,22 @@ TEST_CASE("distinct_characters", "[sbuf]") {
 
     REQUIRE(sbuf1.getUTF8(4) == "o World!\n");
 
+}
+
+TEST_CASE("range_exception", "[sbuf]") {
+    auto sbuf1 = sbuf_t("Hello World!\n");
+
+    REQUIRE( sbuf1[100] == 0 );         // [] is safe
+    REQUIRE_THROWS_AS( sbuf1.get8i(100), sbuf_t::range_exception_t); // get is not
+    REQUIRE_THROWS_AS( sbuf1.get8uBE(100), sbuf_t::range_exception_t); // get is not
+    REQUIRE_THROWS_AS( sbuf1.get16uBE(100), sbuf_t::range_exception_t); // get is not
+    REQUIRE_THROWS_AS( sbuf1.get32uBE(100), sbuf_t::range_exception_t); // get is not
+    try {
+        std::cerr << sbuf1.get8i(100);
+    }
+    catch (const sbuf_t::range_exception_t &e) {
+        REQUIRE( std::string("[sbuf_t::range_exception_t: Read past end of sbuf off=100 len=1]") == e.what());
+    }
 }
 
 void validate_file(std::filesystem::path path, std::string contents)
@@ -633,7 +608,6 @@ TEST_CASE("sbuf_stream", "[sbuf]") {
     REQUIRE( sbs.get32uBE() == 0x05060708);
     REQUIRE( sbs.tell() == 8 );
 
-
     sbs.seek(0);
     REQUIRE( sbs.get64u() == 0x0807060504030201L );
     REQUIRE( sbs.tell() == 8 );
@@ -648,7 +622,6 @@ TEST_CASE("sbuf_stream", "[sbuf]") {
 
     REQUIRE( sbs.get16iBE() == 0x0708);
     REQUIRE( sbs.tell() == 8 );
-
 
     sbs.seek(4);
     REQUIRE( sbs.get32iBE() == 0x05060708 );
@@ -852,6 +825,10 @@ TEST_CASE("hello_sbuf", "[sbuf]") {
 
     sbuf_t* sb3 = sb1.new_slice(6, 5);
     REQUIRE(sb3->asString() == "world");
+    REQUIRE(sb1.has_parent() == false);
+    REQUIRE(sb3->has_parent() == true);
+    REQUIRE(sb3->highest_parent() == &sb1);
+
     delete sb3;
 
     auto sb4 = sbuf_t(sb1,6);
@@ -1042,28 +1019,6 @@ TEST_CASE("previously_processed", "[scanner_set]") {
     REQUIRE(ss.previously_processed_count(slg) == 1);
     REQUIRE(ss.previously_processed_count(slg) == 2);
 }
-
-#ifndef BARAKSH_THREADPOOL
-[[noreturn]] void alarm_handler(int signal)
-{
-    std::cerr << "alarm\n";
-    throw std::runtime_error("scanner_set_mt timeout");
-}
-
-// This will give an error unless run with MallocNanoZone=0
-TEST_CASE("scanner_set_mt", "[thread_pool]") {
-    std::signal(SIGALRM, alarm_handler);
-    alarm(60);                          // in case it never finishes
-    scanner_config sc;
-    feature_recorder_set::flags_t f;
-    scanner_set ss(sc, f, nullptr);
-    ss.launch_workers( 12 );
-    ss.set_spin_poll_time(1); // spin fast.
-    ss.join();
-    alarm(0);
-}
-#endif
-
 
 #if 0
 TEST_CASE("mt_previously_processed", "[scanner_set]") {

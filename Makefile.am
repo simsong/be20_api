@@ -56,6 +56,7 @@ TESTS = $(check_PROGRAMS)
 test_be13_api_SOURCES = $(BE13_API_SRC) $(DFXML_READER) $(DFXML_WRITER) \
 	catch.hpp \
 	test_be13_api.cpp \
+	test_be13_threadpool.cpp \
 	test_image_reader.h \
 	test_image_reader.cpp
 
