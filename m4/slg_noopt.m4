@@ -19,7 +19,11 @@ else
   # If we are not stripping the optimizer,
   # increase optimizer from -O2 to -O3 if not explicitly forbidden
   if test "${with_o3}" != "no" ; then
-      CFLAGS=`echo   -g "$CFLAGS"   | sed s/-O2/-O3/`             # note the double quoting!
-      CXXFLAGS=`echo -g "$CXXFLAGS" | sed s/-O2/-O3/`
+      AC_MSG_NOTICE([adding -O3 to CFLAGS and CXXFLAGS])
+      CFLAGS=`echo   -g "$CFLAGS"   | sed 's/-O[123]//'`             # note the double quoting!
+      CFLAGS="$CFLAGS -O3"
+
+      CXXFLAGS=`echo -g "$CXXFLAGS" | sed 's/-O[123]//'`
+      CXXFLAGS="$CXXFLAGS -O3"
   fi
 fi
