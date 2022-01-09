@@ -689,34 +689,6 @@ ssize_t sbuf_t::findbin(const uint8_t* b2, size_t buflen, size_t start ) const
     return -1;
 }
 
-std::ostream& operator<<(std::ostream& os, const sbuf_t& t) {
-    os << "sbuf[pos0=" << t.pos0 << " " ;
-
-    if (t.buf) {
-        os << "buf[0..8]=";
-        for (size_t i=0; i < 8 && i < t.bufsize; i++){
-            os << hexch(t[i]) << ' ';
-        }
-        os << " (" ;
-        for (size_t i=0; i < 8 && i < t.bufsize; i++){
-            if (isprint(t[i])) {
-                os << t[i];
-            }
-        }
-        os << " )" ;
-    }
-    os << " buf= "            << static_cast<const void *>(t.buf)
-       << " malloced= "       << static_cast<const void *>(t.malloced)
-       << " write= "          << static_cast<const void *>(t.buf_writable)
-       << " size=(" << t.bufsize << "/" << t.pagesize << ")"
-       << " children="        << t.children
-       << " refct="           << t.reference_count
-       << " fd="              << t.fd
-       << " depth="           << t.depth()
-       << "]";
-    return os;
-}
-
 /**
  * Read the requested number of UTF-8 format string octets including any \0.
  */
@@ -849,4 +821,41 @@ bool sbuf_t::has_hash() const
 {
     const std::lock_guard<std::mutex> lock(Mhash); // protect this function}
     return (hash_.size() > 0 );
+}
+
+
+/****************************************************************
+ ** ostream operators
+ ****************************************************************/
+std::ostream& operator<<(std::ostream& os, const sbuf_t& t) {
+    os << "sbuf[pos0=" << t.pos0 << " " ;
+
+    if (t.buf) {
+        os << "buf[0..8]=";
+        for (size_t i=0; i < 8 && i < t.bufsize; i++){
+            os << hexch(t[i]) << ' ';
+        }
+        os << " (" ;
+        for (size_t i=0; i < 8 && i < t.bufsize; i++){
+            if (isprint(t[i])) {
+                os << t[i];
+            }
+        }
+        os << " )" ;
+    }
+    os << " buf= "            << static_cast<const void *>(t.buf)
+       << " malloced= "       << static_cast<const void *>(t.malloced)
+       << " write= "          << static_cast<const void *>(t.buf_writable)
+       << " size=(" << t.bufsize << "/" << t.pagesize << ")"
+       << " children="        << t.children
+       << " refct="           << t.reference_count
+       << " fd="              << t.fd
+       << " depth="           << t.depth()
+       << "]";
+    return os;
+}
+
+std::ostream& operator<<(std::ostream& os, const sbuf_t::range_exception_t & e) {
+    os << e.message();
+    return os;
 }
