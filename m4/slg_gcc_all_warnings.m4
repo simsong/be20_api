@@ -13,7 +13,6 @@
 # causes warnings with unistd.h:  -Wnested-externs
 # Just causes too much annoyance: -Wmissing-format-attribute
 
-
 # Check G++
 # We don't use these warnings:
 # -Waggregate-return -- aggregate returns are GOOD; they simplify code design
