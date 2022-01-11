@@ -103,8 +103,11 @@ struct ip4 {
     uint8_t ip_hl : 4;  /* header length */
     uint8_t ip_v : 4;   /* version */
 #endif
-    uint8_t ip_tos;                 /* type of service */
-    uint16_t ip_len;                /* total length */
+    uint8_t  ip_tos;                 /* type of service */
+private:;
+    uint16_t ip_len_;                /* total length */
+public:
+    uint16_t ip_len() const { return ntohs(ip_len_);};
     uint16_t ip_id;                 /* identification */
     uint16_t ip_off;                /* fragment offset field */
 #define IP_RF 0x8000                /* reserved fragment flag */
