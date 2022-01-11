@@ -800,8 +800,8 @@ void scanner_set::process_sbuf(const sbuf_t* sbufp, scanner_t *scanner)
     }
 
     // Don't rescan data that has been seen twice --- and if scanner doesn't doesn't want dups.
-    if (debug_flags.debug_benchmark && sbuf.seen_before && flags.scan_seen_before == false) {
-        if (writer) {
+    if (sbuf.seen_before && flags.scan_seen_before == false) {
+        if (debug_flags.debug_benchmark && writer) {
             writer->xmlout("debug:bypass", "",
                            Formatter()
                            << "sbuf='" << sbuf.pos0.str() << "' "
@@ -813,8 +813,8 @@ void scanner_set::process_sbuf(const sbuf_t* sbufp, scanner_t *scanner)
     }
 
     size_t ngram_size = sbuf.find_ngram_size(sc.max_ngram);
-    if (debug_flags.debug_benchmark && ngram_size > 0 && flags.scan_ngram_buffer == false) {
-        if (writer) {
+    if (ngram_size > 0 && flags.scan_ngram_buffer == false) {
+        if (debug_flags.debug_benchmark && writer) {
             writer->xmlout("debug:bypass", "",
                            Formatter() << "sbuf='" << sbuf.pos0.str() << "' ngram_size='" << ngram_size << "'", true);
         }
@@ -822,11 +822,10 @@ void scanner_set::process_sbuf(const sbuf_t* sbufp, scanner_t *scanner)
     }
 
     size_t distinct_chars = sbuf.get_distinct_character_count();
-    if (debug_flags.debug_benchmark && info->min_distinct_chars > distinct_chars) {
-        if (writer) {
+    if (info->min_distinct_chars > distinct_chars) {
+        if (debug_flags.debug_benchmark && writer) {
             writer->xmlout("debug:bypass", "",
-                           Formatter()
-                           << "sbuf='" << sbuf.pos0.str() << "' min_distinct_chars='" << distinct_chars << "'", true);
+                           Formatter() << "sbuf='" << sbuf.pos0.str() << "' min_distinct_chars='" << distinct_chars << "'", true);
         }
         return;
     }
