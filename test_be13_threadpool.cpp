@@ -79,10 +79,6 @@ TEST_CASE("atomic_map_mt", "[atomic]") {
 }
 #endif
 
-<<<<<<< HEAD
-#ifndef BARAKSH_THREADPOOL
-=======
->>>>>>> main
 [[noreturn]] void alarm_handler(int signal)
 {
     std::cerr << "alarm\n";
@@ -101,7 +97,3 @@ TEST_CASE("scanner_set_mt", "[thread_pool]") {
     ss.join();
     alarm(0);
 }
-<<<<<<< HEAD
-#endif
-=======
->>>>>>> main
