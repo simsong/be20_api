@@ -67,6 +67,16 @@ void thread_pool::join()
     }
 }
 
+void thread_pool::main_thread_wait()
+{
+    std::unique_lock<std::mutex> lock(M);
+    main_wait_timer.start();
+    //TO_WORKER.notify_one();         // if a worker is sleeping, wake it up
+    TO_MAIN.wait( lock );
+    main_wait_timer.stop();
+}
+
+
 /*
  * This may be called from any thread.
  * Right now it only works if called by main thread.
@@ -84,8 +94,10 @@ void thread_pool::push_task(const sbuf_t *sbuf, scanner_t *scanner)
         std::cerr << " , scanner=" << scanner << ") ";
     }
     std::unique_lock<std::mutex> lock(M);
-    if (main_thread == std::this_thread::get_id()) {
-        /* In the main thread, make sure there is a free worker before continuing */
+    /* In the main thread, make sure there is a free worker before continuing.
+     * We don't do this in the worker threads because we want them to clear.
+     */
+    if (main_thread == std::this_thread::get_id() && scanner==nullptr) {
         while (freethreads==0){               // if there are no free threads, wait.
             main_wait_timer.start();
             //TO_WORKER.notify_one();         // if a worker is sleeping, wake it up
