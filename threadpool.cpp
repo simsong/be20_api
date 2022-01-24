@@ -67,6 +67,16 @@ void thread_pool::join()
     }
 }
 
+void thread_pool::main_thread_wait()
+{
+    std::unique_lock<std::mutex> lock(M);
+    main_wait_timer.start();
+    //TO_WORKER.notify_one();         // if a worker is sleeping, wake it up
+    TO_MAIN.wait( lock );
+    main_wait_timer.stop();
+}
+
+
 /*
  * This may be called from any thread.
  * Right now it only works if called by main thread.

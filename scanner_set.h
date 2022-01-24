@@ -156,6 +156,7 @@ public:
     uint64_t  consumer_wait_ns() { return pool.total_worker_wait_ns;}
     uint64_t  consumer_wait_ns_per_worker() { return worker_count > 0 ? pool.total_worker_wait_ns / worker_count : 0;}
 
+    void main_thread_wait()      { return pool.main_thread_wait(); }
     /* They throw a ScannerNotFound exception if no scanner exists */
     class NoSuchScanner : public std::exception {
         std::string m_error{};

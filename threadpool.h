@@ -97,6 +97,7 @@ public:
     void launch_workers(size_t num_workers);
     void wait_for_tasks();              // wait until there are no tasks in work queue
     void join();                        // wait_for_tasks() and kill the workers
+    void main_thread_wait();
     void push_task(const sbuf_t *sbuf, scanner_t *scanner);
     void push_task(const sbuf_t *sbuf);
 
