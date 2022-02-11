@@ -26,7 +26,7 @@ a.out
 aclocal.m4
 ar-lib
 autom4te.cache
-be13_api-*-*/
+be20_api-*-*/
 build-aux/
 compile
 config.guess
@@ -44,8 +44,9 @@ stamp-h1
 stand
 test-driver
 test-program.cpp
-test_be13_api
-test_be13api
-test_be13api_catch2
+test_be20_api
+test_be20api
+test_be20api_catch2
 tests/Makefile
 x.cpp
+test_be20_api

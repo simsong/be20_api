@@ -2,7 +2,7 @@
  *** utils.h
  ***
  *** To use utils.c/utils.h, be sure this is in your configure.ac file:
-      m4_include([be13_api/be13_configure.m4])
+      m4_include([be20_api/be20_configure.m4])
  ***
  ****************************************************************/
 

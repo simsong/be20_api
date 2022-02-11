@@ -1,9 +1,9 @@
 #
-# mix-ins for be13
+# mix-ins for be20
 #
 
-AC_MSG_NOTICE([Including be13_configure.m4 from be13_api])
-AC_DEFINE(BE13_CONFIGURE_APPLIED, 1, [be13_configure.m4 was included by autoconf.ac])
+AC_MSG_NOTICE([Including be20_configure.m4 from be20_api])
+AC_DEFINE(BE20_CONFIGURE_APPLIED, 1, [be20_configure.m4 was included by autoconf.ac])
 
 ################################################################
 ## compile with pthread if its available
@@ -18,8 +18,8 @@ unset SAVE_CXXFLAGS
 
 ################################################################
 ## Endian check. Used for sbuf code.
-AC_C_BIGENDIAN([AC_DEFINE(BE13_API_BIGENDIAN, 1, [Big Endian aarchitecutre - like M68K])],
-                AC_DEFINE(BE13_API_LITTLEENDIAN, 1, [Little Endian aarchitecutre - like x86]))
+AC_C_BIGENDIAN([AC_DEFINE(BE20_API_BIGENDIAN, 1, [Big Endian aarchitecutre - like M68K])],
+                AC_DEFINE(BE20_API_LITTLEENDIAN, 1, [Little Endian aarchitecutre - like x86]))
 
 
 ################################################################

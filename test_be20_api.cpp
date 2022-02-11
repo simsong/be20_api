@@ -1,5 +1,5 @@
 /*
- * Most be13_api test cases are in this file.
+ * Most be20_api test cases are in this file.
  * The goal is to have complete test coverage of the v2 API
  *
  * Todo list:
@@ -976,7 +976,7 @@ TEST_CASE("scanner", "[scanner]") { /* check that scanner params made from an ex
 /****************************************************************
  * scanner_set.h:
  * Creates a place to hold all of the scanners.
- * The be13_api contains a single scanner for testing purposes:
+ * The be20_api contains a single scanner for testing purposes:
  * scan_null, the null scanner, which writes metadata into a version.txt feature file.
  */
 #include "scan_sha1_test.h"

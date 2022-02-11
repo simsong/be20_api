@@ -1,4 +1,4 @@
-# be13_api Makefile.am
+# be20_api Makefile.am
 # This file is compiled with automake to create Makefile.in.
 # Makefile.in is transformed by "configure" to create Makefile
 #
@@ -8,8 +8,8 @@
 # don't include bootstrap. People run it, and they shouldn't
 # It's only for people who check out the git repo
 
-# Use the current directory and include the list of BE13_API sources
-BE13_API_DIR = .
+# Use the current directory and include the list of BE20_API sources
+BE20_API_DIR = .
 include Makefile.defs
 
 DFXML_SRC_DIR=dfxml_cpp/src/
@@ -17,11 +17,11 @@ include $(DFXML_SRC_DIR)Makefile.defs
 
 EXTRA_DIST = \
 	$(DFXML_EXTRA_DIST) \
-	$(BE13_API_EXTRA_DIST) \
+	$(BE20_API_EXTRA_DIST) \
 	Makefile.defs \
 	bootstrap.sh \
 	m4/slg_gcc_all_warnings.m4 \
-	test_be13_api_malloc_debug \
+	test_be20_api_malloc_debug \
 	tests/random.dat \
 	tests/regex_demo.cpp \
 	tests/unilang.htm \
@@ -43,20 +43,20 @@ clang-format:
 
 AUTOMAKE_OPTIONS = subdir-objects
 
-#noinst_LIBRARIES = libbe13api.a
-#libbe13api_a_SOURCES = $(BE13_API_SRC)
+#noinst_LIBRARIES = libbe20api.a
+#libbe20api_a_SOURCES = $(BE20_API_SRC)
 
-bin_PROGRAMS = test_be13_api
-check_PROGRAMS = test_be13_api
-check_SCRIPTS = test_be13_api_malloc_debug
+bin_PROGRAMS = test_be20_api
+check_PROGRAMS = test_be20_api
+check_SCRIPTS = test_be20_api_malloc_debug
 TESTS = $(check_PROGRAMS)
 
-# apitest: test_be13_api
+# apitest: test_be20_api
 
-test_be13_api_SOURCES = $(BE13_API_SRC) $(DFXML_READER) $(DFXML_WRITER) \
+test_be20_api_SOURCES = $(BE20_API_SRC) $(DFXML_READER) $(DFXML_WRITER) \
 	catch.hpp \
-	test_be13_api.cpp \
-	test_be13_threadpool.cpp \
+	test_be20_api.cpp \
+	test_be20_threadpool.cpp \
 	test_image_reader.h \
 	test_image_reader.cpp
 
