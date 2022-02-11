@@ -1,8 +1,8 @@
 #ifndef FEATURE_RECORDER_H
 #define FEATURE_RECORDER_H
 
-#ifndef BE13_CONFIGURE_APPLIED
-#error you must include a config.h that has had be13_configure.m4 applied
+#ifndef BE20_CONFIGURE_APPLIED
+#error you must include a config.h that has had be20_configure.m4 applied
 #endif
 
 
@@ -81,7 +81,7 @@ struct feature_recorder_def {
         CARVE_NONE = 0,    // don't carve at all, even if the carve function is called
         CARVE_ENCODED = 1, // only carve if the data being carved is encoded (e.g. BASE64 or GZIP is in path)
         CARVE_ALL = 2      // carve whenever the carve function is called.
-    } default_carve_mode{CARVE_ALL};
+    } default_carve_mode {CARVE_ALL};
     size_t min_carve_size {200};
     size_t max_carve_size {16*1024*1024};
 

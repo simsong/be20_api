@@ -8,4 +8,4 @@ ignore:
   - "utf8.h"
   - "utf8/*"
   - "tests/regex_demo.cpp"
-  - "test_be13_api.cpp"
+  - "test_be20_api.cpp"

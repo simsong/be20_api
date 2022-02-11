@@ -1,5 +1,5 @@
 /*
- * be13_api threadpool test is in this file.
+ * be20_api threadpool test is in this file.
  * The goal is to have complete test coverage of the v2 API
  *
  */

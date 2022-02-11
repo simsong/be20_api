@@ -58,7 +58,7 @@
 #endif
 
 /* namespace needed here because of conflicts below */
-namespace be13 {
+namespace be20 {
 
 #ifndef ETH_ALEN
 #define ETH_ALEN 6 // ethernet address len
@@ -96,7 +96,7 @@ struct ip4_addr {
  * Structure of an internet header, naked of options.
  */
 struct ip4 {
-#ifdef BE13API_BIGENDIAN
+#ifdef BE20API_BIGENDIAN
     uint8_t ip_v : 4;  /* version */
     uint8_t ip_hl : 4; /* header length */
 #else
@@ -166,7 +166,7 @@ struct tcphdr {
     uint16_t th_dport; /* destination port */
     tcp_seq th_seq;    /* sequence number */
     tcp_seq th_ack;    /* acknowledgement number */
-#ifdef BE13_API_BIGENDIAN
+#ifdef BE20_API_BIGENDIAN
     uint8_t th_off : 4; /* data offset */
     uint8_t th_x2 : 4;  /* (unused) */
 #else
@@ -440,7 +440,7 @@ inline uint16_t packet_info::get_ip6_tcp_dport() const {
 
 /* A packet_info provided as a callback.
  */
-typedef void packet_callback_t(void* user, const be13::packet_info& pi);
-}; // namespace be13
+typedef void packet_callback_t(void* user, const be20::packet_info& pi);
+}; // namespace be20
 
 #endif

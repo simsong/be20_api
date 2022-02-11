@@ -3,8 +3,8 @@
 #ifndef SBUF_H
 #define SBUF_H
 
-#ifndef BE13_CONFIGURE_APPLIED
-#error you must include a config.h that has had be13_configure.m4 applied
+#ifndef BE20_CONFIGURE_APPLIED
+#error you must include a config.h that has had be20_configure.m4 applied
 #endif
 
 /*

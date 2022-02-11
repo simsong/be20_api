@@ -129,7 +129,7 @@ struct scanner_params {
 
         // Derrived:
         // void              *packet_user {};        //   data for network callback
-        // be13::packet_callback_t *packet_cb {};    //   callback for processing network packets, or NULL
+        // be20::packet_callback_t *packet_cb {};    //   callback for processing network packets, or NULL
 
         // Move constructor
         scanner_info(scanner_info&& source)
