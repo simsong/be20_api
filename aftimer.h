@@ -50,8 +50,6 @@ public:
  * https://gist.github.com/ugovaretto/5875385
  */
 
-//inline void timestamp(struct timeval* t) { gettimeofday(t, NULL); }
-
 // https://stackoverflow.com/questions/16177295/get-time-since-epoch-in-milliseconds-preferably-using-c11-chrono
 inline std::string aftimer::now_str(std::string prefix,std::string suffix) {
     //uint64_t nanoseconds_since_epoch  = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now());

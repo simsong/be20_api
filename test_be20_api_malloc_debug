@@ -6,8 +6,8 @@ export MallocStackLoggingNoCompact=1
 export MallocScribble=1
 export MallocPreScribble=1
 export MallocGuardEdges=1
-./test_be13_api $* || exit 1
+./test_be20_api $* || exit 1
 
 export MallocCheckHeapStart=1000
 export MallocCheckHeapEach=100
-./test_be13_api $* || exit 1
+./test_be20_api $* || exit 1

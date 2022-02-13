@@ -1,10 +1,10 @@
-# be13_api
-[branch slg-dev](https://github.com/simsong/be13_api/blob/slg-dev/README.md): [![codecov](https://codecov.io/gh/simsong/be13_api/branch/slg-dev/graph/badge.svg?token=Nj8q8eo3Ji)](https://codecov.io/gh/simsong/be13_api)
+# be20_api
+[branch slg-dev](https://github.com/simsong/be20_api/blob/slg-dev/README.md): [![codecov](https://codecov.io/gh/simsong/be20_api/branch/slg-dev/graph/badge.svg?token=Nj8q8eo3Ji)](https://codecov.io/gh/simsong/be20_api)
 
-[![codecov](https://codecov.io/gh/simsong/be13_api/branch/slg-dev/graph/badge.svg?token=Nj8q8eo3Ji)](https://codecov.io/gh/simsong/be13_api)
+[![codecov](https://codecov.io/gh/simsong/be20_api/branch/slg-dev/graph/badge.svg?token=Nj8q8eo3Ji)](https://codecov.io/gh/simsong/be20_api)
 
 This is the framework for the [bulk_extractor](https://github.com/simsong/bulk_extractor)  plug-in API.
-It is called *be13_api* because the API was developed for Bulk_Extractor version 1.3. The API has been
+It is called *be20_api* because the API was developed for Bulk_Extractor version 1.3. The API has been
 used without change in Bulk_Extractor versions 1.4 and 1.5, and will be used without change in Bulk_Extractor version 2.0
 
 The Bulk_Extractor API is a plug-in API for bulk_extractor "scanners." Scanners are implemented
@@ -57,7 +57,7 @@ This repo can used in three ways:
 2. As a stand-alone repo for developing and testing scanners.
 3. As a submodule repo to bulk_extractor or tcplow
 
-The autotools implementation is this repo is designed to either be included in the parent's `configure.ac` file or to use its own `configure.ac` file. It makes a library called `be13_api.a` which can then be linked into the bulk_extractor program or the testing program.
+The autotools implementation is this repo is designed to either be included in the parent's `configure.ac` file or to use its own `configure.ac` file. It makes a library called `be20_api.a` which can then be linked into the bulk_extractor program or the testing program.
 
 Use the  `bootstrap.sh` program in *this* repo to compile the test programs.
 
@@ -67,9 +67,9 @@ Git submodules are complicated. Basically, the parent module is linked to a pari
 
 Update to this repository to master:
 
-    (cd be13_api; git pull origin master)
+    (cd be20_api; git pull origin master)
 
-# Major changes with BE13 v. 2.0:
+# Major changes with BE20 v. 2.0:
 * `scanner_set` now controls the recursive scanning process. Scanner
   set holds the configuration information for the scan and the scanners.
 
@@ -89,12 +89,8 @@ Scanner Activation
 
 * The scanners are then sent
 
-BE13_API STATUS REPORT
+BE20_API STATUS REPORT
 ======================
-I continue to port bulk_extractor, tcpflow, be13_api and dfxml to modern C++. After surveying the standards I’ve decided to go with C++17 and not C++14, as support for 17 is now widespread. (I probably don’t need 20). I am sticking with autotools, although there seems a strong reason to move to CMake. I am keeping be13_api and dfxml as a modules that are included, python-style, rather than making them stand-alone libraries that are linked against. I’m not 100% sure that’s the correct decision, though.
+BE13_API has been renamed BE20_API and is largley complete.
 
-The project is taking longer than anticipated because I am also doing a general code refactoring. The main thing that is taking time is figuring out how to detangle all of the C++ objects having to do with parser options and configuration.
-
-Given that tcpflow and bulk_extractor both use be13_api, my attention has shifted to using tcpflow to get be13_api operational, as it is a simpler program. I’m about three quarters of the way through now. I anticipate having something finished before the end of 2020.
-
---- Simson Garfinkel, October 18, 2020
+Next on the agenda is rewriting tcpflow to use be20_api from be13_api.

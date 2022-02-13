@@ -1,6 +1,6 @@
 #!/bin/bash
 # run each test once
-TEST=test_be13_api
+TEST=test_be20_api
 PATH=$PATH:.:..
 tests=$($TEST -l | egrep -v 'All available|test cases|\[')
 for test in $tests ; do

@@ -1131,7 +1131,7 @@ uint64_t scanner_set::previously_processed_count(const sbuf_t& sbuf) {
  * Designed to be very efficient because we have so many packets.
  */
 #if 0
-void scanner_set::process_packet(const be13::packet_info &pi)
+void scanner_set::process_packet(const be20::packet_info &pi)
 {
     for (packet_plugin_info_vector_t::iterator it = packet_handlers.begin(); it != packet_handlers.end(); it++){
         (*(*it).callback)((*it).user,pi);
@@ -1147,9 +1147,9 @@ typedef std::vector<packet_plugin_info> packet_plugin_info_vector_t;
 /* object for keeping track of packet callbacks */
 class packet_plugin_info {
 public:
-    packet_plugin_info(void *user_,be13::packet_callback_t *callback_):user(user_),callback(callback_){};
+    packet_plugin_info(void *user_,be20::packet_callback_t *callback_):user(user_),callback(callback_){};
     void *user;
-    be13::packet_callback_t *callback;
+    be20::packet_callback_t *callback;
 };
 void scanner_set::load_scanner_packet_handlers()
 {

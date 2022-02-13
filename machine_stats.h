@@ -1,8 +1,8 @@
 #ifndef MACHINE_STATS_H
 #define MACHINE_STATS_H
 
-#ifndef BE13_CONFIGURE_APPLIED
-#error config.h with be13_api additions must be included before machine_stats.h
+#ifndef BE20_CONFIGURE_APPLIED
+#error config.h with be20_api additions must be included before machine_stats.h
 #endif
 
 #ifdef HAVE_MACH_MACH_H

@@ -11,8 +11,8 @@
 #include <memory>
 #include <mutex>
 
-#ifndef BE13_CONFIGURE_APPLIED
-#error you must include a config.h that has had be13_configure.m4 applied
+#ifndef BE20_CONFIGURE_APPLIED
+#error you must include a config.h that has had be20_configure.m4 applied
 #endif
 
 #include "utils.h"
@@ -303,7 +303,7 @@ public:;
     bool allow_recurse() const { return sc.allow_recurse; };
 
 
-    // void     process_packet(const be13::packet_info &pi);
+    // void     process_packet(const be20::packet_info &pi);
 
     /* PHASE_SHUTDOWN */
     // explicit shutdown, called automatically on delete if it hasn't be called

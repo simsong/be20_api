@@ -10,7 +10,7 @@
 
 #AC_PREREQ([2.71])
 AC_PREREQ([2.69])
-AC_INIT([BE13_API],[2.0.0-dev1],[bugs@digitalcorpora.org])
+AC_INIT([BE20_API],[2.0.0-dev1],[bugs@digitalcorpora.org])
 AC_CONFIG_MACRO_DIR(m4)
 
 AC_CONFIG_FILES([Makefile ])
@@ -43,9 +43,9 @@ m4_include([m4/slg_gcc_all_warnings.m4])
 ## Check for headers used by bulk Extractor
 ## do not put pthread here
 
-## Check dfxml and be13_api headers
+## Check dfxml and be20_api headers
 m4_include([dfxml_cpp/src/dfxml_configure.m4])
-m4_include([be13_configure.m4])
+m4_include([be20_configure.m4])
 m4_include([m4/slg_address_sanitizer.m4])
 m4_include([m4/slg_noopt.m4])
 
