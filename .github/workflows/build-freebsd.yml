@@ -7,7 +7,7 @@
 # See: https://github.community/t/how-to-trigger-workflow-run-once-a-week-if-push-has-occurred/18124
 
 
-name: BE13_API CI (c++17) on FreeBSD
+name: BE20_API CI (c++17) on FreeBSD
 # on: [push]
 on:
   schedule:

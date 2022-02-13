@@ -10,7 +10,7 @@
  *** TCP/IP isn't changing anytime soon, and when it changes (as it
  *** did with IPv6), these different systems all implemented it slightly
  *** differently, and that caused a lot of problems for us.
- *** So the BE13 API has a single implementation and it's good enough
+ *** So the BE20API has a single implementation and it's good enough
  *** for our uses.
  ***/
 
