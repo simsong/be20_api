@@ -485,7 +485,6 @@ namespace be20 {
             return ~sum;
         };
     };
-
 }; // namespace be20
 
 #endif
