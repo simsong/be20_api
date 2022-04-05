@@ -3,14 +3,14 @@
 # Order is largely irrelevant, although it must start with AC_INIT and end with AC_OUTPUT
 # See http://autotoolset.sourceforge.net/tutorial.html
 # and http://www.openismus.com/documents/linux/automake/automake.shtml
+# This is used solely for creating the test program
 
 #
 # This file is public domain
 #
 
-#AC_PREREQ([2.71])
 AC_PREREQ([2.69])
-AC_INIT([BE20_API],[2.0.0-dev1],[bugs@digitalcorpora.org])
+AC_INIT([BE20_API],[2.0.0],[bugs@digitalcorpora.org])
 AC_CONFIG_MACRO_DIR(m4)
 
 AC_CONFIG_FILES([Makefile ])
