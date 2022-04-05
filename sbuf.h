@@ -320,6 +320,10 @@ public:;
         return (uint16_t)(this->buf[i + 0] <<  0) | (uint16_t)(this->buf[i + 1] << 8);
     }
 
+    uint16_t get16uBE_unsafe(size_t i) const {
+        return (uint16_t)(this->buf[i + 1] <<  0) | (uint16_t)(this->buf[i + 0] << 8);
+    }
+
     uint16_t get16u(size_t i) const {
         if (i + 2 > bufsize) throw sbuf_t::range_exception_t(i, 2);
         return get16u_unsafe(i);
