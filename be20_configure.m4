@@ -2,7 +2,7 @@
 # mix-ins for be20
 #
 
-AC_MSG_NOTICE([Including be20_configure.m4 from be20_api])
+AC_MSG_NOTICE([be20_api/be20_configure.m4 start])
 AC_DEFINE(BE20_CONFIGURE_APPLIED, 1, [be20_configure.m4 was included by autoconf.ac])
 
 ################################################################
@@ -46,3 +46,4 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM(
   ]])],
  [AC_DEFINE(HAVE_DIAGNOSTIC_CAST_ALIGN,1,[define 1 if GCC supports -Wcast-align])]
 )
+AC_MSG_NOTICE([be20_api/be20_configure.m4 end])
