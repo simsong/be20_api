@@ -241,9 +241,6 @@ public:
     // Find interface
     const std::vector<std::string> &find_patterns() const           { return sc.find_patterns(); }
     const std::vector<std::filesystem::path> &find_files()    const { return sc.find_files(); }
-    //void add_find_pattern(std::string pattern)                      { sc.add_find_pattern(pattern);}
-    //void add_find_path(std::filesystem::path path)                  { sc.add_find_file(path);}
-    //bool find_opts_empty() const                                    { return sc.find_opts_empty(); }
 
     // Scanning
     scanner_params::phase_t get_current_phase() const { return current_phase; };
