@@ -7,7 +7,7 @@
 # See: https://github.community/t/how-to-trigger-workflow-run-once-a-week-if-push-has-occurred/18124
 
 
-name: BE13_API CI (c++17) on FreeBSD
+name: BE20_API CI (c++17) on FreeBSD
 # on: [push]
 on:
   schedule:
@@ -33,13 +33,13 @@ jobs:
         if: steps.check_sha.outputs.cache-hit != 'true'
         run: |
           echo "Execute the subsequent steps because the SHA changed"
-          sudo apt-get install virtualbox
+          sudo apt install virtualbox
 
       - name: Checkout
         uses: actions/checkout@v2
         with:
           submodules: recursive
-          
+
       - name: make check on FreeBSD
         uses: vmactions/freebsd-vm@v0.1.5
         with:
