@@ -1,7 +1,10 @@
 # be20_api
-[branch slg-dev](https://github.com/simsong/be20_api/blob/slg-dev/README.md): [![codecov](https://codecov.io/gh/simsong/be20_api/branch/slg-dev/graph/badge.svg?token=Nj8q8eo3Ji)](https://codecov.io/gh/simsong/be20_api)
 
-[![codecov](https://codecov.io/gh/simsong/be20_api/branch/slg-dev/graph/badge.svg?token=Nj8q8eo3Ji)](https://codecov.io/gh/simsong/be20_api)
+|Branch|Coverage|
+|------|--------|
+|[main](https://github.com/simsong/be20_api/blob/main/README.md)|[![codecov](https://codecov.io/gh/simsong/be20_api/branch/slg-dev/graph/badge.svg?token=Nj8q8eo3Ji)](https://codecov.io/gh/simsong/be20_api)|
+|[slg-dev](https://github.com/simsong/be20_api/blob/slg-dev/README.md)| [![codecov](https://codecov.io/gh/simsong/be20_api/branch/slg-dev/graph/badge.svg?token=Nj8q8eo3Ji)](https://codecov.io/gh/simsong/be20_api)|
+
 
 This is the framework for the [bulk_extractor](https://github.com/simsong/bulk_extractor)  plug-in API.
 It is called *be20_api* because the API was developed for Bulk_Extractor version 1.3. The API has been
