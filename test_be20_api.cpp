@@ -1225,7 +1225,33 @@ TEST_CASE("word_and_context_list", "[feature_recorder]") {
     REQUIRE(word_and_context_list::rstrcmp("aaaa1", "bbbb0") < 0);
     REQUIRE(word_and_context_list::rstrcmp("aaaa1", "aaaa1") == 0);
     REQUIRE(word_and_context_list::rstrcmp("bbbb0", "aaaa1") > 0);
+
+    auto tmpdir = NamedTemporaryDirectory();
+    std::filesystem::path words_txt = tmpdir / "words.txt";
+    std::filesystem::path bogus_txt = tmpdir / "bogus.txt";
+    std::ofstream os;
+    os.open(words_txt);
+    REQUIRE(os.is_open());
+    os << "# This is a comment\n";
+
+    // Three features with no context
+    os << "word1\n";
+    os << "word2\n";
+    os << "word3\n";
+
+    // And a simple regular expression
+    os << "letters?\n";
+
+    os.close();
+    word_and_context_list wcl;
+    REQUIRE(wcl.readfile(bogus_txt) == -1);
+    REQUIRE(wcl.readfile(words_txt) == 0);
+    REQUIRE(wcl.size() == 4);
+
+    std::filesystem::remove(words_txt);
+    std::filesystem::remove_all(tmpdir);
 }
+
 
 /****************************************************************
  * unicode_escape.h

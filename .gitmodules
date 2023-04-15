@@ -1,3 +1,6 @@
 [submodule "dfxml_cpp"]
 	path = dfxml_cpp
 	url = https://github.com/dfxml-working-group/dfxml_cpp.git
+[submodule "utfcpp"]
+	path = utfcpp
+	url = https://github.com/nemtrif/utfcpp.git

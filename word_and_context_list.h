@@ -34,6 +34,7 @@
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
+#include <filesystem>
 
 #include "regex_vector.h"
 
@@ -99,12 +100,12 @@ public:
     size_t size() { return fcmap.size() + patterns.size(); }
     void add_regex(const std::string& pat);                  // not threadsafe
     bool add_fc(const std::string& f, const std::string& c); // not threadsafe
-    int readfile(const std::string& fname);                  // not threadsafe
+    int readfile(const std::filesystem::path path, std::ostream& os = std::cout); // readfile with stats to os
 
     // return true if the probe with context is in the list or in the stopmap
     bool check(const std::string& probe, const std::string& before, const std::string& after) const; // threadsafe
     bool check_feature_context(const std::string& probe, const std::string& context) const;          // threadsafe
-    void dump();
+    void dump(std::ostream &os = std::cout);
 };
 
 /* like strcmp, but runs in reverse */

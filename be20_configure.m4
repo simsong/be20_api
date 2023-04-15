@@ -1,5 +1,5 @@
 #
-# mix-ins for be20
+# mix-ins for be20_api
 #
 
 AC_MSG_NOTICE([be20_api/be20_configure.m4 start])

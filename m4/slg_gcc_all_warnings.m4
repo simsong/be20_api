@@ -20,14 +20,10 @@
 # -Wundef  --- causes problems with zlib
 # -Wcast-qual
 # -Wmissing-format-attribute  --- Just too annoying
+
 AC_LANG_PUSH(C++)
 AC_CHECK_HEADERS([string])
-CXX_WARNINGS_TO_TEST="-Wall -MD -Wpointer-arith \
-    -Wshadow -Wwrite-strings -Wcast-align  \
-    -Wredundant-decls -Wdisabled-optimization \
-    -Wfloat-equal -Wmultichar -Wmissing-noreturn \
-    -Woverloaded-virtual -Wsign-promo \
-    -funit-at-a-time"
+CXX_WARNINGS_TO_TEST="-Wall -MD -Wpointer-arith -Wshadow -Wwrite-strings -Wcast-align -Wredundant-decls -Wdisabled-optimization -Wfloat-equal -Wmultichar -Wmissing-noreturn -Woverloaded-virtual -Wsign-promo"
 
 if test x"${mingw}" != "xyes" ; then
   # add the warnings we don't want to do on mingw
