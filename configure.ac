@@ -47,10 +47,11 @@ m4_include([m4/slg_gcc_all_warnings.m4])
 ## do not put pthread here
 
 ## Check dfxml and be20_api headers
+
 m4_include([dfxml_cpp/src/dfxml_configure.m4])
-m4_include([be20_configure.m4])
 m4_include([m4/slg_address_sanitizer.m4])
 m4_include([m4/slg_noopt.m4])
+m4_include([be20_configure.m4])
 
 ############## drop optimization flags and add -g if requested ################
 if test x"${AFF_NOOPT}" != "x" ; then

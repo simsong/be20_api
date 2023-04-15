@@ -68,7 +68,7 @@ int word_and_context_list::readfile(const std::string& filename) {
         }
     }
     std::cout << "Stop list read.\n";
-    std::cout << "  Total features read: " << features_read << "\n";
+    std::cout << "  Total features read: " << features_read << " in " << line_counter << " lines.\n";
     std::cout << "  List Size: " << fcmap.size() << "\n";
     std::cout << "  Context Strings: " << total_context << "\n";
     std::cout << "  Regular Expressions: " << patterns.size() << "\n";
