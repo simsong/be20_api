@@ -27,9 +27,9 @@ EXTRA_DIST = \
 	tests/unilang.htm \
 	tests/unilang8.htm
 
-
 ETAGS = etags-emacs
 ACLOCAL_AMFLAGS = -I m4
+AM_CPPFLAGS = -I$(top_srcdir)/utfcpp/source
 
 
 clean-local:

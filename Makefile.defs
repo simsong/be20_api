@@ -47,14 +47,12 @@ BE20_API_SRC= \
         $(BE20_API_DIR)/threadpool.cpp \
 	$(BE20_API_DIR)/unicode_escape.cpp \
 	$(BE20_API_DIR)/unicode_escape.h \
-	$(BE20_API_DIR)/utf8.h \
-	$(BE20_API_DIR)/utf8/checked.h \
-	$(BE20_API_DIR)/utf8/core.h \
-	$(BE20_API_DIR)/utf8/cpp11.h \
-	$(BE20_API_DIR)/utf8/cpp17.h \
-	$(BE20_API_DIR)/utf8/LICENSE \
-	$(BE20_API_DIR)/utf8/README.md \
-	$(BE20_API_DIR)/utf8/unchecked.h \
+	$(BE20_API_DIR)/utfcpp/source/utf8.h \
+	$(BE20_API_DIR)/utfcpp/source/utf8/checked.h \
+	$(BE20_API_DIR)/utfcpp/source/utf8/core.h \
+	$(BE20_API_DIR)/utfcpp/source/utf8/cpp11.h \
+	$(BE20_API_DIR)/utfcpp/source/utf8/cpp17.h \
+	$(BE20_API_DIR)/utfcpp/source/utf8/unchecked.h \
 	$(BE20_API_DIR)/utils.cpp \
 	$(BE20_API_DIR)/utils.h \
 	$(BE20_API_DIR)/word_and_context_list.cpp \
@@ -64,4 +62,6 @@ BE20_API_SRC= \
         $(BE20_API_DIR)/dfxml_cpp/src/cpuid.h
 
 BE20_API_EXTRA_DIST=\
-        $(BE20_API_DIR)/README.md
+        $(BE20_API_DIR)/README.md \
+	$(BE20_API_DIR)/utfcpp/LICENSE \
+	$(BE20_API_DIR)/utfcpp/README.md

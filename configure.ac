@@ -5,6 +5,8 @@
 # and http://www.openismus.com/documents/linux/automake/automake.shtml
 # This is used solely for creating the test program
 
+# Review Makefile.am which includes Makefile.defs
+
 #
 # This file is public domain
 #
@@ -36,6 +38,7 @@ AC_LANG_POP()
 
 # Turn on all warnings
 m4_include([m4/slg_gcc_all_warnings.m4])
+
 
 ################################################################
 # Specify our headers

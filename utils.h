@@ -27,8 +27,6 @@
 #include <unistd.h>
 #include <vector>
 
-#include "utf8.h"
-
 bool getenv_debug(const char *name);    // look for an environment variable and return TRUE if it is set and not 0 or FALSE
 bool starts_with(const std::string& buf, const std::string& with);
 bool ends_with(const std::string& buf, const std::string& with);
@@ -102,29 +100,6 @@ inline int ishexnumber(int c) {
     return 0;
 }
 #endif
-
-inline std::string safe_utf16to8(std::wstring s) { // needs to be cleaned up
-    std::string utf8_line;
-    try {
-        utf8::utf16to8(s.begin(), s.end(), back_inserter(utf8_line));
-    } catch (const utf8::invalid_utf16&) {
-        /* Exception thrown: bad UTF16 encoding */
-        utf8_line = "";
-    }
-    return utf8_line;
-}
-
-// This needs to be cleaned up:
-inline std::wstring safe_utf8to16(std::string s) {
-    std::wstring utf16_line;
-    try {
-        utf8::utf8to16(s.begin(), s.end(), back_inserter(utf16_line));
-    } catch (const utf8::invalid_utf8&) {
-        /* Exception thrown: bad UTF8 encoding */
-        utf16_line = L"";
-    }
-    return utf16_line;
-}
 
 #ifndef HAVE_ISXDIGIT
 inline int isxdigit(int c) { return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F'); }

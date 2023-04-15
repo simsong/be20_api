@@ -28,7 +28,7 @@
 struct machine_stats {
     static float get_cpu_percentage() {
         char buf[100];
-        sprintf(buf,"ps -O %ccpu %d",'%',getpid());
+        snprintf(buf,sizeof(buf),"ps -O %ccpu %d",'%',getpid());
         FILE *f = popen(buf,"r");
         if(f==nullptr){
             perror("popen failed\n");

@@ -26,8 +26,7 @@ CXX_WARNINGS_TO_TEST="-Wall -MD -Wpointer-arith \
     -Wshadow -Wwrite-strings -Wcast-align  \
     -Wredundant-decls -Wdisabled-optimization \
     -Wfloat-equal -Wmultichar -Wmissing-noreturn \
-    -Woverloaded-virtual -Wsign-promo \
-    -funit-at-a-time"
+    -Woverloaded-virtual -Wsign-promo
 
 if test x"${mingw}" != "xyes" ; then
   # add the warnings we don't want to do on mingw

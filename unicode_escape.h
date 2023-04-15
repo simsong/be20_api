@@ -7,8 +7,7 @@
 #ifndef UNICODE_ESCAPE_H
 #define UNICODE_ESCAPE_H
 
-#include <codecvt>
-//#include <cstdint>
+//#include <codecvt>
 #include <cstring>
 #include <cwctype>
 #include <iostream>
@@ -87,26 +86,42 @@ inline const std::u32string utf32_extract_numeric(const std::u32string& str) {
     return output;
 }
 
-/* Standards Compliant */
-// https://en.cppreference.com/w/cpp/locale/wstring_convert/from_bytes
-// https://stackoverflow.com/questions/38688417/utf-conversion-functions-in-c11
+/* Now we just pass through to utf8 */
 inline const std::u16string convert_utf8_to_utf16(const std::string& utf8) {
-    return std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t>{}.from_bytes(utf8.data());
+    return utf8::utf8to16(utf8);
 }
 
 inline const std::u32string convert_utf8_to_utf32(const std::string utf8) {
-    return std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t>{}.from_bytes(utf8);
+    return utf8::utf8to32(utf8);
 }
 
-// https://stackoverflow.com/questions/48474227/during-conversation-from-utf32-to-utf8-using-utf8-cpp-i-get-an-error-utf8inva
 inline const std::string convert_utf32_to_utf8(const std::u32string& u32s) {
-    std::string u8s;
-    utf8::utf32to8(u32s.begin(), u32s.end(), std::back_inserter(u8s));
-    return u8s;
-    // std::wstring_convert<std::codecvt_utf8<int32_t>, int32_t> convert;
-    //    auto p = static_cast<const int32_t *>(s.data());
-    //    return convert.to_bytes(p, p + s.size());
-    // return std::string();
+    return utf8::utf32to8(u32s);
 }
+
+inline std::string safe_utf16to8(std::wstring s) { // needs to be cleaned up
+    std::string utf8_line;
+    try {
+        utf8::utf16to8(s.begin(), s.end(), back_inserter(utf8_line));
+    } catch (const utf8::invalid_utf16&) {
+        /* Exception thrown: bad UTF16 encoding */
+        utf8_line = "";
+    }
+    return utf8_line;
+}
+
+// This needs to be cleaned up:
+inline std::wstring safe_utf8to16(std::string s) {
+    std::wstring utf16_line;
+    try {
+        utf8::utf8to16(s.begin(), s.end(), back_inserter(utf16_line));
+    } catch (const utf8::invalid_utf8&) {
+        /* Exception thrown: bad UTF8 encoding */
+        utf16_line = L"";
+    }
+    return utf16_line;
+}
+
+
 
 #endif
