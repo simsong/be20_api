@@ -7,7 +7,6 @@
 #ifndef UNICODE_ESCAPE_H
 #define UNICODE_ESCAPE_H
 
-//#include <codecvt>
 #include <cstring>
 #include <cwctype>
 #include <iostream>
