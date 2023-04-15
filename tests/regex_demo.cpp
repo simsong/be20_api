@@ -20,8 +20,8 @@ int main(int argc,char **argv)
     std::cout << "len(s32)=" << s32.size() << "\n";
     std::basic_regex<char>  r8("([0-9]+)");
     std::basic_regex<wchar_t> r16(L"([0-9]+)");
+
     // this doesn't work:
     //std::basic_regex<char32_t>  r32(U"([0-9]+)");
-
     return(0);
 }

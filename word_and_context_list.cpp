@@ -24,11 +24,12 @@ bool word_and_context_list::add_fc(const std::string& f, const std::string& c) {
     return true;
 }
 
-/** returns 0 if success, -1 if fail. */
-int word_and_context_list::readfile(const std::string& filename) {
-    std::ifstream i(filename.c_str());
+/**
+returns 0 if success, -1 if fail. */
+int word_and_context_list::readfile(const std::filesystem::path path, std::ostream &os) {
+    std::ifstream i( path );
     if (!i.is_open()) return -1;
-    printf("Reading context stop list %s\n", filename.c_str());
+    os << "Reading context stop list " << path << "\n";
     std::string line;
     uint64_t total_context = 0;
     uint64_t line_counter = 0;
@@ -67,11 +68,11 @@ int word_and_context_list::readfile(const std::string& filename) {
             fcmap.insert(std::pair<std::string, context>(line, context(line)));
         }
     }
-    std::cout << "Stop list read.\n";
-    std::cout << "  Total features read: " << features_read << " in " << line_counter << " lines.\n";
-    std::cout << "  List Size: " << fcmap.size() << "\n";
-    std::cout << "  Context Strings: " << total_context << "\n";
-    std::cout << "  Regular Expressions: " << patterns.size() << "\n";
+    os << "Stop list read.\n";
+    os << "  Total features read: " << features_read << " in " << line_counter << " lines.\n";
+    os << "  List Size: " << fcmap.size() << "\n";
+    os << "  Context Strings: " << total_context << "\n";
+    os << "  Regular Expressions: " << patterns.size() << "\n";
     return 0;
 }
 
@@ -96,11 +97,11 @@ bool word_and_context_list::check_feature_context(const std::string& probe, cons
     return check(probe, before, after);
 }
 
-void word_and_context_list::dump() {
-    std::cout << "dump context list:\n";
-    for (auto const& it : fcmap) { std::cout << it.first << " = " << it.second << "\n"; }
-    std::cout << "dump RE list:\n";
-    patterns.dump(std::cout);
+void word_and_context_list::dump(std::ostream &os) {
+    os << "dump context list:\n";
+    for (auto const& it : fcmap) { os << it.first << " = " << it.second << "\n"; }
+    os << "dump RE list:\n";
+    patterns.dump(os);
 }
 
 #ifdef STAND
