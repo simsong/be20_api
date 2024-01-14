@@ -12,7 +12,7 @@
 #
 
 AC_PREREQ([2.69])
-AC_INIT([BE20_API],[2.0.0],[bugs@digitalcorpora.org])
+AC_INIT([BE20_API],[2.0.1],[bugs@digitalcorpora.org])
 AC_CONFIG_MACRO_DIR(m4)
 
 AC_CONFIG_FILES([Makefile ])
