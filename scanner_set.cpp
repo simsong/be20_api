@@ -739,24 +739,28 @@ void scanner_set::record_work_start(const sbuf_t *sbufp)
     }
 }
 
-void scanner_set::record_work_start_pos0str(const std::string pos0str)
+void scanner_set::record_work_start_stop_pos0str(const std::string pos0str)
 {
     if (writer) {
-        writer->xmlout("debug:work_start","",
-                       Formatter() << "pos0='" << dfxml_writer::xmlescape(pos0str) << "'", true);
+        writer->xmlout("debug:work_start","", Formatter() << "pos0='" << dfxml_writer::xmlescape(pos0str) << "' restarted='1' " , true);
+        writer->xmlout("debug:work_stop","",  Formatter() << "pos0='" << dfxml_writer::xmlescape(pos0str) << "' restarted='1' ", true);
     }
 }
 
 
 void scanner_set::record_work_end(const sbuf_t *sbufp)
 {
-    if (debug_flags.debug_benchmark && sbufp->depth()==0 && writer) {
-        writer->xmlout("debug:work_end", "",
-                       Formatter()
-                       << "threadid='" << std::this_thread::get_id() << "' "
-                       << "pos0='" << dfxml_writer::xmlescape(sbufp->pos0.str()) << "'"
-                       << "rc='" << sbufp->reference_count << "'"
-                       << aftimer::now_str(" t='","'"), true);
+    if (sbufp->depth()==0 && writer) {
+
+        Formatter fmt;
+        fmt << "threadid='" << std::this_thread::get_id() << "' "
+            << "pos0='" << dfxml_writer::xmlescape(sbufp->pos0.str()) << "' "
+            << "rc='" << sbufp->reference_count << "'";
+        // add the time if this is a debug
+        if (debug_flags.debug_benchmark) {
+            fmt << aftimer::now_str(" t='","'");
+        }
+        writer->xmlout("debug:work_stop", "",fmt, true);
     }
 }
 

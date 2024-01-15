@@ -34,8 +34,8 @@ struct machine_stats {
             perror("popen failed\n");
             return(0);
         }
-        fgets(buf,sizeof(buf),f);           /* read the first line */
-        fgets(buf,sizeof(buf),f);           /* read the second line */
+        if (fgets(buf,sizeof(buf),f)==NULL) return nan("error1");           /* read the first line */
+        if (fgets(buf,sizeof(buf),f)==NULL) return nan("error2");           /* read the second line */
         pclose(f);
         buf[sizeof(buf)-1] = 0;             // in case it needs termination
         int pid=0;
