@@ -739,11 +739,11 @@ void scanner_set::record_work_start(const sbuf_t *sbufp)
     }
 }
 
-void scanner_set::record_work_start_pos0str(const std::string pos0str)
+void scanner_set::record_work_start_stop_pos0str(const std::string pos0str)
 {
     if (writer) {
-        writer->xmlout("debug:work_start","",
-                       Formatter() << "pos0='" << dfxml_writer::xmlescape(pos0str) << "'", true);
+        writer->xmlout("debug:work_start","", Formatter() << "pos0='" << dfxml_writer::xmlescape(pos0str) << "' restarted='1' " , true);
+        writer->xmlout("debug:work_stop","",  Formatter() << "pos0='" << dfxml_writer::xmlescape(pos0str) << "' restarted='1' ", true);
     }
 }
 
