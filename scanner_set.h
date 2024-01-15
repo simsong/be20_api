@@ -285,7 +285,7 @@ public:;
     void schedule_sbuf(const sbuf_t* sbuf);                    // process sbuf if not threading, otherwise retain and put it on the queue.
 
     void record_work_start(const sbuf_t *sbuf);
-    void record_work_start_pos0str(const std::string pos0str);
+    void record_work_start_stop_pos0str(const std::string pos0str);
     void record_work_end(const sbuf_t *sbuf);
 
 
