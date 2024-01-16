@@ -27,7 +27,7 @@ Configuring $OS_NAME $OS_VERSION to compile be20 for test programs
 ******************************************************************
 EOF
 
-MPKGS="libtool autoconf automake libssl-dev pkg-config re2 g++ "
+MPKGS="libtool autoconf automake libssl-dev pkg-config libre2-dev libabsl-dev make g++ libsqlite3-dev"
 
 sudo apt update -y
 sudo apt install -y $MPKGS
