@@ -12,8 +12,11 @@
 #
 
 AC_PREREQ([2.69])
-AC_INIT([BE20_API],[2.0.1],[bugs@digitalcorpora.org])
+AC_INIT([BE20_API],[2.1.0],[bugs@digitalcorpora.org])
 AC_CONFIG_MACRO_DIR(m4)
+
+AC_MSG_NOTICE([at start CPPFLAGS are $CPPFLAGS])
+
 
 AC_CONFIG_FILES([Makefile ])
 AC_CONFIG_HEADERS([config.h])
@@ -48,16 +51,25 @@ m4_include([m4/slg_gcc_all_warnings.m4])
 
 ## Check dfxml and be20_api headers
 
+AC_MSG_NOTICE([point 1 - CPPFLAGS are $CPPFLAGS])
+
 m4_include([dfxml_cpp/src/dfxml_configure.m4])
+
+AC_MSG_NOTICE([point 2 - CPPFLAGS are $CPPFLAGS])
+
+
 m4_include([m4/slg_address_sanitizer.m4])
+
+AC_MSG_NOTICE([point 3 - CPPFLAGS are $CPPFLAGS])
+
 m4_include([m4/slg_noopt.m4])
+
+AC_MSG_NOTICE([point 4 - CPPFLAGS are $CPPFLAGS])
 m4_include([be20_configure.m4])
 
-############## drop optimization flags and add -g if requested ################
-if test x"${AFF_NOOPT}" != "x" ; then
-   with_noopt="yes";
-fi
+AC_MSG_NOTICE([point 5 - CPPFLAGS are $CPPFLAGS])
 
+############## drop optimization flags and add -g if requested ################
 if test "${with_opt}" = "no" ; then
   CFLAGS=`echo   -g "$CFLAGS"   | sed s/-O[[0-9]]//`             # note the double quoting!
   CXXFLAGS=`echo -g "$CXXFLAGS" | sed s/-O[[0-9]]//`

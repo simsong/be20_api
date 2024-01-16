@@ -40,6 +40,7 @@ public:
         assert(regex_strings.size() == regex_chars.size());
     }
 
+    void clear() { regex_strings.clear(); regex_chars.clear();}
     auto size() { return regex_chars.size(); }
 
     /**

@@ -6,17 +6,6 @@ AC_MSG_NOTICE([be20_api/be20_configure.m4 start])
 AC_DEFINE(BE20_CONFIGURE_APPLIED, 1, [be20_configure.m4 was included by autoconf.ac])
 
 ################################################################
-## compile with pthread if its available
-SAVE_CXXFLAGS="$CXXFLAGS"
-CXXFLAGS="$CXXFLAGS -pthread"
-AC_MSG_CHECKING([whether C++ compiler understands $option])
-AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[]], [[]])],
-     [AC_MSG_RESULT([Adding -pthread to CXXFLAGS])],
-     [AC_MSG_RESULT([Compiler does not understand -pthread]); CXXFLAGS="$SAVE_CXXFLAGS"])
-unset SAVE_CXXFLAGS
-
-
-################################################################
 ## Endian check. Used for sbuf code.
 AC_C_BIGENDIAN([AC_DEFINE(BE20_API_BIGENDIAN, 1, [Big Endian aarchitecutre - like M68K])],
                 AC_DEFINE(BE20_API_LITTLEENDIAN, 1, [Little Endian aarchitecutre - like x86]))
@@ -28,8 +17,24 @@ AC_CHECK_HEADERS([ dlfcn.h fcntl.h limits.h limits/limits.h linux/if_ether.h net
 
 AC_CHECK_FUNCS([gmtime_r ishexnumber isxdigit localtime_r unistd.h mmap err errx warn warnx pread64 pread strptime _lseeki64 task_info utimes host_statistics64])
 
+################################################################
+## Libraries
+## Note that we now require pkg-config
+
 AC_CHECK_LIB([sqlite3],[sqlite3_libversion])
 AC_CHECK_FUNCS([sqlite3_create_function_v2 sysctlbyname])
+
+AC_MSG_NOTICE([CPPFLAGS are now $CPPFLAGS])
+
+AC_LANG_PUSH(C++)
+AC_CHECK_HEADERS([re2/re2.h])
+PKG_CHECK_MODULES([RE2], [re2], [
+  AC_DEFINE([HAVE_RE2], [1], [Define if you have the RE2 library])
+],
+  [AC_MSG_ERROR([Could not find RE2 library. Please install libre2-dev or equivalent.])])
+AC_LANG_POP()
+
+
 
 ################################################################
 ## Check on two annoying warnings
