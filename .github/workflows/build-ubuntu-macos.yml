@@ -42,7 +42,7 @@ jobs:
       - name: configure for ubuntu with codecov
         if: startsWith(matrix.os, 'ubuntu')
         run: |
-          ./configure -q --disable-opt --enable-address-sanitizer --enable-silent-rules CFLAGS='-g -O0 -fprofile-arcs -ftest-coverage' CXXFLAGS='-g -O0 -fprofile-arcs -ftest-coverage' LIBS='-lgcov'
+          ./configure --disable-opt --enable-address-sanitizer CFLAGS='-g -O0 -fprofile-arcs -ftest-coverage' CXXFLAGS='-g -O0 -fprofile-arcs -ftest-coverage' LIBS='-lgcov'
 
       - name: configure for macOS
         if: startsWith(matrix.os, 'macos')
