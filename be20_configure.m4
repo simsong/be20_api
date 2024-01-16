@@ -34,8 +34,6 @@ PKG_CHECK_MODULES([RE2], [re2], [
   [AC_MSG_ERROR([Could not find RE2 library. Please install libre2-dev or equivalent.])])
 AC_LANG_POP()
 
-
-
 ################################################################
 ## Check on two annoying warnings
 AC_COMPILE_IFELSE([AC_LANG_PROGRAM(
@@ -52,3 +50,7 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM(
  [AC_DEFINE(HAVE_DIAGNOSTIC_CAST_ALIGN,1,[define 1 if GCC supports -Wcast-align])]
 )
 AC_MSG_NOTICE([be20_api/be20_configure.m4 end])
+
+# Take out duplicate flags
+RE2_CFLAGS=$(echo $RE2_CFLAGS | tr ' ' '\n' | sort -u | tr '\n' ' ')
+RE2_LIBS=$(echo $RE2_LIBS | tr ' ' '\n' | sort -u | tr '\n' ' ')

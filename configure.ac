@@ -51,23 +51,24 @@ m4_include([m4/slg_gcc_all_warnings.m4])
 
 ## Check dfxml and be20_api headers
 
-AC_MSG_NOTICE([point 1 - CPPFLAGS are $CPPFLAGS])
-
 m4_include([dfxml_cpp/src/dfxml_configure.m4])
-
-AC_MSG_NOTICE([point 2 - CPPFLAGS are $CPPFLAGS])
-
-
 m4_include([m4/slg_address_sanitizer.m4])
-
-AC_MSG_NOTICE([point 3 - CPPFLAGS are $CPPFLAGS])
-
 m4_include([m4/slg_noopt.m4])
-
-AC_MSG_NOTICE([point 4 - CPPFLAGS are $CPPFLAGS])
 m4_include([be20_configure.m4])
+AC_MSG_NOTICE([hello point 1])
 
-AC_MSG_NOTICE([point 5 - CPPFLAGS are $CPPFLAGS])
+AC_MSG_NOTICE([CFLAGS are now $CFLAGS])
+AC_MSG_NOTICE([hello point 2])
+AC_MSG_NOTICE([CPPFLAGS are now $CPPFLAGS])
+AC_MSG_NOTICE([CXXFLAGS are now $CXXFLAGS])
+
+
+################################################################
+# Take out duplicate flags
+CFLAGS=$(echo $CFLAGS | tr ' ' '\n' | sort -u | tr '\n' ' ')
+CPPFLAGS=$(echo $CPPFLAGS | tr ' ' '\n' | sort -u | tr '\n' ' ')
+CXXFLAGS=$(echo $CXXFLAGS | tr ' ' '\n' | sort -u | tr '\n' ' ')
+
 
 ############## drop optimization flags and add -g if requested ################
 if test "${with_opt}" = "no" ; then

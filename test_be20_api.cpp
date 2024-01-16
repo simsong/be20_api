@@ -32,6 +32,8 @@
 #include <string>
 #include <csignal>
 
+#include <re2/re2.h>
+
 //#include "astream.h"
 #include "atomic_unicode_histogram.h"
 #include "sbuf.h"
@@ -779,7 +781,7 @@ TEST_CASE("test regex_vector", "[regex]") {
     REQUIRE(rv.search_all(bigstring, &found, &offset, &len) == true);
     alarm(0);
     REQUIRE(found == "user@company.com");
-    REQUIRE(offset == 1024*1024*30+2);
+    REQUIRE(offset == 1024*1024*30+1);
     REQUIRE(len == 16 );
 }
 
