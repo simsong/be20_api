@@ -749,7 +749,7 @@ TEST_CASE("pos0_t", "[feature_recorder]") {
  */
 #include "regex_vector.h"
 TEST_CASE("test regex_vector", "[regex]") {
-    std::cout << "Testing regex engine: " <<  regex_vector::regex_engine() << std:endl;
+    std::cout << "Testing regex engine: " <<  regex_vector::regex_engine() << std::endl;
 
     REQUIRE(regex_vector::has_metachars("this[1234]foo") == true);
     REQUIRE(regex_vector::has_metachars("this(1234)foo") == true);
