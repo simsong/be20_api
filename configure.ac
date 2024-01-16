@@ -69,7 +69,6 @@ CFLAGS=$(echo $CFLAGS | tr ' ' '\n' | sort -u | tr '\n' ' ')
 CPPFLAGS=$(echo $CPPFLAGS | tr ' ' '\n' | sort -u | tr '\n' ' ')
 CXXFLAGS=$(echo $CXXFLAGS | tr ' ' '\n' | sort -u | tr '\n' ' ')
 
-
 ############## drop optimization flags and add -g if requested ################
 if test "${with_opt}" = "no" ; then
   CFLAGS=`echo   -g "$CFLAGS"   | sed s/-O[[0-9]]//`             # note the double quoting!
@@ -77,5 +76,10 @@ if test "${with_opt}" = "no" ; then
 fi
 
 LIBS="-lstdc++ $LIBS"
+
+AC_MSG_NOTICE([CFLAGS are now $CFLAGS])
+AC_MSG_NOTICE([CPPFLAGS are now $CPPFLAGS])
+AC_MSG_NOTICE([CXXFLAGS are now $CXXFLAGS])
+
 
 AC_OUTPUT
