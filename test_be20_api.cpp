@@ -749,6 +749,8 @@ TEST_CASE("pos0_t", "[feature_recorder]") {
  */
 #include "regex_vector.h"
 TEST_CASE("test regex_vector", "[regex]") {
+    std::cout << "Testing regex engine: " <<  regex_vector::regex_engine() << std:endl;
+
     REQUIRE(regex_vector::has_metachars("this[1234]foo") == true);
     REQUIRE(regex_vector::has_metachars("this(1234)foo") == true);
     REQUIRE(regex_vector::has_metachars("this[1234].*foo") == true);
@@ -773,7 +775,9 @@ TEST_CASE("test regex_vector", "[regex]") {
     rv.push_back("[a-z]*@company.com");
 
     /* Make a 32MB array to search */
-    std::string bigstring = std::string(1024*1024*30,'a') + " user@company.com " + std::string(1024*1024*2,'b');
+    std::string bigstring = std::string(1024*1024*30,'a')
+        + " user@company.com "
+        + std::string(1024*1024*2,'b');
     found="";
     size_t offset = 0;
     size_t len = 0;
@@ -783,6 +787,8 @@ TEST_CASE("test regex_vector", "[regex]") {
     REQUIRE(found == "user@company.com");
     REQUIRE(offset == 1024*1024*30+1);
     REQUIRE(len == 16 );
+
+    /* Test from a file */
 }
 
 /****************************************************************
