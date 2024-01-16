@@ -3,7 +3,7 @@
 #include "regex_vector.h"
 
 /* rewritten to use C++11's regex */
-const std::string regex_vector::regex_engine() { return std::string("std-c++11"); }
+const std::string regex_vector::regex_engine() { return std::string("RE2"); }
 
 /* Only certain characters are assumed to be a regular expression. These characters are
  * coincidently never in email addresses.
@@ -26,13 +26,12 @@ bool regex_vector::has_metachars(const std::string& str) {
  * the length. Note that this only handles a single group.
  */
 bool regex_vector::search_all(const std::string& probe, std::string* found, size_t* offset, size_t* len) const {
-    for (const auto &it : regex_chars) {
-        std::smatch sm;
-        std::regex_search(probe, sm, it);
-        if (sm.size() > 0) {
-            if (found) *found = sm.str();
-            if (offset) *offset = sm.position();
-            if (len) *len = sm.length();
+    for (RE2 *re: regex_comps) {
+        re2::StringPiece result;
+        if (RE2::PartialMatch( probe, *re, &result) ){
+            if (found)  *found  = result;
+            if (offset) *offset = result.data() - probe.data(); // this is so gross
+            if (len)    *len    = result.length();
             return true;
         }
     }
@@ -50,7 +49,7 @@ int regex_vector::readfile(const std::string& fname) {
             if (line.size() > 0 && (((*line.end()) == '\r') || (*line.end()) == '\n')) { line.erase(line.end()); }
 
             /* Create a regular expression and add it */
-            regex_chars.push_back(std::regex(line));
+            push_back(line);
         }
         f.close();
         return 0;

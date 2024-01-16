@@ -32,6 +32,8 @@
 #include <string>
 #include <csignal>
 
+#include <re2/re2.h>
+
 //#include "astream.h"
 #include "atomic_unicode_histogram.h"
 #include "sbuf.h"
@@ -766,6 +768,21 @@ TEST_CASE("test regex_vector", "[regex]") {
 
     REQUIRE(rv.search_all("before check2 after", &found) == true);
     REQUIRE(found == "check2");
+
+    rv.clear();
+    rv.push_back("[a-z]*@company.com");
+
+    /* Make a 32MB array to search */
+    std::string bigstring = std::string(1024*1024*30,'a') + " user@company.com " + std::string(1024*1024*2,'b');
+    found="";
+    size_t offset = 0;
+    size_t len = 0;
+    alarm(60);
+    REQUIRE(rv.search_all(bigstring, &found, &offset, &len) == true);
+    alarm(0);
+    REQUIRE(found == "user@company.com");
+    REQUIRE(offset == 1024*1024*30+1);
+    REQUIRE(len == 16 );
 }
 
 /****************************************************************

@@ -2,7 +2,8 @@
 # This file is compiled with automake to create Makefile.in.
 # Makefile.in is transformed by "configure" to create Makefile
 #
-# (C) 2020 Simson L. Garfinkel
+# (C) 2020-2022 Simson L. Garfinkel
+# (C) 2020-2023 BasisTech LLC
 # https://www.gnu.org/licenses/lgpl-3.0.en.html
 
 # don't include bootstrap. People run it, and they shouldn't
@@ -29,8 +30,9 @@ EXTRA_DIST = \
 
 ETAGS = etags-emacs
 ACLOCAL_AMFLAGS = -I m4
-AM_CPPFLAGS = -I$(top_srcdir)/utfcpp/source
 
+AM_CPPFLAGS = @RE2_CFLAGS@ -I$(top_srcdir)/utfcpp/source
+AM_LDFLAGS = @RE2_LIBS@
 
 clean-local:
 	rm -f *.gcov *~ *.gcda *.gcno
@@ -60,5 +62,5 @@ test_be20_api_SOURCES = $(BE20_API_SRC) $(DFXML_READER) $(DFXML_WRITER) \
 	test_image_reader.h \
 	test_image_reader.cpp
 
-push:
-	make && make check && make distcheck && git push origin
+test_be20_api_CPPFLAGS = $(AM_CPPFLAGS) @RE2_CFLAGS@
+test_be20_api_LDADD = @RE2_LIBS@

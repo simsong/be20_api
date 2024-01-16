@@ -12,8 +12,11 @@
 #
 
 AC_PREREQ([2.69])
-AC_INIT([BE20_API],[2.0.1],[bugs@digitalcorpora.org])
+AC_INIT([BE20_API],[2.1.0],[bugs@digitalcorpora.org])
 AC_CONFIG_MACRO_DIR(m4)
+
+AC_MSG_NOTICE([at start CPPFLAGS are $CPPFLAGS])
+
 
 AC_CONFIG_FILES([Makefile ])
 AC_CONFIG_HEADERS([config.h])
@@ -52,12 +55,22 @@ m4_include([dfxml_cpp/src/dfxml_configure.m4])
 m4_include([m4/slg_address_sanitizer.m4])
 m4_include([m4/slg_noopt.m4])
 m4_include([be20_configure.m4])
+AC_MSG_NOTICE([hello point 1])
+
+AC_MSG_NOTICE([CFLAGS are now $CFLAGS])
+AC_MSG_NOTICE([hello point 2])
+AC_MSG_NOTICE([CPPFLAGS are now $CPPFLAGS])
+AC_MSG_NOTICE([CXXFLAGS are now $CXXFLAGS])
+
+
+################################################################
+# Take out duplicate flags
+CFLAGS=$(echo $CFLAGS | tr ' ' '\n' | sort -u | tr '\n' ' ')
+CPPFLAGS=$(echo $CPPFLAGS | tr ' ' '\n' | sort -u | tr '\n' ' ')
+CXXFLAGS=$(echo $CXXFLAGS | tr ' ' '\n' | sort -u | tr '\n' ' ')
+
 
 ############## drop optimization flags and add -g if requested ################
-if test x"${AFF_NOOPT}" != "x" ; then
-   with_noopt="yes";
-fi
-
 if test "${with_opt}" = "no" ; then
   CFLAGS=`echo   -g "$CFLAGS"   | sed s/-O[[0-9]]//`             # note the double quoting!
   CXXFLAGS=`echo -g "$CXXFLAGS" | sed s/-O[[0-9]]//`
