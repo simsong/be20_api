@@ -27,11 +27,11 @@ bool regex_vector::has_metachars(const std::string& str) {
  */
 bool regex_vector::search_all(const std::string& probe, std::string* found, size_t* offset, size_t* len) const {
     for (RE2 *re: regex_comps) {
-        re2::StringPiece result;
-        if (RE2::PartialMatch( probe, *re, &result) ){
-            if (found)  *found  = result;
-            if (offset) *offset = result.data() - probe.data(); // this is so gross
-            if (len)    *len    = result.length();
+        re2::StringPiece sp;
+        if (RE2::PartialMatch( probe, *re, &sp) ){
+            if (found)  *found  = std::string(sp.data(), sp.size());
+            if (offset) *offset = sp.data() - probe.data(); // this is so gross
+            if (len)    *len    = sp.length();
             return true;
         }
     }
