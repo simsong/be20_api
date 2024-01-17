@@ -786,8 +786,6 @@ TEST_CASE("test regex_vector", "[regex]") {
     REQUIRE(found == "user@company.com");
     REQUIRE(offset == 1024*1024*30+1);
     REQUIRE(len == 16 );
-
-    /* Test from a file */
 }
 
 /****************************************************************
