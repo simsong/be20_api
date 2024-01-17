@@ -24,14 +24,17 @@ AC_CHECK_FUNCS([gmtime_r ishexnumber isxdigit localtime_r unistd.h mmap err errx
 AC_CHECK_LIB([sqlite3],[sqlite3_libversion])
 AC_CHECK_FUNCS([sqlite3_create_function_v2 sysctlbyname])
 
-AC_MSG_NOTICE([CPPFLAGS are now $CPPFLAGS])
+AC_MSG_NOTICE([be20_configure: CPPFLAGS are now $CPPFLAGS])
 
 AC_LANG_PUSH(C++)
 AC_CHECK_HEADERS([re2/re2.h])
-PKG_CHECK_MODULES([RE2], [re2], [
-  AC_DEFINE([HAVE_RE2], [1], [Define if you have the RE2 library])
-],
-  [AC_MSG_ERROR([Could not find RE2 library. Please install libre2-dev or equivalent.])])
+PKG_CHECK_MODULES([RE2], [re2],
+  [
+    AC_MSG_NOTICE([re2 detected])
+    AC_DEFINE([HAVE_RE2], [1], [Define if you have the RE2 library])
+    AC_DEFINE([HAVE_RE2], [1], [Define if you have the RE2 library]) ],
+  [AC_MSG_ERROR([Could not find RE2 library. Please install libre2-dev or equivalent.])]
+)
 AC_LANG_POP()
 
 ################################################################

@@ -755,6 +755,7 @@ TEST_CASE("test regex_vector", "[regex]") {
     REQUIRE(regex_vector::has_metachars("this1234foo") == false);
 
     regex_vector rv;
+    std::cout << "Testing regex engine: " <<  rv.regex_engine() << std::endl;
     rv.push_back("this.*");
     rv.push_back("check[1-9]");
     rv.push_back("thing");
@@ -773,7 +774,9 @@ TEST_CASE("test regex_vector", "[regex]") {
     rv.push_back("[a-z]*@company.com");
 
     /* Make a 32MB array to search */
-    std::string bigstring = std::string(1024*1024*30,'a') + " user@company.com " + std::string(1024*1024*2,'b');
+    std::string bigstring = std::string(1024*1024*30,'a')
+        + " user@company.com "
+        + std::string(1024*1024*2,'b');
     found="";
     size_t offset = 0;
     size_t len = 0;
