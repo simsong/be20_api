@@ -7,6 +7,8 @@ MAKE_CONCURRENCY=-j2
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd $SCRIPT_DIR
 
+. ./paths.bash
+
 if [ ! -r /etc/os-release ]; then
   echo This requires /etc/os-release
   exit 1
