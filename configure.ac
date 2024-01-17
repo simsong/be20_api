@@ -55,6 +55,12 @@ m4_include([dfxml_cpp/src/dfxml_configure.m4])
 m4_include([m4/slg_address_sanitizer.m4])
 m4_include([m4/slg_noopt.m4])
 m4_include([be20_configure.m4])
+AC_MSG_NOTICE([hello point 1])
+
+AC_MSG_NOTICE([CFLAGS are now $CFLAGS])
+AC_MSG_NOTICE([hello point 2])
+AC_MSG_NOTICE([CPPFLAGS are now $CPPFLAGS])
+AC_MSG_NOTICE([CXXFLAGS are now $CXXFLAGS])
 
 ################################################################
 # Take out duplicate flags
