@@ -4,6 +4,7 @@
 OS_NAME=ubuntu
 OS_VERSION=22
 MAKE_CONCURRENCY=-j2
+MPKGS="autoconf automake g++ libtool libssl-dev pkg-config libabsl-dev libre2-dev libsqlite3-dev make pkg-config zlib1g-dev"
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd $SCRIPT_DIR
 
@@ -29,7 +30,6 @@ Configuring $OS_NAME $OS_VERSION to compile be20 for test programs
 ******************************************************************
 EOF
 
-MPKGS="autoconf automake g++ libtool libssl-dev pkg-config libabsl-dev libre2-dev libsqlite3-dev make "
 
 sudo apt update -y
 sudo apt install -y $MPKGS
