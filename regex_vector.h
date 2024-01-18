@@ -34,37 +34,17 @@ class regex_vector {
 
 public:
     regex_vector() : regex_strings(), regex_comps(){};
-    ~regex_vector() {
-        clear();
-    }
+    ~regex_vector();
 
     // is this a regular expression with meta characters?
     static bool has_metachars(const std::string& str);
     const std::string regex_engine(); // which engine is in use
 
     /* Add a string */
-    void push_back(const std::string& val) {
-        RE2::Options options;
-        options.set_case_sensitive(false);
-
-        regex_strings.push_back(val);
-        RE2 *re = new RE2(std::string("(") + val + std::string(")"), options);
-        if (!re->ok()){
-            std::cerr << "regex error: " << re->error() << std::endl;
-            assert(false);
-        }
-        regex_comps.push_back( re );
-    }
-
+    void push_back(const std::string& val);
     // Empty the vectors. For the compiled, be sure to delete them
-    void clear() {
-        regex_strings.clear();
-        for (RE2 *re: regex_comps) {
-            delete re;
-        }
-        regex_comps.clear();
-    }
-    auto size() { return regex_comps.size(); }
+    void clear(); 
+    size_t size() const;
 
     /**
      * Read regular expressions from a file: returns 0 if successful, -1 if failure.

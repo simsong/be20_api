@@ -32,7 +32,7 @@ ETAGS = etags-emacs
 ACLOCAL_AMFLAGS = -I m4
 
 AM_CPPFLAGS = @RE2_CFLAGS@ -I$(top_srcdir)/utfcpp/source
-AM_LDFLAGS = @RE2_LIBS@
+AM_LDFLAGS  = @RE2_LIBS@
 
 clean-local:
 	rm -f *.gcov *~ *.gcda *.gcno
@@ -44,9 +44,6 @@ clang-format:
 	clang-format* -i *h *cpp
 
 AUTOMAKE_OPTIONS = subdir-objects
-
-#noinst_LIBRARIES = libbe20api.a
-#libbe20api_a_SOURCES = $(BE20_API_SRC)
 
 bin_PROGRAMS = test_be20_api
 check_PROGRAMS = test_be20_api

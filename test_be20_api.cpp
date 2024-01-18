@@ -755,6 +755,13 @@ TEST_CASE("test regex_vector", "[regex]") {
     REQUIRE(regex_vector::has_metachars("this1234foo") == false);
 
     regex_vector rv;
+
+    REQUIRE(rv.size() == 0);
+    rv.push_back("this.*");
+    REQUIRE(rv.size() == 1);
+    rv.clear();			// test this functionality
+    REQUIRE(rv.size() == 0);
+
     std::cout << "Testing regex engine: " <<  rv.regex_engine() << std::endl;
     rv.push_back("this.*");
     rv.push_back("check[1-9]");
