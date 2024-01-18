@@ -5,6 +5,12 @@
 /* rewritten to use C++11's regex */
 const std::string regex_vector::regex_engine() { return std::string("RE2"); }
 
+regex_vector::~regex_vector()
+{
+    clear();
+}
+
+
 /* Only certain characters are assumed to be a regular expression. These characters are
  * coincidently never in email addresses.
  */
@@ -18,6 +24,31 @@ bool regex_vector::has_metachars(const std::string& str) {
         }
     }
     return false;
+}
+
+void regex_vector::push_back(const std::string& val) {
+    RE2::Options options;
+    options.set_case_sensitive(false);
+    
+    regex_strings.push_back(val);
+    RE2 *re = new RE2(std::string("(") + val + std::string(")"), options);
+    if (!re->ok()){
+        std::cerr << "regex error: " << re->error() << std::endl;
+        assert(false);
+    }
+    regex_comps.push_back( re );
+}
+
+void regex_vector::clear() {
+    regex_strings.clear();
+    for (RE2 *re: regex_comps) {
+        delete re;
+    }
+    regex_comps.clear();
+}
+
+size_t regex_vector::size() const {
+    return regex_comps.size();
 }
 
 /**
