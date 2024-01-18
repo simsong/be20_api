@@ -62,6 +62,11 @@ BE20_API_SRC= \
         $(BE20_API_DIR)/dfxml_cpp/src/cpuid.h
 
 BE20_API_EXTRA_DIST=\
+        $(BE20_API_DIR)/m4/slg_gcc_all_warnings.m4 \
+        $(BE20_API_DIR)/Makefile.defs \
+        $(BE20_API_DIR)/Makefile.am \
+        $(BE20_API_DIR)/dfxml_cpp/src/Makefile.defs \
+        $(BE20_API_DIR)/dfxml_cpp/src/Makefile.am \
         $(BE20_API_DIR)/README.md \
 	$(BE20_API_DIR)/utfcpp/LICENSE \
 	$(BE20_API_DIR)/utfcpp/README.md

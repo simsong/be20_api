@@ -16,12 +16,11 @@ include Makefile.defs
 DFXML_SRC_DIR=dfxml_cpp/src/
 include $(DFXML_SRC_DIR)Makefile.defs
 
+# Hardcode dfxml_cpp/src/Makefile.defs ; there is a typo somewhere.
 EXTRA_DIST = \
 	$(DFXML_EXTRA_DIST) \
 	$(BE20_API_EXTRA_DIST) \
-	Makefile.defs \
 	bootstrap.sh \
-	m4/slg_gcc_all_warnings.m4 \
 	test_be20_api_malloc_debug \
 	tests/random.dat \
 	tests/regex_demo.cpp \
