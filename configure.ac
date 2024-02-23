@@ -55,10 +55,13 @@ m4_include([dfxml_cpp/src/dfxml_configure.m4])
 m4_include([m4/slg_address_sanitizer.m4])
 m4_include([m4/slg_noopt.m4])
 m4_include([be20_configure.m4])
+m4_include([m4/ax_path_lib_pcre.m4])
 
 AC_MSG_NOTICE([point1 - CFLAGS are now $CFLAGS])
 AC_MSG_NOTICE([point2 - CPPFLAGS are now $CPPFLAGS])
 AC_MSG_NOTICE([point3 - CXXFLAGS are now $CXXFLAGS])
+
+AX_PATH_LIB_PCRE
 
 ################################################################
 # Take out duplicate flags
