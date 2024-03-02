@@ -19,21 +19,47 @@
 #include <set>
 #include <string>
 #include <vector>
+#include <cstdlib>
 
+#include "config.h"
+
+#ifdef HAVE_RE2_RE2_H
 #include <re2/re2.h>
+#endif
+
+#ifdef HAVE_PCRE_H
+#include <pcre.h>
+#endif
 
 /**
  * The regex_vector is a vector of character regexes with a few additional convenience functions.
  * We might want to change this to handle ASCII, UTF-16 and UTF-8 characters simultaneously.
  */
+
+//https://www.pcre.org/original/doc/html/pcreapi.html
+
 class regex_vector {
     std::vector<std::string> regex_strings; // the original regex strings
-    std::vector<RE2 *> regex_comps;         // the compiled regular expressions
+#ifdef HAVE_RE2
+    std::vector<RE2 *> re2_regex_comps;         // the compiled regular expressions
+#endif
+#ifdef HAVE_PCRE
+    std::vector<pcre *> pcre_regex_comps;         // the compiled regular expressions
+#endif
     regex_vector(const regex_vector&) = delete;
     regex_vector& operator=(const regex_vector&) = delete;
+    static const std::string RE2_DISABLE;
 
 public:
-    regex_vector() : regex_strings(), regex_comps(){};
+    static bool re2_disabled() {return std::getenv(RE2_DISABLE.c_str()) != nullptr;}
+    regex_vector() : regex_strings()
+#ifdef HAVE_RE2
+                   , re2_regex_comps()
+#endif
+#ifdef HAVE_PCRE
+                   , pcre_regex_comps()
+#endif
+    {};
     ~regex_vector();
 
     // is this a regular expression with meta characters?
@@ -43,7 +69,7 @@ public:
     /* Add a string */
     void push_back(const std::string& val);
     // Empty the vectors. For the compiled, be sure to delete them
-    void clear(); 
+    void clear();
     size_t size() const;
 
     /**

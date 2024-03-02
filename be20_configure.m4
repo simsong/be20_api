@@ -10,7 +10,6 @@ AC_DEFINE(BE20_CONFIGURE_APPLIED, 1, [be20_configure.m4 was included by autoconf
 AC_C_BIGENDIAN([AC_DEFINE(BE20_API_BIGENDIAN, 1, [Big Endian aarchitecutre - like M68K])],
                 AC_DEFINE(BE20_API_LITTLEENDIAN, 1, [Little Endian aarchitecutre - like x86]))
 
-
 ################################################################
 ## Headers
 AC_CHECK_HEADERS([ dlfcn.h fcntl.h limits.h limits/limits.h linux/if_ether.h net/ethernet.h netinet/if_ether.h netinet/in.h pcap.h pcap/pcap.h sqlite3.h sys/cdefs.h sys/mman.h sys/stat.h sys/time.h sys/types.h sys/vmmeter.h unistd.h windows.h windows.h windowsx.h winsock2.h wpcap/pcap.h mach/mach.h mach-o/dyld.h])
@@ -26,6 +25,7 @@ AC_CHECK_FUNCS([sqlite3_create_function_v2 sysctlbyname])
 
 AC_MSG_NOTICE([be20_configure: CPPFLAGS are now $CPPFLAGS])
 
+# re2
 AC_LANG_PUSH(C++)
 AC_CHECK_HEADERS([re2/re2.h])
 PKG_CHECK_MODULES([RE2], [re2],
@@ -33,9 +33,21 @@ PKG_CHECK_MODULES([RE2], [re2],
     AC_MSG_NOTICE([re2 detected])
     AC_DEFINE([HAVE_RE2], [1], [Define if you have the RE2 library])
     AC_DEFINE([HAVE_RE2], [1], [Define if you have the RE2 library]) ],
-  [AC_MSG_ERROR([Could not find RE2 library. Please install libre2-dev or equivalent.])]
+  [AC_MSG_NOTICE([Could not find RE2 library. Please install libre2-dev or equivalent.])]
 )
 AC_LANG_POP()
+
+# pcre
+# Check for pkg-config first (optional)
+AC_CHECK_HEADERS([pcre.h])
+PKG_CHECK_MODULES([PCRE], [libpcre],
+    [
+    AC_MSG_NOTICE([pcre detected])
+    AC_DEFINE([HAVE_PCRE], [1], [Define if you have the PCRE library])
+    AC_DEFINE([HAVE_PCRE], [1], [Define if you have the PCRE library]) ],
+  [AC_MSG_NOTICE([Could not find PCRE library. Please install pcre equivalent.])]
+)
+
 
 ################################################################
 ## Check on two annoying warnings

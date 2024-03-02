@@ -3,7 +3,18 @@
 #include "regex_vector.h"
 
 /* rewritten to use C++11's regex */
-const std::string regex_vector::regex_engine() { return std::string("RE2"); }
+const std::string regex_vector::RE2_DISABLE {"RE2_DISABLE"};
+const std::string regex_vector::regex_engine()
+{
+#ifdef HAVE_RE2
+    if (!re2_disabled()) {
+        return std::string("RE2");
+    }
+#endif
+#ifdef HAVE_PCRE
+    return std::string("PCRE");
+#endif
+}
 
 regex_vector::~regex_vector()
 {
@@ -29,26 +40,60 @@ bool regex_vector::has_metachars(const std::string& str) {
 void regex_vector::push_back(const std::string& val) {
     RE2::Options options;
     options.set_case_sensitive(false);
-    
-    regex_strings.push_back(val);
-    RE2 *re = new RE2(std::string("(") + val + std::string(")"), options);
-    if (!re->ok()){
-        std::cerr << "regex error: " << re->error() << std::endl;
-        assert(false);
+
+#ifdef HAVE_RE2
+    if (!re2_disabled()){
+        regex_strings.push_back(val);
+        RE2 *re = new RE2(std::string("(") + val + std::string(")"), options);
+        if (!re->ok()){
+            std::cerr << "RE2 compilation failed error: " << re->error() << " compiling: " << val << std::endl;
+            throw std::runtime_error(std::string("RE2 compilation failed"));
+        }
+        re2_regex_comps.push_back( re );
+        return;
     }
-    regex_comps.push_back( re );
+#endif
+#ifdef HAVE_PCRE
+    const char *error = nullptr;
+    int erroffset = 0;
+    auto re = pcre_compile( val.c_str(), // pattern
+                            0,           // default options
+                            &error,      // for error message
+                            &erroffset,  // for error offset,
+                            NULL);       // use default error tables
+    if (re == nullptr) {
+        std::cerr << "PCRE compliation failed at offset " << erroffset << ": " << error << "  compiling: " << val << std::endl;
+        throw std::runtime_error(std::string("PCRE compilation failed"));
+    }
+    pcre_regex_comps.push_back( re );
+#endif
 }
 
 void regex_vector::clear() {
     regex_strings.clear();
-    for (RE2 *re: regex_comps) {
+#ifdef HAVE_RE2
+    for (RE2 *re: re2_regex_comps) {
         delete re;
     }
-    regex_comps.clear();
+    re2_regex_comps.clear();
+#endif
+#ifdef HAVE_PCRE
+    for (pcre *p: pcre_regex_comps) {
+        pcre_free(p);
+    }
+    pcre_regex_comps.clear();
+#endif
 }
 
 size_t regex_vector::size() const {
-    return regex_comps.size();
+    size_t sz = 0;
+#ifdef HAVE_RE2
+    sz += re2_regex_comps.size();
+#endif
+#ifdef HAVE_PCRE
+    sz += pcre_regex_comps.size();
+#endif
+    return sz;
 }
 
 /**
@@ -57,7 +102,8 @@ size_t regex_vector::size() const {
  * the length. Note that this only handles a single group.
  */
 bool regex_vector::search_all(const std::string& probe, std::string* found, size_t* offset, size_t* len) const {
-    for (RE2 *re: regex_comps) {
+#ifdef HAVE_RE2
+    for (RE2 *re: re2_regex_comps) {
         re2::StringPiece sp;
         if (RE2::PartialMatch( probe, *re, &sp) ){
             if (found)  *found  = std::string(sp.data(), sp.size());
@@ -66,6 +112,7 @@ bool regex_vector::search_all(const std::string& probe, std::string* found, size
             return true;
         }
     }
+#endif
     return false;
 }
 

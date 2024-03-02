@@ -34,6 +34,8 @@
 
 #include <re2/re2.h>
 
+#include "stdlib.h"
+
 //#include "astream.h"
 #include "atomic_unicode_histogram.h"
 #include "sbuf.h"
@@ -748,51 +750,63 @@ TEST_CASE("pos0_t", "[feature_recorder]") {
  * regex_vector.h & regex_vector.cpp
  */
 #include "regex_vector.h"
+char disable[64];
 TEST_CASE("test regex_vector", "[regex]") {
     REQUIRE(regex_vector::has_metachars("this[1234]foo") == true);
     REQUIRE(regex_vector::has_metachars("this(1234)foo") == true);
     REQUIRE(regex_vector::has_metachars("this[1234].*foo") == true);
     REQUIRE(regex_vector::has_metachars("this1234foo") == false);
 
-    regex_vector rv;
+    for(int pass=0;pass<2;pass++){
+        if (pass==1) {
+            strncpy(disable,"RE2_DISABLE=TRUE",sizeof(disable));       // must be (char *)
+            REQUIRE( regex_vector::re2_disabled()==false);
+            putenv(disable);
+            REQUIRE( regex_vector::re2_disabled()==true);
+        }
 
-    REQUIRE(rv.size() == 0);
-    rv.push_back("this.*");
-    REQUIRE(rv.size() == 1);
-    rv.clear();			// test this functionality
-    REQUIRE(rv.size() == 0);
+        regex_vector rv;
+        std::cout << "Pass " << pass << " testing regex engine: " <<  rv.regex_engine() << std::endl;
 
-    std::cout << "Testing regex engine: " <<  rv.regex_engine() << std::endl;
-    rv.push_back("this.*");
-    rv.push_back("check[1-9]");
-    rv.push_back("thing");
+        REQUIRE(rv.size() == 0);
+        rv.push_back("this.*");
+        REQUIRE(rv.size() == 1);
+        rv.clear();			// test this functionality
+        REQUIRE(rv.size() == 0);
 
-    REQUIRE(rv.size() == 3);
+        rv.push_back("this.*");
+        rv.push_back("check[1-9]");
+        rv.push_back("thing");
 
-    std::string found;
-    REQUIRE(rv.search_all("hello1", &found) == false);
-    REQUIRE(rv.search_all("check1", &found) == true);
-    REQUIRE(found == "check1");
+        REQUIRE(rv.size() == 3);
 
-    REQUIRE(rv.search_all("before check2 after", &found) == true);
-    REQUIRE(found == "check2");
+        std::string found;
+        REQUIRE(rv.search_all("hello1", &found) == false);
+        REQUIRE(rv.search_all("check1", &found) == true);
+        REQUIRE(found == "check1");
 
-    rv.clear();
-    rv.push_back("[a-z]*@company.com");
+        REQUIRE(rv.search_all("before check2 after", &found) == true);
+        REQUIRE(found == "check2");
 
-    /* Make a 32MB array to search */
-    std::string bigstring = std::string(1024*1024*30,'a')
-        + " user@company.com "
-        + std::string(1024*1024*2,'b');
-    found="";
-    size_t offset = 0;
-    size_t len = 0;
-    alarm(60);
-    REQUIRE(rv.search_all(bigstring, &found, &offset, &len) == true);
-    alarm(0);
-    REQUIRE(found == "user@company.com");
-    REQUIRE(offset == 1024*1024*30+1);
-    REQUIRE(len == 16 );
+        rv.clear();
+        rv.push_back("[a-z]*@company.com");
+
+        /* This tests to make sure searching for a potentially open-ended string doesn't
+         * take a very long time. We do the search in a 30MiB array...
+         */
+        std::string bigstring = std::string(1024*1024*30,'a')
+            + " user@company.com "
+            + std::string(1024*1024*2,'b');
+        found="";
+        size_t offset = 0;
+        size_t len = 0;
+        alarm(60);
+        REQUIRE(rv.search_all(bigstring, &found, &offset, &len) == true);
+        alarm(0);
+        REQUIRE(found == "user@company.com");
+        REQUIRE(offset == 1024*1024*30+1);
+        REQUIRE(len == 16 );
+    }
 }
 
 /****************************************************************
