@@ -4,7 +4,7 @@
 OS_NAME=ubuntu
 OS_VERSION=22
 MAKE_CONCURRENCY=-j2
-MPKGS="autoconf automake g++ libtool libssl-dev pkg-config libabsl-dev libre2-dev libsqlite3-dev make pkg-config zlib1g-dev"
+MPKGS="autoconf automake g++ libtool libssl-dev pkg-config libabsl-dev libre2-dev libpcre3-dev libsqlite3-dev make pkg-config zlib1g-dev"
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd $SCRIPT_DIR
 
