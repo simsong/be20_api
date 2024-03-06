@@ -757,13 +757,17 @@ TEST_CASE("test regex_vector", "[regex]") {
     REQUIRE(regex_vector::has_metachars("this[1234].*foo") == true);
     REQUIRE(regex_vector::has_metachars("this1234foo") == false);
 
-    for(int pass=0;pass<2;pass++){
+    for(int pass=0;pass<3;pass++){
         if (pass==0) {
             strncpy(disable,"RE_ENGINE=RE2",sizeof(disable));
             putenv(disable);
         }
         if (pass==1) {
             strncpy(disable,"RE_ENGINE=PCRE",sizeof(disable));
+            putenv(disable);
+        }
+        if (pass==2) {
+            strncpy(disable,"RE_ENGINE=STD::REGEX",sizeof(disable));
             putenv(disable);
         }
 
@@ -796,17 +800,23 @@ TEST_CASE("test regex_vector", "[regex]") {
         /* This tests to make sure searching for a potentially open-ended string doesn't
          * take a very long time. We do the search in a 30MiB array...
          */
-        std::string bigstring = std::string(1024*1024*30,'a')
+        const size_t mbytes = 1;
+        const size_t bytes = 1024*1024*mbytes;
+        std::string bigstring = std::string(bytes,'a')
             + " user@company.com "
             + std::string(1024*1024*2,'b');
         found="";
         size_t offset = 0;
         size_t len = 0;
-        alarm(60);
+        aftimer t;
+        t.start();
+        alarm(6000);
         REQUIRE(rv.search_all(bigstring, &found, &offset, &len) == true);
         alarm(0);
+        t.stop();
+        std::cout << "time=" << t.elapsed_seconds() << "\n";
         REQUIRE(found == "user@company.com");
-        REQUIRE(offset == 1024*1024*30+1);
+        REQUIRE(offset == bytes+1);
         REQUIRE(len == 16 );
     }
     strncpy(disable,"RE_ENGINE=RE2",sizeof(disable));

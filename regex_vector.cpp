@@ -16,7 +16,7 @@ const std::string regex_vector::regex_engine()
         return std::string("PCRE");
     }
 #endif
-    return std::string("NONE");
+    return std::string("STD::REGEX");
 }
 
 regex_vector::~regex_vector()
@@ -76,7 +76,7 @@ void regex_vector::push_back(const std::string& val) {
         return;
     }
 #endif
-    throw std::runtime_error(std::string("NO ENGINE ENABLED"));
+    regex_chars.push_back(std::regex(val, std::regex_constants::icase));
 }
 
 void regex_vector::clear() {
@@ -95,6 +95,7 @@ void regex_vector::clear() {
     }
     pcre_regex_comps.clear();
 #endif
+    regex_chars.clear();
 }
 
 size_t regex_vector::size() const {
@@ -105,6 +106,7 @@ size_t regex_vector::size() const {
 #ifdef HAVE_PCRE
     sz += pcre_regex_comps.size();
 #endif
+    sz += regex_chars.size();
     return sz;
 }
 
@@ -156,6 +158,22 @@ bool regex_vector::search_all(const std::string& probe, std::string* found, size
         }
     }
 #endif
+    /* default to std::regex */
+    const int MAX_STD_SIZE = 1024;
+    const int STD_WINDOW = 128;
+    for (auto &it : regex_chars ) {
+        for (auto probe_offset=0;probe_offset < probe.size(); probe_offset+=MAX_STD_SIZE) {
+            std::string short_probe = probe.substr(probe_offset, MAX_STD_SIZE+STD_WINDOW);
+            std::smatch sm;
+            std::regex_search(short_probe, sm, it);
+            if (sm.size() > 0) {
+                if (found) *found = sm.str();
+                if (offset) *offset = probe_offset + sm.position();
+                if (len) *len = sm.length();
+                return true;
+            }
+        }
+    }
     return false;
 }
 

@@ -20,6 +20,7 @@
 #include <string>
 #include <vector>
 #include <cstdlib>
+#include <regex>
 
 #include "config.h"
 
@@ -41,6 +42,7 @@
 
 class regex_vector {
     std::vector<std::string> regex_strings; // the original regex strings
+    std::vector<std::regex> regex_chars;    // STL's built-in problematic regex
 #ifdef HAVE_RE2
     std::vector<RE2 *> re2_regex_comps;     // the compiled regular expressions
 #endif
@@ -63,7 +65,7 @@ public:
         return std::getenv(RE_ENGINE.c_str()) == nullptr ||
             std::getenv(RE_ENGINE.c_str())==engine;
     }
-    regex_vector() : regex_strings()
+    regex_vector() : regex_strings(), regex_chars()
 #ifdef HAVE_RE2
                    , re2_regex_comps()
 #endif
