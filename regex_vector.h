@@ -36,22 +36,33 @@
  * We might want to change this to handle ASCII, UTF-16 and UTF-8 characters simultaneously.
  */
 
-//https://www.pcre.org/original/doc/html/pcreapi.html
+// https://www.pcre.org/original/doc/html/pcreapi.html
+// https://www.pcre.org/original/doc/html/pcredemo.html
 
 class regex_vector {
     std::vector<std::string> regex_strings; // the original regex strings
 #ifdef HAVE_RE2
-    std::vector<RE2 *> re2_regex_comps;         // the compiled regular expressions
+    std::vector<RE2 *> re2_regex_comps;     // the compiled regular expressions
 #endif
 #ifdef HAVE_PCRE
-    std::vector<pcre *> pcre_regex_comps;         // the compiled regular expressions
+    struct p2 {
+        p2(pcre *re_,pcre_extra *extra_,pcre_jit_stack *jit_stack_):re(re_),extra(extra_),jit_stack(jit_stack_){};
+        pcre *re;
+        pcre_extra *extra;
+        pcre_jit_stack *jit_stack;
+    };
+    std::vector<struct p2> pcre_regex_comps;    // the compiled regular expressions
 #endif
     regex_vector(const regex_vector&) = delete;
     regex_vector& operator=(const regex_vector&) = delete;
-    static const std::string RE2_DISABLE;
+    static const std::string RE_ENGINE;
 
 public:
-    static bool re2_disabled() {return std::getenv(RE2_DISABLE.c_str()) != nullptr;}
+    static bool engine_enabled(const std::string engine) {
+        /** each engine is enabled if it is the first to check, or if it is specified */
+        return std::getenv(RE_ENGINE.c_str()) == nullptr ||
+            std::getenv(RE_ENGINE.c_str())==engine;
+    }
     regex_vector() : regex_strings()
 #ifdef HAVE_RE2
                    , re2_regex_comps()

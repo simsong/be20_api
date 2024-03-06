@@ -758,11 +758,13 @@ TEST_CASE("test regex_vector", "[regex]") {
     REQUIRE(regex_vector::has_metachars("this1234foo") == false);
 
     for(int pass=0;pass<2;pass++){
-        if (pass==1) {
-            strncpy(disable,"RE2_DISABLE=TRUE",sizeof(disable));       // must be (char *)
-            REQUIRE( regex_vector::re2_disabled()==false);
+        if (pass==0) {
+            strncpy(disable,"RE_ENGINE=RE2",sizeof(disable));
             putenv(disable);
-            REQUIRE( regex_vector::re2_disabled()==true);
+        }
+        if (pass==1) {
+            strncpy(disable,"RE_ENGINE=PCRE",sizeof(disable));
+            putenv(disable);
         }
 
         regex_vector rv;
@@ -807,6 +809,8 @@ TEST_CASE("test regex_vector", "[regex]") {
         REQUIRE(offset == 1024*1024*30+1);
         REQUIRE(len == 16 );
     }
+    strncpy(disable,"RE_ENGINE=RE2",sizeof(disable));
+    putenv(disable);
 }
 
 /****************************************************************

@@ -3,17 +3,20 @@
 #include "regex_vector.h"
 
 /* rewritten to use C++11's regex */
-const std::string regex_vector::RE2_DISABLE {"RE2_DISABLE"};
+const std::string regex_vector::RE_ENGINE {"RE_ENGINE"};
 const std::string regex_vector::regex_engine()
 {
 #ifdef HAVE_RE2
-    if (!re2_disabled()) {
+    if (engine_enabled("RE2")) {
         return std::string("RE2");
     }
 #endif
 #ifdef HAVE_PCRE
-    return std::string("PCRE");
+    if (engine_enabled("PCRE")){
+        return std::string("PCRE");
+    }
 #endif
+    return std::string("NONE");
 }
 
 regex_vector::~regex_vector()
@@ -42,7 +45,7 @@ void regex_vector::push_back(const std::string& val) {
     options.set_case_sensitive(false);
 
 #ifdef HAVE_RE2
-    if (!re2_disabled()){
+    if (engine_enabled("RE2")){
         regex_strings.push_back(val);
         RE2 *re = new RE2(std::string("(") + val + std::string(")"), options);
         if (!re->ok()){
@@ -54,19 +57,26 @@ void regex_vector::push_back(const std::string& val) {
     }
 #endif
 #ifdef HAVE_PCRE
-    const char *error = nullptr;
-    int erroffset = 0;
-    auto re = pcre_compile( val.c_str(), // pattern
-                            0,           // default options
-                            &error,      // for error message
-                            &erroffset,  // for error offset,
-                            NULL);       // use default error tables
-    if (re == nullptr) {
-        std::cerr << "PCRE compliation failed at offset " << erroffset << ": " << error << "  compiling: " << val << std::endl;
-        throw std::runtime_error(std::string("PCRE compilation failed"));
+    if (engine_enabled("PCRE")){
+        const char *error = nullptr;
+        int erroffset = 0;
+        auto re = pcre_compile( val.c_str(), // pattern
+                                0,           // default options
+                                &error,      // for error message
+                                &erroffset,  // for error offset,
+                                NULL);       // use default error tables
+        if (re == nullptr) {
+            std::cerr << "PCRE compliation failed at offset " << erroffset << ": " << error << "  compiling: " << val << std::endl;
+            throw std::runtime_error(std::string("PCRE compilation failed"));
+        }
+        pcre_extra *extra = pcre_study(re, PCRE_STUDY_JIT_COMPILE, &error);
+        pcre_jit_stack *jit_stack = pcre_jit_stack_alloc(32*1024, 16*1024*1024);
+        pcre_assign_jit_stack(extra, NULL, jit_stack);
+        pcre_regex_comps.push_back( p2(re,extra,jit_stack) );
+        return;
     }
-    pcre_regex_comps.push_back( re );
 #endif
+    throw std::runtime_error(std::string("NO ENGINE ENABLED"));
 }
 
 void regex_vector::clear() {
@@ -78,8 +88,10 @@ void regex_vector::clear() {
     re2_regex_comps.clear();
 #endif
 #ifdef HAVE_PCRE
-    for (pcre *p: pcre_regex_comps) {
-        pcre_free(p);
+    for (auto const &it: pcre_regex_comps) {
+        pcre_free(it.re);
+        pcre_free_study(it.extra);
+        pcre_jit_stack_free(it.jit_stack);
     }
     pcre_regex_comps.clear();
 #endif
@@ -113,6 +125,37 @@ bool regex_vector::search_all(const std::string& probe, std::string* found, size
         }
     }
 #endif
+#ifdef HAVE_PCRE
+    const int MAX_PCRE_SIZE = 1024;
+    const int PCRE_WINDOW = 512;
+    for (auto &it : pcre_regex_comps) {
+        for (auto probe_offset=0;probe_offset < probe.size(); probe_offset+=MAX_PCRE_SIZE) {
+            auto window_start = probe.c_str()+probe_offset;
+            auto window_len   = probe.size()-probe_offset;
+            if (window_len > MAX_PCRE_SIZE+PCRE_WINDOW){
+                window_len = MAX_PCRE_SIZE+PCRE_WINDOW;
+            }
+            size_t const OVECCOUNT=3;       // must be divisble by three
+            int ovector[OVECCOUNT];
+            int rc = pcre_exec(it.re,         // the compiled pattern
+                               it.extra,       // no extra data
+                               window_start, // the subject
+                               window_len,  // the length of the subject,
+                               0,             // start at offset 0 in the subject
+                               0,             // default options
+                               ovector,       // output vector for substring information
+                               OVECCOUNT);
+            if (rc>=0){
+                size_t substring_start = ovector[0];
+                size_t substring_len   = ovector[1] - ovector[0];
+                if (found)  *found  = probe.substr(probe_offset+substring_start, substring_len);
+                if (offset) *offset = probe_offset + substring_start;
+                if (len)    *len    = substring_len;
+                return true;
+            }
+        }
+    }
+#endif
     return false;
 }
 
@@ -136,7 +179,9 @@ int regex_vector::readfile(const std::string& fname) {
 }
 
 void regex_vector::dump(std::ostream& os) const {
-    for (auto const& it : regex_strings) { os << it << "\n"; }
+    for (auto const& it : regex_strings) {
+        os << it << "\n";
+    }
 }
 
 std::ostream& operator<<(std::ostream& os, const class regex_vector& rv) {
