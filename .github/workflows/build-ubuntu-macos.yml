@@ -24,7 +24,7 @@ jobs:
       - name: Install MacOS dependencies
         if: startsWith(matrix.os, 'macos')
         run: |
-          brew install autoconf automake libtool abseil pkg-config re2
+          brew install autoconf automake libtool abseil pkg-config pcre re2
 
       - name: Install Ubuntu dependencies
         if: startsWith(matrix.os, 'ubuntu')

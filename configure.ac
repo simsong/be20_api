@@ -15,6 +15,8 @@ AC_PREREQ([2.69])
 AC_INIT([BE20_API],[2.1.0],[bugs@digitalcorpora.org])
 AC_CONFIG_MACRO_DIR(m4)
 
+m4_include([m4/ax_cxx_compile_stdcxx.m4])
+
 AC_MSG_NOTICE([at start CPPFLAGS are $CPPFLAGS])
 
 AC_CONFIG_FILES([Makefile ])
@@ -33,7 +35,6 @@ AM_PROG_CC_C_O                    dnl allow per-produce flags
 AC_PROG_INSTALL
 
 # Must use C++17 mode.
-m4_include([m4/ax_cxx_compile_stdcxx.m4])
 
 AC_LANG_PUSH(C++)
 AX_CXX_COMPILE_STDCXX([17], [noext], [mandatory])
@@ -41,7 +42,6 @@ AC_LANG_POP()
 
 # Turn on all warnings
 m4_include([m4/slg_gcc_all_warnings.m4])
-
 
 ################################################################
 # Specify our headers
@@ -55,32 +55,39 @@ m4_include([dfxml_cpp/src/dfxml_configure.m4])
 m4_include([m4/slg_address_sanitizer.m4])
 m4_include([m4/slg_noopt.m4])
 m4_include([be20_configure.m4])
-AC_MSG_NOTICE([hello point 1])
+m4_include([m4/ax_path_lib_pcre.m4])
 
-AC_MSG_NOTICE([CFLAGS are now $CFLAGS])
-AC_MSG_NOTICE([hello point 2])
-AC_MSG_NOTICE([CPPFLAGS are now $CPPFLAGS])
-AC_MSG_NOTICE([CXXFLAGS are now $CXXFLAGS])
+AC_MSG_NOTICE([point1 - CFLAGS are now $CFLAGS])
+AC_MSG_NOTICE([point2 - CPPFLAGS are now $CPPFLAGS])
+AC_MSG_NOTICE([point3 - CXXFLAGS are now $CXXFLAGS])
+
+AX_PATH_LIB_PCRE
 
 ################################################################
 # Take out duplicate flags
 CFLAGS=$(echo $CFLAGS | tr ' ' '\n' | sort -u | tr '\n' ' ')
 CPPFLAGS=$(echo $CPPFLAGS | tr ' ' '\n' | sort -u | tr '\n' ' ')
 CXXFLAGS=$(echo $CXXFLAGS | tr ' ' '\n' | sort -u | tr '\n' ' ')
+AM_LDFLAGS=$(echo $LDFLAGS | tr ' ' '\n' | sort -u | tr '\n' ' ')
 
 ################################################################
-# drop optimization flags and add -g if requested 
+# drop optimization flags and add -g if requested
 if test "${with_opt}" = "no" ; then
   CFLAGS=`echo   -g "$CFLAGS"   | sed s/-O[[0-9]]//`             # note the double quoting!
   CXXFLAGS=`echo -g "$CXXFLAGS" | sed s/-O[[0-9]]//`
 fi
 
-LIBS="-lstdc++ $LIBS"
+# LIBS="-lstdc++ $LIBS"
+
+## Remove flags that shouldn't be present
+AC_MSG_NOTICE([point4 - CXX: $CXX])
+CXX=$(echo $CXX | sed s/-std=gnu..11//)
 
 ################################################################
 AC_MSG_NOTICE([CFLAGS are now $CFLAGS])
 AC_MSG_NOTICE([CPPFLAGS are now $CPPFLAGS])
 AC_MSG_NOTICE([CXXFLAGS are now $CXXFLAGS])
+AC_MSG_NOTICE([AM_LDFLAGS are now $AM_LDFLAGS])
 
 
 AC_OUTPUT
