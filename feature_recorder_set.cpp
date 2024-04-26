@@ -187,7 +187,8 @@ feature_recorder& feature_recorder_set::get_alert_recorder() const
 }
 
 /*
- *
+ * set_carve_defaults():
+ * Called after PHASE_INIT2 before PHASE_ENABLED from scanner_set::apply_scanner_commands.
  */
 void feature_recorder_set::set_carve_defaults()
 {

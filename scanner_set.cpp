@@ -556,8 +556,10 @@ void scanner_set::apply_scanner_commands() {
     scanner_params sp(sc, this, nullptr, scanner_params::PHASE_INIT2, nullptr);
     for (const auto &it : enabled_scanners) { (*it)(sp); }
 
-    /* set the carve defaults */
+    /* set the carve defaults from the command line (-S jpeg_carve_mode=...) or the scanner definitions if one is not provided*/
     fs.set_carve_defaults();
+
+    /* Read the command line arguments for carve_modes */
     current_phase = scanner_params::PHASE_ENABLED;
 }
 

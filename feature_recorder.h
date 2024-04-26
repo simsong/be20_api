@@ -76,6 +76,7 @@ struct feature_recorder_def {
      * Carving is implemented in the abstract class so all feature recorders have access to it.
      * Carve mode parameters were previously set in the INIT phase of each of the scanners. Now it is set for
      * all feature recorers in the scanner_set after the scanners are initialized and the feature recorders are created.
+     * See scanner_set::apply_scanner_commands
      */
     enum carve_mode_t {
         CARVE_NONE = 0,    // don't carve at all, even if the carve function is called
