@@ -420,6 +420,7 @@ TODO: Re-implement using C++17 directory reading.
  * Print a list of scanners.
  * We need to load them to do this, so they are loaded with empty config
  * Note that scanners can only be loaded once, so this exits.
+ * Used for the help system
  */
 void scanner_set::info_scanners(std::ostream &out, bool detailed_info, bool detailed_settings,
                                 const char enable_opt,
@@ -487,6 +488,9 @@ void scanner_set::info_scanners(std::ostream &out, bool detailed_info, bool deta
             out << scanner_info_db[get_scanner_by_name(it)]->help_options;
         }
     }
+
+    /* And print information about the feature recorders that have settable options */
+    fs.info_feature_recorders( out );
 }
 
 
