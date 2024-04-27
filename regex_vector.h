@@ -28,6 +28,7 @@
 #ifdef HAVE_RE2
 #undef HAVE_PCRE_H
 #undef HAVE_PCRE
+#define HAVE_RE2_RE2_H                  // be sure it is defined
 #endif
 
 #ifdef HAVE_RE2_RE2_H
