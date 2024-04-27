@@ -24,6 +24,12 @@
 
 #include "config.h"
 
+/* Do not use PCRE if we have RE2 */
+#ifdef HAVE_RE2
+#undef HAVE_PCRE_H
+#undef HAVE_PCRE
+#endif
+
 #ifdef HAVE_RE2_RE2_H
 #include <re2/re2.h>
 #endif
