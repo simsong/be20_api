@@ -265,6 +265,20 @@ std::vector<std::string> feature_recorder_set::feature_file_list() const {
     return frm.keys();
 }
 
+void feature_recorder_set::info_feature_recorders( std::ostream &os) const
+{
+    os << std::endl << "Options for setting carve mode in feature recorders that support carving:" << std::endl;
+    for (const auto &name : frm.keys()){
+        feature_recorder &fr = frm.get(name);
+        if (fr.def.flags.carve){
+            os << "   -S "<<name<<"_carve_mode=n  where n=[0,1,2]" << std::endl;
+        }
+    }
+    os << "Carve mode 0: do not carve; mode 1: carve encoded data; mode 2: carve everything." << std::endl;
+}
+
+
+
 #if 0
 
 /*** SQL Support ***/
@@ -312,7 +326,7 @@ static const char *commit_transaction[] = {"COMMIT TRANSACTION",0};
 void feature_recorder_set::db_send_sql(sqlite3 *db,const char **stmts, ...)
 {
     assert(db!=0);
-    for(int i=0;stmts[i];i++){
+    for (int i=0;stmts[i];i++){
         char *errmsg = 0;
         char buf[65536];
 
@@ -389,5 +403,6 @@ void feature_recorder_set::db_transaction_commit()
         std::cerr << "No transaction to commit\n";
     }
 }
+
 
 #endif

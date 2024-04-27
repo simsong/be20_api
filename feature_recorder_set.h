@@ -192,6 +192,8 @@ public:
 
     void dump_name_count_stats(class dfxml_writer& writer) const; // dumps the standard dfxml
 
+    void info_feature_recorders( std::ostream &os) const;
+
     /****************************************************************
      *** DB interface
      ****************************************************************/
