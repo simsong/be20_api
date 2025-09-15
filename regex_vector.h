@@ -30,8 +30,8 @@
 #undef HAVE_PCRE                // do not use PCRE if we have RE2
 #endif
 
-#ifdef HAVE_RE2_RE2_H
-#include <re2/re2.h>
+#ifdef HAVE_RE2
+#include <re2/re2.h>            // it's always here.
 #endif
 
 #ifdef HAVE_PCRE_H
