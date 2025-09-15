@@ -276,11 +276,11 @@ public:;
             }
         };
         virtual const char* what() const throw() {
-            static char buf[80];        // big enough to hold a single error
+            static char lbuf[80];        // big enough to hold a single error
             std::string str = message();
-            strncpy(buf, str.c_str(), sizeof(buf)-1);
-            buf[sizeof(buf)-1] = '\000'; // safety
-            return buf;
+            strncpy(lbuf, str.c_str(), sizeof(buf)-1);
+            lbuf[sizeof(lbuf)-1] = '\000'; // safety
+            return lbuf;
         }
     };
 
