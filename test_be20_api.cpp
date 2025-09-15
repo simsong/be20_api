@@ -813,7 +813,7 @@ TEST_CASE("test regex_vector", "[regex]") {
         std::thread([&] {
             std::this_thread::sleep_for(std::chrono::seconds(6000));
             std::cerr << "Timeout hit!" << std::endl;
-            std::exit(1);  // kill process if still running
+            REQUIRE(false);  // Tell catch that we failed.
         }).detach();
         REQUIRE(rv.search_all(bigstring, &found, &offset, &len) == true);
 #ifndef _WIN32
