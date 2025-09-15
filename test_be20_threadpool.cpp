@@ -87,13 +87,23 @@ TEST_CASE("atomic_map_mt", "[atomic]") {
 
 // This will give an error unless run with MallocNanoZone=0
 TEST_CASE("scanner_set_mt", "[thread_pool]") {
-    std::signal(SIGALRM, alarm_handler);
-    alarm(60);                          // in case it never finishes
+    std::atomic<bool> done{false};
+
+    std::thread watchdog([&] {
+        using namespace std::chrono_literals;
+        std::this_thread::sleep_for(60s);
+        if (!done) {
+            FAIL("scanner_set_mt test timed out");
+        }
+    });
+
     scanner_config sc;
     feature_recorder_set::flags_t f;
     scanner_set ss(sc, f, nullptr);
-    ss.launch_workers( 12 );
-    ss.set_spin_poll_time(1); // spin fast.
+    ss.launch_workers(12);
+    ss.set_spin_poll_time(1);
     ss.join();
-    alarm(0);
+
+    done = true;
+    watchdog.join();
 }

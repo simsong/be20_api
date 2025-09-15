@@ -322,7 +322,7 @@ TEST_CASE("AtomicUnicodeHistogram_3", "[histogram]") {
     REQUIRE(r.at(0).value->count16 == 1);
 
     /* write the histogram to a file */
-    std::string tempdir = get_tempdir();
+    std::string tempdir = get_tempdir().string();
     std::string fname = tempdir + "/histogram1.txt";
     {
         std::ofstream out(fname.c_str());
@@ -560,15 +560,15 @@ void validate_file(std::filesystem::path path, std::string contents)
 
 TEST_CASE("sbuf_write", "[sbuf]") {
     auto sbuf1 = sbuf_t("0123456789");
-    std::filesystem::path td = get_tempdir();
+    std::filesystem::path td = get_tempdir().string();
     std::filesystem::path fname = td / "file.txt";
-    int fd = open(fname.c_str(), O_RDWR | O_CREAT | O_BINARY, 0777);
+    int fd = open(fname.string().c_str(), O_RDWR | O_CREAT | O_BINARY, 0777);
     REQUIRE(sbuf1.write(fd, 1, 4) == 4);
     close(fd);
     validate_file(fname, "1234");
     std::filesystem::remove(fname);
 
-    FILE *f = fopen(fname.c_str(), "wb");
+    FILE *f = fopen(fname.string().c_str(), "wb");
     REQUIRE(sbuf1.write(f, 2, 4) == 4);
     fclose(f);
     validate_file(fname, "2345");
@@ -810,9 +810,15 @@ TEST_CASE("test regex_vector", "[regex]") {
         size_t len = 0;
         aftimer t;
         t.start();
-        alarm(6000);
+        std::thread([&] {
+            std::this_thread::sleep_for(std::chrono::seconds(6000));
+            std::cerr << "Timeout hit!" << std::endl;
+            std::exit(1);  // kill process if still running
+        }).detach();
         REQUIRE(rv.search_all(bigstring, &found, &offset, &len) == true);
-        alarm(0);
+#ifndef _WIN32
+alarm(0);
+#endif
         t.stop();
         std::cout << "time=" << t.elapsed_seconds() << "\n";
         REQUIRE(found == "user@company.com");
