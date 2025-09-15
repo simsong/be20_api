@@ -278,7 +278,7 @@ public:;
         virtual const char* what() const throw() {
             static char lbuf[80];        // big enough to hold a single error
             std::string str = message();
-            strncpy(lbuf, str.c_str(), sizeof(buf)-1);
+            strncpy(lbuf, str.c_str(), sizeof(lbuf)-1);
             lbuf[sizeof(lbuf)-1] = '\000'; // safety
             return lbuf;
         }
