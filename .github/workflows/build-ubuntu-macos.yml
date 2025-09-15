@@ -63,5 +63,5 @@ jobs:
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         run: |
-          gcov-9 -o . `find . -name '*cpp'`
+          gcov -o . `find . -name '*cpp'`
           bash <(curl -s https://codecov.io/bash)
