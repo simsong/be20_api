@@ -58,10 +58,21 @@ jobs:
       - uses: ammaraskar/gcc-problem-matcher@master
         name: GCC Problem Matcher
 
-      - name: upload codecov report
-        if: startsWith(matrix.os, 'ubuntu')
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+      - name: list files
         run: |
-          gcov -o . `find . -name '*cpp'`
-          bash <(curl -s https://codecov.io/bash)
+          find . -ls
+
+      - name: Generate coverage report
+        run: |
+          lcov --capture --directory . --output-file coverage.info
+          #lcov --remove linux-coverage.info '/usr/*' --output-file linux-coverage.info
+          lcov --list coverage.info
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: false
+          files: coverage.info
+          flags: unittests
+          name: sleuthkit-codecov
