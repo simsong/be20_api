@@ -30,6 +30,7 @@ jobs:
         if: startsWith(matrix.os, 'ubuntu')
         run: |
           sudo bash etc/CONFIGURE_UBUNTU22.bash
+          sudo apt install -y lcov build-essential autoconf automake libtool
 
       - name: Update autoconf on Ubuntu
         if: startsWith(matrix.os, 'ubuntu')
