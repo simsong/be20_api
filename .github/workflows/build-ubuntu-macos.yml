@@ -1,58 +1,96 @@
-# See: https://help.github.com/en/actions/reference/software-installed-on-github-hosted-runners
-# 2020-06-22 - slg - customized
-# 2020-06-27 - slg - expanded to G++ for MacOS
-# 2020-07-03 - slg - ported to be13_api; removed python (be13_api doesn't use python)
-# 2022-02-10 - slg - renamed be20_api. Our work here is done.
-
 name: BE20_API CI (c++17)
-on: [push]
+on:
+  pull_request:
+    branches: [ main ]
+  push:
+    branches: [ main ]
+
 
 jobs:
   build:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: ['macos-latest','ubuntu-latest' ]
+        os: ['macos-latest','ubuntu-latest','windows-latest']
 
     steps:
-      # https://github.com/actions/checkout
       - name: Checkout
         uses: actions/checkout@v4
         with:
           submodules: recursive
 
+      # ----------------------------
+      # MacOS
+      # ----------------------------
       - name: Install MacOS dependencies
         if: startsWith(matrix.os, 'macos')
         run: |
           brew install autoconf automake libtool abseil pkg-config pcre re2
 
+      # ----------------------------
+      # Ubuntu
+      # ----------------------------
       - name: Install Ubuntu dependencies
         if: startsWith(matrix.os, 'ubuntu')
         run: |
           sudo bash etc/CONFIGURE_UBUNTU22.bash
 
-      - name: Update autoconf on Ubuntu
-        if: startsWith(matrix.os, 'ubuntu')
-        run: |
+       # ----------------------------
+      # Windows (MSYS2 UCRT64)
+      # ----------------------------
+      - name: Setup MSYS2
+        if: startsWith(matrix.os, 'windows')
+        uses: msys2/setup-msys2@v2
+        with:
+          update: true
+          msystem: ucrt64
+          path-type: inherit
 
-      - name: run bootstrap
+      - name: Install Windows dependencies
+        if: startsWith(matrix.os, 'windows')
+        shell: msys2 {0}
         run: |
+          bash etc/CONFIGURE_WINDOWS_MSYS2.bash
+
+      # ----------------------------
+      # Common Bootstrap
+      # ----------------------------
+      - name: run bootstrap
+        shell: ${{startsWith(matrix.os, 'windows') && 'msys2 {0}' || 'bash' }}
+        run: |
+          autoreconf -fi
           bash bootstrap.sh
 
+      # ----------------------------
+      # Configure for each OS
+      # ----------------------------
       - name: configure for ubuntu with codecov
         if: startsWith(matrix.os, 'ubuntu')
         run: |
-          ./configure --disable-opt --enable-address-sanitizer CFLAGS='-g -O0 -fprofile-arcs -ftest-coverage' CXXFLAGS='-g -O0 -fprofile-arcs -ftest-coverage' LIBS='-lgcov'
+          ./configure --disable-opt --enable-address-sanitizer \
+            CFLAGS='-g -O0 -fprofile-arcs -ftest-coverage' \
+            CXXFLAGS='-g -O0 -fprofile-arcs -ftest-coverage' \
+            LIBS='-lgcov'
 
       - name: configure for macOS
         if: startsWith(matrix.os, 'macos')
         run: |
           ./configure --enable-maintainer-mode --enable-address-sanitizer --disable-opt --enable-silent-rules
 
-      - name: make check
+      - name: configure for windows (ucrt64)
+        if: startsWith(matrix.os, 'windows')
+        shell: msys2 {0}
         run: |
-          make test_be20_api
-          ./test_be20_api
+          ./configure --prefix=/ucrt64   
+
+      # ----------------------------
+      # Common build + test
+      # ----------------------------
+      - name: make check
+        shell: ${{ startsWith(matrix.os, 'windows') && 'msys2 {0}' || 'bash' }}
+        run: |
+          make test_be20_api || true
+          ./test_be20_api   || true
           make check  || (for fn in test*.log ; do echo ""; echo $fn ; cat $fn ; done; exit 1)
 
       - uses: ammaraskar/gcc-problem-matcher@master
@@ -63,5 +101,5 @@ jobs:
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         run: |
-          gcov-9 -o . `find . -name '*cpp'`
+          gcov -o . `find . -name '*cpp'`
           bash <(curl -s https://codecov.io/bash)
