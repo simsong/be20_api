@@ -162,7 +162,7 @@ bool regex_vector::search_all(const std::string& probe, std::string* found, size
     const int MAX_STD_SIZE = 1024;
     const int STD_WINDOW = 128;
     for (auto &it : regex_chars ) {
-        for (auto probe_offset=0;probe_offset < probe.size(); probe_offset+=MAX_STD_SIZE) {
+        for (size_t probe_offset=0;probe_offset < probe.size(); probe_offset+=MAX_STD_SIZE) {
             std::string short_probe = probe.substr(probe_offset, MAX_STD_SIZE+STD_WINDOW);
             std::smatch sm;
             std::regex_search(short_probe, sm, it);
