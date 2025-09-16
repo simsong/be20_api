@@ -33,7 +33,7 @@ jobs:
       - name: Install Ubuntu dependencies
         if: startsWith(matrix.os, 'ubuntu')
         run: |
-          sudo bash etc/CONFIGURE_UBUNTU22.bash
+          sudo bash etc/CONFIGURE_UBUNTU_LATEST.bash
 
        # ----------------------------
       # Windows (MSYS2 UCRT64)
@@ -50,7 +50,7 @@ jobs:
         if: startsWith(matrix.os, 'windows')
         shell: msys2 {0}
         run: |
-          bash etc/CONFIGURE_WINDOWS_MSYS2.bash
+          bash etc/CONFIGURE_WINDOWS_LATEST.bash
 
       # ----------------------------
       # Common Bootstrap
