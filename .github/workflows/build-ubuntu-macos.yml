@@ -35,7 +35,7 @@ jobs:
         if: startsWith( matrix.os, 'ubuntu')
         run: |
           sudo apt update -y
-          sudo apt install -y autoconf automake g++ libtool libssl-dev libabsl-dev libre2-dev pkg-config make pkg-config zlib1g-dev
+          sudo apt install -y autoconf automake g++ lcov libtool libssl-dev libabsl-dev libre2-dev pkg-config make pkg-config zlib1g-dev
           autoreconf -fi
 
       # ----------------------------
