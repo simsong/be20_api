@@ -1,4 +1,4 @@
-name: BE20_API CI (c++17)
+name: BE20_API CI Ubuntu and Mac
 on:
   pull_request:
     branches: [ main ]
