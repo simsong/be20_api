@@ -1,0 +1,56 @@
+name: BE20_API CI (c++17)
+on:
+  pull_request:
+    branches: [ main ]
+  push:
+    branches: [ main ]
+
+
+jobs:
+  build:
+    runs-on: 'windows-latest'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      # ----------------------------
+      # Windows ( mSYS2 UCRT64)
+      # ----------------------------
+      - name: Setup MSYS2
+        uses: msys2/setup-msys2@v2
+        with:
+          update: true
+          msystem: ucrt64
+          path-type: inherit
+
+      - name: Install Windows dependencies and bootstrap
+        shell: msys2 {0}
+        run: |
+          bash etc/CONFIGURE_WINDOWS_LATEST.bash
+          bash bootstrap.sh
+          autoreconf -fi
+
+      - name: configure for windows (ucrt64)
+        shell: msys2 {0}
+        run: |
+          ./configure --prefix=/ucrt64
+
+      # ----------------------------
+      # build + test windows
+      # ----------------------------
+      - name: make check
+        shell: msys2 {0}
+        run: |
+          make test_be20_api
+          ./test_be20_api
+          make check  || (for fn in test*.log ; do echo ""; echo $fn ; cat $fn ; done; exit 1)
+
+      - uses: ammaraskar/gcc-problem-matcher@master
+        name: GCC Problem Matcher
+
+      - name: list files
+        run: |
+          find . -ls
