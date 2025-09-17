@@ -20,47 +20,24 @@
 #include <string>
 #include <vector>
 #include <cstdlib>
-#include <regex>
 
 #include "config.h"
 
-/* Do not use PCRE if we have RE2 */
 #ifdef HAVE_RE2
-#undef HAVE_PCRE_H
-#undef HAVE_PCRE
-#define HAVE_RE2_RE2_H                  // be sure it is defined
-#endif
-
-#ifdef HAVE_RE2_RE2_H
-#include <re2/re2.h>
-#endif
-
-#ifdef HAVE_PCRE_H
-#include <pcre.h>
+#include <re2/re2.h>            // it's always here.
 #endif
 
 /**
  * The regex_vector is a vector of character regexes with a few additional convenience functions.
  * We might want to change this to handle ASCII, UTF-16 and UTF-8 characters simultaneously.
+ * Only RE2 is supported because it is the only regular expression library that doesn't die on large segments.
+ * See: https://swtch.com/~rsc/regexp/regexp3.html#caveats
  */
-
-// https://www.pcre.org/original/doc/html/pcreapi.html
-// https://www.pcre.org/original/doc/html/pcredemo.html
 
 class regex_vector {
     std::vector<std::string> regex_strings; // the original regex strings
-    std::vector<std::regex> regex_chars;    // STL's built-in problematic regex
 #ifdef HAVE_RE2
     std::vector<RE2 *> re2_regex_comps;     // the compiled regular expressions
-#endif
-#ifdef HAVE_PCRE
-    struct p2 {
-        p2(pcre *re_,pcre_extra *extra_,pcre_jit_stack *jit_stack_):re(re_),extra(extra_),jit_stack(jit_stack_){};
-        pcre *re;
-        pcre_extra *extra;
-        pcre_jit_stack *jit_stack;
-    };
-    std::vector<struct p2> pcre_regex_comps;    // the compiled regular expressions
 #endif
     regex_vector(const regex_vector&) = delete;
     regex_vector& operator=(const regex_vector&) = delete;
@@ -72,12 +49,9 @@ public:
         return std::getenv(RE_ENGINE.c_str()) == nullptr ||
             std::getenv(RE_ENGINE.c_str())==engine;
     }
-    regex_vector() : regex_strings(), regex_chars()
+    regex_vector() : regex_strings()
 #ifdef HAVE_RE2
                    , re2_regex_comps()
-#endif
-#ifdef HAVE_PCRE
-                   , pcre_regex_comps()
 #endif
     {};
     ~regex_vector();
@@ -90,7 +64,7 @@ public:
     void push_back(const std::string& val);
     // Empty the vectors. For the compiled, be sure to delete them
     void clear();
-    size_t size() const;
+    size_t size() const;        // the number of regular expressions in the vector
 
     /**
      * Read regular expressions from a file: returns 0 if successful, -1 if failure.

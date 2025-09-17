@@ -180,7 +180,7 @@ uint64_t scaled_stoi64(const std::string &str);
 inline std::string subprocess_call(const char* cmd) {
     std::array<char, 4096> buffer;
     std::stringstream ss;
-    std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(cmd, "r"), pclose);
+    std::unique_ptr<FILE, int(*)(FILE *)> pipe(popen(cmd, "r"), pclose);
     if (!pipe) {
         throw std::runtime_error("popen() failed!");
     }

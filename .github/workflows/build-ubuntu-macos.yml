@@ -4,7 +4,7 @@
 # 2020-07-03 - slg - ported to be13_api; removed python (be13_api doesn't use python)
 # 2022-02-10 - slg - renamed be20_api. Our work here is done.
 
-name: BE20_API CI (c++17)
+name: BE20_API CI (c++17) for Ubuntu and MacOS
 on: [push]
 
 jobs:
@@ -17,7 +17,7 @@ jobs:
     steps:
       # https://github.com/actions/checkout
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           submodules: recursive
 
@@ -30,6 +30,7 @@ jobs:
         if: startsWith(matrix.os, 'ubuntu')
         run: |
           sudo bash etc/CONFIGURE_UBUNTU22.bash
+          sudo apt install -y lcov
 
       - name: Update autoconf on Ubuntu
         if: startsWith(matrix.os, 'ubuntu')
@@ -42,7 +43,9 @@ jobs:
       - name: configure for ubuntu with codecov
         if: startsWith(matrix.os, 'ubuntu')
         run: |
-          ./configure --disable-opt --enable-address-sanitizer CFLAGS='-g -O0 -fprofile-arcs -ftest-coverage' CXXFLAGS='-g -O0 -fprofile-arcs -ftest-coverage' LIBS='-lgcov'
+          ./configure --disable-opt --enable-address-sanitizer \
+          CFLAGS='-g -O0 -fprofile-arcs -ftest-coverage' \
+          CXXFLAGS='-g -O0 -fprofile-arcs -ftest-coverage' LIBS='-lgcov'
 
       - name: configure for macOS
         if: startsWith(matrix.os, 'macos')
@@ -58,10 +61,23 @@ jobs:
       - uses: ammaraskar/gcc-problem-matcher@master
         name: GCC Problem Matcher
 
-      - name: upload codecov report
-        if: startsWith(matrix.os, 'ubuntu')
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+      - name: list files
         run: |
-          gcov-9 -o . `find . -name '*cpp'`
-          bash <(curl -s https://codecov.io/bash)
+          find . -ls
+
+      - name: Generate coverage report
+        if: startsWith(matrix.os, 'ubuntu')
+        run: |
+          lcov --capture --directory . --output-file coverage.info
+          #lcov --remove linux-coverage.info '/usr/*' --output-file linux-coverage.info
+          lcov --list coverage.info
+
+      - name: Upload coverage to Codecov
+        if: startsWith(matrix.os, 'ubuntu')
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: false
+          files: coverage.info
+          flags: unittests
+          name: sleuthkit-codecov
