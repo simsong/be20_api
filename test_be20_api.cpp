@@ -32,8 +32,6 @@
 #include <string>
 #include <csignal>
 
-#include <re2/re2.h>
-
 #include "stdlib.h"
 
 //#include "astream.h"
@@ -748,6 +746,7 @@ TEST_CASE("pos0_t", "[feature_recorder]") {
 
 /****************************************************************
  * regex_vector.h & regex_vector.cpp
+ * Previously tested all three regex engines. Now just tests RE_ENGINE=RE2
  */
 #include "regex_vector.h"
 char disable[64];
@@ -757,17 +756,9 @@ TEST_CASE("test regex_vector", "[regex]") {
     REQUIRE(regex_vector::has_metachars("this[1234].*foo") == true);
     REQUIRE(regex_vector::has_metachars("this1234foo") == false);
 
-    for(int pass=0;pass<3;pass++){
+    for(int pass=0;pass<1;pass++){
         if (pass==0) {
             strncpy(disable,"RE_ENGINE=RE2",sizeof(disable));
-            putenv(disable);
-        }
-        if (pass==1) {
-            strncpy(disable,"RE_ENGINE=PCRE",sizeof(disable));
-            putenv(disable);
-        }
-        if (pass==2) {
-            strncpy(disable,"RE_ENGINE=STD::REGEX",sizeof(disable));
             putenv(disable);
         }
 
@@ -780,6 +771,7 @@ TEST_CASE("test regex_vector", "[regex]") {
         rv.clear();			// test this functionality
         REQUIRE(rv.size() == 0);
 
+        // Check a simple vector with three regular expressions
         rv.push_back("this.*");
         rv.push_back("check[1-9]");
         rv.push_back("thing");

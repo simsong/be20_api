@@ -37,16 +37,6 @@ PKG_CHECK_MODULES([RE2], [re2],
 )
 AC_LANG_POP()
 
-# pcre
-# Check for pkg-config first (optional)
-AC_CHECK_HEADERS([pcre.h])
-PKG_CHECK_MODULES([PCRE], [libpcre],
-    [
-    AC_MSG_NOTICE([pcre detected])
-    AC_DEFINE([HAVE_PCRE], [1], [Define if you have the PCRE library])
-    AC_DEFINE([HAVE_PCRE], [1], [Define if you have the PCRE library]) ],
-  [AC_MSG_NOTICE([Could not find PCRE library. Please install pcre equivalent.])]
-)
 
 
 ################################################################
