@@ -38,8 +38,8 @@ AS_IF([test "x$enable_asan" = "xyes"], [
 # hardcode additional directory
 CPPFLAGS="$CPPFLAGS -I$top_srcdir/utfcpp/source -Iutfcpp/source"
 # Add the -g (no kidding)
-CFLAGS="$CFLAGS -g"
-CXXFLAGS="$CXXFLAGS -g"
+CFLAGS="$CFLAGS -c"
+CXXFLAGS="$CXXFLAGS -c"
 
 
 ################################################################
