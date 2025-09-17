@@ -32,7 +32,7 @@ jobs:
           WANT_AUTOCONF: "2.71"
         run: |
           pacman -Syu --noconfirm
-          pacman -S --needed --noconfirm base-devel automake autoconf mingw-w64-ucrt-x86_64-gcc   mingw-w64-ucrt-x86_64-make \
+          pacman -S --needed --noconfirm base-devel automake autoconf pkgconf mingw-w64-ucrt-x86_64-gcc   mingw-w64-ucrt-x86_64-make \
                mingw-w64-ucrt-x86_64-re2 mingw-w64-ucrt-x86_64-abseil-cpp mingw-w64-ucrt-x86_64-sqlite3 mingw-w64-ucrt-x86_64-openssl \
                mingw-w64-ucrt-x86_64-expat
           bash bootstrap.sh
