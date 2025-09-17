@@ -30,8 +30,7 @@ EXTRA_DIST = \
 ETAGS = etags-emacs
 ACLOCAL_AMFLAGS = -I m4
 
-AM_CPPFLAGS = @RE2_CFLAGS@ -I$(top_srcdir)/utfcpp/source
-
+AM_CPPFLAGS = @RE2_CFLAGS@ -I$(top_srcdir)/utfpp/source
 
 clean-local:
 	rm -f *.gcov *~ *.gcda *.gcno

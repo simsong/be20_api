@@ -3,13 +3,12 @@ AC_INIT([BE20_API],[2.1.0],[bugs@digitalcorpora.org])
 AC_CONFIG_SRCDIR([Makefile.am])        dnl or src/main.c / src/...
 AC_CONFIG_AUX_DIR([build-aux])
 AC_USE_SYSTEM_EXTENSIONS
-AM_INIT_AUTOMAKE([foreign subdir-objects -Wall -Werror=foreign])
+AM_INIT_AUTOMAKE
 
 m4_include([be20_configure.m4])
 m4_include([dfxml_cpp/src/dfxml_configure.m4])
 m4_include([m4/slg_address_sanitizer.m4])
 m4_include([m4/slg_noopt.m4])
-
 
 AC_LANG([C++])
 AC_PROG_CC
@@ -44,6 +43,17 @@ CPPFLAGS=$(echo $CPPFLAGS | tr ' ' '\n' | sort -u | tr '\n' ' ')
 CXXFLAGS=$(echo $CXXFLAGS | tr ' ' '\n' | sort -u | tr '\n' ' ')
 AM_LDFLAGS=$(echo $LDFLAGS | tr ' ' '\n' | sort -u | tr '\n' ' ')
 
+AC_MSG_NOTICE([*************************************])
+AC_MSG_NOTICE([*************************************])
+AC_MSG_NOTICE([  PACKAGE_NAME:     $PACKAGE_NAME])
+AC_MSG_NOTICE([  PACKAGE_VERSION:  $PACKAGE_VERSION])
+AC_MSG_NOTICE([  CC:               $CC])
+AC_MSG_NOTICE([  CXX:              $CXX])
+AC_MSG_NOTICE([  CPPFLAGS:         $CPPFLAGS])
+AC_MSG_NOTICE([  CFLAGS:           $CFLAGS])
+AC_MSG_NOTICE([  CXXFLAGS:         $CXXFLAGS])
+AC_MSG_NOTICE([  LIBS:             $LIBS])
+AC_MSG_NOTICE([  LDFLAGS:          $LDFLAGS])
 
 
 AC_OUTPUT
