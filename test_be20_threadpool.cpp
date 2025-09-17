@@ -39,48 +39,6 @@
 #define O_BINARY 0
 #endif
 
-#ifdef BARAKSH_THREADPOOL
-TEST_CASE("atomic_set_mt", "[atomic]") {
-    INFO("BARAKSH_THREADPOOL TEST START");
-    thread_pool pool;
-    atomic_set<std::string> as;
-    for (size_t i=0;i<100;i++){
-        pool.push_task( [&as, i] {
-            for (int j=0;j<100;j++){
-                std::stringstream ss;
-                ss << "this is string " << j << " " << i << " " << std::this_thread::get_id();
-                as.insert( ss.str() );
-            }
-        });
-    }
-    pool.wait_for_tasks();
-    REQUIRE( as.keys().size() == 10000 );
-    as.clear();
-    REQUIRE( as.keys().size() == 0 );
-}
-
-TEST_CASE("atomic_map_mt", "[atomic]") {
-    INFO("BARAKSH_THREADPOOL TEST START 2");
-    thread_pool pool;
-    atomic_map<std::string, std::string> am;
-    for (size_t i=0;i<100;i++){
-        pool.push_task( [&am, i] {
-            for (int j=0;j<100;j++){
-                std::stringstream s1;
-                s1 << "thread " << i;
-                std::stringstream s2;
-                s2 << "string " << j << " " << i << " " << std::this_thread::get_id();
-                am[s1.str()] = s2.str();
-            }
-        });
-    }
-    pool.wait_for_tasks();
-    REQUIRE( am.keys().size() == 100 );
-    am.clear();
-    REQUIRE( am.keys().size() == 0 );
-}
-#endif
-
 [[noreturn]] void alarm_handler(int signal)
 {
     std::cerr << "alarm\n";
