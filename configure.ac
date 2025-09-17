@@ -2,17 +2,24 @@ AC_PREREQ([2.71])
 AC_INIT([BE20_API],[2.1.0],[bugs@digitalcorpora.org])
 AC_CONFIG_SRCDIR([Makefile.am])        dnl or src/main.c / src/...
 AC_CONFIG_AUX_DIR([build-aux])
-AC_CONFIG_MACRO_DIR([m4])
-
-AM_INIT_AUTOMAKE([foreign subdir-objects -Wall -Werror=foreign])
 AC_USE_SYSTEM_EXTENSIONS
+AM_INIT_AUTOMAKE([foreign subdir-objects -Wall -Werror=foreign])
+
+m4_include([be20_configure.m4])
+m4_include([dfxml_cpp/src/dfxml_configure.m4])
+m4_include([m4/slg_address_sanitizer.m4])
+m4_include([m4/slg_noopt.m4])
+
 
 AC_LANG([C++])
 AC_PROG_CC
 AC_PROG_CXX
 
-dnl If you want to enforce a standard, prefer this over rewriting $CXX:
-dnl AX_CXX_COMPILE_STDCXX([17], [noext], [mandatory])
+AC_CONFIG_HEADERS([config.h])
+AC_CONFIG_FILES([Makefile ])
+
+dnl Enforce C++20
+AX_CXX_COMPILE_STDCXX([17], [noext], [mandatory])
 
 dnl Optional: pkg-config and deps
 PKG_PROG_PKG_CONFIG
@@ -28,12 +35,15 @@ AS_IF([test "x$enable_asan" = "xyes"], [
   LDFLAGS="$LDFLAGS -fsanitize=address"
 ])
 
-AC_CONFIG_HEADERS([config.h])
 
-dnl List every Makefile you expect Automake to generate
-AC_CONFIG_FILES([
-  Makefile
-  src/Makefile
-  tests/Makefile
-])
+
+################################################################
+# Take out duplicate flags
+CFLAGS=$(echo $CFLAGS | tr ' ' '\n' | sort -u | tr '\n' ' ')
+CPPFLAGS=$(echo $CPPFLAGS | tr ' ' '\n' | sort -u | tr '\n' ' ')
+CXXFLAGS=$(echo $CXXFLAGS | tr ' ' '\n' | sort -u | tr '\n' ' ')
+AM_LDFLAGS=$(echo $LDFLAGS | tr ' ' '\n' | sort -u | tr '\n' ' ')
+
+
+
 AC_OUTPUT
