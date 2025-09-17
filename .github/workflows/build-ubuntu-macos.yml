@@ -43,7 +43,9 @@ jobs:
       - name: configure for ubuntu with codecov
         if: startsWith(matrix.os, 'ubuntu')
         run: |
-          ./configure --disable-opt --enable-address-sanitizer CFLAGS='-g -O0 -fprofile-arcs -ftest-coverage' CXXFLAGS='-g -O0 -fprofile-arcs -ftest-coverage' LIBS='-lgcov'
+          ./configure --disable-opt --enable-address-sanitizer \
+          CFLAGS='-g -O0 -fprofile-arcs -ftest-coverage' \
+          CXXFLAGS='-g -O0 -fprofile-arcs -ftest-coverage' LIBS='-lgcov'
 
       - name: configure for macOS
         if: startsWith(matrix.os, 'macos')
@@ -64,12 +66,14 @@ jobs:
           find . -ls
 
       - name: Generate coverage report
+        if: startsWith(matrix.os, 'ubuntu')
         run: |
           lcov --capture --directory . --output-file coverage.info
           #lcov --remove linux-coverage.info '/usr/*' --output-file linux-coverage.info
           lcov --list coverage.info
 
       - name: Upload coverage to Codecov
+        if: startsWith(matrix.os, 'ubuntu')
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
