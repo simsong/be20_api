@@ -30,7 +30,7 @@ EXTRA_DIST = \
 ETAGS = etags-emacs
 ACLOCAL_AMFLAGS = -I m4
 
-AM_CPPFLAGS = @RE2_CFLAGS@ -I$(top_srcdir)/utfpp/source
+AM_CPPFLAGS = @RE2_CFLAGS@ -I$(top_srcdir)/utfcpp/source
 
 clean-local:
 	rm -f *.gcov *~ *.gcda *.gcno
@@ -57,5 +57,4 @@ test_be20_api_SOURCES = $(BE20_API_SRC) $(DFXML_READER) $(DFXML_WRITER) \
 	test_image_reader.h \
 	test_image_reader.cpp
 
-#test_be20_api_CPPFLAGS = $(AM_CPPFLAGS) @RE2_CFLAGS@
 test_be20_api_LDADD = @RE2_LIBS@ $(LIBS)

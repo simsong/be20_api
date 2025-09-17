@@ -37,9 +37,6 @@ PKG_CHECK_MODULES([RE2], [re2],
 )
 AC_LANG_POP()
 
-CPPFLAGS="$CPPFLAGS -I$(top_srcdir)/utfcpp/source"
-
-
 ################################################################
 ## Check on two annoying warnings
 AC_COMPILE_IFELSE([AC_LANG_PROGRAM(
