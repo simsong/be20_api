@@ -34,7 +34,7 @@ jobs:
         if: startsWith(matrix.os, 'ubuntu')
         run: |
           sudo apt update -y
-          sudo apt install -y autoconf automake g++ libtool libssl-dev pkg-config libabsl-dev libre2-dev make pkg-config zlib1g-dev
+          sudo apt install -y autoconf automake g++ libtool libssl-dev libabsl-dev libre2-dev pkg-config make pkg-config zlib1g-dev
 
       # ----------------------------
       # Windows (MSYS2 UCRT64)
@@ -54,10 +54,10 @@ jobs:
           bash etc/CONFIGURE_WINDOWS_LATEST.bash
 
       # ----------------------------
-      # Common Bootstrap
+      # Posix Bootstrap
       # ----------------------------
       - name: run bootstrap
-        shell: ${{startsWith(matrix.os, 'windows') && 'msys2 {0}' || 'bash' }}
+        shell: ${{ startsWith(matrix.os, 'windows') && 'msys2 {0}' || 'bash' }}
         run: |
           autoreconf -fi
           bash bootstrap.sh
