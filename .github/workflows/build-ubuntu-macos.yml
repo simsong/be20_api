@@ -4,7 +4,7 @@
 # 2020-07-03 - slg - ported to be13_api; removed python (be13_api doesn't use python)
 # 2022-02-10 - slg - renamed be20_api. Our work here is done.
 
-name: BE20_API CI (c++17)
+name: BE20_API CI (c++17) for Ubuntu and MacOS
 on: [push]
 
 jobs:
@@ -17,7 +17,7 @@ jobs:
     steps:
       # https://github.com/actions/checkout
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           submodules: recursive
 
@@ -63,5 +63,5 @@ jobs:
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         run: |
-          gcov-9 -o . `find . -name '*cpp'`
+          gcov -o . `find . -name '*cpp'`
           bash <(curl -s https://codecov.io/bash)
