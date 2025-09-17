@@ -34,13 +34,6 @@ AS_IF([test "x$enable_asan" = "xyes"], [
   LDFLAGS="$LDFLAGS -fsanitize=address"
 ])
 
-# for windows:
-# hardcode additional directory
-CPPFLAGS="$CPPFLAGS -I$top_srcdir/utfcpp/source -Iutfcpp/source"
-# Add the -g (no kidding)
-CFLAGS="$CFLAGS -c"
-CXXFLAGS="$CXXFLAGS -c"
-
 
 ################################################################
 # Take out duplicate flags
