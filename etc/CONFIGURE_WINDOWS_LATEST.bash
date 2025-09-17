@@ -5,7 +5,7 @@
 
 OS_NAME=msys
 MAKE_CONCURRENCY=-j2
-MPKGS="base-devel \
+MPKGS="base-devel automake autoconf \
   mingw-w64-ucrt-x86_64-gcc \
   mingw-w64-ucrt-x86_64-make \
   mingw-w64-ucrt-x86_64-re2 \
