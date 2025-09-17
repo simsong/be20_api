@@ -14,7 +14,7 @@
 AC_PREREQ([2.71])
 AC_INIT([BE20_API],[2.1.0],[bugs@digitalcorpora.org])
 AC_CONFIG_MACRO_DIR([m4])
-AM_INIT_AUTOMAKE([foreign 1.18])
+AM_INIT_AUTOMAKE()
 
 m4_include([m4/ax_cxx_compile_stdcxx.m4])
 
