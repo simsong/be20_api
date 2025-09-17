@@ -23,20 +23,8 @@
 
 #include "config.h"
 
-<<<<<<< Updated upstream
-/* Do not use PCRE if we have RE2 */
-#ifdef HAVE_RE2
-#undef HAVE_PCRE_H
-#undef HAVE_PCRE
-#define HAVE_RE2_RE2_H                  // be sure it is defined
-#endif
-
-#ifdef HAVE_RE2_RE2_H
-#include <re2/re2.h>
-=======
 #ifdef HAVE_RE2
 #include <re2/re2.h>            // it's always here.
->>>>>>> Stashed changes
 #endif
 
 /**
