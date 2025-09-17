@@ -33,7 +33,6 @@ jobs:
           WANT_AUTOMAKE: "1.18"
         run: |
           bash etc/CONFIGURE_WINDOWS_LATEST.bash
-          bash bootstrap.sh
           autoreconf -fi
 
       - name: configure for windows (ucrt64)
