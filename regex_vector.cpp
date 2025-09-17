@@ -92,56 +92,6 @@ bool regex_vector::search_all(const std::string& probe, std::string* found, size
         }
     }
 #endif
-<<<<<<< Updated upstream
-#ifdef HAVE_PCRE
-    const int MAX_PCRE_SIZE = 1024;
-    const int PCRE_WINDOW = 512;
-    for (auto &it : pcre_regex_comps) {
-        for (auto probe_offset=0;probe_offset < probe.size(); probe_offset+=MAX_PCRE_SIZE) {
-            auto window_start = probe.c_str()+probe_offset;
-            auto window_len   = probe.size()-probe_offset;
-            if (window_len > MAX_PCRE_SIZE+PCRE_WINDOW){
-                window_len = MAX_PCRE_SIZE+PCRE_WINDOW;
-            }
-            size_t const OVECCOUNT=3;       // must be divisble by three
-            int ovector[OVECCOUNT];
-            int rc = pcre_exec(it.re,         // the compiled pattern
-                               it.extra,       // no extra data
-                               window_start, // the subject
-                               window_len,  // the length of the subject,
-                               0,             // start at offset 0 in the subject
-                               0,             // default options
-                               ovector,       // output vector for substring information
-                               OVECCOUNT);
-            if (rc>=0){
-                size_t substring_start = ovector[0];
-                size_t substring_len   = ovector[1] - ovector[0];
-                if (found)  *found  = probe.substr(probe_offset+substring_start, substring_len);
-                if (offset) *offset = probe_offset + substring_start;
-                if (len)    *len    = substring_len;
-                return true;
-            }
-        }
-    }
-#endif
-    /* default to std::regex */
-    const int MAX_STD_SIZE = 1024;
-    const int STD_WINDOW = 128;
-    for (auto &it : regex_chars ) {
-        for (auto probe_offset=0;probe_offset < probe.size(); probe_offset+=MAX_STD_SIZE) {
-            std::string short_probe = probe.substr(probe_offset, MAX_STD_SIZE+STD_WINDOW);
-            std::smatch sm;
-            std::regex_search(short_probe, sm, it);
-            if (sm.size() > 0) {
-                if (found) *found = sm.str();
-                if (offset) *offset = probe_offset + sm.position();
-                if (len) *len = sm.length();
-                return true;
-            }
-        }
-    }
-=======
->>>>>>> Stashed changes
     return false;
 }
 
