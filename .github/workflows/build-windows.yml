@@ -28,6 +28,9 @@ jobs:
 
       - name: Install Windows dependencies and bootstrap
         shell: msys2 {0}
+        env:
+          WANT_AUTOCONF: "2.71"
+          WANT_AUTOMAKE: "1.18"
         run: |
           bash etc/CONFIGURE_WINDOWS_LATEST.bash
           bash bootstrap.sh

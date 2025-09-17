@@ -11,9 +11,10 @@
 # This file is public domain
 #
 
-AC_PREREQ([2.69])
+AC_PREREQ([2.71])
 AC_INIT([BE20_API],[2.1.0],[bugs@digitalcorpora.org])
-AC_CONFIG_MACRO_DIR(m4)
+AC_CONFIG_MACRO_DIR([m4])
+AM_INIT_AUTOMAKE([foreign 1.18])
 
 m4_include([m4/ax_cxx_compile_stdcxx.m4])
 
@@ -23,7 +24,6 @@ AC_CONFIG_FILES([Makefile ])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_AUX_DIR([build-aux])
 
-AM_INIT_AUTOMAKE
 AM_MAINTAINER_MODE
 AC_PROG_RANLIB
 AM_PROG_AR
