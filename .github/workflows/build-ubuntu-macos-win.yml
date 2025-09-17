@@ -44,7 +44,7 @@ jobs:
       # Windows (MSYS2 UCRT64)
       # ----------------------------
       - name: Setup MSYS2
-        if: startsWith(matrix.os, 'windows')
+        if: runner.os == 'Windows'
         uses: msys2/setup-msys2@v2
         with:
           update: true
@@ -52,7 +52,7 @@ jobs:
           path-type: inherit
 
       - name: Install Windows dependencies and bootstrap
-        if: startsWith(matrix.os, 'windows')
+        if: runner.os == 'Windows'
         shell: msys2 {0}
         run: |
           bash etc/CONFIGURE_WINDOWS_LATEST.bash
@@ -82,10 +82,21 @@ jobs:
           ./configure --prefix=/ucrt64
 
       # ----------------------------
-      # Common build + test
+      # build + test windows
       # ----------------------------
       - name: make check
-        shell: ${{ startsWith(matrix.os, 'windows') && 'msys2 {0}' || 'bash' }}
+        if: runner.os == 'Windows'
+        shell: msys2 {0}
+        run: |
+          make test_be20_api
+          ./test_be20_api
+          make check  || (for fn in test*.log ; do echo ""; echo $fn ; cat $fn ; done; exit 1)
+
+      # ----------------------------
+      # Common build + test - not windows
+      # ----------------------------
+      - name: make check
+        if: runner.os != 'Windows'
         run: |
           make test_be20_api
           ./test_be20_api
