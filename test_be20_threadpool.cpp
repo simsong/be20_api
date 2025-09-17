@@ -41,6 +41,7 @@
 
 #ifdef BARAKSH_THREADPOOL
 TEST_CASE("atomic_set_mt", "[atomic]") {
+    INFO("BARAKSH_THREADPOOL TEST START");
     thread_pool pool;
     atomic_set<std::string> as;
     for (size_t i=0;i<100;i++){
@@ -59,6 +60,7 @@ TEST_CASE("atomic_set_mt", "[atomic]") {
 }
 
 TEST_CASE("atomic_map_mt", "[atomic]") {
+    INFO("BARAKSH_THREADPOOL TEST START 2");
     thread_pool pool;
     atomic_map<std::string, std::string> am;
     for (size_t i=0;i<100;i++){
@@ -87,6 +89,8 @@ TEST_CASE("atomic_map_mt", "[atomic]") {
 
 // This will give an error unless run with MallocNanoZone=0
 TEST_CASE("scanner_set_mt", "[thread_pool]") {
+    std::cout << std::endl << "This will take at least 60 seconds. Don't give up..." << std::endl;
+    INFO("scanner_set_mt test start");
     std::atomic<bool> done{false};
 
     std::thread watchdog([&] {

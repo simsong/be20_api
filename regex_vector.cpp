@@ -11,11 +11,6 @@ const std::string regex_vector::regex_engine()
         return std::string("RE2");
     }
 #endif
-#ifdef HAVE_PCRE
-    if (engine_enabled("PCRE")){
-        return std::string("PCRE");
-    }
-#endif
     return std::string("STD::REGEX");
 }
 
@@ -40,11 +35,13 @@ bool regex_vector::has_metachars(const std::string& str) {
     return false;
 }
 
+#ifndef HAVE_RE2
+[[noreturn]]
+#endif
 void regex_vector::push_back(const std::string& val) {
+#ifdef HAVE_RE2
     RE2::Options options;
     options.set_case_sensitive(false);
-
-#ifdef HAVE_RE2
     if (engine_enabled("RE2")){
         regex_strings.push_back(val);
         RE2 *re = new RE2(std::string("(") + val + std::string(")"), options);
@@ -55,28 +52,9 @@ void regex_vector::push_back(const std::string& val) {
         re2_regex_comps.push_back( re );
         return;
     }
+#else
+    throw std::runtime_error(std::string("RE2 not compiled in"));
 #endif
-#ifdef HAVE_PCRE
-    if (engine_enabled("PCRE")){
-        const char *error = nullptr;
-        int erroffset = 0;
-        auto re = pcre_compile( val.c_str(), // pattern
-                                0,           // default options
-                                &error,      // for error message
-                                &erroffset,  // for error offset,
-                                NULL);       // use default error tables
-        if (re == nullptr) {
-            std::cerr << "PCRE compliation failed at offset " << erroffset << ": " << error << "  compiling: " << val << std::endl;
-            throw std::runtime_error(std::string("PCRE compilation failed"));
-        }
-        pcre_extra *extra = pcre_study(re, PCRE_STUDY_JIT_COMPILE, &error);
-        pcre_jit_stack *jit_stack = pcre_jit_stack_alloc(32*1024, 16*1024*1024);
-        pcre_assign_jit_stack(extra, NULL, jit_stack);
-        pcre_regex_comps.push_back( p2(re,extra,jit_stack) );
-        return;
-    }
-#endif
-    regex_chars.push_back(std::regex(val, std::regex_constants::icase));
 }
 
 void regex_vector::clear() {
@@ -87,27 +65,14 @@ void regex_vector::clear() {
     }
     re2_regex_comps.clear();
 #endif
-#ifdef HAVE_PCRE
-    for (auto const &it: pcre_regex_comps) {
-        pcre_free(it.re);
-        pcre_free_study(it.extra);
-        pcre_jit_stack_free(it.jit_stack);
-    }
-    pcre_regex_comps.clear();
-#endif
-    regex_chars.clear();
 }
 
 size_t regex_vector::size() const {
-    size_t sz = 0;
 #ifdef HAVE_RE2
-    sz += re2_regex_comps.size();
+    return re2_regex_comps.size();
+#else
+    return 0;
 #endif
-#ifdef HAVE_PCRE
-    sz += pcre_regex_comps.size();
-#endif
-    sz += regex_chars.size();
-    return sz;
 }
 
 /**
@@ -127,6 +92,7 @@ bool regex_vector::search_all(const std::string& probe, std::string* found, size
         }
     }
 #endif
+<<<<<<< Updated upstream
 #ifdef HAVE_PCRE
     const int MAX_PCRE_SIZE = 1024;
     const int PCRE_WINDOW = 512;
@@ -174,6 +140,8 @@ bool regex_vector::search_all(const std::string& probe, std::string* found, size
             }
         }
     }
+=======
+>>>>>>> Stashed changes
     return false;
 }
 
