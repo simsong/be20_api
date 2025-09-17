@@ -1,64 +1,39 @@
-#                                               -*- Autoconf -*-
-# Process this file with autoconf to produce a configure script.
-# Order is largely irrelevant, although it must start with AC_INIT and end with AC_OUTPUT
-# See http://autotoolset.sourceforge.net/tutorial.html
-# and http://www.openismus.com/documents/linux/automake/automake.shtml
-# This is used solely for creating the test program
-
-# Review Makefile.am which includes Makefile.defs
-
-#
-# This file is public domain
-#
-
-AC_PREREQ([2.69])
+AC_PREREQ([2.71])
 AC_INIT([BE20_API],[2.1.0],[bugs@digitalcorpora.org])
-AC_CONFIG_MACRO_DIR(m4)
-
-m4_include([m4/ax_cxx_compile_stdcxx.m4])
-
-AC_MSG_NOTICE([at start CPPFLAGS are $CPPFLAGS])
-
-AC_CONFIG_FILES([Makefile ])
-AC_CONFIG_HEADERS([config.h])
+AC_CONFIG_SRCDIR([Makefile.am])        dnl or src/main.c / src/...
 AC_CONFIG_AUX_DIR([build-aux])
-
+AC_USE_SYSTEM_EXTENSIONS
 AM_INIT_AUTOMAKE
-AM_MAINTAINER_MODE
-AC_PROG_RANLIB
-AM_PROG_AR
-
-# Programs we will be using
-AC_PROG_CC
-AC_PROG_CXX
-AM_PROG_CC_C_O                    dnl allow per-produce flags
-AC_PROG_INSTALL
-
-# Must use C++17 mode.
-
-AC_LANG_PUSH(C++)
-AX_CXX_COMPILE_STDCXX([17], [noext], [mandatory])
-AC_LANG_POP()
-
-# Turn on all warnings
-m4_include([m4/slg_gcc_all_warnings.m4])
-
-################################################################
-# Specify our headers
-#
-# Check for headers used by bulk Extractor
-# do not put pthread here
-#
-# Check dfxml and be20_api headers
 
 m4_include([be20_configure.m4])
 m4_include([dfxml_cpp/src/dfxml_configure.m4])
 m4_include([m4/slg_address_sanitizer.m4])
 m4_include([m4/slg_noopt.m4])
 
-AC_MSG_NOTICE([point1 - CFLAGS are now $CFLAGS])
-AC_MSG_NOTICE([point2 - CPPFLAGS are now $CPPFLAGS])
-AC_MSG_NOTICE([point3 - CXXFLAGS are now $CXXFLAGS])
+AC_LANG([C++])
+AC_PROG_CC
+AC_PROG_CXX
+
+AC_CONFIG_HEADERS([config.h])
+AC_CONFIG_FILES([Makefile ])
+
+dnl Enforce C++20
+AX_CXX_COMPILE_STDCXX([17], [noext], [mandatory])
+
+dnl Optional: pkg-config and deps
+PKG_PROG_PKG_CONFIG
+dnl PKG_CHECK_MODULES([DEPS], [foo >= 1.2 bar])
+
+dnl Optional feature toggles (asan example)
+AC_ARG_ENABLE([asan],
+  [AS_HELP_STRING([--enable-asan], [Build with AddressSanitizer])],
+  [], [enable_asan=no])
+AS_IF([test "x$enable_asan" = "xyes"], [
+  dnl Append rather than overwrite; keep user flags intact
+  CXXFLAGS="$CXXFLAGS -fsanitize=address -fno-omit-frame-pointer"
+  LDFLAGS="$LDFLAGS -fsanitize=address"
+])
+
 
 ################################################################
 # Take out duplicate flags
@@ -67,24 +42,17 @@ CPPFLAGS=$(echo $CPPFLAGS | tr ' ' '\n' | sort -u | tr '\n' ' ')
 CXXFLAGS=$(echo $CXXFLAGS | tr ' ' '\n' | sort -u | tr '\n' ' ')
 AM_LDFLAGS=$(echo $LDFLAGS | tr ' ' '\n' | sort -u | tr '\n' ' ')
 
-################################################################
-# drop optimization flags and add -g if requested
-if test "${with_opt}" = "no" ; then
-  CFLAGS=`echo   -g "$CFLAGS"   | sed s/-O[[0-9]]//`             # note the double quoting!
-  CXXFLAGS=`echo -g "$CXXFLAGS" | sed s/-O[[0-9]]//`
-fi
-
-# LIBS="-lstdc++ $LIBS"
-
-## Remove flags that shouldn't be present
-AC_MSG_NOTICE([point4 - CXX: $CXX])
-CXX=$(echo $CXX | sed s/-std=gnu..11//)
-
-################################################################
-AC_MSG_NOTICE([CFLAGS are now $CFLAGS])
-AC_MSG_NOTICE([CPPFLAGS are now $CPPFLAGS])
-AC_MSG_NOTICE([CXXFLAGS are now $CXXFLAGS])
-AC_MSG_NOTICE([AM_LDFLAGS are now $AM_LDFLAGS])
+AC_MSG_NOTICE([*************************************])
+AC_MSG_NOTICE([*************************************])
+AC_MSG_NOTICE([  PACKAGE_NAME:     $PACKAGE_NAME])
+AC_MSG_NOTICE([  PACKAGE_VERSION:  $PACKAGE_VERSION])
+AC_MSG_NOTICE([  CC:               $CC])
+AC_MSG_NOTICE([  CXX:              $CXX])
+AC_MSG_NOTICE([  CPPFLAGS:         $CPPFLAGS])
+AC_MSG_NOTICE([  CFLAGS:           $CFLAGS])
+AC_MSG_NOTICE([  CXXFLAGS:         $CXXFLAGS])
+AC_MSG_NOTICE([  LIBS:             $LIBS])
+AC_MSG_NOTICE([  LDFLAGS:          $LDFLAGS])
 
 
 AC_OUTPUT

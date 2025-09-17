@@ -32,7 +32,6 @@ ACLOCAL_AMFLAGS = -I m4
 
 AM_CPPFLAGS = @RE2_CFLAGS@ -I$(top_srcdir)/utfcpp/source
 
-
 clean-local:
 	rm -f *.gcov *~ *.gcda *.gcno
 
@@ -44,19 +43,17 @@ clang-format:
 
 AUTOMAKE_OPTIONS = subdir-objects
 
-bin_PROGRAMS = test_be20_api
+bin_PROGRAMS =
 check_PROGRAMS = test_be20_api
 check_SCRIPTS = test_be20_api_malloc_debug
 TESTS = $(check_PROGRAMS)
 
 # apitest: test_be20_api
 
+test_be20_api_LDADD = @RE2_LIBS@ $(LIBS)
 test_be20_api_SOURCES = $(BE20_API_SRC) $(DFXML_READER) $(DFXML_WRITER) \
 	catch.hpp \
 	test_be20_api.cpp \
 	test_be20_threadpool.cpp \
 	test_image_reader.h \
 	test_image_reader.cpp
-
-#test_be20_api_CPPFLAGS = $(AM_CPPFLAGS) @RE2_CFLAGS@
-test_be20_api_LDADD = @RE2_LIBS@ $(LIBS)

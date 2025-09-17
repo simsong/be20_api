@@ -50,3 +50,6 @@ test_be20api_catch2
 tests/Makefile
 x.cpp
 test_be20_api
+README
+stamp-h
+*.old

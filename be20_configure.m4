@@ -37,8 +37,6 @@ PKG_CHECK_MODULES([RE2], [re2],
 )
 AC_LANG_POP()
 
-
-
 ################################################################
 ## Check on two annoying warnings
 AC_COMPILE_IFELSE([AC_LANG_PROGRAM(
