@@ -34,6 +34,8 @@ AS_IF([test "x$enable_asan" = "xyes"], [
   LDFLAGS="$LDFLAGS -fsanitize=address"
 ])
 
+# hardcode additional directory
+CPPFLAGS="$CPPFLAGS -I$top_srcdir/utfcpp/source -Iutfcpp/source"
 
 
 ################################################################
