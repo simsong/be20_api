@@ -1036,6 +1036,11 @@ TEST_CASE("scanner", "[scanner]") { /* check that scanner params made from an ex
 #include "scanner_set.h"
 #include "machine_stats.h"
 
+#ifdef _WIN32
+TEST_CASE("machine_stats", "[!mayfail][machine_stats]") {
+    WARN("machine_stats not implemented on Windows (ps and /proc/ don't exist)");
+}
+#else
 TEST_CASE("machine_stats", "[machine_stats]") {
     REQUIRE(machine_stats::get_available_memory() != 0);
     REQUIRE(machine_stats::get_cpu_percentage() >= 0);
@@ -1046,7 +1051,7 @@ TEST_CASE("machine_stats", "[machine_stats]") {
     REQUIRE(virtual_size > 0);
     REQUIRE(resident_size > 0);
 }
-
+#endif
 
 
 /* Just make sure that they can be created and deleted without error.
