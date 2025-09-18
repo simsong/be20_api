@@ -17,15 +17,22 @@ pacman -S \
   mingw-w64-ucrt-x86_64-openssl \
   mingw-w64-ucrt-x86_64-expat
 ```
-* Generate the next bit
+* Generate the `config.h`
 ```
-autoreconf -fi
+./bootstrap.sh
 ```
 * Configure
 ```
 ./configure
 ```
-* Then make should run 
+* Then make the executable  
 ```
 make
 ```
+* Time for tests
+```shell
+./test_be20_api.exe    
+
+make check  || (for fn in test*.log ; do echo ""; echo $fn ; cat $fn ; done; exit 1)
+```
+Done!

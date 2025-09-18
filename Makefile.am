@@ -43,7 +43,7 @@ clang-format:
 
 AUTOMAKE_OPTIONS = subdir-objects
 
-bin_PROGRAMS =
+bin_PROGRAMS = test_be20_api
 check_PROGRAMS = test_be20_api
 check_SCRIPTS = test_be20_api_malloc_debug
 TESTS = $(check_PROGRAMS)
