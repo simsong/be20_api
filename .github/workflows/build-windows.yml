@@ -54,6 +54,3 @@ jobs:
       - uses: ammaraskar/gcc-problem-matcher@master
         name: GCC Problem Matcher
 
-      - name: list files
-        run: |
-          find . -ls
