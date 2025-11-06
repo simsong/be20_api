@@ -6,9 +6,7 @@
 const std::string regex_vector::RE_ENGINE {"RE_ENGINE"};
 const std::string regex_vector::regex_engine()
 {
-    if (engine_enabled("RE2")) {
-        return std::string("RE2");
-    }
+    return std::string("RE2");
 }
 
 regex_vector::~regex_vector()
