@@ -61,6 +61,9 @@ public:
     const std::string regex_engine(); // which engine is in use
 
     /* Add a string */
+#ifndef HAVE_RE2
+[[noreturn]]
+#endif
     void push_back(const std::string& val);
     // Empty the vectors. For the compiled, be sure to delete them
     void clear();
