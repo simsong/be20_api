@@ -23,6 +23,11 @@
 
 #include "config.h"
 
+/* on some systems HAVE_RE2_RE2_H is defined by HAVE_RE2 is not. We are not yet sure why */
+#ifdef HAVE_RE2_RE2_H
+#define HAVE_RE2
+#endif
+
 #ifdef HAVE_RE2
 #include <re2/re2.h>            // it's always here.
 #endif
