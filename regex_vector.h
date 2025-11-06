@@ -20,17 +20,9 @@
 #include <string>
 #include <vector>
 #include <cstdlib>
+#include <re2/re2.h>            // it's always here.
 
 #include "config.h"
-
-/* on some systems HAVE_RE2_RE2_H is defined by HAVE_RE2 is not. We are not yet sure why */
-#ifdef HAVE_RE2_RE2_H
-#define HAVE_RE2
-#endif
-
-#ifdef HAVE_RE2
-#include <re2/re2.h>            // it's always here.
-#endif
 
 /**
  * The regex_vector is a vector of character regexes with a few additional convenience functions.
@@ -41,9 +33,7 @@
 
 class regex_vector {
     std::vector<std::string> regex_strings; // the original regex strings
-#ifdef HAVE_RE2
     std::vector<RE2 *> re2_regex_comps;     // the compiled regular expressions
-#endif
     regex_vector(const regex_vector&) = delete;
     regex_vector& operator=(const regex_vector&) = delete;
     static const std::string RE_ENGINE;
@@ -54,11 +44,7 @@ public:
         return std::getenv(RE_ENGINE.c_str()) == nullptr ||
             std::getenv(RE_ENGINE.c_str())==engine;
     }
-    regex_vector() : regex_strings()
-#ifdef HAVE_RE2
-                   , re2_regex_comps()
-#endif
-    {};
+    regex_vector() : regex_strings() , re2_regex_comps() {};
     ~regex_vector();
 
     // is this a regular expression with meta characters?
@@ -66,9 +52,6 @@ public:
     const std::string regex_engine(); // which engine is in use
 
     /* Add a string */
-#ifndef HAVE_RE2
-[[noreturn]]
-#endif
     void push_back(const std::string& val);
     // Empty the vectors. For the compiled, be sure to delete them
     void clear();

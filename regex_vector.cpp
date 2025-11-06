@@ -6,12 +6,9 @@
 const std::string regex_vector::RE_ENGINE {"RE_ENGINE"};
 const std::string regex_vector::regex_engine()
 {
-#ifdef HAVE_RE2
     if (engine_enabled("RE2")) {
         return std::string("RE2");
     }
-#endif
-    return std::string("STD::REGEX");
 }
 
 regex_vector::~regex_vector()
@@ -35,11 +32,7 @@ bool regex_vector::has_metachars(const std::string& str) {
     return false;
 }
 
-#ifndef HAVE_RE2
-[[noreturn]]
-#endif
 void regex_vector::push_back(const std::string& val) {
-#ifdef HAVE_RE2
     RE2::Options options;
     options.set_case_sensitive(false);
     if (engine_enabled("RE2")){
@@ -52,27 +45,18 @@ void regex_vector::push_back(const std::string& val) {
         re2_regex_comps.push_back( re );
         return;
     }
-#else
-    throw std::runtime_error(std::string("RE2 not compiled in"));
-#endif
 }
 
 void regex_vector::clear() {
     regex_strings.clear();
-#ifdef HAVE_RE2
     for (RE2 *re: re2_regex_comps) {
         delete re;
     }
     re2_regex_comps.clear();
-#endif
 }
 
 size_t regex_vector::size() const {
-#ifdef HAVE_RE2
     return re2_regex_comps.size();
-#else
-    return 0;
-#endif
 }
 
 /**
@@ -81,7 +65,6 @@ size_t regex_vector::size() const {
  * the length. Note that this only handles a single group.
  */
 bool regex_vector::search_all(const std::string& probe, std::string* found, size_t* offset, size_t* len) const {
-#ifdef HAVE_RE2
     for (RE2 *re: re2_regex_comps) {
         re2::StringPiece sp;
         if (RE2::PartialMatch( probe, *re, &sp) ){
@@ -91,7 +74,6 @@ bool regex_vector::search_all(const std::string& probe, std::string* found, size
             return true;
         }
     }
-#endif
     return false;
 }
 
